@@ -582,8 +582,7 @@
     function openFamily(fileName, familyName) {
       localStorage.setItem("nbs_current_family", fileName);
       localStorage.setItem("nbs_current_family_name", familyName);
-      // 之後改為：window.location.href = "family.html";
-      alert("即將開啟：" + familyName + "\n\n（family.html 建置中）");
+      window.location.href = "family.html";
     }
 
     // ── 新增家庭 Modal ────────────────────────────────────────
