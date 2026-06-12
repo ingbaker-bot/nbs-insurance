@@ -777,10 +777,17 @@
 
     // ── 呼叫 GAS API ─────────────────────────────────────────
     function callGAS(action, params) {
-      return fetch(GAS_URL, {
-        method: "POST",
-        body: JSON.stringify({ action, ...params }),
-      }).then(res => res.json());
+      const url = new URL(GAS_URL);
+      url.searchParams.set("action", action);
+      Object.entries(params || {}).forEach(([k, v]) => {
+        if (typeof v === "object") {
+          url.searchParams.set(k, encodeURIComponent(JSON.stringify(v)));
+        } else if (v !== null && v !== undefined) {
+          url.searchParams.set(k, v);
+        }
+      });
+      return fetch(url.toString())
+        .then(res => res.json());
     }
   </script>
 
