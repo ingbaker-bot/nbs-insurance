@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NBS 雲端保單體檢</title>
+
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f3;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    /* ── 登入卡片 ── */
+    .login-card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 40px 36px;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: 0 2px 20px rgba(0,0,0,0.08);
+      text-align: center;
+    }
+
+    .logo {
+      font-size: 36px;
+      margin-bottom: 12px;
+    }
+
+    .title {
+      font-size: 22px;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: #999;
+      margin-bottom: 32px;
+    }
+
+    /* ── Google 登入按鈕 ── */
+    .google-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 12px 20px;
+      background: #fff;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #333;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      margin-bottom: 16px;
+    }
+
+    .google-btn:hover {
+      background: #f7f7f5;
+      border-color: #bbb;
+    }
+
+    .google-btn img {
+      width: 20px;
+      height: 20px;
+    }
+
+    /* ── 申請帳號連結 ── */
+    .apply-link {
+      font-size: 13px;
+      color: #378ADD;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    /* ── 狀態訊息 ── */
+    .status-box {
+      display: none;
+      margin-top: 16px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      text-align: left;
+      line-height: 1.6;
+    }
+    .status-box.info    { background: #E6F1FB; color: #0C447C; border: 1px solid #A8CEF0; }
+    .status-box.success { background: #EAF3DE; color: #27500A; border: 1px solid #A8D5B5; }
+    .status-box.warning { background: #FAEEDA; color: #633806; border: 1px solid #EF9F27; }
+    .status-box.error   { background: #FCEBEB; color: #791F1F; border: 1px solid #F0A8BF; }
+
+    /* ── 載入動畫 ── */
+    .spinner {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      border: 2px solid #e0e0e0;
+      border-top-color: #378ADD;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── 申請表單 ── */
+    .apply-form {
+      display: none;
+      text-align: left;
+      margin-top: 20px;
+    }
+
+    .form-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #1a1a1a;
+    }
+
+    .field {
+      margin-bottom: 14px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 4px;
+    }
+
+    .field input, .field select {
+      width: 100%;
+      padding: 9px 12px;
+      font-size: 14px;
+      border: 1px solid #e0e0e0;
+      border-radius: 7px;
+      outline: none;
+      transition: border-color 0.15s;
+      font-family: inherit;
+      background: #fff;
+    }
+
+    .field input:focus, .field select:focus {
+      border-color: #378ADD;
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 11px;
+      background: #378ADD;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+      font-family: inherit;
+    }
+
+    .btn-primary:hover { background: #2970c0; }
+    .btn-primary:disabled { background: #ccc; cursor: default; }
+
+    .btn-secondary {
+      width: 100%;
+      padding: 10px;
+      background: transparent;
+      color: #666;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      margin-top: 8px;
+      font-family: inherit;
+    }
+
+    .btn-secondary:hover { background: #f7f7f5; }
+
+    /* ── 等待審核畫面 ── */
+    .waiting-box {
+      display: none;
+      text-align: center;
+      padding: 20px 0;
+    }
+
+    .waiting-icon { font-size: 40px; margin-bottom: 12px; }
+    .waiting-title { font-size: 16px; font-weight: 500; margin-bottom: 8px; }
+    .waiting-desc { font-size: 13px; color: #888; line-height: 1.7; }
+
+    /* ── 版本標示 ── */
+    .footer {
+      margin-top: 24px;
+      font-size: 11px;
+      color: #ccc;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- 登入卡片 -->
+  <div class="login-card" id="main-card">
+
+    <!-- Logo & 標題 -->
+    <div class="logo">🛡️</div>
+    <div class="title">NBS 雲端保單體檢</div>
+    <div class="subtitle">富邦人壽保險顧問專用系統</div>
+
+    <!-- 主畫面（登入按鈕） -->
+    <div id="view-login">
+      <button class="google-btn" onclick="startLogin()">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" />
+        使用 Google 帳號登入
+      </button>
+      <div style="font-size:12px; color:#aaa; margin-bottom:12px;">
+        ──── 還沒有帳號？ ────
+      </div>
+      <span class="apply-link" onclick="showApplyForm()">申請使用帳號</span>
+    </div>
+
+    <!-- 載入中 -->
+    <div id="view-loading" style="display:none; padding:20px 0;">
+      <div style="font-size:14px; color:#666;">
+        <span class="spinner"></span>驗證中，請稍候…
+      </div>
+    </div>
+
+    <!-- 等待審核 -->
+    <div class="waiting-box" id="view-waiting">
+      <div class="waiting-icon">⏳</div>
+      <div class="waiting-title">帳號審核中</div>
+      <div class="waiting-desc" id="waiting-desc">
+        您的申請已送出，請等待管理員審核。<br/>
+        審核通過後會發送通知至您的 email。
+      </div>
+      <button class="btn-secondary" style="margin-top:16px;" onclick="showLogin()">
+        返回登入
+      </button>
+    </div>
+
+    <!-- 申請表單 -->
+    <div class="apply-form" id="view-apply">
+      <div class="form-title">申請使用帳號</div>
+
+      <div class="field">
+        <label>姓名 <span style="color:#e74c3c;">*</span></label>
+        <input type="text" id="apply-name" placeholder="請輸入真實姓名" />
+      </div>
+      <div class="field">
+        <label>Google 帳號 Email <span style="color:#e74c3c;">*</span></label>
+        <input type="email" id="apply-email" placeholder="將用來登入系統的 Google 帳號" />
+      </div>
+      <div class="field">
+        <label>業務員編號 <span style="color:#e74c3c;">*</span></label>
+        <input type="text" id="apply-agentno" placeholder="請輸入業務員編號" />
+      </div>
+      <div class="field">
+        <label>所屬保險公司 <span style="color:#e74c3c;">*</span></label>
+        <select id="apply-company">
+          <option value="">請選擇所屬保險公司</option>
+          <option>富邦人壽</option>
+          <option>國泰人壽</option>
+          <option>南山人壽</option>
+          <option>新光人壽</option>
+          <option>中國人壽</option>
+          <option>台灣人壽</option>
+          <option>三商美邦人壽</option>
+          <option>遠雄人壽</option>
+          <option>全球人壽</option>
+          <option>保誠人壽</option>
+          <option>宏泰人壽</option>
+          <option>第一金人壽</option>
+          <option>合作金庫人壽</option>
+          <option>臺銀人壽</option>
+          <option>元大人壽</option>
+          <option>康健人壽</option>
+          <option>安聯人壽</option>
+          <option>友邦人壽</option>
+          <option>法國巴黎人壽</option>
+          <option>宏利人壽</option>
+          <option>skyway人壽</option>
+          <option value="其他">其他</option>
+        </select>
+      </div>
+
+      <div id="apply-status" class="status-box"></div>
+
+      <button class="btn-primary" id="apply-btn" onclick="submitApply()">送出申請</button>
+      <button class="btn-secondary" onclick="showLogin()">返回登入</button>
+    </div>
+
+    <!-- 狀態訊息 -->
+    <div class="status-box" id="login-status"></div>
+
+  </div>
+
+  <div class="footer">NBS 雲端保單體檢 v1.0 · 資料存放於您的 Google 雲端硬碟</div>
+
+  <script>
+    // ── 設定 ─────────────────────────────────────────────────
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec";
+    // 請填入您在 Google Cloud Console 取得的 OAuth Client ID
+    const GOOGLE_CLIENT_ID = "524622074888-iuij6ib2qvr0qddvvrpfqnmfbt85gvti.apps.googleusercontent.com";
+
+    let currentUser = null;
+
+    // ── Google OAuth 初始化 ───────────────────────────────────
+    window.onload = function() {
+      // 檢查 localStorage 是否有已登入的使用者
+      const saved = localStorage.getItem("nbs_user");
+      if (saved) {
+        try {
+          currentUser = JSON.parse(saved);
+          checkAuthAndRedirect(currentUser.email);
+        } catch(e) {
+          localStorage.removeItem("nbs_user");
+        }
+      }
+
+      // 初始化 Google Identity Services
+      if (typeof google !== "undefined") {
+        google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: handleGoogleLogin,
+          auto_select: false,
+        });
+      }
+    };
+
+    // ── 開始 Google 登入 ─────────────────────────────────────
+    function startLogin() {
+      if (typeof google === "undefined") {
+        showStatus("login-status", "error", "Google 登入載入失敗，請重新整理頁面");
+        return;
+      }
+      google.accounts.id.prompt();
+    }
+
+    // ── Google 登入回調 ──────────────────────────────────────
+    function handleGoogleLogin(response) {
+      showView("loading");
+      try {
+        // 解析 JWT token 取得使用者資訊
+        const payload = parseJwt(response.credential);
+        currentUser = {
+          email: payload.email,
+          name: payload.name,
+          picture: payload.picture,
+        };
+        localStorage.setItem("nbs_user", JSON.stringify(currentUser));
+        checkAuthAndRedirect(currentUser.email);
+      } catch(e) {
+        showView("login");
+        showStatus("login-status", "error", "登入失敗，請重新嘗試");
+      }
+    }
+
+    // ── 驗證授權並跳轉 ───────────────────────────────────────
+    function checkAuthAndRedirect(email) {
+      showView("loading");
+      callGAS("checkAuth", { email: email })
+        .then(result => {
+          if (result.authorized) {
+            // 儲存使用者資訊
+            const userInfo = {
+              ...currentUser,
+              agentNo: result.agentNo,
+              agentName: result.name,
+              company: result.company,
+              isAdmin: result.isAdmin || false,
+            };
+            localStorage.setItem("nbs_user", JSON.stringify(userInfo));
+
+            // 跳轉到主畫面
+            showStatus("login-status", "success", "✓ 驗證成功，正在進入系統…");
+            setTimeout(() => {
+              window.location.href = "main.html";
+            }, 800);
+
+          } else {
+            showView("login");
+            if (result.status === "申請中") {
+              showView("waiting");
+              document.getElementById("waiting-desc").innerHTML =
+                "您的申請審核中，請等待管理員審核。<br/>審核通過後會發送通知至 <strong>" + email + "</strong>";
+            } else if (result.status === "not_found") {
+              showView("login");
+              showStatus("login-status", "warning",
+                "此帳號尚未申請，請點下方「申請使用帳號」");
+            } else {
+              showView("login");
+              showStatus("login-status", "error", result.message || "帳號未核准");
+            }
+          }
+        })
+        .catch(err => {
+          showView("login");
+          showStatus("login-status", "error", "連線失敗，請檢查網路後重試");
+        });
+    }
+
+    // ── 申請帳號 ─────────────────────────────────────────────
+    function submitApply() {
+      const name     = document.getElementById("apply-name").value.trim();
+      const email    = document.getElementById("apply-email").value.trim();
+      const agentNo  = document.getElementById("apply-agentno").value.trim();
+      const company  = document.getElementById("apply-company").value;
+
+      if (!name || !email || !agentNo || !company) {
+        showStatus("apply-status", "error", "請填寫所有必填欄位");
+        return;
+      }
+
+      const btn = document.getElementById("apply-btn");
+      btn.disabled = true;
+      btn.textContent = "送出中…";
+
+      callGAS("apply", { name, email, agentNo, company })
+        .then(result => {
+          btn.disabled = false;
+          btn.textContent = "送出申請";
+
+          if (result.status === "ok") {
+            showStatus("apply-status", "success",
+              "✓ 申請成功！管理員審核後會發送通知至 " + email);
+            // 清空表單
+            ["apply-name","apply-email","apply-agentno"].forEach(id => {
+              document.getElementById(id).value = "";
+            });
+            document.getElementById("apply-company").value = "";
+          } else if (result.status === "already_approved") {
+            showStatus("apply-status", "info", "此帳號已核准，請直接登入");
+          } else if (result.status === "already_applied") {
+            showStatus("apply-status", "warning", "此帳號已申請過，請等待審核");
+          } else {
+            showStatus("apply-status", "error", result.message || "申請失敗，請重試");
+          }
+        })
+        .catch(err => {
+          btn.disabled = false;
+          btn.textContent = "送出申請";
+          showStatus("apply-status", "error", "連線失敗，請檢查網路後重試");
+        });
+    }
+
+    // ── 畫面切換 ─────────────────────────────────────────────
+    function showView(view) {
+      ["login","loading","waiting","apply"].forEach(v => {
+        const el = document.getElementById("view-" + v);
+        if (el) el.style.display = "none";
+      });
+      const target = document.getElementById("view-" + view);
+      if (target) target.style.display = "block";
+
+      // 清除狀態訊息
+      const status = document.getElementById("login-status");
+      if (status) status.style.display = "none";
+    }
+
+    function showLogin()     { showView("login"); }
+    function showApplyForm() { showView("apply"); }
+
+    function showStatus(id, type, message) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.className = "status-box " + type;
+      el.textContent = message;
+      el.style.display = "block";
+    }
+
+    // ── 呼叫 GAS API ─────────────────────────────────────────
+    function callGAS(action, params) {
+      return fetch(GAS_URL, {
+        method: "POST",
+        body: JSON.stringify({ action, ...params }),
+      }).then(res => res.json());
+    }
+
+    // ── 解析 Google JWT ──────────────────────────────────────
+    function parseJwt(token) {
+      const base64 = token.split(".")[1].replace(/-/g,"+").replace(/_/g,"/");
+      return JSON.parse(decodeURIComponent(
+        atob(base64).split("").map(c =>
+          "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2)
+        ).join("")
+      ));
+    }
+  </script>
+
+</body>
+</html>
