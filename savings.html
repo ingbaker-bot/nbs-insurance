@@ -19,82 +19,85 @@
 
     .main { padding:16px; max-width:560px; margin:0 auto; }
 
-    /* 保單卡片 */
-    .savings-card {
-      background:#fff; border:1px solid #e8e8e8; border-radius:10px;
-      overflow:hidden; margin-bottom:12px;
-    }
+    .savings-card { background:#fff; border:1px solid #e8e8e8; border-radius:10px; overflow:hidden; margin-bottom:14px; }
 
-    .card-header {
-      padding:12px 14px; display:flex; align-items:flex-start;
-      justify-content:space-between; gap:10px;
-    }
-    .card-header-left { flex:1; min-width:0; }
-    .card-no {
-      font-size:11px; font-weight:500; font-family:monospace;
-      background:#FBEAF0; color:#72243E;
-      padding:1px 7px; border-radius:99px;
-      display:inline-block; margin-bottom:4px;
-    }
+    .card-header { padding:12px 14px; border-bottom:1px solid #f0f0f0; }
+    .card-no { font-size:11px; font-weight:500; font-family:monospace; background:#FBEAF0; color:#72243E; padding:1px 7px; border-radius:99px; display:inline-block; margin-bottom:4px; }
     .card-no.annuity { background:#FCEBEB; color:#791F1F; }
-    .card-name { font-size:14px; font-weight:500; margin-bottom:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .cat-badge { font-size:10px; padding:1px 6px; border-radius:99px; margin-left:6px; }
+    .cat-儲蓄險 { background:#FBEAF0; color:#72243E; }
+    .cat-年金險 { background:#FCEBEB; color:#791F1F; }
+    .card-name { font-size:14px; font-weight:500; margin:4px 0 2px; }
     .card-meta { font-size:11px; color:#aaa; }
-    .edit-btn { padding:4px 10px; font-size:12px; border:1px solid #ddd; border-radius:5px; background:transparent; cursor:pointer; font-family:inherit; color:#666; flex-shrink:0; }
 
-    /* 設定區 */
-    .card-setting { padding:12px 14px; border-top:1px solid #f0f0f0; background:#fafafa; }
-    .setting-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px; }
-    .setting-row.three { grid-template-columns:1fr 1fr 1fr; }
+    /* 類型選擇 */
+    .type-section { padding:12px 14px; border-bottom:1px solid #f0f0f0; background:#fafafa; }
+    .type-label { font-size:11px; font-weight:500; color:#999; margin-bottom:8px; letter-spacing:0.05em; }
+    .type-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+    .type-btn {
+      padding:8px 10px; border:1px solid #e0e0e0; border-radius:8px;
+      cursor:pointer; text-align:left; background:#fff; font-family:inherit;
+      transition:all 0.12s;
+    }
+    .type-btn.active { border-color:#378ADD; background:#E6F1FB; }
+    .type-btn .type-title { font-size:12px; font-weight:500; color:#333; }
+    .type-btn.active .type-title { color:#0C447C; }
+    .type-btn .type-desc { font-size:10px; color:#aaa; margin-top:2px; }
+    .type-btn.custom-btn { grid-column:1/-1; }
+
+    /* 設定欄位 */
+    .fields-section { padding:12px 14px; border-bottom:1px solid #f0f0f0; }
+    .fields-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .field-full { grid-column:1/-1; }
     .field label { display:block; font-size:11px; color:#888; margin-bottom:3px; }
-    .field select, .field input {
-      width:100%; padding:7px 9px; font-size:13px;
+    .input-unit { display:flex; align-items:center; border:1px solid #e0e0e0; border-radius:6px; overflow:hidden; }
+    .input-unit:focus-within { border-color:#378ADD; }
+    .input-unit input { flex:1; padding:8px 9px; font-size:13px; border:none; outline:none; font-family:inherit; min-width:0; }
+    .input-unit .unit { padding:0 8px; font-size:11px; color:#aaa; background:#fafafa; border-left:1px solid #f0f0f0; white-space:nowrap; flex-shrink:0; }
+    .field input[type=number], .field input[type=text], .field select {
+      width:100%; padding:8px 9px; font-size:13px;
       border:1px solid #e0e0e0; border-radius:6px;
       outline:none; font-family:inherit; background:#fff;
     }
-    .field select:focus, .field input:focus { border-color:#378ADD; }
+    .field input:focus, .field select:focus { border-color:#378ADD; }
+    .field .hint { font-size:11px; color:#0C447C; margin-top:3px; }
+    .field .dim { font-size:11px; color:#aaa; margin-top:3px; }
+
+    /* 自訂模式 */
+    .custom-rows { }
+    .custom-row {
+      display:flex; align-items:center; gap:8px;
+      padding:8px; background:#f7f7f5; border-radius:8px;
+      margin-bottom:6px;
+    }
+    .custom-row input, .custom-row select {
+      flex:1; padding:6px 8px; font-size:12px;
+      border:1px solid #e0e0e0; border-radius:5px;
+      outline:none; font-family:inherit; background:#fff; min-width:0;
+    }
+    .custom-row input:focus, .custom-row select:focus { border-color:#378ADD; }
+    .custom-row .del-btn { background:none; border:none; color:#e74c3c; cursor:pointer; font-size:16px; flex-shrink:0; padding:0 2px; }
+    .add-row-btn { font-size:12px; padding:6px 12px; border:1px dashed #ddd; border-radius:6px; background:transparent; cursor:pointer; color:#666; font-family:inherit; }
 
     /* 領回明細表 */
-    .return-table-wrap { overflow-x:auto; }
-    .return-table {
-      width:100%; border-collapse:collapse; font-size:12px;
-    }
-    .return-table th {
-      padding:7px 10px; text-align:right; font-weight:500;
-      color:#888; background:#f7f7f5; border-bottom:1px solid #e8e8e8;
-      white-space:nowrap;
-    }
+    .table-section { padding:12px 14px; }
+    .table-title { font-size:11px; font-weight:500; color:#999; margin-bottom:8px; letter-spacing:0.05em; }
+    .return-table { width:100%; border-collapse:collapse; font-size:12px; }
+    .return-table th { padding:6px 10px; text-align:right; font-weight:500; color:#888; background:#f7f7f5; border-bottom:1px solid #e8e8e8; white-space:nowrap; }
     .return-table th:first-child { text-align:left; }
-    .return-table td {
-      padding:7px 10px; text-align:right;
-      border-bottom:1px solid #f5f5f5;
-    }
+    .return-table td { padding:6px 10px; text-align:right; border-bottom:1px solid #f8f8f8; }
     .return-table td:first-child { text-align:left; color:#555; font-weight:500; }
-    .return-table .has-return { color:#0C447C; font-weight:500; }
-    .return-table .no-return { color:#e0e0e0; }
-    .return-table .total-row td { font-weight:500; color:#27500A; background:#f7f7f5; border-top:2px solid #e8e8e8; }
+    .has-return { color:#0C447C; font-weight:500; }
+    .no-return { color:#e0e0e0; }
+    .total-row td { font-weight:500; color:#27500A; background:#EAF3DE; border-top:2px solid #e8e8e8; }
 
-    /* 年度總領回卡片 */
-    .annual-summary {
-      background:#E6F1FB; border-radius:8px; padding:10px 14px;
-      margin-bottom:12px; display:flex; align-items:center; gap:12px;
-    }
-    .annual-summary .label { font-size:12px; color:#0C447C; }
-    .annual-summary .value { font-size:18px; font-weight:500; color:#0C447C; flex:1; }
-
-    /* 年金險累積期提示 */
-    .annuity-notice {
-      padding:8px 12px; background:#FFF8E1; border:1px solid #FFE082;
-      border-radius:8px; font-size:11px; color:#5D4037;
-      margin-bottom:8px;
-    }
-
-    .section-label { font-size:11px; font-weight:500; color:#999; letter-spacing:0.05em; margin-bottom:8px; margin-top:4px; }
+    .annuity-notice { padding:8px 12px; background:#FFF8E1; border:1px solid #FFE082; border-radius:8px; font-size:11px; color:#5D4037; margin-bottom:10px; }
+    .save-all-btn { width:100%; padding:11px; background:#378ADD; color:#fff; border:none; border-radius:8px; font-size:14px; font-weight:500; cursor:pointer; font-family:inherit; margin-top:4px; }
     .empty-state { text-align:center; padding:40px 20px; color:#bbb; font-size:13px; }
     .loading { text-align:center; padding:40px; color:#bbb; font-size:13px; }
     .spinner { display:inline-block; width:16px; height:16px; border:2px solid #e0e0e0; border-top-color:#378ADD; border-radius:50%; animation:spin 0.7s linear infinite; vertical-align:middle; }
     @keyframes spin { to { transform:rotate(360deg); } }
     .saved-hint { font-size:11px; color:#27AE8F; text-align:center; padding:6px 0; display:none; }
-    .save-all-btn { width:100%; padding:11px; background:#378ADD; color:#fff; border:none; border-radius:8px; font-size:14px; font-weight:500; cursor:pointer; font-family:inherit; margin-top:4px; }
   </style>
 </head>
 <body>
@@ -104,9 +107,7 @@
   <div class="header-title">儲蓄險現況</div>
   <div class="header-sub" id="header-sub"></div>
 </div>
-
 <div class="member-tabs" id="member-tabs"></div>
-
 <div class="main">
   <div id="loading" class="loading"><span class="spinner"></span> 載入中…</div>
   <div id="content" style="display:none"></div>
@@ -116,301 +117,438 @@
 <script>
 const GAS_URL = "https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec";
 
-let currentUser     = null;
-let familyData      = null;
-let familyFileName  = null;
-let personDataMap   = {};
+// 四種類型定義
+const TYPES = [
+  { key:"1", title:"期滿領整筆",      desc:"繳費期滿一次領清" },
+  { key:"2", title:"期間領＋期滿整筆",desc:"定期生存金＋期滿整筆" },
+  { key:"3", title:"期間不領＋期滿領",desc:"期滿後每年持續領回" },
+  { key:"4", title:"期間領＋期滿領",  desc:"定期生存金＋期滿後繼續領" },
+  { key:"custom", title:"自訂",       desc:"手動設定每一筆領回" },
+];
+
+let currentUser    = null;
+let familyData     = null;
+let familyFileName = null;
+let personDataMap  = {};
 let currentPersonId = null;
-let savingsSettings = {}; // policyId → { mode, amount, interval, payEndYear }
+// settings: policyId → { type, maturityYear, maturityAmount, periodAmount, periodInterval, periodStartYear, afterMaturityAmount, customRows:[{year,amount}] }
+let settings = {};
 
 window.onload = async function() {
   const saved = localStorage.getItem("nbs_user");
-  if (!saved) { window.location.href = "index.html"; return; }
+  if (!saved) { window.location.href="index.html"; return; }
   currentUser = JSON.parse(saved);
   familyFileName = localStorage.getItem("nbs_current_family");
-  if (!familyFileName) { window.location.href = "main.html"; return; }
-
+  if (!familyFileName) { window.location.href="main.html"; return; }
   try {
-    const fr = await callGAS("readFile", { email:currentUser.email, fileType:"family", fileName:familyFileName });
+    const fr = await callGAS("readFile",{email:currentUser.email,fileType:"family",fileName:familyFileName});
     familyData = fr.content;
     document.getElementById("header-sub").textContent = familyData.familyName;
-
-    for (const m of familyData.members.filter(m => m.role !== "beneficiary_only")) {
-      const pr = await callGAS("readFile", { email:currentUser.email, fileType:"person", fileName:m.name+"_"+m.personId+".json" });
-      if (pr.status === "ok") personDataMap[m.personId] = pr.content;
+    for (const m of familyData.members.filter(m=>m.role!=="beneficiary_only")) {
+      const pr = await callGAS("readFile",{email:currentUser.email,fileType:"person",fileName:m.name+"_"+m.personId+".json"});
+      if (pr.status==="ok") personDataMap[m.personId] = pr.content;
     }
-
     const savedPerson = localStorage.getItem("nbs_current_person");
-    const primary = familyData.members.find(m => m.role === "primary");
+    const primary = familyData.members.find(m=>m.role==="primary");
     currentPersonId = savedPerson || primary?.personId;
-
-    // 初始化儲蓄設定（從 savings 陣列讀取）
-    initSavingsSettings();
+    loadSettings();
     renderTabs();
     renderContent();
   } catch(e) {
-    document.getElementById("loading").innerHTML = '<div style="color:#e74c3c">載入失敗：'+e.message+'</div>';
+    document.getElementById("loading").innerHTML='<div style="color:#e74c3c">載入失敗：'+e.message+'</div>';
   }
 };
 
-function initSavingsSettings() {
+function loadSettings() {
   Object.keys(personDataMap).forEach(pid => {
     const person = personDataMap[pid];
-    const savings = person.savings || [];
-    savings.forEach(s => {
-      savingsSettings[s.policyId] = s;
-    });
+    (person.savings||[]).forEach(s => { settings[s.policyId] = s; });
   });
 }
 
 function renderTabs() {
-  const members = familyData.members.filter(m => m.role !== "beneficiary_only");
-  document.getElementById("member-tabs").innerHTML = members.map(m => `
-    <div class="member-tab ${currentPersonId===m.personId?'active':''}" onclick="switchPerson('${m.personId}')">
-      ${m.name}
-    </div>`).join("");
+  const members = familyData.members.filter(m=>m.role!=="beneficiary_only");
+  document.getElementById("member-tabs").innerHTML = members.map(m=>`
+    <div class="member-tab ${currentPersonId===m.personId?'active':''}" onclick="switchPerson('${m.personId}')">${m.name}</div>`).join("");
 }
 
 function switchPerson(pid) {
-  currentPersonId = pid;
-  renderTabs();
-  renderContent();
+  currentPersonId=pid; renderTabs(); renderContent();
 }
 
-// ── 渲染內容 ──────────────────────────────────────────────
 function renderContent() {
-  document.getElementById("loading").style.display = "none";
-  document.getElementById("content").style.display = "block";
-
+  document.getElementById("loading").style.display="none";
+  document.getElementById("content").style.display="block";
   const person = personDataMap[currentPersonId];
-  const savingsPolicies = (person?.policies || []).filter(p =>
-    p.category === "儲蓄險" || p.category === "年金險" ||
-    p.category === "儲蓄年金"
-  );
-
-  if (savingsPolicies.length === 0) {
-    document.getElementById("content").innerHTML =
-      '<div class="empty-state">此成員尚無儲蓄險或年金險保單<br/>請先至「保險繳費」頁面新增保單</div>';
+  const policies = (person?.policies||[]).filter(p=>p.category==="儲蓄險"||p.category==="年金險"||p.category==="儲蓄年金");
+  if (!policies.length) {
+    document.getElementById("content").innerHTML='<div class="empty-state">此成員尚無儲蓄險或年金險保單<br/>請先至「保險繳費」頁面新增保單</div>';
     return;
   }
+  document.getElementById("content").innerHTML = policies.map(p=>renderCard(p)).join("") +
+    `<button class="save-all-btn" onclick="saveAll()">儲存所有設定</button>`;
+}
 
-  let html = "";
+function renderCard(policy) {
+  const isAnnuity = policy.category==="年金險";
+  const s = settings[policy.id] || { policyId:policy.id, type:"1" };
+  if (!settings[policy.id]) settings[policy.id]=s;
 
-  savingsPolicies.forEach(p => {
-    const isAnnuity = p.category === "年金險";
-    const s = savingsSettings[p.id] || { policyId:p.id, mode:"year", amount:0, interval:2, payEndYear:null };
-    if (!savingsSettings[p.id]) savingsSettings[p.id] = s;
+  const typeButtons = TYPES.map(t=>`
+    <button class="type-btn ${s.type===t.key?'active':''} ${t.key==='custom'?'custom-btn':''}"
+      onclick="setType('${policy.id}','${t.key}')">
+      <div class="type-title">${t.key==="custom"?'✏️ 自訂（其他特殊方式）':t.key+'. '+t.title}</div>
+      <div class="type-desc">${t.desc}</div>
+    </button>`).join("");
 
-    // 計算領回明細
-    const tableHtml = buildReturnTable(p, s);
+  const fieldsHtml = renderFields(policy, s);
+  const tableHtml  = renderTable(policy, s);
 
-    html += `<div class="savings-card">
-      <div class="card-header">
-        <div class="card-header-left">
-          <div><span class="card-no ${isAnnuity?'annuity':''}">${p.policyNo||p.id}</span>
-            <span style="font-size:10px;padding:1px 6px;border-radius:99px;background:${isAnnuity?'#FCEBEB':'#FBEAF0'};color:${isAnnuity?'#791F1F':'#72243E'};margin-left:6px">${p.category}</span>
-          </div>
-          <div class="card-name">${p.itemName||'—'}</div>
-          <div class="card-meta">${p.company||'—'}　${p.payMode||''}　NT${(p.premiumTWD||0).toLocaleString()}</div>
-        </div>
+  return `<div class="savings-card" id="card_${policy.id}">
+    <div class="card-header">
+      <span class="card-no ${isAnnuity?'annuity':''}">${policy.policyNo||policy.id}</span>
+      <span class="cat-badge cat-${policy.category||''}">${policy.category||''}</span>
+      <div class="card-name">${policy.itemName||'—'}</div>
+      <div class="card-meta">${policy.company||'—'}　${policy.payMode||''}　NT$${(policy.premiumTWD||0).toLocaleString()}　起始日：${policy.startDateRaw||'—'}</div>
+    </div>
+    ${isAnnuity?`<div style="padding:10px 14px 0"><div class="annuity-notice">⚠ 繳費期（累積期）身故：法定繼承人｜給付期身故：可指定受益人</div></div>`:''}
+    <div class="type-section">
+      <div class="type-label">領回類型</div>
+      <div class="type-grid">${typeButtons}</div>
+    </div>
+    <div class="fields-section" id="fields_${policy.id}">${fieldsHtml}</div>
+    <div class="table-section" id="table_${policy.id}">${tableHtml}</div>
+  </div>`;
+}
+
+function renderFields(policy, s) {
+  const t = s.type||"1";
+  if (t==="1") return `
+    <div class="fields-grid">
+      <div class="field">
+        <label>期滿年（民國）</label>
+        <input type="number" id="matYear_${policy.id}" value="${s.maturityYear||''}" placeholder="如 130"
+          onblur="applyAndRefreshTable('${policy.id}')" />
+        <div class="dim">繳費期滿日年份</div>
       </div>
-
-      ${isAnnuity ? `<div style="padding:0 14px"><div class="annuity-notice">⚠ 年金險：繳費期（累積期）身故固定為法定繼承人，給付期可指定受益人</div></div>` : ''}
-
-      <div class="card-setting">
-        <div style="font-size:11px;font-weight:500;color:#999;margin-bottom:8px">領回設定</div>
-        <div class="setting-row">
-          <div class="field">
-            <label>${isAnnuity?'給付方式':'還本方式'}</label>
-            <select id="mode_${p.id}" onchange="updateSetting('${p.id}')">
-              <option value="year" ${s.mode==='year'?'selected':''}>年領</option>
-              <option value="month" ${s.mode==='month'?'selected':''}>月領</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>每次金額（元）</label>
-            <input type="number" id="amount_${p.id}" value="${s.amount||''}" placeholder="如 50000" oninput="updateSetting('${p.id}')" />
-          </div>
+      <div class="field">
+        <label>滿期金額（元）</label>
+        <div class="input-unit">
+          <input type="number" id="matAmt_${policy.id}" value="${s.maturityAmount||''}" placeholder="如 500000"
+            onblur="applyAndRefreshTable('${policy.id}')" />
+          <span class="unit">元</span>
         </div>
-        ${s.mode === 'year' ? `
-        <div class="setting-row">
-          <div class="field">
-            <label>每幾年領一次</label>
-            <select id="interval_${p.id}" onchange="updateSetting('${p.id}')">
-              ${[1,2,3,4,5,6].map(n => `<option value="${n}" ${s.interval==n?'selected':''}>${n} 年</option>`).join('')}
-            </select>
-          </div>
-          <div class="field">
-            <label>起始年（民國）</label>
-            <input type="number" id="startYear_${p.id}" value="${s.startYear||''}" placeholder="如 115" oninput="updateSetting('${p.id}')" />
-          </div>
-        </div>` : ''}
-      </div>
-
-      <div style="padding:0 14px 14px">
-        ${tableHtml}
       </div>
     </div>`;
-  });
 
-  // 儲存按鈕
-  html += `<button class="save-all-btn" onclick="saveAll()">儲存所有設定</button>`;
+  if (t==="2") return `
+    <div class="fields-grid">
+      <div class="field">
+        <label>生存金金額（元）</label>
+        <div class="input-unit">
+          <input type="number" id="perAmt_${policy.id}" value="${s.periodAmount||''}" placeholder="如 20000"
+            onblur="applyAndRefreshTable('${policy.id}')" />
+          <span class="unit">元</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>每幾年領一次</label>
+        <select id="perInterval_${policy.id}" onchange="applyAndRefreshTable('${policy.id}')">
+          ${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${s.periodInterval==n?'selected':''}>${n} 年</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label>起始年（民國）</label>
+        <input type="number" id="perStart_${policy.id}" value="${s.periodStartYear||''}" placeholder="如 115"
+          onblur="applyAndRefreshTable('${policy.id}')" />
+      </div>
+      <div class="field">
+        <label>期滿年（民國）</label>
+        <input type="number" id="matYear_${policy.id}" value="${s.maturityYear||''}" placeholder="如 130"
+          onblur="applyAndRefreshTable('${policy.id}')" />
+      </div>
+      <div class="field field-full">
+        <label>滿期金額（元）</label>
+        <div class="input-unit">
+          <input type="number" id="matAmt_${policy.id}" value="${s.maturityAmount||''}" placeholder="如 500000"
+            onblur="applyAndRefreshTable('${policy.id}')" />
+          <span class="unit">元</span>
+        </div>
+      </div>
+    </div>`;
 
-  document.getElementById("content").innerHTML = html;
+  if (t==="3") return `
+    <div class="fields-grid">
+      <div class="field">
+        <label>期滿年（民國）</label>
+        <input type="number" id="matYear_${policy.id}" value="${s.maturityYear||''}" placeholder="如 130"
+          onblur="applyAndRefreshTable('${policy.id}')" />
+        <div class="dim">期滿後開始每年領</div>
+      </div>
+      <div class="field">
+        <label>每年領回金額（元）</label>
+        <div class="input-unit">
+          <input type="number" id="afterAmt_${policy.id}" value="${s.afterMaturityAmount||''}" placeholder="如 30000"
+            onblur="applyAndRefreshTable('${policy.id}')" />
+          <span class="unit">元/年</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>顯示幾年</label>
+        <select id="displayYears_${policy.id}" onchange="applyAndRefreshTable('${policy.id}')">
+          ${[10,15,20,25,30].map(n=>`<option value="${n}" ${(s.displayYears||20)==n?'selected':''}>${n} 年</option>`).join('')}
+        </select>
+      </div>
+    </div>`;
+
+  if (t==="4") return `
+    <div class="fields-grid">
+      <div class="field">
+        <label>生存金金額（元）</label>
+        <div class="input-unit">
+          <input type="number" id="perAmt_${policy.id}" value="${s.periodAmount||''}" placeholder="如 20000"
+            onblur="applyAndRefreshTable('${policy.id}')" />
+          <span class="unit">元</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>每幾年領一次</label>
+        <select id="perInterval_${policy.id}" onchange="applyAndRefreshTable('${policy.id}')">
+          ${[1,2,3,4,5,6].map(n=>`<option value="${n}" ${s.periodInterval==n?'selected':''}>${n} 年</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label>起始年（民國）</label>
+        <input type="number" id="perStart_${policy.id}" value="${s.periodStartYear||''}" placeholder="如 115"
+          onblur="applyAndRefreshTable('${policy.id}')" />
+      </div>
+      <div class="field">
+        <label>期滿年（民國）</label>
+        <input type="number" id="matYear_${policy.id}" value="${s.maturityYear||''}" placeholder="如 130"
+          onblur="applyAndRefreshTable('${policy.id}')" />
+      </div>
+      <div class="field field-full">
+        <label>期滿後每年領回（元）</label>
+        <div class="input-unit">
+          <input type="number" id="afterAmt_${policy.id}" value="${s.afterMaturityAmount||''}" placeholder="如 30000"
+            onblur="applyAndRefreshTable('${policy.id}')" />
+          <span class="unit">元/年</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>顯示幾年</label>
+        <select id="displayYears_${policy.id}" onchange="applyAndRefreshTable('${policy.id}')">
+          ${[10,15,20,25,30].map(n=>`<option value="${n}" ${(s.displayYears||20)==n?'selected':''}>${n} 年</option>`).join('')}
+        </select>
+      </div>
+    </div>`;
+
+  // 自訂
+  const rows = s.customRows||[];
+  return `
+    <div class="custom-rows" id="customRows_${policy.id}">
+      ${rows.map((r,i)=>renderCustomRow(policy.id,i,r)).join('')}
+    </div>
+    <button class="add-row-btn" onclick="addCustomRow('${policy.id}')">＋ 新增一筆領回</button>`;
 }
 
-// ── 更新設定並重新計算表格 ────────────────────────────────
-function updateSetting(policyId) {
-  const s = savingsSettings[policyId];
-  s.mode     = document.getElementById("mode_"+policyId)?.value || "year";
-  s.amount   = parseFloat(document.getElementById("amount_"+policyId)?.value) || 0;
-  s.interval = parseInt(document.getElementById("interval_"+policyId)?.value) || 2;
-  s.startYear = parseInt(document.getElementById("startYear_"+policyId)?.value) || null;
+function renderCustomRow(policyId, idx, row) {
+  return `<div class="custom-row" id="crow_${policyId}_${idx}">
+    <select id="ctype_${policyId}_${idx}" style="flex:0 0 80px">
+      <option value="year" ${row.type==="year"?'selected':''}>年領</option>
+      <option value="month" ${row.type==="month"?'selected':''}>月領</option>
+      <option value="lump" ${row.type==="lump"?'selected':''}>整筆</option>
+    </select>
+    <input type="number" id="cyear_${policyId}_${idx}" value="${row.year||''}" placeholder="民國年" style="flex:0 0 80px" />
+    <input type="number" id="camt_${policyId}_${idx}" value="${row.amount||''}" placeholder="金額（元）" />
+    <button class="del-btn" onclick="removeCustomRow('${policyId}',${idx})">×</button>
+  </div>`;
+}
 
-  // 只更新這張保單的表格
+function addCustomRow(policyId) {
+  const s = settings[policyId];
+  if (!s.customRows) s.customRows=[];
+  s.customRows.push({type:"year",year:"",amount:0});
+  refreshCard(policyId);
+}
+
+function removeCustomRow(policyId, idx) {
+  const s = settings[policyId];
+  s.customRows.splice(idx,1);
+  refreshCard(policyId);
+}
+
+function setType(policyId, type) {
+  settings[policyId].type = type;
+  refreshCard(policyId);
+}
+
+function refreshCard(policyId) {
+  collectValues(policyId);
   const person = personDataMap[currentPersonId];
-  const policy = person?.policies?.find(p => p.id === policyId);
+  const policy = person?.policies?.find(p=>p.id===policyId);
   if (!policy) return;
-
-  const tableEl = document.getElementById("table_"+policyId);
-  if (tableEl) tableEl.innerHTML = buildReturnTable(policy, s);
-
-  // 若 mode 切換需要重新渲染設定區
-  renderContent();
+  const cardEl = document.getElementById("card_"+policyId);
+  if (cardEl) {
+    const s = settings[policyId];
+    const newCard = document.createElement("div");
+    newCard.innerHTML = renderCard(policy);
+    cardEl.replaceWith(newCard.firstElementChild);
+  }
 }
 
-// ── 建立領回明細表 ────────────────────────────────────────
-function buildReturnTable(policy, s) {
-  if (!s.amount || s.amount <= 0) {
-    return `<div style="font-size:12px;color:#bbb;padding:8px 0">請填寫領回金額後自動計算</div>`;
+function applyAndRefreshTable(policyId) {
+  collectValues(policyId);
+  const person = personDataMap[currentPersonId];
+  const policy = person?.policies?.find(p=>p.id===policyId);
+  if (!policy) return;
+  const tableEl = document.getElementById("table_"+policyId);
+  if (tableEl) tableEl.innerHTML = renderTable(policy, settings[policyId]);
+}
+
+function collectValues(policyId) {
+  const s = settings[policyId];
+  if (!s) return;
+  const g = id => document.getElementById(id);
+  const num = id => { const el=g(id); if(!el) return null; const v=parseFloat(el.value); return isNaN(v)?null:v; };
+  const int = id => { const el=g(id); if(!el) return null; const v=parseInt(el.value); return isNaN(v)?null:v; };
+
+  s.maturityYear        = int("matYear_"+policyId);
+  s.maturityAmount      = num("matAmt_"+policyId);
+  s.periodAmount        = num("perAmt_"+policyId);
+  s.periodInterval      = int("perInterval_"+policyId) || 2;
+  s.periodStartYear     = int("perStart_"+policyId);
+  s.afterMaturityAmount = num("afterAmt_"+policyId);
+  s.displayYears        = int("displayYears_"+policyId) || 20;
+
+  // 自訂列
+  if (s.type==="custom") {
+    const rows = s.customRows||[];
+    rows.forEach((r,i) => {
+      const typeEl = g("ctype_"+policyId+"_"+i);
+      const yearEl = g("cyear_"+policyId+"_"+i);
+      const amtEl  = g("camt_"+policyId+"_"+i);
+      if (typeEl) r.type   = typeEl.value;
+      if (yearEl) r.year   = parseInt(yearEl.value)||null;
+      if (amtEl)  r.amount = parseFloat(amtEl.value)||0;
+    });
   }
+}
 
-  const startDate = policy.startDate;
-  if (!startDate) {
-    return `<div style="font-size:12px;color:#bbb;padding:8px 0">請先至「保險繳費」填寫保單起始日</div>`;
+// ── 計算並渲染領回表格 ────────────────────────────────────
+function renderTable(policy, s) {
+  const t = s.type||"1";
+  if (t==="custom") return renderCustomTable(s);
+
+  const startRaw = policy.startDateRaw||"";
+  const startWYear = startRaw.length>=3 ? parseInt(startRaw.slice(0,3))+1911 : null;
+  const startRocYear = startWYear ? startWYear-1911 : null;
+  const dispYears = s.displayYears || 20;
+  const analysisRocYear = familyData.analysisDate ? new Date(familyData.analysisDate).getFullYear()-1911 : (startRocYear||100);
+
+  // 收集各年領回
+  const yearMap = {};
+
+  if (t==="1") {
+    if (s.maturityYear && s.maturityAmount) yearMap[s.maturityYear] = (yearMap[s.maturityYear]||0) + s.maturityAmount;
   }
-
-  const startWYear = new Date(startDate).getFullYear();
-  const startRocYear = startWYear - 1911;
-
-  // 分析日（用家庭的分析日）
-  const analysisDate = familyData.analysisDate;
-  const analysisRocYear = analysisDate ? new Date(analysisDate).getFullYear() - 1911 : startRocYear;
-
-  // 顯示從起始年往後 20 年
-  const displayYears = 20;
-  const fromYear = s.startYear || (analysisRocYear);
-  const toYear = fromYear + displayYears - 1;
-
-  let rows = [];
-  let annualTotal = {};
-
-  for (let y = fromYear; y <= toYear; y++) {
-    const westernYear = y + 1911;
-    let amount = 0;
-
-    if (s.mode === "month") {
-      amount = s.amount * 12;
-    } else {
-      const yearsFromStart = y - startRocYear;
-      if (yearsFromStart >= 0) {
-        const interval = s.interval || 1;
-        if (yearsFromStart % interval === 0) {
-          amount = s.amount;
-        }
+  else if (t==="2") {
+    // 生存金（期間）
+    if (s.periodStartYear && s.periodAmount && s.maturityYear) {
+      for (let y=s.periodStartYear; y<s.maturityYear; y+=s.periodInterval||1) {
+        yearMap[y] = (yearMap[y]||0) + s.periodAmount;
       }
     }
-
-    rows.push({ roc: y + "年", amount });
-    if (amount > 0) annualTotal[y] = amount;
+    // 期滿整筆
+    if (s.maturityYear && s.maturityAmount) yearMap[s.maturityYear] = (yearMap[s.maturityYear]||0) + s.maturityAmount;
+  }
+  else if (t==="3") {
+    // 期滿後每年領
+    if (s.maturityYear && s.afterMaturityAmount) {
+      for (let i=0; i<dispYears; i++) {
+        const y = s.maturityYear + i;
+        yearMap[y] = (yearMap[y]||0) + s.afterMaturityAmount;
+      }
+    }
+  }
+  else if (t==="4") {
+    // 生存金（期間）
+    if (s.periodStartYear && s.periodAmount && s.maturityYear) {
+      for (let y=s.periodStartYear; y<s.maturityYear; y+=s.periodInterval||1) {
+        yearMap[y] = (yearMap[y]||0) + s.periodAmount;
+      }
+    }
+    // 期滿後每年領
+    if (s.maturityYear && s.afterMaturityAmount) {
+      for (let i=0; i<dispYears; i++) {
+        const y = s.maturityYear + i;
+        yearMap[y] = (yearMap[y]||0) + s.afterMaturityAmount;
+      }
+    }
   }
 
-  const totalReturn = Object.values(annualTotal).reduce((s,v)=>s+v, 0);
+  if (!Object.keys(yearMap).length) return `<div style="font-size:12px;color:#bbb;padding:8px 0">請填寫上方欄位後自動計算</div>`;
 
-  let tableHtml = `<div id="table_${policy.id}">`;
-  tableHtml += `<div style="font-size:11px;font-weight:500;color:#999;margin-bottom:6px;letter-spacing:0.05em">
-    領回明細　共 ${Object.keys(annualTotal).length} 次　合計 NT$${totalReturn.toLocaleString()}
-  </div>`;
-  tableHtml += `<div class="return-table-wrap"><table class="return-table">
-    <thead><tr>
-      <th>民國年</th>
-      <th>領回金額</th>
-    </tr></thead>
-    <tbody>`;
+  const years = Object.keys(yearMap).map(Number).sort((a,b)=>a-b);
+  const minY = years[0];
+  const maxY = years[years.length-1];
+  const total = Object.values(yearMap).reduce((s,v)=>s+v,0);
+  const count = Object.keys(yearMap).length;
 
-  rows.forEach(r => {
-    if (r.amount > 0) {
-      tableHtml += `<tr>
-        <td>${r.roc}</td>
-        <td class="has-return">NT$${r.amount.toLocaleString()}</td>
-      </tr>`;
-    } else {
-      tableHtml += `<tr>
-        <td>${r.roc}</td>
-        <td class="no-return">—</td>
-      </tr>`;
-    }
-  });
+  let html = `<div class="table-title">領回明細　共 ${count} 次　合計 NT$${total.toLocaleString()}</div>
+    <table class="return-table"><thead><tr><th>民國年</th><th>領回金額</th></tr></thead><tbody>`;
 
-  tableHtml += `<tr class="total-row">
-    <td>合計</td>
-    <td>NT$${totalReturn.toLocaleString()}</td>
-  </tr>`;
-
-  tableHtml += `</tbody></table></div></div>`;
-  return tableHtml;
+  for (let y=minY; y<=maxY; y++) {
+    const amt = yearMap[y]||0;
+    html += `<tr><td>${y}年</td><td class="${amt>0?'has-return':'no-return'}">${amt>0?'NT$'+amt.toLocaleString():'—'}</td></tr>`;
+  }
+  html += `<tr class="total-row"><td>合計</td><td>NT$${total.toLocaleString()}</td></tr>`;
+  html += `</tbody></table>`;
+  return html;
 }
 
-// ── 儲存所有設定 ──────────────────────────────────────────
-async function saveAll() {
-  const person = personDataMap[currentPersonId];
-  if (!person) return;
-
-  // 收集最新設定值
-  const savingsPolicies = (person.policies || []).filter(p =>
-    p.category === "儲蓄險" || p.category === "年金險" || p.category === "儲蓄年金"
-  );
-
-  person.savings = savingsPolicies.map(p => {
-    const s = savingsSettings[p.id] || {};
-    return {
-      policyId:  p.id,
-      mode:      s.mode || "year",
-      amount:    s.amount || 0,
-      interval:  s.interval || 2,
-      startYear: s.startYear || null,
-    };
+function renderCustomTable(s) {
+  const rows = (s.customRows||[]).filter(r=>r.year&&r.amount>0).sort((a,b)=>a.year-b.year);
+  if (!rows.length) return `<div style="font-size:12px;color:#bbb;padding:8px 0">請新增領回項目</div>`;
+  const total = rows.reduce((sum,r)=>sum+r.amount,0);
+  let html = `<div class="table-title">領回明細　共 ${rows.length} 筆　合計 NT$${total.toLocaleString()}</div>
+    <table class="return-table"><thead><tr><th>民國年</th><th>方式</th><th>金額</th></tr></thead><tbody>`;
+  rows.forEach(r=>{
+    const modeLabel = r.type==="month"?"月領":r.type==="lump"?"整筆":"年領";
+    html+=`<tr><td>${r.year}年</td><td style="text-align:center;color:#888">${modeLabel}</td><td class="has-return">NT$${r.amount.toLocaleString()}</td></tr>`;
   });
+  html+=`<tr class="total-row"><td>合計</td><td></td><td>NT$${total.toLocaleString()}</td></tr></tbody></table>`;
+  return html;
+}
 
+// ── 儲存 ─────────────────────────────────────────────────
+async function saveAll() {
+  // 先收集所有值
+  const person = personDataMap[currentPersonId];
+  const policies = (person?.policies||[]).filter(p=>p.category==="儲蓄險"||p.category==="年金險"||p.category==="儲蓄年金");
+  policies.forEach(p => collectValues(p.id));
+  person.savings = policies.map(p => ({ ...settings[p.id], policyId:p.id }));
   person.updatedAt = new Date().toISOString();
 
   try {
-    const member = familyData.members.find(m => m.personId === currentPersonId);
-    await callGAS("saveFile", {
-      email: currentUser.email,
-      fileType: "person",
-      fileId: currentPersonId,
-      fileName: member.name+"_"+currentPersonId+".json",
-      content: person,
-    });
+    const member = familyData.members.find(m=>m.personId===currentPersonId);
+    await callGAS("saveFile",{email:currentUser.email,fileType:"person",fileId:currentPersonId,fileName:member.name+"_"+currentPersonId+".json",content:person});
     const hint = document.getElementById("saved-hint");
-    hint.style.display = "block";
-    setTimeout(() => hint.style.display = "none", 2000);
-  } catch(e) {
-    alert("儲存失敗："+e.message);
-  }
+    hint.style.display="block";
+    setTimeout(()=>hint.style.display="none",2000);
+  } catch(e) { alert("儲存失敗："+e.message); }
 }
 
-function goBack() { window.location.href = "family.html"; }
+function goBack() { window.location.href="family.html"; }
 
-function callGAS(action, params) {
-  const url = new URL(GAS_URL);
-  url.searchParams.set("action", action);
-  Object.entries(params||{}).forEach(([k,v]) => {
-    if (typeof v === "object") url.searchParams.set(k, encodeURIComponent(JSON.stringify(v)));
-    else if (v !== null && v !== undefined) url.searchParams.set(k, v);
+function callGAS(action,params) {
+  const url=new URL(GAS_URL);
+  url.searchParams.set("action",action);
+  Object.entries(params||{}).forEach(([k,v])=>{
+    if(typeof v==="object") url.searchParams.set(k,encodeURIComponent(JSON.stringify(v)));
+    else if(v!==null&&v!==undefined) url.searchParams.set(k,v);
   });
-  return fetch(url.toString()).then(res => res.json());
+  return fetch(url.toString()).then(r=>r.json());
 }
 </script>
 </body>
