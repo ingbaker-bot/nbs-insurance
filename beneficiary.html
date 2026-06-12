@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NBS - 受益人設定</title>
+  <style>
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:#f5f5f3; min-height:100vh; color:#1a1a1a; }
+
+    .header { background:#fff; border-bottom:1px solid #eee; padding:12px 16px; display:flex; align-items:center; gap:10px; position:sticky; top:0; z-index:100; }
+    .back-btn { background:none; border:none; font-size:22px; color:#999; cursor:pointer; padding:0; }
+    .header-title { font-size:15px; font-weight:500; flex:1; }
+
+    .member-tabs { display:flex; background:#fafafa; border-bottom:1px solid #eee; overflow-x:auto; padding:0 16px; }
+    .member-tab { padding:9px 14px; font-size:12px; cursor:pointer; white-space:nowrap; border-bottom:2px solid transparent; color:#888; }
+    .member-tab.active { border-bottom-color:#378ADD; color:#378ADD; font-weight:500; }
+
+    /* tab 二層：模板 / 保單套用 */
+    .sub-tabs { display:flex; padding:0 16px; background:#fff; border-bottom:1px solid #eee; }
+    .sub-tab { padding:9px 16px; font-size:13px; cursor:pointer; border-bottom:2px solid transparent; color:#888; }
+    .sub-tab.active { border-bottom-color:#378ADD; color:#378ADD; font-weight:500; }
+
+    .main { padding:16px; max-width:560px; margin:0 auto; }
+
+    /* 模板卡片 */
+    .tpl-card { background:#fff; border:1px solid #e8e8e8; border-radius:10px; padding:12px 14px; margin-bottom:8px; }
+    .tpl-card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+    .tpl-name { font-size:13px; font-weight:500; }
+    .mode-badge { font-size:10px; padding:2px 7px; border-radius:99px; }
+    .mode-equal  { background:#EAF3DE; color:#27500A; }
+    .mode-ratio  { background:#EEEDFE; color:#3C3489; }
+    .mode-rank   { background:#FAEEDA; color:#633806; }
+    .edit-btn { font-size:12px; padding:3px 10px; border:1px solid #ddd; border-radius:5px; background:transparent; cursor:pointer; color:#666; font-family:inherit; }
+
+    .benef-tags { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:4px; }
+    .benef-tag { font-size:11px; padding:2px 8px; background:#E6F1FB; color:#0C447C; border-radius:99px; }
+    .benef-ratio { font-size:10px; color:#aaa; margin-left:2px; }
+    .rank-label { font-size:10px; color:#aaa; margin-right:3px; }
+    .used-count { font-size:11px; color:#bbb; margin-top:4px; }
+
+    .add-tpl-btn { width:100%; padding:10px; border:1px dashed #ddd; border-radius:10px; background:transparent; cursor:pointer; font-size:13px; color:#999; font-family:inherit; margin-top:4px; }
+
+    /* 保單套用 */
+    .policy-benef-card { background:#fff; border:1px solid #e8e8e8; border-radius:10px; padding:12px 14px; margin-bottom:8px; }
+    .policy-benef-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; flex-wrap:wrap; gap:6px; }
+    .policy-no { font-size:11px; font-family:monospace; background:#E6F1FB; color:#0C447C; padding:1px 7px; border-radius:99px; }
+    .policy-name { font-size:13px; font-weight:500; }
+    .cat-badge { font-size:10px; padding:1px 6px; border-radius:99px; }
+    .cat-壽險保障   { background:#E6F1FB; color:#0C447C; }
+    .cat-醫療保障   { background:#E1F5EE; color:#085041; }
+    .cat-意外險     { background:#FAEEDA; color:#633806; }
+    .cat-重大疾病險 { background:#EEEDFE; color:#3C3489; }
+    .cat-重大傷病險 { background:#EEEDFE; color:#3C3489; }
+    .cat-特定傷病險 { background:#EEEDFE; color:#3C3489; }
+    .cat-儲蓄險     { background:#FBEAF0; color:#72243E; }
+    .cat-年金險     { background:#FCEBEB; color:#791F1F; }
+    .cat-投資型保險 { background:#f0f0f0; color:#555; }
+
+    .benef-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .benef-cell { }
+    .benef-cell-label { font-size:11px; color:#aaa; margin-bottom:3px; }
+    .locked-tag { font-size:11px; padding:2px 8px; background:#EAF3DE; color:#27500A; border-radius:99px; display:inline-block; }
+    .locked-tag.legal { background:#f0f0f0; color:#888; }
+    .rider-tag { font-size:11px; padding:2px 8px; background:#E6F1FB; color:#0C447C; border-radius:99px; display:inline-block; }
+    .set-btn { font-size:12px; padding:3px 10px; border:1px solid #ddd; border-radius:5px; background:transparent; cursor:pointer; color:#666; font-family:inherit; }
+
+    /* Modal */
+    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:200; align-items:flex-end; justify-content:center; }
+    .modal-overlay.active { display:flex; }
+    .modal { background:#fff; border-radius:16px 16px 0 0; padding:20px; width:100%; max-width:560px; max-height:90vh; overflow-y:auto; }
+    .modal-title { font-size:15px; font-weight:600; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; }
+    .modal-close { background:none; border:none; font-size:22px; color:#999; cursor:pointer; line-height:1; }
+
+    .field { margin-bottom:12px; }
+    .field label { display:block; font-size:12px; color:#666; margin-bottom:3px; }
+    .field input, .field select { width:100%; padding:8px 10px; font-size:14px; border:1px solid #e0e0e0; border-radius:7px; outline:none; font-family:inherit; background:#fff; }
+    .field input:focus, .field select:focus { border-color:#378ADD; }
+
+    /* 分配方式 */
+    .mode-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:14px; }
+    .mode-btn { padding:8px; border:1px solid #e0e0e0; border-radius:8px; cursor:pointer; text-align:center; background:#fff; font-family:inherit; }
+    .mode-btn.active { border-color:#378ADD; background:#E6F1FB; }
+    .mode-btn .ml { font-size:13px; font-weight:500; color:#333; }
+    .mode-btn.active .ml { color:#0C447C; }
+    .mode-btn .ms { font-size:10px; color:#aaa; }
+
+    /* 受益人列 */
+    .benef-item-row { display:flex; align-items:center; gap:8px; padding:8px 10px; background:#fafafa; border-radius:8px; border:1px solid #f0f0f0; margin-bottom:6px; }
+    .benef-avatar { width:28px; height:28px; border-radius:50%; background:#E6F1FB; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:500; color:#0C447C; flex-shrink:0; }
+    .benef-item-row select { flex:1; padding:5px 8px; font-size:13px; border:1px solid #e0e0e0; border-radius:5px; outline:none; font-family:inherit; background:#fff; min-width:0; }
+    .benef-item-row input { flex:1; padding:5px 8px; font-size:13px; border:1px solid #e0e0e0; border-radius:5px; outline:none; font-family:inherit; min-width:0; }
+    .benef-item-row select:focus, .benef-item-row input:focus { border-color:#378ADD; }
+    .ratio-wrap { display:flex; align-items:center; border:1px solid #e0e0e0; border-radius:5px; overflow:hidden; width:68px; flex-shrink:0; }
+    .ratio-wrap input { flex:1; padding:5px 4px; font-size:12px; border:none; outline:none; text-align:right; background:transparent; width:0; }
+    .ratio-wrap .pct { font-size:11px; color:#aaa; padding:0 4px; border-left:1px solid #f0f0f0; background:#fafafa; }
+    .del-btn { background:none; border:1px solid #fcc; border-radius:5px; color:#e74c3c; cursor:pointer; font-size:14px; width:26px; height:26px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+
+    /* 順位群組 */
+    .rank-group { margin-bottom:10px; }
+    .rank-group-label { font-size:11px; font-weight:500; color:#0C447C; background:#E6F1FB; padding:3px 10px; border-radius:99px; display:inline-block; margin-bottom:6px; }
+    .add-rank-btn { font-size:12px; padding:5px 12px; border:1px dashed #378ADD; border-radius:6px; background:transparent; color:#378ADD; cursor:pointer; font-family:inherit; margin-top:4px; }
+
+    /* 比例驗證 */
+    .ratio-hint { font-size:11px; padding:5px 10px; border-radius:6px; margin-bottom:8px; }
+    .ratio-ok  { background:#EAF3DE; color:#27500A; }
+    .ratio-err { background:#FCEBEB; color:#791F1F; }
+
+    .add-benef-btns { display:flex; gap:6px; margin-bottom:10px; }
+    .add-benef-btn { font-size:12px; padding:5px 10px; border:1px solid #ddd; border-radius:6px; background:#fff; cursor:pointer; color:#555; font-family:inherit; }
+
+    .btn-row { display:flex; gap:8px; margin-top:16px; }
+    .btn-primary { flex:2; padding:10px; background:#378ADD; color:#fff; border:none; border-radius:8px; font-size:14px; font-weight:500; cursor:pointer; font-family:inherit; }
+    .btn-secondary { flex:1; padding:10px; background:transparent; color:#666; border:1px solid #e0e0e0; border-radius:8px; font-size:13px; cursor:pointer; font-family:inherit; }
+    .btn-danger { padding:10px 12px; background:transparent; color:#e74c3c; border:1px solid #fcc; border-radius:8px; font-size:12px; cursor:pointer; font-family:inherit; }
+
+    /* 生存金三選項 */
+    .live-opts { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:8px; }
+    .live-opt { padding:8px; border:1px solid #e0e0e0; border-radius:7px; cursor:pointer; text-align:center; background:#fff; font-family:inherit; font-size:12px; }
+    .live-opt.active { border-color:#378ADD; background:#E6F1FB; color:#0C447C; font-weight:500; }
+
+    .loading { text-align:center; padding:40px; color:#bbb; font-size:13px; }
+    .spinner { display:inline-block; width:16px; height:16px; border:2px solid #e0e0e0; border-top-color:#378ADD; border-radius:50%; animation:spin 0.7s linear infinite; vertical-align:middle; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+    .saved-hint { font-size:11px; color:#27AE8F; text-align:center; padding:6px 0; display:none; }
+    .empty-state { text-align:center; padding:32px 20px; color:#bbb; font-size:13px; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <button class="back-btn" onclick="goBack()">‹</button>
+  <div class="header-title">受益人設定</div>
+</div>
+<div class="member-tabs" id="member-tabs"></div>
+<div class="sub-tabs">
+  <div class="sub-tab active" id="tab-tpl" onclick="switchSubTab('tpl')">受益人模板</div>
+  <div class="sub-tab" id="tab-policy" onclick="switchSubTab('policy')">保單套用</div>
+</div>
+<div class="main">
+  <div id="loading" class="loading"><span class="spinner"></span> 載入中…</div>
+  <div id="tpl-view" style="display:none"></div>
+  <div id="policy-view" style="display:none"></div>
+  <div class="saved-hint" id="saved-hint">✓ 已儲存</div>
+</div>
+
+<!-- 模板編輯 Modal -->
+<div class="modal-overlay" id="tpl-modal" onclick="handleTplOverlay(event)">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="tpl-modal-title">新增受益人模板</span>
+      <button class="modal-close" onclick="closeTplModal()">×</button>
+    </div>
+    <div class="field">
+      <label>模板名稱</label>
+      <input type="text" id="tpl-name-input" placeholder="如：身故－配偶＋子女均分" />
+    </div>
+    <div class="mode-grid">
+      <button class="mode-btn active" id="modeBtn-equal" onclick="setMode('equal')">
+        <div class="ml">均分</div><div class="ms">平均分配</div>
+      </button>
+      <button class="mode-btn" id="modeBtn-ratio" onclick="setMode('ratio')">
+        <div class="ml">比例</div><div class="ms">各填百分比</div>
+      </button>
+      <button class="mode-btn" id="modeBtn-rank" onclick="setMode('rank')">
+        <div class="ml">順位</div><div class="ms">依順位受益</div>
+      </button>
+    </div>
+    <div id="tpl-benef-area"></div>
+    <div id="ratio-hint" class="ratio-hint" style="display:none"></div>
+    <div class="add-benef-btns">
+      <button class="add-benef-btn" onclick="addBenefFromMember()">＋ 從成員選取</button>
+      <button class="add-benef-btn" onclick="addBenefCustom()">＋ 自訂姓名</button>
+      <button class="add-benef-btn" id="add-rank-btn" onclick="addRank()" style="display:none">＋ 新增下一順位</button>
+    </div>
+    <div class="btn-row">
+      <button class="btn-danger" id="tpl-delete-btn" style="display:none" onclick="deleteTpl()">刪除</button>
+      <button class="btn-secondary" onclick="closeTplModal()">取消</button>
+      <button class="btn-primary" onclick="saveTpl()">儲存模板</button>
+    </div>
+  </div>
+</div>
+
+<!-- 保單受益人設定 Modal -->
+<div class="modal-overlay" id="policy-modal" onclick="handlePolicyOverlay(event)">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="policy-modal-title">設定受益人</span>
+      <button class="modal-close" onclick="closePolicyModal()">×</button>
+    </div>
+    <div id="policy-modal-body"></div>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="closePolicyModal()">取消</button>
+      <button class="btn-primary" onclick="savePolicyBenef()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const GAS_URL = "https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec";
+
+const BENEF_RULES = {
+  "壽險保障":   { death:"可設定", live:"可設定" },
+  "醫療保障":   { death:"鎖定本人", live:"鎖定本人" },
+  "意外險":     { death:"可設定", live:"鎖定本人" },
+  "重大疾病險": { death:"可設定", live:"鎖定本人" },
+  "重大傷病險": { death:"可設定", live:"鎖定本人" },
+  "特定傷病險": { death:"可設定", live:"鎖定本人" },
+  "儲蓄險":     { death:"可設定", live:"可設定", liveLabel:"生存金/滿期金" },
+  "年金險":     { death:"年金險", live:"不適用" },
+  "投資型保險": { death:"可設定", live:"鎖定本人" },
+};
+
+let currentUser    = null;
+let familyData     = null;
+let familyFileName = null;
+let personDataMap  = {};
+let currentPersonId = null;
+let currentSubTab  = "tpl";
+
+// 模板編輯狀態
+let editTplId   = null;
+let tplMode     = "equal";
+let tplItems    = []; // { personId, customName, ratio, rank }
+let maxRank     = 1;
+
+// 保單受益人編輯狀態
+let editPolicyId = null;
+
+window.onload = async function() {
+  const saved = localStorage.getItem("nbs_user");
+  if (!saved) { window.location.href="index.html"; return; }
+  currentUser = JSON.parse(saved);
+  familyFileName = localStorage.getItem("nbs_current_family");
+  if (!familyFileName) { window.location.href="main.html"; return; }
+  try {
+    const fr = await callGAS("readFile",{email:currentUser.email,fileType:"family",fileName:familyFileName});
+    familyData = fr.content;
+    for (const m of familyData.members.filter(m=>m.role!=="beneficiary_only")) {
+      const pr = await callGAS("readFile",{email:currentUser.email,fileType:"person",fileName:m.name+"_"+m.personId+".json"});
+      if (pr.status==="ok") personDataMap[m.personId] = pr.content;
+    }
+    const savedPerson = localStorage.getItem("nbs_current_person");
+    const primary = familyData.members.find(m=>m.role==="primary");
+    currentPersonId = savedPerson || primary?.personId;
+    renderTabs();
+    renderSubView();
+  } catch(e) {
+    document.getElementById("loading").innerHTML='<div style="color:#e74c3c">載入失敗：'+e.message+'</div>';
+  }
+};
+
+function renderTabs() {
+  const members = familyData.members.filter(m=>m.role!=="beneficiary_only");
+  document.getElementById("member-tabs").innerHTML = members.map(m=>`
+    <div class="member-tab ${currentPersonId===m.personId?'active':''}" onclick="switchPerson('${m.personId}')">${m.name}</div>`).join("");
+}
+
+function switchPerson(pid) { currentPersonId=pid; renderTabs(); renderSubView(); }
+function switchSubTab(tab) {
+  currentSubTab=tab;
+  document.getElementById("tab-tpl").classList.toggle("active",tab==="tpl");
+  document.getElementById("tab-policy").classList.toggle("active",tab==="policy");
+  renderSubView();
+}
+
+function renderSubView() {
+  document.getElementById("loading").style.display="none";
+  document.getElementById("tpl-view").style.display = currentSubTab==="tpl"?"block":"none";
+  document.getElementById("policy-view").style.display = currentSubTab==="policy"?"block":"none";
+  if (currentSubTab==="tpl") renderTplView();
+  else renderPolicyView();
+}
+
+// ── 模板頁 ────────────────────────────────────────────────
+function renderTplView() {
+  const person = personDataMap[currentPersonId];
+  const templates = person?.beneficiaryTemplates || [];
+  const policies  = person?.policies || [];
+
+  let html = `<div style="font-size:11px;color:#999;margin-bottom:10px">建立常用受益人組合，保單可直接套用。修改模板時所有套用的保單自動更新。</div>`;
+
+  templates.forEach(t => {
+    const modeLabel = t.mode==="ratio"?"比例":t.mode==="rank"?"順位":"均分";
+    const modeClass = "mode-"+t.mode;
+    const usedCount = policies.filter(p=>p.beneficiaryDeathTplId===t.id||p.beneficiaryLiveTplId===t.id).length;
+
+    let itemsHtml = "";
+    if (t.mode==="rank") {
+      const ranks = [...new Set((t.items||[]).map(i=>i.rank))].sort((a,b)=>a-b);
+      itemsHtml = ranks.map(r=>{
+        const group = (t.items||[]).filter(i=>i.rank===r);
+        return `<span class="rank-label">第${r}順位</span>` +
+          group.map(i=>`<span class="benef-tag">${i.customName||getMemberName(i.personId)}${i.ratio?`<span class="benef-ratio">${i.ratio}%</span>`:''}</span>`).join("");
+      }).join(" › ");
+    } else {
+      itemsHtml = (t.items||[]).map(i=>
+        `<span class="benef-tag">${i.customName||getMemberName(i.personId)}${i.ratio?`<span class="benef-ratio">${i.ratio}%</span>`:''}</span>`
+      ).join("");
+    }
+
+    html += `<div class="tpl-card">
+      <div class="tpl-card-header">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="tpl-name">${t.name}</span>
+          <span class="mode-badge ${modeClass}">${modeLabel}</span>
+        </div>
+        <button class="edit-btn" onclick="openTplModal('${t.id}')">編輯</button>
+      </div>
+      <div class="benef-tags">${itemsHtml}</div>
+      <div class="used-count">已有 ${usedCount} 筆保單套用</div>
+    </div>`;
+  });
+
+  html += `<button class="add-tpl-btn" onclick="openTplModal(null)">＋ 新增受益人模板</button>`;
+  document.getElementById("tpl-view").innerHTML = html;
+}
+
+// ── 保單套用頁 ────────────────────────────────────────────
+function renderPolicyView() {
+  const person = personDataMap[currentPersonId];
+  const policies = person?.policies || [];
+  const templates = person?.beneficiaryTemplates || [];
+
+  if (!policies.length) {
+    document.getElementById("policy-view").innerHTML='<div class="empty-state">尚無保單，請先至「保險繳費」頁面輸入保單資料</div>';
+    return;
+  }
+
+  let html = `<div style="font-size:11px;color:#999;margin-bottom:10px">為每筆保單設定受益人，灰色鎖定項目依法令規定無法更改。</div>`;
+
+  policies.forEach(p => {
+    const rule = BENEF_RULES[p.category] || { death:"可設定", live:"可設定" };
+    const isRider = p.isRider || false;
+
+    // 身故受益人顯示
+    let deathDisplay = "";
+    if (isRider) {
+      deathDisplay = `<span class="rider-tag">📎 同主約（${p.policyNo}）</span>`;
+    } else if (rule.death==="鎖定本人") {
+      deathDisplay = `<span class="locked-tag">🔒 被保險人本人</span>`;
+    } else if (rule.death==="年金險") {
+      deathDisplay = `<span class="locked-tag legal">繳費期：法定繼承人</span>`;
+    } else if (p.beneficiaryDeathTplId) {
+      const t = templates.find(t=>t.id===p.beneficiaryDeathTplId);
+      deathDisplay = t ? `<span class="benef-tag">${t.name}</span>` : `<span style="color:#ccc;font-size:11px">模板已刪除</span>`;
+    } else if (p.beneficiaryDeathCustom?.length) {
+      deathDisplay = p.beneficiaryDeathCustom.map(i=>`<span class="benef-tag">${i.customName||getMemberName(i.personId)}</span>`).join("");
+    } else {
+      deathDisplay = `<span style="color:#ccc;font-size:11px">未設定</span>`;
+    }
+
+    // 生存金顯示
+    let liveDisplay = "";
+    if (rule.live==="鎖定本人") {
+      liveDisplay = `<span class="locked-tag">🔒 被保險人本人</span>`;
+    } else if (rule.live==="不適用") {
+      liveDisplay = `<span class="locked-tag legal">不適用</span>`;
+    } else if (p.beneficiaryLiveType==="self") {
+      liveDisplay = `<span class="locked-tag">被保險人本人</span>`;
+    } else if (p.beneficiaryLiveType==="owner") {
+      liveDisplay = `<span class="rider-tag">要保人</span>`;
+    } else if (p.beneficiaryLiveType==="other" && p.beneficiaryLiveOther) {
+      liveDisplay = `<span class="benef-tag">${p.beneficiaryLiveOther}</span>`;
+    } else {
+      liveDisplay = `<span style="color:#ccc;font-size:11px">未設定</span>`;
+    }
+
+    const canSet = !isRider || rule.live!=="鎖定本人";
+
+    html += `<div class="policy-benef-card">
+      <div class="policy-benef-header">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <span class="policy-no">${p.policyNo||p.id}</span>
+          <span class="policy-name">${p.itemName||'—'}</span>
+          <span class="cat-badge cat-${p.category||''}">${p.category||''}</span>
+          ${isRider?'<span style="font-size:10px;padding:1px 6px;border-radius:99px;background:#FAEEDA;color:#633806">附約</span>':''}
+        </div>
+        <button class="set-btn" onclick="openPolicyModal('${p.id}')">設定</button>
+      </div>
+      <div class="benef-row">
+        <div class="benef-cell">
+          <div class="benef-cell-label">身故受益人</div>
+          <div style="font-size:12px">${deathDisplay}</div>
+        </div>
+        <div class="benef-cell">
+          <div class="benef-cell-label">生存金受益人</div>
+          <div style="font-size:12px">${liveDisplay}</div>
+        </div>
+      </div>
+    </div>`;
+  });
+
+  document.getElementById("policy-view").innerHTML = html;
+}
+
+// ── 模板 Modal ────────────────────────────────────────────
+function openTplModal(tplId) {
+  const person = personDataMap[currentPersonId];
+  const templates = person?.beneficiaryTemplates || [];
+
+  if (tplId) {
+    const t = templates.find(t=>t.id===tplId);
+    if (!t) return;
+    editTplId = tplId;
+    tplMode   = t.mode || "equal";
+    tplItems  = JSON.parse(JSON.stringify(t.items||[])).map((i,idx)=>({...i,_key:idx}));
+    maxRank   = Math.max(1,...tplItems.map(i=>i.rank||1));
+    document.getElementById("tpl-name-input").value = t.name;
+    document.getElementById("tpl-modal-title").textContent = "編輯模板";
+    document.getElementById("tpl-delete-btn").style.display = "block";
+  } else {
+    editTplId = null;
+    tplMode   = "equal";
+    tplItems  = [];
+    maxRank   = 1;
+    document.getElementById("tpl-name-input").value = "";
+    document.getElementById("tpl-modal-title").textContent = "新增受益人模板";
+    document.getElementById("tpl-delete-btn").style.display = "none";
+  }
+  updateModeUI();
+  renderTplBenefArea();
+  document.getElementById("tpl-modal").classList.add("active");
+}
+
+function closeTplModal() { document.getElementById("tpl-modal").classList.remove("active"); }
+function handleTplOverlay(e) { if(e.target===document.getElementById("tpl-modal")) closeTplModal(); }
+
+function setMode(mode) {
+  tplMode = mode;
+  if (mode!=="rank") tplItems.forEach(i=>{ i.rank=1; });
+  updateModeUI();
+  renderTplBenefArea();
+}
+
+function updateModeUI() {
+  ["equal","ratio","rank"].forEach(m=>{
+    document.getElementById("modeBtn-"+m).classList.toggle("active",tplMode===m);
+  });
+  document.getElementById("add-rank-btn").style.display = tplMode==="rank"?"inline-block":"none";
+}
+
+function renderTplBenefArea() {
+  const area = document.getElementById("tpl-benef-area");
+  if (tplMode==="rank") {
+    const ranks = [...new Set(tplItems.map(i=>i.rank||1))].sort((a,b)=>a-b);
+    area.innerHTML = ranks.map(r=>`
+      <div class="rank-group">
+        <div class="rank-group-label">第 ${r} 順位</div>
+        ${tplItems.filter(i=>i.rank===r).map(item=>renderBenefRow(item,r)).join('')}
+        <div style="display:flex;gap:6px;margin-top:4px">
+          <button class="add-benef-btn" onclick="addBenefFromMember(${r})">＋ 成員</button>
+          <button class="add-benef-btn" onclick="addBenefCustom(${r})">＋ 自訂</button>
+        </div>
+      </div>`).join("");
+  } else {
+    area.innerHTML = tplItems.map(item=>renderBenefRow(item,1)).join('');
+    // 比例驗證
+    if (tplMode==="ratio") {
+      const total = tplItems.reduce((s,i)=>s+(i.ratio||0),0);
+      const hint = document.getElementById("ratio-hint");
+      if (tplItems.some(i=>i.ratio)) {
+        hint.style.display="block";
+        hint.className="ratio-hint "+(total===100?"ratio-ok":"ratio-err");
+        hint.textContent = total===100?"✓ 比例合計 100%":"⚠ 比例合計 "+total+"%，請調整至 100%";
+      } else { hint.style.display="none"; }
+    } else { document.getElementById("ratio-hint").style.display="none"; }
+  }
+}
+
+function renderBenefRow(item) {
+  const isCustom = !item.personId;
+  const usedIds = tplItems.filter(i=>i.personId&&i._key!==item._key).map(i=>i.personId);
+  const memberOptions = familyData.members.map(m=>
+    `<option value="${m.personId}" ${item.personId===m.personId?'selected':''} ${usedIds.includes(m.personId)?'disabled':''}>
+      ${m.name}（${m.relation}）${usedIds.includes(m.personId)?'✓已選':''}
+    </option>`).join('');
+
+  return `<div class="benef-item-row" id="brow_${item._key}">
+    <div class="benef-avatar">${isCustom?"?":getMemberName(item.personId)[0]||"?"}</div>
+    ${isCustom
+      ? `<input type="text" value="${item.customName||''}" placeholder="自訂姓名" onchange="updateBenefCustomName(${item._key},this.value)" />`
+      : `<select onchange="updateBenefPerson(${item._key},this.value)">
+          <option value="">請選擇成員</option>
+          ${memberOptions}
+          <option value="__custom__">＋ 自訂姓名…</option>
+         </select>`
+    }
+    ${tplMode==="ratio"
+      ? `<div class="ratio-wrap"><input type="number" min="0" max="100" value="${item.ratio||''}" placeholder="%" onchange="updateBenefRatio(${item._key},this.value)" /><span class="pct">%</span></div>`
+      : ''
+    }
+    <button class="del-btn" onclick="removeBenef(${item._key})">×</button>
+  </div>`;
+}
+
+function addBenefFromMember(rank) {
+  const key = Date.now();
+  tplItems.push({ personId:"", customName:null, ratio:null, rank:rank||1, _key:key });
+  renderTplBenefArea();
+}
+function addBenefCustom(rank) {
+  const key = Date.now();
+  tplItems.push({ personId:null, customName:"", ratio:null, rank:rank||1, _key:key });
+  renderTplBenefArea();
+}
+function addRank() {
+  maxRank++;
+  addBenefFromMember(maxRank);
+}
+function updateBenefPerson(key, val) {
+  const item = tplItems.find(i=>i._key===key);
+  if (!item) return;
+  if (val==="__custom__") { item.personId=null; item.customName=""; }
+  else { item.personId=val; item.customName=null; }
+  renderTplBenefArea();
+}
+function updateBenefCustomName(key, val) { const i=tplItems.find(i=>i._key===key); if(i) i.customName=val; }
+function updateBenefRatio(key, val) { const i=tplItems.find(i=>i._key===key); if(i) i.ratio=parseInt(val)||null; renderTplBenefArea(); }
+function removeBenef(key) { tplItems=tplItems.filter(i=>i._key!==key); renderTplBenefArea(); }
+
+async function saveTpl() {
+  const name = document.getElementById("tpl-name-input").value.trim();
+  if (!name) { alert("請填寫模板名稱"); return; }
+  const items = tplItems.map(({_key,...rest})=>rest);
+  const person = personDataMap[currentPersonId];
+  if (!person.beneficiaryTemplates) person.beneficiaryTemplates=[];
+
+  if (editTplId) {
+    const idx = person.beneficiaryTemplates.findIndex(t=>t.id===editTplId);
+    if (idx>=0) person.beneficiaryTemplates[idx] = { id:editTplId, name, mode:tplMode, items };
+  } else {
+    person.beneficiaryTemplates.push({ id:"tpl_"+Date.now(), name, mode:tplMode, items });
+  }
+  await savePerson();
+  closeTplModal();
+  renderTplView();
+}
+
+async function deleteTpl() {
+  if (!confirm("確定刪除此模板？")) return;
+  const person = personDataMap[currentPersonId];
+  person.beneficiaryTemplates = (person.beneficiaryTemplates||[]).filter(t=>t.id!==editTplId);
+  await savePerson();
+  closeTplModal();
+  renderTplView();
+}
+
+// ── 保單受益人 Modal ──────────────────────────────────────
+function openPolicyModal(policyId) {
+  editPolicyId = policyId;
+  const person = personDataMap[currentPersonId];
+  const policy = person?.policies?.find(p=>p.id===policyId);
+  if (!policy) return;
+  const templates = person?.beneficiaryTemplates || [];
+  const rule = BENEF_RULES[policy.category] || { death:"可設定", live:"可設定" };
+
+  document.getElementById("policy-modal-title").textContent = policy.itemName||"設定受益人";
+
+  let html = `<div style="font-size:11px;color:#aaa;margin-bottom:14px">${policy.company} ${policy.policyNo} <span class="cat-badge cat-${policy.category||''}" style="margin-left:4px">${policy.category||''}</span></div>`;
+
+  // 身故受益人
+  if (policy.isRider) {
+    html += `<div style="margin-bottom:14px">
+      <div style="font-size:12px;font-weight:500;color:#666;margin-bottom:6px">身故受益人</div>
+      <div style="padding:10px 14px;background:#E6F1FB;border-radius:8px;font-size:13px;font-weight:500;color:#0C447C">📎 同主約（附約受益人自動跟隨主約）</div>
+    </div>`;
+  } else if (rule.death==="鎖定本人") {
+    html += `<div style="margin-bottom:14px">
+      <div style="font-size:12px;font-weight:500;color:#666;margin-bottom:6px">身故受益人</div>
+      <div style="padding:10px 14px;background:#EAF3DE;border-radius:8px;font-size:13px;font-weight:500;color:#27500A">🔒 依法令規定為被保險人本人</div>
+    </div>`;
+  } else if (rule.death==="年金險") {
+    html += `<div style="margin-bottom:14px">
+      <div style="font-size:12px;font-weight:500;color:#666;margin-bottom:6px">身故受益人</div>
+      <div style="padding:8px 12px;background:#EAF3DE;border-radius:8px;font-size:12px;color:#27500A;margin-bottom:6px">🔒 繳費期（累積期）：固定法定繼承人</div>
+      <div style="font-size:12px;color:#378ADD;font-weight:500;margin-bottom:6px">給付期（清償期）：可指定</div>
+      <div id="death-area">${renderBenefSetArea("death", policy, templates)}</div>
+    </div>`;
+  } else {
+    html += `<div style="margin-bottom:14px">
+      <div style="font-size:12px;font-weight:500;color:#666;margin-bottom:6px">身故受益人</div>
+      <div id="death-area">${renderBenefSetArea("death", policy, templates)}</div>
+    </div>`;
+  }
+
+  // 生存金受益人
+  if (rule.live==="鎖定本人") {
+    html += `<div>
+      <div style="font-size:12px;font-weight:500;color:#666;margin-bottom:6px">生存金受益人</div>
+      <div style="padding:10px 14px;background:#EAF3DE;border-radius:8px;font-size:13px;font-weight:500;color:#27500A">🔒 依法令規定為被保險人本人</div>
+    </div>`;
+  } else if (rule.live==="不適用") {
+    html += `<div>
+      <div style="font-size:12px;font-weight:500;color:#666;margin-bottom:6px">生存金受益人</div>
+      <div style="padding:8px 12px;background:#f0f0f0;border-radius:8px;font-size:12px;color:#888">此險種無生存金</div>
+    </div>`;
+  } else {
+    const liveLabel = rule.liveLabel || "生存金受益人";
+    html += `<div>
+      <div style="font-size:12px;font-weight:500;color:#666;margin-bottom:6px">${liveLabel}</div>
+      <div class="live-opts">
+        <button class="live-opt ${policy.beneficiaryLiveType==='self'||!policy.beneficiaryLiveType?'active':''}" onclick="setLiveType('self')">被保險人本人</button>
+        <button class="live-opt ${policy.beneficiaryLiveType==='owner'?'active':''}" onclick="setLiveType('owner')">要保人</button>
+        <button class="live-opt ${policy.beneficiaryLiveType==='other'?'active':''}" onclick="setLiveType('other')">其他（指定）</button>
+      </div>
+      <div id="live-other-input" style="display:${policy.beneficiaryLiveType==='other'?'block':'none'}">
+        <input type="text" id="live-other-text" value="${policy.beneficiaryLiveOther||''}" placeholder="請輸入受益人姓名"
+          style="width:100%;padding:8px 10px;font-size:14px;border:1px solid #e0e0e0;border-radius:7px;outline:none;font-family:inherit" />
+      </div>
+    </div>`;
+  }
+
+  document.getElementById("policy-modal-body").innerHTML = html;
+  document.getElementById("policy-modal").classList.add("active");
+}
+
+function renderBenefSetArea(type, policy, templates) {
+  const tplId  = type==="death" ? policy.beneficiaryDeathTplId : policy.beneficiaryLiveTplId;
+  const custom = type==="death" ? (policy.beneficiaryDeathCustom||[]) : (policy.beneficiaryLiveCustom||[]);
+  const mode   = tplId ? "template" : "custom";
+
+  const tplOptions = templates.map(t=>`<option value="${t.id}" ${tplId===t.id?'selected':''}>${t.name}</option>`).join('');
+  const customHtml = custom.map((i,idx)=>{
+    const name = i.customName || getMemberName(i.personId);
+    return `<span style="font-size:12px;padding:2px 8px;background:#E6F1FB;color:#0C447C;border-radius:99px;margin-right:4px">${name}</span>`;
+  }).join('');
+
+  return `
+    <div style="display:flex;gap:6px;margin-bottom:8px">
+      <button style="font-size:12px;padding:4px 12px;border-radius:99px;cursor:pointer;font-family:inherit;border:none;background:${mode==='template'?'#378ADD':'#f0f0f0'};color:${mode==='template'?'#fff':'#888'};font-weight:${mode==='template'?500:400}"
+        onclick="setDeathMode('${type}','template')">套用模板</button>
+      <button style="font-size:12px;padding:4px 12px;border-radius:99px;cursor:pointer;font-family:inherit;border:none;background:${mode==='custom'?'#378ADD':'#f0f0f0'};color:${mode==='custom'?'#fff':'#888'};font-weight:${mode==='custom'?500:400}"
+        onclick="setDeathMode('${type}','custom')">個別設定</button>
+    </div>
+    <div id="${type}-mode-content">
+      ${mode==="template"
+        ? `<select id="${type}-tpl-select" style="width:100%;padding:8px 10px;font-size:13px;border:1px solid #e0e0e0;border-radius:7px;outline:none;font-family:inherit;background:#fff">
+            <option value="">請選擇模板</option>${tplOptions}</select>`
+        : `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">${customHtml||'<span style="color:#ccc;font-size:12px">未設定</span>'}</div>
+           <div style="display:flex;gap:6px;flex-wrap:wrap">
+             ${familyData.members.map(m=>`<button onclick="addCustomBenef('${type}','${m.personId}')"
+               style="font-size:12px;padding:4px 10px;border:1px solid #ddd;border-radius:99px;background:#fff;cursor:pointer;font-family:inherit">${m.name}</button>`).join('')}
+             <button onclick="clearCustomBenef('${type}')"
+               style="font-size:12px;padding:4px 10px;border:1px solid #fcc;border-radius:99px;background:#fff;cursor:pointer;color:#e74c3c;font-family:inherit">清除</button>
+           </div>`
+      }
+    </div>`;
+}
+
+function setDeathMode(type, mode) {
+  const person = personDataMap[currentPersonId];
+  const policy = person?.policies?.find(p=>p.id===editPolicyId);
+  if (!policy) return;
+  const templates = person?.beneficiaryTemplates||[];
+  const area = document.getElementById(type+"-area");
+  if (area) area.innerHTML = renderBenefSetAreaWithMode(type, policy, templates, mode);
+}
+
+function renderBenefSetAreaWithMode(type, policy, templates, mode) {
+  const tplOptions = templates.map(t=>`<option value="${t.id}">${t.name}</option>`).join('');
+  return `
+    <div style="display:flex;gap:6px;margin-bottom:8px">
+      <button style="font-size:12px;padding:4px 12px;border-radius:99px;cursor:pointer;font-family:inherit;border:none;background:${mode==='template'?'#378ADD':'#f0f0f0'};color:${mode==='template'?'#fff':'#888'}"
+        onclick="setDeathMode('${type}','template')">套用模板</button>
+      <button style="font-size:12px;padding:4px 12px;border-radius:99px;cursor:pointer;font-family:inherit;border:none;background:${mode==='custom'?'#378ADD':'#f0f0f0'};color:${mode==='custom'?'#fff':'#888'}"
+        onclick="setDeathMode('${type}','custom')">個別設定</button>
+    </div>
+    <div id="${type}-mode-content">
+      ${mode==="template"
+        ? `<select id="${type}-tpl-select" style="width:100%;padding:8px 10px;font-size:13px;border:1px solid #e0e0e0;border-radius:7px;outline:none;font-family:inherit;background:#fff">
+            <option value="">請選擇模板</option>${tplOptions}</select>`
+        : `<div id="${type}-custom-tags" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px"></div>
+           <div style="display:flex;gap:6px;flex-wrap:wrap">
+             ${familyData.members.map(m=>`<button onclick="addCustomBenef('${type}','${m.personId}')"
+               style="font-size:12px;padding:4px 10px;border:1px solid #ddd;border-radius:99px;background:#fff;cursor:pointer;font-family:inherit">${m.name}</button>`).join('')}
+             <button onclick="clearCustomBenef('${type}')"
+               style="font-size:12px;padding:4px 10px;border:1px solid #fcc;border-radius:99px;background:#fff;cursor:pointer;color:#e74c3c;font-family:inherit">清除</button>
+           </div>`
+      }
+    </div>`;
+}
+
+let customBenefCache = { death:[], live:[] };
+function addCustomBenef(type, personId) {
+  if (!customBenefCache[type]) customBenefCache[type]=[];
+  if (!customBenefCache[type].find(i=>i.personId===personId)) {
+    customBenefCache[type].push({ personId, customName:null, ratio:null });
+  }
+  const tagsEl = document.getElementById(type+"-custom-tags");
+  if (tagsEl) tagsEl.innerHTML = customBenefCache[type].map(i=>
+    `<span style="font-size:12px;padding:2px 8px;background:#E6F1FB;color:#0C447C;border-radius:99px">${getMemberName(i.personId)}</span>`
+  ).join("");
+}
+function clearCustomBenef(type) {
+  customBenefCache[type]=[];
+  const tagsEl = document.getElementById(type+"-custom-tags");
+  if (tagsEl) tagsEl.innerHTML="";
+}
+
+function setLiveType(t) {
+  ["self","owner","other"].forEach(type=>{
+    document.querySelectorAll(".live-opt").forEach((el,i)=>{
+      if(i===["self","owner","other"].indexOf(type)) el.classList.toggle("active",type===t);
+    });
+  });
+  document.getElementById("live-other-input").style.display = t==="other"?"block":"none";
+}
+
+async function savePolicyBenef() {
+  const person = personDataMap[currentPersonId];
+  const policy = person?.policies?.find(p=>p.id===editPolicyId);
+  if (!policy) return;
+  const rule = BENEF_RULES[policy.category]||{ death:"可設定", live:"可設定" };
+
+  // 身故
+  if (!policy.isRider && rule.death!=="鎖定本人") {
+    const deathTplSel = document.getElementById("death-tpl-select");
+    if (deathTplSel) {
+      policy.beneficiaryDeathTplId = deathTplSel.value || null;
+      policy.beneficiaryDeathCustom = [];
+    } else if (customBenefCache.death?.length) {
+      policy.beneficiaryDeathTplId = null;
+      policy.beneficiaryDeathCustom = customBenefCache.death;
+    }
+  }
+
+  // 生存金
+  if (rule.live!=="鎖定本人" && rule.live!=="不適用") {
+    const activeLiveOpt = document.querySelector(".live-opt.active");
+    const liveTypes = ["self","owner","other"];
+    const liveOptTexts = ["被保險人本人","要保人","其他（指定）"];
+    const idx = activeLiveOpt ? liveOptTexts.indexOf(activeLiveOpt.textContent.trim()) : 0;
+    policy.beneficiaryLiveType  = liveTypes[idx>=0?idx:0];
+    policy.beneficiaryLiveOther = policy.beneficiaryLiveType==="other"
+      ? (document.getElementById("live-other-text")?.value||"") : "";
+  }
+
+  await savePerson();
+  customBenefCache = { death:[], live:[] };
+  closePolicyModal();
+  renderPolicyView();
+}
+
+function closePolicyModal() { document.getElementById("policy-modal").classList.remove("active"); }
+function handlePolicyOverlay(e) { if(e.target===document.getElementById("policy-modal")) closePolicyModal(); }
+
+// ── 共用儲存 ─────────────────────────────────────────────
+async function savePerson() {
+  const person = personDataMap[currentPersonId];
+  person.updatedAt = new Date().toISOString();
+  const member = familyData.members.find(m=>m.personId===currentPersonId);
+  await callGAS("saveFile",{email:currentUser.email,fileType:"person",fileId:currentPersonId,fileName:member.name+"_"+currentPersonId+".json",content:person});
+  const hint = document.getElementById("saved-hint");
+  hint.style.display="block";
+  setTimeout(()=>hint.style.display="none",2000);
+}
+
+// ── 工具函式 ──────────────────────────────────────────────
+function getMemberName(personId) {
+  if (!personId) return "—";
+  return familyData.members.find(m=>m.personId===personId)?.name || personId;
+}
+function goBack() { window.location.href="family.html"; }
+function callGAS(action,params) {
+  const url=new URL(GAS_URL);
+  url.searchParams.set("action",action);
+  Object.entries(params||{}).forEach(([k,v])=>{
+    if(typeof v==="object") url.searchParams.set(k,encodeURIComponent(JSON.stringify(v)));
+    else if(v!==null&&v!==undefined) url.searchParams.set(k,v);
+  });
+  return fetch(url.toString()).then(r=>r.json());
+}
+</script>
+</body>
+</html>
