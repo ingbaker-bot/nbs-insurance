@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NBS 雲端保單體檢 - 家庭詳細</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f3;
+      min-height: 100vh;
+      color: #1a1a1a;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: #fff;
+      border-bottom: 1px solid #eee;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .back-btn {
+      background: none;
+      border: none;
+      font-size: 20px;
+      color: #999;
+      cursor: pointer;
+      padding: 0;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+
+    .header-title { font-size: 15px; font-weight: 500; flex: 1; }
+
+    .header-date { font-size: 11px; color: #bbb; }
+
+    /* ── 主內容 ── */
+    .main { padding: 16px; max-width: 520px; margin: 0 auto; }
+
+    /* ── 區塊標題 ── */
+    .section-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: #999;
+      letter-spacing: 0.06em;
+      margin-bottom: 8px;
+      margin-top: 16px;
+    }
+
+    /* ── 成員切換列 ── */
+    .members-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 4px;
+    }
+
+    .member-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 10px 12px;
+      border: 1px solid #e8e8e8;
+      border-radius: 10px;
+      cursor: pointer;
+      background: #fff;
+      min-width: 74px;
+      transition: all 0.12s;
+    }
+
+    .member-card.active {
+      border: 1.5px solid #378ADD;
+      background: #E6F1FB;
+    }
+
+    .member-card:hover:not(.active) { background: #fafafa; }
+
+    .member-avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: #f0f0f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      font-weight: 500;
+      color: #666;
+    }
+
+    .member-card.active .member-avatar {
+      background: #378ADD;
+      color: #fff;
+    }
+
+    .member-name { font-size: 13px; font-weight: 500; }
+    .member-age  { font-size: 10px; color: #999; }
+
+    .role-badge {
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 99px;
+    }
+
+    .role-primary   { background: #E6F1FB; color: #0C447C; }
+    .role-secondary { background: #E1F5EE; color: #085041; }
+    .role-benef     { background: #FAEEDA; color: #633806; }
+
+    /* 新增成員按鈕 */
+    .add-member-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 10px 12px;
+      border: 1px dashed #ddd;
+      border-radius: 10px;
+      cursor: pointer;
+      min-width: 74px;
+      color: #bbb;
+      background: transparent;
+      font-family: inherit;
+    }
+
+    .add-member-btn:hover { background: #fafafa; }
+
+    /* 受益人名單 */
+    .benef-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 12px;
+      background: #fafafa;
+      border-radius: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .benef-tag {
+      font-size: 12px;
+      padding: 2px 8px;
+      background: #FAEEDA;
+      color: #633806;
+      border-radius: 99px;
+    }
+
+    /* ── 選中成員資料卡 ── */
+    .person-card {
+      background: #fff;
+      border: 1px solid #e8e8e8;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+
+    .person-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: #f7f7f5;
+      border-bottom: 1px solid #e8e8e8;
+    }
+
+    .person-card-header .left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .ins-age-badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      background: #E6F1FB;
+      color: #0C447C;
+      border-radius: 99px;
+    }
+
+    .edit-btn {
+      font-size: 12px;
+      padding: 3px 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      background: transparent;
+      cursor: pointer;
+      font-family: inherit;
+      color: #666;
+    }
+
+    .edit-btn:hover { background: #f0f0f0; }
+
+    .person-card-body {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .info-cell {
+      padding: 10px 14px;
+      border-right: 1px solid #f0f0f0;
+    }
+
+    .info-cell:last-child { border-right: none; }
+    .info-label { font-size: 11px; color: #aaa; margin-bottom: 2px; }
+    .info-value { font-size: 13px; font-weight: 500; }
+
+    /* ── 功能模組 ── */
+    .modules-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .module-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      padding: 14px 8px;
+      background: #fff;
+      border: 1px solid #e8e8e8;
+      border-radius: 10px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.12s;
+    }
+
+    .module-btn:hover { background: #fafafa; }
+
+    .module-icon { font-size: 22px; }
+    .module-label { font-size: 12px; color: #555; }
+
+    /* ── 新增成員 Modal ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 200;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    .modal-overlay.active { display: flex; }
+
+    .modal {
+      background: #fff;
+      border-radius: 16px 16px 0 0;
+      padding: 20px;
+      width: 100%;
+      max-width: 520px;
+      max-height: 85vh;
+      overflow-y: auto;
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 22px;
+      color: #999;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .field { margin-bottom: 14px; }
+
+    .field label {
+      display: block;
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 4px;
+    }
+
+    .field input, .field select {
+      width: 100%;
+      padding: 9px 12px;
+      font-size: 14px;
+      border: 1px solid #e0e0e0;
+      border-radius: 7px;
+      outline: none;
+      font-family: inherit;
+      background: #fff;
+    }
+
+    .field input:focus, .field select:focus { border-color: #378ADD; }
+    .field .hint { font-size: 11px; color: #0C447C; margin-top: 3px; }
+
+    .btn-row { display: flex; gap: 8px; margin-top: 20px; }
+
+    .btn-primary {
+      flex: 2;
+      padding: 10px;
+      background: #378ADD;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .btn-primary:disabled { background: #ccc; cursor: default; }
+
+    .btn-secondary {
+      flex: 1;
+      padding: 10px;
+      background: transparent;
+      color: #666;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    /* ── 儲存狀態 ── */
+    .save-hint {
+      font-size: 11px;
+      color: #ccc;
+      text-align: center;
+      padding: 8px 0 4px;
+    }
+
+    /* ── 載入 ── */
+    .spinner {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      border: 2px solid #e0e0e0;
+      border-top-color: #378ADD;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <button class="back-btn" onclick="goBack()">‹</button>
+    <div class="header-title" id="family-title">載入中…</div>
+    <div class="header-date" id="header-date"></div>
+  </div>
+
+  <!-- 主內容 -->
+  <div class="main" id="main-content" style="display:none">
+
+    <!-- 家庭成員切換列 -->
+    <div class="section-label">家庭成員</div>
+    <div class="members-row" id="members-row"></div>
+
+    <!-- 僅受益人名單 -->
+    <div id="benef-row" style="display:none" class="benef-row"></div>
+
+    <!-- 選中成員資料卡 -->
+    <div class="person-card" id="person-card">
+      <div class="person-card-header">
+        <div class="left">
+          <span id="card-name" style="font-weight:500;">—</span>
+          <span id="card-age-badge" class="ins-age-badge" style="display:none"></span>
+        </div>
+        <button class="edit-btn" onclick="openEditPerson()">編輯</button>
+      </div>
+      <div class="person-card-body">
+        <div class="info-cell">
+          <div class="info-label">出生日期</div>
+          <div class="info-value" id="card-birth">—</div>
+        </div>
+        <div class="info-cell">
+          <div class="info-label">分析日</div>
+          <div class="info-value" id="card-analysis">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 功能模組 -->
+    <div class="section-label">
+      功能模組　<span id="module-hint" style="font-weight:400; color:#bbb;"></span>
+    </div>
+    <div class="modules-grid">
+      <button class="module-btn" onclick="goModule('policy')">
+        <span class="module-icon">📋</span>
+        <span class="module-label">保險繳費</span>
+      </button>
+      <button class="module-btn" onclick="goModule('coverage')">
+        <span class="module-icon">🛡️</span>
+        <span class="module-label">保障清單</span>
+      </button>
+      <button class="module-btn" onclick="goModule('savings')">
+        <span class="module-icon">🐷</span>
+        <span class="module-label">儲蓄險</span>
+      </button>
+      <button class="module-btn" onclick="goModule('summary')">
+        <span class="module-icon">📊</span>
+        <span class="module-label">保單彙總</span>
+      </button>
+      <button class="module-btn" onclick="goModule('beneficiary')">
+        <span class="module-icon">👥</span>
+        <span class="module-label">受益人</span>
+      </button>
+      <button class="module-btn" onclick="goModule('export')">
+        <span class="module-icon">🖼️</span>
+        <span class="module-label">匯出圖片</span>
+      </button>
+    </div>
+
+    <div class="save-hint">☁️ 資料自動儲存至 Google Drive</div>
+
+  </div>
+
+  <!-- 載入中 -->
+  <div id="loading-view" style="text-align:center; padding:60px 20px; color:#bbb; font-size:13px;">
+    <span class="spinner"></span> 載入中…
+  </div>
+
+  <!-- 新增成員 Modal -->
+  <div class="modal-overlay" id="add-member-modal" onclick="handleOverlayClick(event)">
+    <div class="modal">
+      <div class="modal-title">
+        新增家庭成員
+        <button class="modal-close" onclick="closeAddMember()">×</button>
+      </div>
+
+      <div class="field">
+        <label>姓名 <span style="color:#e74c3c">*</span></label>
+        <input type="text" id="new-name" placeholder="請輸入姓名" oninput="updateAddBtn()" />
+      </div>
+
+      <div class="field">
+        <label>與主要成員的關係</label>
+        <select id="new-relation">
+          <option>配偶</option>
+          <option>子女</option>
+          <option>父母</option>
+          <option>祖父母</option>
+          <option>兄弟姊妹</option>
+          <option>其他</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>出生日期</label>
+        <input type="date" id="new-birth" oninput="updateNewAge()" />
+        <div class="hint" id="new-age-hint"></div>
+      </div>
+
+      <div class="field">
+        <label>角色</label>
+        <select id="new-role">
+          <option value="secondary">次要成員（有自己的保單）</option>
+          <option value="beneficiary_only">僅受益人（不列入保單彙總）</option>
+        </select>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-secondary" onclick="closeAddMember()">取消</button>
+        <button class="btn-primary" id="add-member-btn" onclick="addMember()" disabled>新增成員</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 編輯成員 Modal -->
+  <div class="modal-overlay" id="edit-person-modal" onclick="handleEditOverlayClick(event)">
+    <div class="modal">
+      <div class="modal-title">
+        編輯個人資料
+        <button class="modal-close" onclick="closeEditPerson()">×</button>
+      </div>
+
+      <div class="field">
+        <label>姓名</label>
+        <input type="text" id="edit-name" placeholder="姓名" />
+      </div>
+
+      <div class="field">
+        <label>出生日期</label>
+        <input type="date" id="edit-birth" oninput="updateEditAge()" />
+        <div class="hint" id="edit-age-hint"></div>
+      </div>
+
+      <div class="field">
+        <label>分析日</label>
+        <input type="date" id="edit-analysis" oninput="updateEditAnalysis()" />
+        <div class="hint" id="edit-analysis-hint"></div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-secondary" onclick="closeEditPerson()">取消</button>
+        <button class="btn-primary" onclick="saveEditPerson()">儲存</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── 設定 ─────────────────────────────────────────────────
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec";
+
+    let currentUser   = null;
+    let familyData    = null;
+    let familyFileName = null;
+    let personDataMap = {};      // personId → personData
+    let selectedPersonId = null;
+
+    // ── 初始化 ────────────────────────────────────────────────
+    window.onload = async function() {
+      // 驗證登入
+      const saved = localStorage.getItem("nbs_user");
+      if (!saved) { window.location.href = "index.html"; return; }
+      currentUser = JSON.parse(saved);
+
+      // 取得家庭檔名
+      familyFileName = localStorage.getItem("nbs_current_family");
+      if (!familyFileName) { window.location.href = "main.html"; return; }
+
+      // 載入家庭資料
+      try {
+        const result = await callGAS("readFile", {
+          email: currentUser.email,
+          fileType: "family",
+          fileName: familyFileName,
+        });
+
+        if (result.status !== "ok") throw new Error(result.message);
+        familyData = result.content;
+
+        // 載入所有成員資料
+        const activeMembers = familyData.members.filter(m => m.role !== "beneficiary_only");
+        for (const m of activeMembers) {
+          try {
+            const pr = await callGAS("readFile", {
+              email: currentUser.email,
+              fileType: "person",
+              fileName: m.name + "_" + m.personId + ".json",
+            });
+            if (pr.status === "ok") personDataMap[m.personId] = pr.content;
+          } catch(e) {}
+        }
+
+        renderPage();
+      } catch(e) {
+        document.getElementById("loading-view").innerHTML =
+          '<div style="color:#e74c3c">載入失敗：' + e.message + '</div>';
+      }
+    };
+
+    // ── 渲染頁面 ──────────────────────────────────────────────
+    function renderPage() {
+      document.getElementById("loading-view").style.display = "none";
+      document.getElementById("main-content").style.display = "block";
+
+      // Header
+      document.getElementById("family-title").textContent = familyData.familyName;
+      document.getElementById("header-date").textContent =
+        "分析日 " + toRoc(familyData.analysisDate);
+
+      // 成員列
+      renderMembers();
+
+      // 預設選主要成員
+      const primary = familyData.members.find(m => m.role === "primary");
+      if (primary) selectMember(primary.personId);
+    }
+
+    // ── 渲染成員列 ────────────────────────────────────────────
+    function renderMembers() {
+      const row = document.getElementById("members-row");
+      const activeMembers = familyData.members.filter(m => m.role !== "beneficiary_only");
+      const benefMembers  = familyData.members.filter(m => m.role === "beneficiary_only");
+
+      row.innerHTML = activeMembers.map(m => {
+        const person = personDataMap[m.personId];
+        const age = person ? calcInsAge(person.profile.birthDate, person.profile.analysisDate) : null;
+        const rc = m.role === "primary" ? "role-primary" : "role-secondary";
+        const rl = m.role === "primary" ? "主要" : "次要";
+        return `
+          <div class="member-card ${selectedPersonId === m.personId ? 'active' : ''}"
+               onclick="selectMember('${m.personId}')">
+            <div class="member-avatar">${m.name[0]}</div>
+            <div class="member-name">${m.name}</div>
+            <div class="member-age">${age !== null ? age + '歲' : '—'}</div>
+            <span class="role-badge ${rc}">${rl}</span>
+          </div>`;
+      }).join("") + `
+        <button class="add-member-btn" onclick="openAddMember()">
+          <span style="font-size:22px">＋</span>
+          <span style="font-size:12px">新增</span>
+        </button>`;
+
+      // 受益人名單
+      const benefRow = document.getElementById("benef-row");
+      if (benefMembers.length > 0) {
+        benefRow.style.display = "flex";
+        benefRow.innerHTML = `<span style="font-size:11px;color:#aaa;">受益人名單：</span>` +
+          benefMembers.map(m => `<span class="benef-tag">${m.name}</span>`).join("");
+      } else {
+        benefRow.style.display = "none";
+      }
+    }
+
+    // ── 選擇成員 ──────────────────────────────────────────────
+    function selectMember(personId) {
+      selectedPersonId = personId;
+      const member = familyData.members.find(m => m.personId === personId);
+      const person = personDataMap[personId];
+
+      // 更新成員卡片樣式
+      document.querySelectorAll(".member-card").forEach(c => c.classList.remove("active"));
+      const cards = document.querySelectorAll(".member-card");
+      const activeMembers = familyData.members.filter(m => m.role !== "beneficiary_only");
+      const idx = activeMembers.findIndex(m => m.personId === personId);
+      if (cards[idx]) cards[idx].classList.add("active");
+
+      // 更新資料卡
+      document.getElementById("card-name").textContent = member ? member.name : "—";
+
+      if (person) {
+        const age = calcInsAge(person.profile.birthDate, person.profile.analysisDate);
+        const ageBadge = document.getElementById("card-age-badge");
+        if (age !== null) {
+          ageBadge.textContent = "保險年齡 " + age + " 歲";
+          ageBadge.style.display = "inline";
+        } else {
+          ageBadge.style.display = "none";
+        }
+        document.getElementById("card-birth").textContent = toRoc(person.profile.birthDate) || "—";
+        document.getElementById("card-analysis").textContent = toRoc(person.profile.analysisDate) || "—";
+      } else {
+        document.getElementById("card-age-badge").style.display = "none";
+        document.getElementById("card-birth").textContent = "—";
+        document.getElementById("card-analysis").textContent = "—";
+      }
+
+      // 模組提示
+      document.getElementById("module-hint").textContent =
+        "目前：" + (member ? member.name : "");
+    }
+
+    // ── 新增成員 ──────────────────────────────────────────────
+    function openAddMember() {
+      document.getElementById("add-member-modal").classList.add("active");
+      document.getElementById("new-name").value = "";
+      document.getElementById("new-birth").value = "";
+      document.getElementById("new-age-hint").textContent = "";
+      document.getElementById("add-member-btn").disabled = true;
+    }
+
+    function closeAddMember() {
+      document.getElementById("add-member-modal").classList.remove("active");
+    }
+
+    function updateAddBtn() {
+      const name = document.getElementById("new-name").value.trim();
+      document.getElementById("add-member-btn").disabled = !name;
+    }
+
+    function updateNewAge() {
+      const birth = document.getElementById("new-birth").value;
+      const hint = document.getElementById("new-age-hint");
+      if (!birth) { hint.textContent = ""; return; }
+      hint.textContent = "保險年齡：" + calcInsAge(birth, familyData.analysisDate) + " 歲";
+    }
+
+    async function addMember() {
+      const name     = document.getElementById("new-name").value.trim();
+      const relation = document.getElementById("new-relation").value;
+      const birth    = document.getElementById("new-birth").value;
+      const role     = document.getElementById("new-role").value;
+      if (!name) return;
+
+      const btn = document.getElementById("add-member-btn");
+      btn.disabled = true;
+      btn.textContent = "新增中…";
+
+      const personId = "p_" + Date.now();
+
+      // 建立個人 JSON
+      const personData = {
+        version: "3.0.0",
+        personId,
+        agentId: currentUser.email,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        profile: {
+          name,
+          birthDate: birth || null,
+          analysisDate: familyData.analysisDate,
+          note: "",
+        },
+        policies: [],
+        coverage: {},
+        savings: [],
+        beneficiaryTemplates: [],
+        medicalSummary: {},
+        settings: { savingsDisplayYears: 20, notes: "" },
+      };
+
+      try {
+        // 儲存個人 JSON（僅非受益人才建立）
+        if (role !== "beneficiary_only") {
+          await callGAS("saveFile", {
+            email: currentUser.email,
+            fileType: "person",
+            fileId: personId,
+            fileName: name + "_" + personId + ".json",
+            content: personData,
+          });
+          personDataMap[personId] = personData;
+        }
+
+        // 更新家庭 JSON
+        familyData.members.push({ personId, name, role, relation });
+        familyData.updatedAt = new Date().toISOString();
+
+        await callGAS("saveFile", {
+          email: currentUser.email,
+          fileType: "family",
+          fileId: familyData.familyId,
+          fileName: familyFileName,
+          content: familyData,
+        });
+
+        closeAddMember();
+        renderMembers();
+
+      } catch(e) {
+        alert("新增失敗：" + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "新增成員";
+      }
+    }
+
+    // ── 編輯個人資料 ──────────────────────────────────────────
+    function openEditPerson() {
+      const person = personDataMap[selectedPersonId];
+      if (!person) return;
+      document.getElementById("edit-name").value = person.profile.name || "";
+      document.getElementById("edit-birth").value = person.profile.birthDate || "";
+      document.getElementById("edit-analysis").value = person.profile.analysisDate || "";
+      updateEditAge();
+      updateEditAnalysis();
+      document.getElementById("edit-person-modal").classList.add("active");
+    }
+
+    function closeEditPerson() {
+      document.getElementById("edit-person-modal").classList.remove("active");
+    }
+
+    function updateEditAge() {
+      const birth = document.getElementById("edit-birth").value;
+      const analysis = document.getElementById("edit-analysis").value;
+      const hint = document.getElementById("edit-age-hint");
+      if (!birth) { hint.textContent = ""; return; }
+      hint.textContent = "保險年齡：" + calcInsAge(birth, analysis || new Date().toISOString().slice(0,10)) + " 歲";
+    }
+
+    function updateEditAnalysis() {
+      const val = document.getElementById("edit-analysis").value;
+      const hint = document.getElementById("edit-analysis-hint");
+      if (!val) { hint.textContent = ""; return; }
+      const d = new Date(val);
+      hint.textContent = "民國 " + (d.getFullYear()-1911) + " 年 " + (d.getMonth()+1) + " 月 " + d.getDate() + " 日";
+    }
+
+    async function saveEditPerson() {
+      const person = personDataMap[selectedPersonId];
+      if (!person) return;
+
+      const newName     = document.getElementById("edit-name").value.trim();
+      const newBirth    = document.getElementById("edit-birth").value;
+      const newAnalysis = document.getElementById("edit-analysis").value;
+
+      person.profile.name        = newName || person.profile.name;
+      person.profile.birthDate   = newBirth || null;
+      person.profile.analysisDate = newAnalysis;
+      person.updatedAt = new Date().toISOString();
+
+      try {
+        await callGAS("saveFile", {
+          email: currentUser.email,
+          fileType: "person",
+          fileId: selectedPersonId,
+          fileName: person.profile.name + "_" + selectedPersonId + ".json",
+          content: person,
+        });
+
+        // 同步更新家庭成員名稱
+        const member = familyData.members.find(m => m.personId === selectedPersonId);
+        if (member && newName) {
+          member.name = newName;
+          familyData.updatedAt = new Date().toISOString();
+          await callGAS("saveFile", {
+            email: currentUser.email,
+            fileType: "family",
+            fileId: familyData.familyId,
+            fileName: familyFileName,
+            content: familyData,
+          });
+        }
+
+        closeEditPerson();
+        renderMembers();
+        selectMember(selectedPersonId);
+
+      } catch(e) {
+        alert("儲存失敗：" + e.message);
+      }
+    }
+
+    // ── 功能模組跳轉 ──────────────────────────────────────────
+    function goModule(module) {
+      localStorage.setItem("nbs_current_person", selectedPersonId);
+      const pages = {
+        policy:      "policy.html",
+        coverage:    "coverage.html",
+        savings:     "savings.html",
+        summary:     "summary.html",
+        beneficiary: "beneficiary.html",
+        export:      "export.html",
+      };
+      if (pages[module]) {
+        window.location.href = pages[module];
+      } else {
+        alert("模組「" + module + "」建置中…");
+      }
+    }
+
+    // ── 返回 ──────────────────────────────────────────────────
+    function goBack() {
+      window.location.href = "main.html";
+    }
+
+    // ── Modal overlay click ───────────────────────────────────
+    function handleOverlayClick(e) {
+      if (e.target === document.getElementById("add-member-modal")) closeAddMember();
+    }
+    function handleEditOverlayClick(e) {
+      if (e.target === document.getElementById("edit-person-modal")) closeEditPerson();
+    }
+
+    // ── 工具函式 ──────────────────────────────────────────────
+    function toRoc(dateStr) {
+      if (!dateStr) return "—";
+      const d = new Date(dateStr);
+      if (isNaN(d)) return "—";
+      return (d.getFullYear()-1911) + "年" + (d.getMonth()+1) + "月" + d.getDate() + "日";
+    }
+
+    function calcInsAge(birthDate, analysisDate) {
+      if (!birthDate) return null;
+      const b = new Date(birthDate);
+      const a = new Date(analysisDate || new Date());
+      let years = a.getFullYear() - b.getFullYear();
+      const months = (a - new Date(b.getFullYear()+years, b.getMonth(), b.getDate())) / (1000*60*60*24*30.4375);
+      if (months >= 6) years++;
+      return years;
+    }
+
+    function callGAS(action, params) {
+      return fetch(GAS_URL, {
+        method: "POST",
+        body: JSON.stringify({ action, ...params }),
+      }).then(res => res.json());
+    }
+  </script>
+</body>
+</html>
