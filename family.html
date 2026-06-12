@@ -833,9 +833,19 @@
     // ── 功能模組跳轉 ──────────────────────────────────────────
     function goModule(module) {
       localStorage.setItem("nbs_current_person", selectedPersonId);
-      // 各模組頁面建置中
-      alert("模組「" + module + "」建置中…\n\n被保人：" +
-        (familyData.members.find(m => m.personId === selectedPersonId)?.name || "—"));
+      const pages = {
+        policy:      "policy.html",
+        coverage:    "coverage.html",
+        savings:     "savings.html",
+        summary:     "summary.html",
+        beneficiary: "beneficiary.html",
+        export:      "export.html",
+      };
+      if (pages[module]) {
+        window.location.href = pages[module];
+      } else {
+        alert("模組「" + module + "」建置中…");
+      }
     }
 
     // ── 返回 ──────────────────────────────────────────────────
