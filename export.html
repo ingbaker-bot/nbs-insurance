@@ -4,25 +4,18 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>NBS - 匯出圖片</title>
-  <!-- html2canvas + jsPDF -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     * { box-sizing:border-box; margin:0; padding:0; }
     body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:#f5f5f3; min-height:100vh; color:#1a1a1a; }
-
     .header { background:#fff; border-bottom:1px solid #eee; padding:12px 16px; display:flex; align-items:center; gap:10px; position:sticky; top:0; z-index:100; }
     .back-btn { background:none; border:none; font-size:22px; color:#999; cursor:pointer; padding:0; }
     .header-title { font-size:15px; font-weight:500; flex:1; }
     .header-sub { font-size:11px; color:#bbb; }
-
     .main { padding:16px; max-width:560px; margin:0 auto; }
-
     .section-label { font-size:11px; font-weight:500; color:#999; margin-bottom:8px; letter-spacing:0.05em; display:flex; align-items:center; justify-content:space-between; }
-
-    /* 區塊選擇 */
-    .block-list { display:flex; flex-direction:column; gap:8px; margin-bottom:20px; }
-    .block-item { display:flex; align-items:center; gap:12px; padding:12px 14px; border:1px solid #e8e8e8; border-radius:10px; cursor:pointer; background:#fff; transition:all 0.12s; }
+    .block-item { display:flex; align-items:center; gap:12px; padding:12px 14px; border:1px solid #e8e8e8; border-radius:10px; cursor:pointer; background:#fff; margin-bottom:8px; -webkit-tap-highlight-color:transparent; }
     .block-item.selected { border:1.5px solid #378ADD; background:#F0F7FF; }
     .block-check { width:20px; height:20px; border-radius:5px; border:1.5px solid #ddd; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:13px; color:#fff; }
     .block-item.selected .block-check { background:#378ADD; border:none; }
@@ -30,52 +23,30 @@
     .block-label { font-size:13px; font-weight:500; color:#333; }
     .block-item.selected .block-label { color:#0C447C; }
     .block-desc { font-size:11px; color:#aaa; margin-top:1px; }
-
-    /* 格式選擇 */
-    .format-group-label { font-size:12px; font-weight:500; color:#555; margin-bottom:6px; display:flex; align-items:center; gap:6px; }
-    .format-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; }
-    .format-item { padding:10px 12px; border:1px solid #e8e8e8; border-radius:10px; cursor:pointer; background:#fff; }
-    .format-item.selected-png { border:1.5px solid #378ADD; background:#F0F7FF; }
-    .format-item.selected-pdf { border:1.5px solid #E74C3C; background:#FEF5F8; }
+    .format-group-label { font-size:12px; font-weight:500; color:#555; margin-bottom:6px; margin-top:12px; }
+    .format-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .format-item { padding:10px 12px; border:1px solid #e8e8e8; border-radius:10px; cursor:pointer; background:#fff; -webkit-tap-highlight-color:transparent; }
+    .format-item.sel-png { border:1.5px solid #378ADD; background:#F0F7FF; }
+    .format-item.sel-pdf { border:1.5px solid #E74C3C; background:#FEF5F8; }
     .format-title { font-size:13px; font-weight:500; color:#333; margin-bottom:2px; }
-    .format-item.selected-png .format-title { color:#0C447C; }
-    .format-item.selected-pdf .format-title { color:#791F1F; }
+    .format-item.sel-png .format-title { color:#0C447C; }
+    .format-item.sel-pdf .format-title { color:#791F1F; }
     .format-desc { font-size:11px; color:#aaa; line-height:1.5; }
-
-    /* 按鈕 */
-    .primary-btn { width:100%; padding:12px; color:#fff; border:none; border-radius:8px; font-size:14px; font-weight:500; cursor:pointer; font-family:inherit; }
-    .primary-btn.blue { background:#378ADD; }
-    .primary-btn.red  { background:#E74C3C; }
-    .primary-btn:disabled { background:#ccc; cursor:default; }
-    .secondary-btn { flex:1; padding:10px; background:transparent; color:#666; border:1px solid #ddd; border-radius:8px; font-size:13px; cursor:pointer; font-family:inherit; }
-    .btn-row { display:flex; gap:8px; }
-
-    /* 預覽 */
+    .primary-btn { width:100%; padding:12px; color:#fff; border:none; border-radius:8px; font-size:14px; font-weight:500; cursor:pointer; font-family:inherit; margin-top:16px; display:block; text-align:center; -webkit-tap-highlight-color:transparent; }
+    .btn-blue { background:#378ADD; }
+    .btn-red  { background:#E74C3C; }
+    .btn-gray { background:#ccc; }
+    .btn-row { display:flex; gap:8px; margin-top:16px; }
+    .sec-btn { flex:1; padding:10px; background:#fff; color:#666; border:1px solid #ddd; border-radius:8px; font-size:13px; cursor:pointer; font-family:inherit; -webkit-tap-highlight-color:transparent; }
+    .page { display:none; }
+    .page.active { display:block; }
     .preview-notice { padding:10px 12px; background:#E6F1FB; border-radius:8px; margin-bottom:12px; font-size:11px; color:#0C447C; line-height:1.7; }
     .preview-block { border:1px solid #e8e8e8; border-radius:8px; overflow:hidden; margin-bottom:8px; }
-    .preview-block-header { padding:6px 12px; background:#f7f7f5; border-bottom:1px solid #f0f0f0; font-size:11px; font-weight:500; color:#666; }
-    .preview-block-body { padding:0; }
-
-    /* 長圖預覽 */
-    .long-preview { border:2px solid #e8e8e8; border-radius:10px; overflow:hidden; }
-    .long-preview .preview-block { border:none; border-radius:0; border-bottom:1px solid #f0f0f0; margin-bottom:0; }
-    .long-preview .preview-block:last-child { border-bottom:none; }
-
-    /* 進度 */
-    .progress-wrap { background:#f0f0f0; border-radius:99px; height:8px; overflow:hidden; margin-bottom:8px; max-width:280px; margin-left:auto; margin-right:auto; }
-    .progress-bar { height:100%; background:#378ADD; border-radius:99px; transition:width 0.2s; }
-    .progress-bar.red { background:#E74C3C; }
-
-    /* 完成頁 */
-    .file-list { padding:12px 14px; background:#f7f7f5; border-radius:8px; margin-bottom:20px; text-align:left; }
+    .preview-block-hdr { padding:6px 12px; background:#f7f7f5; border-bottom:1px solid #f0f0f0; font-size:11px; font-weight:500; color:#666; }
+    .progress-wrap { background:#f0f0f0; border-radius:99px; height:8px; overflow:hidden; max-width:280px; margin:0 auto 8px; }
+    .progress-bar { height:100%; border-radius:99px; transition:width 0.2s; }
+    .file-list { padding:12px 14px; background:#f7f7f5; border-radius:8px; margin-bottom:20px; }
     .file-item { font-size:12px; color:#333; display:flex; align-items:center; gap:6px; margin-bottom:4px; }
-
-    /* 圓餅圖（預覽用） */
-    .pie-preview { display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:10px 12px; }
-    .pie-legend-item { display:flex; align-items:center; gap:5px; font-size:11px; }
-    .pie-dot { width:10px; height:10px; border-radius:2px; flex-shrink:0; }
-
-    .loading { text-align:center; padding:40px; color:#bbb; font-size:13px; }
     .spinner { display:inline-block; width:16px; height:16px; border:2px solid #e0e0e0; border-top-color:#378ADD; border-radius:50%; animation:spin 0.7s linear infinite; vertical-align:middle; }
     @keyframes spin { to { transform:rotate(360deg); } }
   </style>
@@ -83,13 +54,69 @@
 <body>
 
 <div class="header">
-  <button class="back-btn" id="back-btn" onclick="handleBack()">‹</button>
-  <div class="header-title" id="header-title">匯出圖片</div>
-  <div class="header-sub" id="header-sub"></div>
+  <button class="back-btn" id="btn-back">‹</button>
+  <div class="header-title" id="hdr-title">匯出圖片</div>
+  <div class="header-sub" id="hdr-sub"></div>
 </div>
 
-<div class="main" id="main-content">
-  <div id="loading" class="loading"><span class="spinner"></span> 載入中…</div>
+<!-- 頁面1：選擇區塊 -->
+<div class="page active" id="page-select">
+  <div class="main">
+    <div class="section-label">
+      選擇匯出區塊
+      <button id="btn-toggle-all" style="font-size:11px;padding:3px 12px;border:1px solid #ddd;border-radius:99px;background:#fff;color:#666;cursor:pointer;font-family:inherit">全部勾選</button>
+    </div>
+    <div id="block-list"></div>
+
+    <div class="format-group-label">🖼️ 圖檔（PNG）</div>
+    <div class="format-grid" id="fmt-png"></div>
+    <div class="format-group-label">📄 文件（PDF）</div>
+    <div class="format-grid" id="fmt-pdf"></div>
+
+    <button class="primary-btn btn-blue" id="btn-preview" style="margin-top:20px">預覽區塊</button>
+  </div>
+</div>
+
+<!-- 頁面2：預覽 -->
+<div class="page" id="page-preview">
+  <div class="main">
+    <div class="preview-notice" id="preview-notice"></div>
+    <div id="preview-blocks"></div>
+    <div style="padding:8px 12px;background:#f7f7f5;border-radius:8px;font-size:11px;color:#aaa;margin-bottom:14px;display:flex;gap:6px">
+      <span>💡</span><span id="watermark-hint"></span>
+    </div>
+    <div class="btn-row">
+      <button class="sec-btn" id="btn-back-to-select">返回修改</button>
+      <button class="primary-btn btn-blue" id="btn-start-export" style="flex:2;margin-top:0">下載圖片</button>
+    </div>
+  </div>
+</div>
+
+<!-- 頁面3：進行中 -->
+<div class="page" id="page-exporting">
+  <div class="main" style="text-align:center;padding-top:40px">
+    <div style="font-size:36px;margin-bottom:16px" id="export-icon">🖼️</div>
+    <div style="font-weight:500;font-size:15px;margin-bottom:8px" id="export-msg">正在產生圖片…</div>
+    <div style="font-size:12px;color:#999;margin-bottom:24px" id="export-sub"></div>
+    <div class="progress-wrap">
+      <div class="progress-bar" id="progress-bar" style="width:0%;background:#378ADD"></div>
+    </div>
+    <div style="font-size:12px;font-weight:500;margin-top:8px" id="progress-pct">0%</div>
+  </div>
+</div>
+
+<!-- 頁面4：完成 -->
+<div class="page" id="page-done">
+  <div class="main" style="text-align:center;padding-top:32px">
+    <div style="font-size:48px;margin-bottom:16px">✅</div>
+    <div style="font-weight:500;font-size:16px;margin-bottom:8px">匯出完成！</div>
+    <div style="font-size:12px;color:#999;line-height:1.8;margin-bottom:20px" id="done-msg"></div>
+    <div class="file-list" id="done-files"></div>
+    <div class="btn-row">
+      <button class="sec-btn" id="btn-redo">重新匯出</button>
+      <button class="primary-btn btn-blue" id="btn-done-finish" style="flex:2;margin-top:0">完成</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -106,25 +133,28 @@ const BLOCKS = [
 
 const FORMATS = [
   { key:"png_single",   type:"png", label:"PNG 一張長圖", desc:"所有區塊合併，適合 LINE 傳送" },
-  { key:"png_multiple", type:"png", label:"PNG 分張",     desc:"每個區塊各自一張，打包下載" },
+  { key:"png_multiple", type:"png", label:"PNG 分張",     desc:"每個區塊各自一張" },
   { key:"pdf_merge",    type:"pdf", label:"PDF 合併",     desc:"所有區塊合併為單一 PDF" },
   { key:"pdf_pages",    type:"pdf", label:"PDF 分頁",     desc:"每個區塊各自一頁" },
 ];
 
-let currentUser     = null;
-let familyData      = null;
-let familyFileName  = null;
-let personDataMap   = {};
-let currentPersonId = null;
-let selected        = { summary:true, timeline:true, coverage:true, savings:false, monthly:false, policy:false };
-let format          = "png_single";
-let step            = "select"; // select | preview | exporting | done
-let progress        = 0;
-let progressTimer   = null;
-let personName      = "";
-let analysisDate    = "";
+let currentUser = null, familyData = null, familyFileName = null;
+let personDataMap = {}, currentPersonId = null;
+let selected = { summary:true, timeline:true, coverage:true, savings:false, monthly:false, policy:false };
+let format = "png_single";
+let personName = "", analysisDate = "";
 
-window.onload = async function() {
+// ── 初始化 ────────────────────────────────────────────────
+window.addEventListener("DOMContentLoaded", async function() {
+  // 靜態按鈕綁定
+  document.getElementById("btn-back").addEventListener("click", () => window.location.href="family.html");
+  document.getElementById("btn-toggle-all").addEventListener("click", toggleAll);
+  document.getElementById("btn-preview").addEventListener("click", showPreview);
+  document.getElementById("btn-back-to-select").addEventListener("click", showSelect);
+  document.getElementById("btn-start-export").addEventListener("click", startExport);
+  document.getElementById("btn-redo").addEventListener("click", showSelect);
+  document.getElementById("btn-done-finish").addEventListener("click", () => window.location.href="family.html");
+
   const saved = localStorage.getItem("nbs_user");
   if (!saved) { window.location.href="index.html"; return; }
   currentUser = JSON.parse(saved);
@@ -134,7 +164,7 @@ window.onload = async function() {
   try {
     const fr = await callGAS("readFile",{email:currentUser.email,fileType:"family",fileName:familyFileName});
     familyData = fr.content;
-    document.getElementById("header-sub").textContent = familyData.familyName;
+    document.getElementById("hdr-sub").textContent = familyData.familyName;
 
     for (const m of familyData.members.filter(m=>m.role!=="beneficiary_only")) {
       const pr = await callGAS("readFile",{email:currentUser.email,fileType:"person",fileName:m.name+"_"+m.personId+".json"});
@@ -146,457 +176,312 @@ window.onload = async function() {
     currentPersonId = savedPerson || primary?.personId;
 
     const person = personDataMap[currentPersonId];
-    personName   = person?.profile?.name || "—";
-    const ad     = person?.profile?.analysisDate;
+    personName = person?.profile?.name || "—";
+    const ad = person?.profile?.analysisDate;
     if (ad) {
       const d = new Date(ad);
       analysisDate = (d.getFullYear()-1911)+"年"+(d.getMonth()+1)+"月"+d.getDate()+"日";
     }
 
-    renderSelectStep();
+    buildBlockList();
+    buildFormatList();
+    updatePreviewBtn();
   } catch(e) {
-    document.getElementById("loading").innerHTML='<div style="color:#e74c3c">載入失敗：'+e.message+'</div>';
+    alert("載入失敗："+e.message);
   }
-};
+});
 
-// ── 步驟一：選擇區塊 ──────────────────────────────────────
-function renderSelectStep() {
-  step = "select";
-  document.getElementById("header-title").textContent = "匯出圖片";
-  document.getElementById("back-btn").onclick = handleBack;
-
-  const selectedKeys = Object.entries(selected).filter(([,v])=>v).map(([k])=>k);
-  const allSel = BLOCKS.every(b=>selected[b.key]);
-
-  let html = `
-    <div class="section-label">
-      選擇匯出區塊
-      <button id="toggle-all-btn" style="font-size:11px;padding:2px 10px;border:1px solid #ddd;border-radius:99px;background:transparent;color:#666;cursor:pointer;font-family:inherit">
-        ${allSel?"全部取消":"全部勾選"}
-      </button>
-    </div>
-    <div class="block-list">`;
-
+// ── 建立區塊清單 ──────────────────────────────────────────
+function buildBlockList() {
+  const container = document.getElementById("block-list");
+  container.innerHTML = "";
   BLOCKS.forEach(b => {
-    const isSel = selected[b.key];
-    html += `<div class="block-item ${isSel?'selected':''}" data-key="${b.key}">
-      <div class="block-check">${isSel?'✓':''}</div>
+    const el = document.createElement("div");
+    el.className = "block-item" + (selected[b.key]?" selected":"");
+    el.dataset.key = b.key;
+    el.innerHTML = `
+      <div class="block-check">${selected[b.key]?"✓":""}</div>
       <span class="block-icon">${b.icon}</span>
       <div style="flex:1">
         <div class="block-label">${b.label}</div>
         <div class="block-desc">${b.desc}</div>
-      </div>
-    </div>`;
+      </div>`;
+    el.addEventListener("click", function() {
+      selected[this.dataset.key] = !selected[this.dataset.key];
+      buildBlockList();
+      updateToggleAllBtn();
+      updatePreviewBtn();
+    });
+    container.appendChild(el);
   });
-
-  html += `</div>
-    <div class="section-label">匯出格式</div>
-    <div class="format-group-label">🖼️ 圖檔（PNG）</div>
-    <div class="format-grid">`;
-
-  FORMATS.filter(f=>f.type==="png").forEach(f => {
-    const isSel = format===f.key;
-    html += `<div class="format-item ${isSel?'selected-png':''}" data-key="${f.key}">
-      <div class="format-title">${f.label}</div>
-      <div class="format-desc">${f.desc}</div>
-    </div>`;
-  });
-
-  html += `</div>
-    <div class="format-group-label">📄 文件（PDF）</div>
-    <div class="format-grid">`;
-
-  FORMATS.filter(f=>f.type==="pdf").forEach(f => {
-    const isSel = format===f.key;
-    html += `<div class="format-item ${isSel?'selected-pdf':''}" data-key="${f.key}">
-      <div class="format-title">${f.label}</div>
-      <div class="format-desc">${f.desc.replace("N",selectedKeys.length)}</div>
-    </div>`;
-  });
-
-  html += `</div>
-    <button id="preview-btn" class="primary-btn ${selectedKeys.length>0?'blue':''}"
-      ${selectedKeys.length===0?"disabled":""}>
-      ${selectedKeys.length===0?"請至少勾選一個區塊":`預覽 ${selectedKeys.length} 個區塊`}
-    </button>`;
-
-  document.getElementById("loading").style.display = "none";
-  document.getElementById("main-content").innerHTML = html;
-
-  // 重新綁定事件（Safari innerHTML onclick 有時失效）
-  document.querySelectorAll(".block-item").forEach(el => {
-    el.addEventListener("click", () => toggleBlock(el.dataset.key));
-  });
-  document.querySelectorAll(".format-item").forEach(el => {
-    el.addEventListener("click", () => setFormat(el.dataset.key));
-  });
-  const toggleAllBtn = document.getElementById("toggle-all-btn");
-  if (toggleAllBtn) toggleAllBtn.addEventListener("click", toggleAll);
-  const previewBtn = document.getElementById("preview-btn");
-  if (previewBtn) previewBtn.addEventListener("click", () => { if (!previewBtn.disabled) renderPreviewStep(); });
 }
 
-function toggleBlock(key) {
-  selected[key] = !selected[key];
-  renderSelectStep();
+// ── 建立格式清單 ──────────────────────────────────────────
+function buildFormatList() {
+  ["png","pdf"].forEach(type => {
+    const container = document.getElementById("fmt-"+type);
+    container.innerHTML = "";
+    FORMATS.filter(f=>f.type===type).forEach(f => {
+      const el = document.createElement("div");
+      const selClass = format===f.key ? (type==="png"?"sel-png":"sel-pdf") : "";
+      el.className = "format-item " + selClass;
+      el.dataset.key = f.key;
+      el.innerHTML = `<div class="format-title">${f.label}</div><div class="format-desc">${f.desc}</div>`;
+      el.addEventListener("click", function() {
+        format = this.dataset.key;
+        buildFormatList();
+      });
+      container.appendChild(el);
+    });
+  });
+}
+
+function updateToggleAllBtn() {
+  const allSel = BLOCKS.every(b=>selected[b.key]);
+  document.getElementById("btn-toggle-all").textContent = allSel?"全部取消":"全部勾選";
+}
+
+function updatePreviewBtn() {
+  const keys = BLOCKS.filter(b=>selected[b.key]);
+  const btn = document.getElementById("btn-preview");
+  if (keys.length === 0) {
+    btn.textContent = "請至少勾選一個區塊";
+    btn.className = "primary-btn btn-gray";
+    btn.disabled = true;
+  } else {
+    btn.textContent = `預覽 ${keys.length} 個區塊`;
+    btn.className = "primary-btn btn-blue";
+    btn.disabled = false;
+  }
 }
 
 function toggleAll() {
   const allSel = BLOCKS.every(b=>selected[b.key]);
   BLOCKS.forEach(b=>{ selected[b.key]=!allSel; });
-  renderSelectStep();
+  buildBlockList();
+  updateToggleAllBtn();
+  updatePreviewBtn();
 }
 
-function setFormat(f) {
-  format = f;
-  renderSelectStep();
+// ── 顯示預覽頁 ────────────────────────────────────────────
+function showSelect() {
+  showPage("select");
+  document.getElementById("hdr-title").textContent = "匯出圖片";
 }
 
-// ── 步驟二：預覽 ──────────────────────────────────────────
-function renderPreviewStep() {
-  step = "preview";
-  document.getElementById("header-title").textContent = "預覽確認";
-  document.getElementById("back-btn").onclick = renderSelectStep;
-
-  const selectedBlocks = BLOCKS.filter(b=>selected[b.key]);
+function showPreview() {
   const isPdf = format.startsWith("pdf");
+  const selBlocks = BLOCKS.filter(b=>selected[b.key]);
 
-  let html = `<div class="preview-notice">
-    ℹ️ 以下預覽為<strong>真實資料渲染</strong>，點「${isPdf?"匯出 PDF":"下載圖片"}」後系統將截圖各區塊產生${isPdf?"PDF":"PNG"}檔案。
-  </div>`;
+  document.getElementById("hdr-title").textContent = "預覽確認";
+  document.getElementById("preview-notice").innerHTML =
+    `ℹ️ 以下為<strong>真實資料預覽</strong>，點「${isPdf?"匯出 PDF":"下載圖片"}」後系統截圖產生${isPdf?"PDF":"PNG"}檔案。`;
 
-  const isLong = format==="png_single";
-  if (isLong) html += `<div class="long-preview">`;
+  // 更新下載按鈕
+  const exportBtn = document.getElementById("btn-start-export");
+  exportBtn.textContent = isPdf ? "匯出 PDF" : "下載圖片";
+  exportBtn.className = `primary-btn ${isPdf?"btn-red":"btn-blue"}`;
+  exportBtn.style.flex = "2";
+  exportBtn.style.marginTop = "0";
 
-  selectedBlocks.forEach((b,i) => {
-    if (!isLong && format==="png_multiple") html += `<div style="font-size:10px;color:#bbb;margin-bottom:3px">第 ${i+1} 張</div>`;
-    if (!isLong && format.startsWith("pdf")) html += `<div style="font-size:10px;color:#bbb;margin-bottom:3px">第 ${i+1} 頁</div>`;
+  document.getElementById("watermark-hint").textContent =
+    `匯出圖片底部將自動加上「NBS 保單體檢　${personName}　${analysisDate}」浮水印`;
 
-    html += `<div class="preview-block" id="preview_${b.key}">
-      <div class="preview-block-header">${b.icon} ${b.label}</div>
-      <div class="preview-block-body">${renderBlockPreview(b.key)}</div>
-    </div>`;
-    if (!isLong) html += `<div style="margin-bottom:8px"></div>`;
+  // 渲染預覽區塊
+  const container = document.getElementById("preview-blocks");
+  container.innerHTML = "";
+  selBlocks.forEach((b,i) => {
+    if (format!=="png_single") {
+      const tag = document.createElement("div");
+      tag.style.cssText = "font-size:10px;color:#bbb;margin-bottom:3px";
+      tag.textContent = `第 ${i+1} ${format.startsWith("pdf")?"頁":"張"}`;
+      container.appendChild(tag);
+    }
+    const block = document.createElement("div");
+    block.className = "preview-block";
+    block.innerHTML = `<div class="preview-block-hdr">${b.icon} ${b.label}</div>
+      <div>${renderBlockHTML(b.key)}</div>`;
+    container.appendChild(block);
+    if (format!=="png_single") {
+      const gap = document.createElement("div");
+      gap.style.marginBottom = "4px";
+      container.appendChild(gap);
+    }
   });
 
-  if (isLong) html += `</div>`;
-
-  html += `<div style="padding:8px 12px;background:#f7f7f5;border-radius:8px;font-size:11px;color:#aaa;margin:12px 0;display:flex;gap:6px">
-    <span>💡</span><span>匯出圖片底部將自動加上「NBS 保單體檢　${personName}　${analysisDate}」浮水印</span>
-  </div>
-  <div class="btn-row">
-    <button id="back-to-select-btn" class="secondary-btn">返回修改</button>
-    <button id="start-export-btn" class="primary-btn ${isPdf?'red':'blue'}" style="flex:2">
-      ${isPdf?"匯出 PDF":"下載圖片"}
-    </button>
-  </div>`;
-
-  // 綁定預覽頁按鈕
-  setTimeout(() => {
-    const backBtn = document.getElementById("back-to-select-btn");
-    if (backBtn) backBtn.addEventListener("click", renderSelectStep);
-    const exportBtn = document.getElementById("start-export-btn");
-    if (exportBtn) exportBtn.addEventListener("click", startExport);
-  }, 50);
-
-  document.getElementById("main-content").innerHTML = html;
+  showPage("preview");
 }
 
-// ── 各區塊預覽 HTML ───────────────────────────────────────
-function renderBlockPreview(key) {
+// ── 各區塊渲染 ────────────────────────────────────────────
+function renderBlockHTML(key) {
   const person   = personDataMap[currentPersonId];
   const policies = person?.policies || [];
   const coverage = person?.coverage || {};
   const active   = policies.filter(p=>p.status==="有效");
-
-  if (key==="summary") return renderSummaryPreview(active, coverage);
-  if (key==="timeline") return renderTimelinePreview(coverage);
-  if (key==="coverage") return renderCoveragePreview(policies, coverage);
-  if (key==="savings")  return renderSavingsPreview(policies, person?.savings||[]);
-  if (key==="monthly")  return renderMonthlyPreview(active);
-  if (key==="policy")   return renderPolicyPreview(policies);
-  return `<div style="padding:16px;color:#aaa;font-size:12px">預覽建置中</div>`;
-}
-
-function renderSummaryPreview(active, coverage) {
   const CAT_COLORS={"壽險保障":"#4A90D9","醫療保障":"#27AE8F","意外險":"#F5A623","重大疾病險":"#9B59B6","重大傷病險":"#8E44AD","特定傷病險":"#7D3C98","儲蓄險":"#E8638A","年金險":"#C0392B","投資型保險":"#95A5A6"};
-  const totalTWD = active.reduce((s,p)=>s+(p.premiumTWD||0),0);
 
-  // 圓餅圖
-  const catMap={};
-  active.forEach(p=>{ catMap[p.category]=(catMap[p.category]||0)+(p.premiumTWD||0); });
-  const pieData=Object.entries(catMap).map(([l,v])=>({label:l,value:v,color:CAT_COLORS[l]||"#999"}));
-  const pieTotal=pieData.reduce((s,d)=>s+d.value,0);
-  const cx=80,cy=80,r=70;
-  let cum=-Math.PI/2;
-  let paths="";
-  pieData.forEach(d=>{
-    const angle=(d.value/pieTotal)*Math.PI*2;
-    const x1=cx+r*Math.cos(cum),y1=cy+r*Math.sin(cum);
-    cum+=angle;
-    const x2=cx+r*Math.cos(cum),y2=cy+r*Math.sin(cum);
-    paths+=`<path d="M${cx},${cy} L${x1.toFixed(1)},${y1.toFixed(1)} A${r},${r} 0 ${angle>Math.PI?1:0} 1 ${x2.toFixed(1)},${y2.toFixed(1)} Z" fill="${d.color}" stroke="#fff" stroke-width="1.5"/>`;
-  });
-
-  const legendHtml=pieData.map(d=>`
-    <div style="display:flex;align-items:center;gap:5px;font-size:11px;margin-bottom:3px">
-      <div style="width:10px;height:10px;border-radius:2px;background:${d.color};flex-shrink:0"></div>
-      <span style="color:#555;min-width:64px">${d.label}</span>
-      <span style="color:#aaa">${Math.round(d.value/pieTotal*100)}%</span>
-    </div>`).join("");
-
-  return `<div style="padding:10px 12px">
-    <div style="font-size:11px;color:#888;margin-bottom:8px">${personName}　${analysisDate}　年繳 NT$${(totalTWD/10000).toFixed(1)}萬</div>
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-      <svg width="160" height="160" style="flex-shrink:0"><g>${paths}</g></svg>
-      <div>${legendHtml}</div>
-    </div>
-  </div>`;
-}
-
-function renderTimelinePreview(coverage) {
-  const phases=[
-    {label:"治療前期",color:"#5BAD6F",bg:"#EAF3DE",items:[["重大疾病",coverage.can_first],["重大傷病",null],["特定傷病",null]]},
-    {label:"治療中期",color:"#378ADD",bg:"#E6F1FB",items:[["住院日額",coverage.daily_room],["初次罹癌",coverage.can_first],["癌症住院",coverage.can_hosp],["放/化療",null]]},
-    {label:"治療後期",color:"#E8638A",bg:"#FBEAF0",items:[["長照每月",coverage.ltc_monthly],["失能一次金",coverage.ltc_dis_amt],["失能扶助",coverage.ltc_dis_life]]},
-  ];
-  const arrowBar=phases.map((p,i)=>`<div style="flex:${i===1?1.6:1};padding:6px 8px;background:${p.color};color:#fff;font-weight:600;font-size:11px;text-align:center;clip-path:${i===0?"polygon(0 0,calc(100% - 8px) 0,100% 50%,calc(100% - 8px) 100%,0 100%)":i===2?"polygon(0 0,100% 0,100% 100%,0 100%,8px 50%)":"polygon(0 0,calc(100% - 8px) 0,100% 50%,calc(100% - 8px) 100%,0 100%,8px 50%)"};margin-left:${i>0?"-2px":"0"}">${p.label}</div>`).join("");
-  const cols=phases.map(p=>`<div style="border:1px solid ${p.color}40;border-radius:6px;overflow:hidden">
-    <div style="height:3px;background:${p.bg}"></div>
-    <div style="padding:5px 7px">${p.items.map(([l,v])=>`<div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:3px;padding:2px 4px;background:${v?"#fff":"#f5f5f5"};border-radius:3px">
-      <span style="color:${v?"#333":"#bbb"}">${l}</span>
-      <span style="font-weight:500;color:${v?p.color:"#ccc"}">${v?v+"萬":"未投保"}</span>
-    </div>`).join("")}</div>
-  </div>`).join("");
-  return `<div style="padding:10px 12px">
-    <div style="display:flex;margin-bottom:8px">${arrowBar}</div>
-    <div style="display:grid;grid-template-columns:1fr 1.6fr 1fr;gap:6px">${cols}</div>
-  </div>`;
-}
-
-function renderCoveragePreview(policies, coverage) {
-  const groups=[
-    {label:"意外險",color:"#F5A623",keys:["acc_special","acc_disable","acc_burn"]},
-    {label:"住院醫療",color:"#27AE8F",keys:["hosp_room","hosp_surgery","daily_room"]},
-    {label:"癌症",color:"#E74C3C",keys:["can_first","can_hosp","can_target"]},
-    {label:"失能長照",color:"#27500A",keys:["ltc_monthly","ltc_dis_amt"]},
-  ];
-  let html="";
-  groups.forEach(g=>{
-    const items=g.keys.map(k=>{
-      let total=0;
-      policies.forEach(p=>{ const v=coverage[p.id+"_"+k]; if(v) total+=v; });
-      return total>0?`<span style="font-size:10px;margin-right:8px;color:#555">${k.split("_").slice(1).join("_")}：${total.toLocaleString()}</span>`:"";
-    }).filter(Boolean).join("");
-    if(items) html+=`<div style="margin-bottom:6px"><div style="font-size:11px;font-weight:500;color:${g.color};margin-bottom:2px">${g.label}</div><div>${items}</div></div>`;
-  });
-  return `<div style="padding:10px 12px">${html||'<div style="color:#aaa;font-size:12px">尚無附約保障資料</div>'}</div>`;
-}
-
-function renderSavingsPreview(policies, savings) {
-  const sPolicies=policies.filter(p=>p.category==="儲蓄險"||p.category==="年金險");
-  if(!sPolicies.length) return `<div style="padding:12px;color:#aaa;font-size:12px">尚無儲蓄險或年金險保單</div>`;
-  let html="";
-  sPolicies.forEach(p=>{
-    const s=savings.find(x=>x.policyId===p.id);
-    html+=`<div style="font-size:12px;margin-bottom:6px;padding:8px 10px;background:#fafafa;border-radius:6px">
-      <div style="font-weight:500">${p.itemName||p.policyNo}</div>
-      <div style="font-size:11px;color:#aaa">${p.company}　${s?`每次 NT$${(s.amount||0).toLocaleString()}　${s.mode==="month"?"月領":"年領"}`:"尚未設定領回方式"}</div>
-    </div>`;
-  });
-  return `<div style="padding:10px 12px">${html}</div>`;
-}
-
-function renderMonthlyPreview(active) {
-  const months=["1","2","3","4","5","6","7","8","9","10","11","12"];
-  const now=new Date().getMonth();
-  const monthData=months.map((m,mi)=>{
-    let total=0;
-    active.forEach(p=>{
-      const startMonth=new Date(p.startDate||"2020-01-01").getMonth();
-      const prem=p.premiumTWD||0;
-      if(p.payMode==="月繳") total+=Math.round(prem/12);
-      else if(p.payMode==="季繳"&&(mi-startMonth+12)%3===0) total+=Math.round(prem/4);
-      else if(p.payMode==="半年繳"&&(mi-startMonth+12)%6===0) total+=Math.round(prem/2);
-      else if(p.payMode==="年繳"&&mi===startMonth%12) total+=prem;
+  if (key==="summary") {
+    const totalTWD = active.reduce((s,p)=>s+(p.premiumTWD||0),0);
+    const catMap={};
+    active.forEach(p=>{ catMap[p.category]=(catMap[p.category]||0)+(p.premiumTWD||0); });
+    const pieData=Object.entries(catMap).map(([l,v])=>({label:l,value:v,color:CAT_COLORS[l]||"#999"}));
+    const pieTotal=pieData.reduce((s,d)=>s+d.value,0);
+    const cx=80,cy=80,r=70; let cum=-Math.PI/2; let paths="";
+    pieData.forEach(d=>{
+      const angle=(d.value/pieTotal)*Math.PI*2;
+      const x1=cx+r*Math.cos(cum),y1=cy+r*Math.sin(cum); cum+=angle;
+      const x2=cx+r*Math.cos(cum),y2=cy+r*Math.sin(cum);
+      paths+=`<path d="M${cx},${cy} L${x1.toFixed(1)},${y1.toFixed(1)} A${r},${r} 0 ${angle>Math.PI?1:0} 1 ${x2.toFixed(1)},${y2.toFixed(1)} Z" fill="${d.color}" stroke="#fff" stroke-width="1.5"/>`;
     });
-    return {m:m+"月",total};
-  });
-  const cells=monthData.map((d,i)=>`
-    <div style="padding:3px;background:${i===now?"#E6F1FB":"#f7f7f5"};border-radius:4px;text-align:center;border:${i===now?"1px solid #378ADD":"1px solid transparent"}">
-      <div style="font-size:8px;color:#aaa">${d.m}</div>
-      <div style="font-size:9px;font-weight:500;color:${i===now?"#0C447C":d.total>0?"#333":"#ddd"}">${d.total>0?(d.total>=10000?(d.total/10000).toFixed(1)+"萬":d.total.toLocaleString()):"—"}</div>
-    </div>`).join("");
-  return `<div style="padding:10px 12px">
-    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:3px">${cells}</div>
-  </div>`;
+    const legend=pieData.map(d=>`<div style="display:flex;align-items:center;gap:5px;font-size:11px;margin-bottom:3px"><div style="width:10px;height:10px;border-radius:2px;background:${d.color};flex-shrink:0"></div><span style="color:#555;min-width:64px">${d.label}</span><span style="color:#aaa">${Math.round(d.value/pieTotal*100)}%</span></div>`).join("");
+    return `<div style="padding:10px 12px"><div style="font-size:11px;color:#888;margin-bottom:8px">${personName}　${analysisDate}　年繳 NT$${(totalTWD/10000).toFixed(1)}萬</div><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><svg width="160" height="160" style="flex-shrink:0"><g>${paths}</g></svg><div>${legend}</div></div></div>`;
+  }
+
+  if (key==="timeline") {
+    const phases=[
+      {label:"治療前期",color:"#5BAD6F",bg:"#EAF3DE",items:[["重大疾病",null],["重大傷病",null],["特定傷病",null]]},
+      {label:"治療中期",color:"#378ADD",bg:"#E6F1FB",items:[["住院日額",null],["初次罹癌",null],["癌症住院",null],["放/化療",null]]},
+      {label:"治療後期",color:"#E8638A",bg:"#FBEAF0",items:[["長照每月",null],["失能一次金",null],["失能扶助",null]]},
+    ];
+    const arrows=phases.map((p,i)=>`<div style="flex:${i===1?1.6:1};padding:5px 6px;background:${p.color};color:#fff;font-weight:600;font-size:10px;text-align:center;clip-path:${i===0?"polygon(0 0,calc(100% - 8px) 0,100% 50%,calc(100% - 8px) 100%,0 100%)":i===2?"polygon(0 0,100% 0,100% 100%,0 100%,8px 50%)":"polygon(0 0,calc(100% - 8px) 0,100% 50%,calc(100% - 8px) 100%,0 100%,8px 50%)"};margin-left:${i>0?"-2px":"0"}">${p.label}</div>`).join("");
+    const cols=phases.map(p=>`<div style="border:1px solid ${p.color}40;border-radius:5px;overflow:hidden"><div style="height:3px;background:${p.bg}"></div><div style="padding:4px 6px">${p.items.map(([l,v])=>`<div style="display:flex;justify-content:space-between;font-size:9px;margin-bottom:2px;padding:2px 3px;background:${v?"#fff":"#f5f5f5"};border-radius:3px"><span style="color:${v?"#333":"#bbb"}">${l}</span><span style="color:${v?p.color:"#ccc"}">${v||"未投保"}</span></div>`).join("")}</div></div>`).join("");
+    return `<div style="padding:10px 12px"><div style="display:flex;margin-bottom:8px">${arrows}</div><div style="display:grid;grid-template-columns:1fr 1.6fr 1fr;gap:5px">${cols}</div></div>`;
+  }
+
+  if (key==="coverage") {
+    const groups=[{label:"意外",color:"#F5A623",keys:["acc_special","acc_disable"]},{label:"住院",color:"#27AE8F",keys:["hosp_room","daily_room"]},{label:"癌症",color:"#E74C3C",keys:["can_first","can_hosp"]},{label:"長照",color:"#27500A",keys:["ltc_monthly","ltc_dis_amt"]}];
+    let html="";
+    groups.forEach(g=>{
+      const items=g.keys.map(k=>{let t=0;policies.forEach(p=>{const v=coverage[p.id+"_"+k];if(v)t+=v;});return t>0?`<span style="font-size:10px;margin-right:8px">${k.split("_").slice(1).join("_")}：${t.toLocaleString()}</span>`:""}).filter(Boolean).join("");
+      if(items) html+=`<div style="margin-bottom:5px"><div style="font-size:10px;font-weight:500;color:${g.color};margin-bottom:1px">${g.label}</div><div>${items}</div></div>`;
+    });
+    return `<div style="padding:10px 12px">${html||'<div style="color:#aaa;font-size:12px">尚無附約保障資料</div>'}</div>`;
+  }
+
+  if (key==="savings") {
+    const sPols=policies.filter(p=>p.category==="儲蓄險"||p.category==="年金險");
+    if(!sPols.length) return `<div style="padding:12px;color:#aaa;font-size:12px">尚無儲蓄險或年金險保單</div>`;
+    const savings=person?.savings||[];
+    return `<div style="padding:10px 12px">${sPols.map(p=>{const s=savings.find(x=>x.policyId===p.id);return `<div style="font-size:12px;margin-bottom:5px;padding:6px 8px;background:#fafafa;border-radius:5px"><div style="font-weight:500">${p.itemName||p.policyNo}</div><div style="font-size:10px;color:#aaa">${p.company}　${s?`每次 NT$${(s.amount||0).toLocaleString()}　${s.mode==="month"?"月領":"年領"}`:"尚未設定"}</div></div>`;}).join("")}</div>`;
+  }
+
+  if (key==="monthly") {
+    const now=new Date().getMonth();
+    const cells=Array.from({length:12},(_,mi)=>{
+      let t=0;
+      active.forEach(p=>{
+        const sm=new Date(p.startDate||"2020-01-01").getMonth(), pr=p.premiumTWD||0;
+        if(p.payMode==="月繳") t+=Math.round(pr/12);
+        else if(p.payMode==="季繳"&&(mi-sm+12)%3===0) t+=Math.round(pr/4);
+        else if(p.payMode==="半年繳"&&(mi-sm+12)%6===0) t+=Math.round(pr/2);
+        else if(p.payMode==="年繳"&&mi===sm%12) t+=pr;
+      });
+      return `<div style="padding:3px;background:${mi===now?"#E6F1FB":"#f7f7f5"};border-radius:4px;text-align:center;border:${mi===now?"1px solid #378ADD":"1px solid transparent"}"><div style="font-size:8px;color:#aaa">${mi+1}月</div><div style="font-size:9px;font-weight:500;color:${mi===now?"#0C447C":t>0?"#333":"#ddd"}">${t>0?(t>=10000?(t/10000).toFixed(1)+"萬":t.toLocaleString()):"—"}</div></div>`;
+    }).join("");
+    return `<div style="padding:10px 12px"><div style="display:grid;grid-template-columns:repeat(6,1fr);gap:3px">${cells}</div></div>`;
+  }
+
+  if (key==="policy") {
+    const totalTWD=policies.filter(p=>p.status==="有效").reduce((s,p)=>s+(p.premiumTWD||0),0);
+    const rows=policies.slice(0,6).map(p=>`<div style="display:flex;align-items:center;gap:5px;font-size:10px;padding:3px 0;border-bottom:1px solid #f8f8f8"><span style="font-family:monospace;background:#E6F1FB;color:#0C447C;padding:1px 5px;border-radius:99px;flex-shrink:0">${p.policyNo||p.id}</span><span style="padding:1px 5px;border-radius:99px;background:${(CAT_COLORS[p.category]||"#999")}20;color:${CAT_COLORS[p.category]||"#555"};flex-shrink:0">${p.category}</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.itemName||"—"}</span><span style="font-weight:500;flex-shrink:0">NT${(p.premiumTWD||0).toLocaleString()}</span></div>`).join("");
+    return `<div style="padding:10px 12px">${rows}${policies.length>6?`<div style="font-size:10px;color:#aaa;padding-top:3px">…等共${policies.length}筆</div>`:""}<div style="font-size:11px;font-weight:500;color:#27500A;text-align:right;padding-top:5px;border-top:1px solid #e8e8e8;margin-top:3px">年繳總計 NT$${totalTWD.toLocaleString()}</div></div>`;
+  }
+
+  return `<div style="padding:12px;color:#aaa;font-size:12px">建置中</div>`;
 }
 
-function renderPolicyPreview(policies) {
-  if(!policies.length) return `<div style="padding:12px;color:#aaa;font-size:12px">尚無保單資料</div>`;
-  const CAT_COLORS={"壽險保障":"#4A90D9","醫療保障":"#27AE8F","意外險":"#F5A623","重大疾病險":"#9B59B6","重大傷病險":"#8E44AD","特定傷病險":"#7D3C98","儲蓄險":"#E8638A","年金險":"#C0392B","投資型保險":"#95A5A6"};
-  const totalTWD=policies.filter(p=>p.status==="有效").reduce((s,p)=>s+(p.premiumTWD||0),0);
-  let html=policies.slice(0,6).map(p=>`
-    <div style="display:flex;align-items:center;gap:6px;font-size:11px;padding:4px 0;border-bottom:1px solid #f8f8f8">
-      <span style="font-family:monospace;font-size:10px;background:#E6F1FB;color:#0C447C;padding:1px 5px;border-radius:99px;flex-shrink:0">${p.policyNo||p.id}</span>
-      <span style="font-size:10px;padding:1px 5px;border-radius:99px;background:${(CAT_COLORS[p.category]||"#999")}20;color:${CAT_COLORS[p.category]||"#555"};flex-shrink:0">${p.category}</span>
-      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.itemName||"—"}</span>
-      <span style="font-weight:500;flex-shrink:0">NT${(p.premiumTWD||0).toLocaleString()}</span>
-    </div>`).join("");
-  if(policies.length>6) html+=`<div style="font-size:10px;color:#aaa;padding-top:4px">…等共 ${policies.length} 筆</div>`;
-  html+=`<div style="font-size:11px;font-weight:500;color:#27500A;text-align:right;padding-top:6px;border-top:1px solid #e8e8e8;margin-top:4px">年繳總計 NT$${totalTWD.toLocaleString()}</div>`;
-  return `<div style="padding:10px 12px">${html}</div>`;
-}
-
-// ── 步驟三：產生中 ────────────────────────────────────────
+// ── 匯出 ─────────────────────────────────────────────────
 async function startExport() {
-  step = "exporting";
   const isPdf = format.startsWith("pdf");
-  const selectedBlocks = BLOCKS.filter(b=>selected[b.key]);
+  const selBlocks = BLOCKS.filter(b=>selected[b.key]);
+  showPage("exporting");
+  document.getElementById("export-icon").textContent = isPdf?"📄":"🖼️";
+  document.getElementById("export-msg").textContent = isPdf?"正在產生 PDF…":format==="png_single"?"正在合併圖片…":"正在產生圖片…";
+  document.getElementById("export-sub").textContent = `共 ${selBlocks.length} 個區塊　${format==="png_single"?"一張 PNG":format==="png_multiple"?selBlocks.length+"張 PNG":format==="pdf_merge"?"單一 PDF":selBlocks.length+" 頁 PDF"}`;
+  document.getElementById("progress-bar").style.background = isPdf?"#E74C3C":"#378ADD";
 
-  document.getElementById("header-title").textContent = "匯出中…";
-  document.getElementById("main-content").innerHTML = `
-    <div style="padding:40px 20px;text-align:center">
-      <div style="font-size:36px;margin-bottom:16px">${isPdf?"📄":"🖼️"}</div>
-      <div style="font-weight:500;font-size:15px;margin-bottom:8px">
-        ${isPdf?"正在產生 PDF…":format==="png_single"?"正在合併圖片…":"正在產生圖片…"}
-      </div>
-      <div style="font-size:12px;color:#999;margin-bottom:24px">
-        共 ${selectedBlocks.length} 個區塊　
-        ${format==="png_single"?"一張 PNG":format==="png_multiple"?selectedBlocks.length+"張 PNG":format==="pdf_merge"?"單一 PDF":selectedBlocks.length+" 頁 PDF"}
-      </div>
-      <div class="progress-wrap">
-        <div class="progress-bar ${isPdf?'red':''}" id="progress-bar" style="width:0%"></div>
-      </div>
-      <div style="font-size:12px;color:${isPdf?"#E74C3C":"#378ADD"};font-weight:500;margin-top:8px" id="progress-pct">0%</div>
-    </div>`;
-
-  // 重新渲染所有區塊到隱藏 div
   const renderDiv = document.createElement("div");
-  renderDiv.style.cssText = "position:fixed;left:-9999px;top:0;width:560px;background:#fff;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#1a1a1a";
+  renderDiv.style.cssText = "position:fixed;left:-9999px;top:0;width:560px;background:#fff;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;color:#1a1a1a";
   document.body.appendChild(renderDiv);
 
   try {
-    if (isPdf) {
-      await exportPDF(selectedBlocks, renderDiv);
-    } else {
-      await exportPNG(selectedBlocks, renderDiv);
-    }
-    renderExportDone(selectedBlocks);
+    if (isPdf) await doExportPDF(selBlocks, renderDiv);
+    else await doExportPNG(selBlocks, renderDiv);
+    showDonePage(selBlocks);
   } catch(e) {
     alert("匯出失敗："+e.message);
-    renderSelectStep();
+    showSelect();
   } finally {
     document.body.removeChild(renderDiv);
   }
 }
 
-function updateProgress(pct) {
-  const bar = document.getElementById("progress-bar");
-  const pctEl = document.getElementById("progress-pct");
-  if (bar) bar.style.width = pct+"%";
-  if (pctEl) pctEl.textContent = pct+"%";
+function setProgress(pct) {
+  document.getElementById("progress-bar").style.width = pct+"%";
+  document.getElementById("progress-pct").textContent = pct+"%";
 }
 
-// ── PNG 匯出 ──────────────────────────────────────────────
-async function exportPNG(blocks, renderDiv) {
-  const isPdf = false;
+async function doExportPNG(blocks, div) {
+  const wm = `<div style="padding:8px;background:#f7f7f5;text-align:center;font-size:11px;color:#aaa">NBS 保單體檢　${personName}　${analysisDate}</div>`;
   if (format==="png_single") {
-    // 全部渲染到同一個 div
-    renderDiv.innerHTML = "";
-    const watermark = `<div style="padding:8px 14px;background:#f7f7f5;text-align:center;font-size:11px;color:#aaa">NBS 保單體檢　${personName}　${analysisDate}</div>`;
-    blocks.forEach(b => {
-      renderDiv.innerHTML += `<div style="border-bottom:1px solid #f0f0f0">${renderBlockPreview(b.key)}</div>`;
-    });
-    renderDiv.innerHTML += watermark;
-    updateProgress(30);
-    await sleep(100);
-    const canvas = await html2canvas(renderDiv, { scale:2, useCORS:true, backgroundColor:"#ffffff" });
-    updateProgress(80);
-    await sleep(100);
-    const link = document.createElement("a");
-    link.download = `${personName}_保單體檢_${analysisDate}.png`;
-    link.href = canvas.toDataURL("image/png");
-    link.click();
-    updateProgress(100);
+    div.innerHTML = blocks.map(b=>`<div style="border-bottom:1px solid #f0f0f0">${renderBlockHTML(b.key)}</div>`).join("") + wm;
+    setProgress(30); await sleep(100);
+    const canvas = await html2canvas(div,{scale:2,useCORS:true,backgroundColor:"#ffffff"});
+    setProgress(80); await sleep(100);
+    const a=document.createElement("a");
+    a.download=`${personName}_保單體檢_${analysisDate}.png`;
+    a.href=canvas.toDataURL("image/png"); a.click();
+    setProgress(100);
   } else {
-    // 分張
     for (let i=0; i<blocks.length; i++) {
-      renderDiv.innerHTML = renderBlockPreview(blocks[i].key);
-      renderDiv.innerHTML += `<div style="padding:6px 14px;background:#f7f7f5;text-align:center;font-size:11px;color:#aaa">NBS 保單體檢　${personName}　${analysisDate}</div>`;
-      updateProgress(Math.round((i/blocks.length)*90));
-      await sleep(50);
-      const canvas = await html2canvas(renderDiv, { scale:2, useCORS:true, backgroundColor:"#ffffff" });
-      const link = document.createElement("a");
-      link.download = `${personName}_${blocks[i].label}_${analysisDate}.png`;
-      link.href = canvas.toDataURL("image/png");
-      link.click();
+      div.innerHTML = renderBlockHTML(blocks[i].key) + wm;
+      setProgress(Math.round((i/blocks.length)*90)); await sleep(50);
+      const canvas = await html2canvas(div,{scale:2,useCORS:true,backgroundColor:"#ffffff"});
+      const a=document.createElement("a");
+      a.download=`${personName}_${blocks[i].label}_${analysisDate}.png`;
+      a.href=canvas.toDataURL("image/png"); a.click();
       await sleep(300);
     }
-    updateProgress(100);
+    setProgress(100);
   }
 }
 
-// ── PDF 匯出 ──────────────────────────────────────────────
-async function exportPDF(blocks, renderDiv) {
-  const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF("p", "mm", "a4");
-  const pageW = 210, pageH = 297;
-
+async function doExportPDF(blocks, div) {
+  const {jsPDF}=window.jspdf;
+  const pdf=new jsPDF("p","mm","a4");
+  const pageW=210, pageH=297;
+  const wm = `<div style="padding:8px;background:#f7f7f5;text-align:center;font-size:11px;color:#aaa">NBS 保單體檢　${personName}　${analysisDate}</div>`;
   for (let i=0; i<blocks.length; i++) {
-    renderDiv.innerHTML = renderBlockPreview(blocks[i].key);
-    renderDiv.innerHTML += `<div style="padding:6px 14px;background:#f7f7f5;text-align:center;font-size:11px;color:#aaa">NBS 保單體檢　${personName}　${analysisDate}</div>`;
-    updateProgress(Math.round((i/blocks.length)*90));
-    await sleep(50);
-    const canvas = await html2canvas(renderDiv, { scale:2, useCORS:true, backgroundColor:"#ffffff" });
-    const imgData = canvas.toDataURL("image/png");
-    const imgW = pageW - 20;
-    const imgH = (canvas.height / canvas.width) * imgW;
-    if (i>0 && format==="pdf_pages") pdf.addPage();
-    else if (i>0 && format==="pdf_merge") pdf.addPage();
-    pdf.addImage(imgData, "PNG", 10, 10, imgW, Math.min(imgH, pageH-20));
+    div.innerHTML = renderBlockHTML(blocks[i].key) + wm;
+    setProgress(Math.round((i/blocks.length)*90)); await sleep(50);
+    const canvas=await html2canvas(div,{scale:2,useCORS:true,backgroundColor:"#ffffff"});
+    const imgW=pageW-20, imgH=(canvas.height/canvas.width)*imgW;
+    if(i>0) pdf.addPage();
+    pdf.addImage(canvas.toDataURL("image/png"),"PNG",10,10,imgW,Math.min(imgH,pageH-20));
   }
-  updateProgress(95);
+  setProgress(95);
   pdf.save(`${personName}_保單體檢_${analysisDate}.pdf`);
-  updateProgress(100);
+  setProgress(100);
 }
 
-// ── 步驟四：完成 ──────────────────────────────────────────
-function renderExportDone(blocks) {
-  step = "done";
-  const isPdf = format.startsWith("pdf");
-  document.getElementById("header-title").textContent = "匯出完成";
-
-  let filesHtml = "";
-  if (format==="png_single") {
-    filesHtml = `<div class="file-item"><span>🖼️</span>${personName}_保單體檢_${analysisDate}.png</div>`;
-  } else if (format==="png_multiple") {
-    filesHtml = blocks.map(b=>`<div class="file-item"><span>🖼️</span>${personName}_${b.label}_${analysisDate}.png</div>`).join("");
-  } else if (format==="pdf_merge"||format==="pdf_pages") {
-    filesHtml = `<div class="file-item"><span>📄</span>${personName}_保單體檢_${analysisDate}.pdf${format==="pdf_pages"?`（${blocks.length} 頁）`:""}</div>`;
-  }
-
-  document.getElementById("main-content").innerHTML = `
-    <div style="padding:32px 20px;text-align:center">
-      <div style="font-size:48px;margin-bottom:16px">✅</div>
-      <div style="font-weight:500;font-size:16px;margin-bottom:8px">匯出完成！</div>
-      <div style="font-size:12px;color:#999;line-height:1.8;margin-bottom:20px">
-        ${isPdf?"PDF":"圖片"}已下載到您的裝置<br/>可直接傳送給保戶
-      </div>
-      <div class="file-list">
-        <div style="font-size:11px;color:#aaa;margin-bottom:6px">下載的檔案</div>
-        ${filesHtml}
-      </div>
-      <div class="btn-row">
-        <button class="secondary-btn" onclick="renderSelectStep()">重新匯出</button>
-        <button class="primary-btn blue" style="flex:2" onclick="goBack()">完成</button>
-      </div>
-    </div>`;
+function showDonePage(blocks) {
+  const isPdf=format.startsWith("pdf");
+  document.getElementById("done-msg").textContent = `${isPdf?"PDF":"圖片"}已下載到您的裝置，可直接傳送給保戶`;
+  let filesHTML="<div style='font-size:11px;color:#aaa;margin-bottom:6px'>下載的檔案</div>";
+  if(format==="png_single") filesHTML+=`<div class="file-item"><span>🖼️</span>${personName}_保單體檢_${analysisDate}.png</div>`;
+  else if(format==="png_multiple") filesHTML+=blocks.map(b=>`<div class="file-item"><span>🖼️</span>${personName}_${b.label}_${analysisDate}.png</div>`).join("");
+  else filesHTML+=`<div class="file-item"><span>📄</span>${personName}_保單體檢_${analysisDate}.pdf${format==="pdf_pages"?` (${blocks.length}頁)`:""}</div>`;
+  document.getElementById("done-files").innerHTML = filesHTML;
+  showPage("done");
 }
 
-function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
-function handleBack() { window.location.href="family.html"; }
-function goBack() { window.location.href="family.html"; }
+// ── 頁面切換 ──────────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  document.getElementById("page-"+name).classList.add("active");
+}
+
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 
 function callGAS(action,params) {
   const url=new URL(GAS_URL);
