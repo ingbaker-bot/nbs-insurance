@@ -1,497 +1,464 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>NBS - 匯出圖片</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
-    * { box-sizing:border-box; margin:0; padding:0; }
-    body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:#f5f5f3; min-height:100vh; color:#1a1a1a; }
-    .header { background:#fff; border-bottom:1px solid #eee; padding:12px 16px; display:flex; align-items:center; gap:10px; position:sticky; top:0; z-index:100; }
-    .back-btn { background:none; border:none; font-size:22px; color:#999; cursor:pointer; padding:0; }
-    .header-title { font-size:15px; font-weight:500; flex:1; }
-    .header-sub { font-size:11px; color:#bbb; }
-    .main { padding:16px; max-width:560px; margin:0 auto; }
-    .section-label { font-size:11px; font-weight:500; color:#999; margin-bottom:8px; letter-spacing:0.05em; display:flex; align-items:center; justify-content:space-between; }
-    .block-item { display:flex; align-items:center; gap:12px; padding:12px 14px; border:1px solid #e8e8e8; border-radius:10px; cursor:pointer; background:#fff; margin-bottom:8px; -webkit-tap-highlight-color:transparent; }
-    .block-item.selected { border:1.5px solid #378ADD; background:#F0F7FF; }
-    .block-check { width:20px; height:20px; border-radius:5px; border:1.5px solid #ddd; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:13px; color:#fff; }
-    .block-item.selected .block-check { background:#378ADD; border:none; }
-    .block-icon { font-size:20px; flex-shrink:0; }
-    .block-label { font-size:13px; font-weight:500; color:#333; }
-    .block-item.selected .block-label { color:#0C447C; }
-    .block-desc { font-size:11px; color:#aaa; margin-top:1px; }
-    .format-group-label { font-size:12px; font-weight:500; color:#555; margin-bottom:6px; margin-top:12px; }
-    .format-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
-    .format-item { padding:10px 12px; border:1px solid #e8e8e8; border-radius:10px; cursor:pointer; background:#fff; -webkit-tap-highlight-color:transparent; }
-    .format-item.sel-png { border:1.5px solid #378ADD; background:#F0F7FF; }
-    .format-item.sel-pdf { border:1.5px solid #E74C3C; background:#FEF5F8; }
-    .format-title { font-size:13px; font-weight:500; color:#333; margin-bottom:2px; }
-    .format-item.sel-png .format-title { color:#0C447C; }
-    .format-item.sel-pdf .format-title { color:#791F1F; }
-    .format-desc { font-size:11px; color:#aaa; line-height:1.5; }
-    .primary-btn { width:100%; padding:12px; color:#fff; border:none; border-radius:8px; font-size:14px; font-weight:500; cursor:pointer; font-family:inherit; margin-top:16px; display:block; text-align:center; -webkit-tap-highlight-color:transparent; }
-    .btn-blue { background:#378ADD; }
-    .btn-red  { background:#E74C3C; }
-    .btn-gray { background:#ccc; }
-    .btn-row { display:flex; gap:8px; margin-top:16px; }
-    .sec-btn { flex:1; padding:10px; background:#fff; color:#666; border:1px solid #ddd; border-radius:8px; font-size:13px; cursor:pointer; font-family:inherit; -webkit-tap-highlight-color:transparent; }
-    .page { display:none; }
-    .page.active { display:block; }
-    .preview-notice { padding:10px 12px; background:#E6F1FB; border-radius:8px; margin-bottom:12px; font-size:11px; color:#0C447C; line-height:1.7; }
-    .preview-block { border:1px solid #e8e8e8; border-radius:8px; overflow:hidden; margin-bottom:8px; }
-    .preview-block-hdr { padding:6px 12px; background:#f7f7f5; border-bottom:1px solid #f0f0f0; font-size:11px; font-weight:500; color:#666; }
-    .progress-wrap { background:#f0f0f0; border-radius:99px; height:8px; overflow:hidden; max-width:280px; margin:0 auto 8px; }
-    .progress-bar { height:100%; border-radius:99px; transition:width 0.2s; }
-    .file-list { padding:12px 14px; background:#f7f7f5; border-radius:8px; margin-bottom:20px; }
-    .file-item { font-size:12px; color:#333; display:flex; align-items:center; gap:6px; margin-bottom:4px; }
-    .spinner { display:inline-block; width:16px; height:16px; border:2px solid #e0e0e0; border-top-color:#378ADD; border-radius:50%; animation:spin 0.7s linear infinite; vertical-align:middle; }
-    @keyframes spin { to { transform:rotate(360deg); } }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f5f3;min-height:100vh;color:#1a1a1a}
+    .hdr{background:#fff;border-bottom:1px solid #eee;padding:12px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100}
+    .back{background:none;border:none;font-size:22px;color:#999;cursor:pointer;padding:0}
+    .hdr-title{font-size:15px;font-weight:500;flex:1}
+    .hdr-sub{font-size:11px;color:#bbb}
+    .wrap{padding:16px;max-width:560px;margin:0 auto}
+    .sec-lbl{font-size:11px;font-weight:500;color:#999;margin-bottom:8px;letter-spacing:.05em;display:flex;align-items:center;justify-content:space-between}
+    .blk{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid #e8e8e8;border-radius:10px;cursor:pointer;background:#fff;margin-bottom:8px;-webkit-tap-highlight-color:rgba(0,0,0,0)}
+    .blk.on{border:1.5px solid #378ADD;background:#F0F7FF}
+    .chk{width:20px;height:20px;border-radius:5px;border:1.5px solid #ddd;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;color:#fff}
+    .blk.on .chk{background:#378ADD;border:none}
+    .blk-lbl{font-size:13px;font-weight:500;color:#333}
+    .blk.on .blk-lbl{color:#0C447C}
+    .blk-desc{font-size:11px;color:#aaa;margin-top:1px}
+    .fmt-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px}
+    .fmt{padding:10px 12px;border:1px solid #e8e8e8;border-radius:10px;cursor:pointer;background:#fff;-webkit-tap-highlight-color:rgba(0,0,0,0)}
+    .fmt.spng{border:1.5px solid #378ADD;background:#F0F7FF}
+    .fmt.spdf{border:1.5px solid #E74C3C;background:#FEF5F8}
+    .fmt-title{font-size:13px;font-weight:500;color:#333;margin-bottom:2px}
+    .fmt.spng .fmt-title{color:#0C447C}
+    .fmt.spdf .fmt-title{color:#791F1F}
+    .fmt-desc{font-size:11px;color:#aaa;line-height:1.5}
+    .pbtn{width:100%;padding:12px;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;display:block;-webkit-tap-highlight-color:rgba(0,0,0,0)}
+    .pbtn:disabled{background:#ccc!important;cursor:default}
+    .sbtn{padding:10px;background:#fff;color:#666;border:1px solid #ddd;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;flex:1;-webkit-tap-highlight-color:rgba(0,0,0,0)}
+    .brow{display:flex;gap:8px;margin-top:16px}
+    .pg{display:none}
+    .pg.act{display:block}
+    .pv-note{padding:10px 12px;background:#E6F1FB;border-radius:8px;margin-bottom:12px;font-size:11px;color:#0C447C;line-height:1.7}
+    .pv-blk{border:1px solid #e8e8e8;border-radius:8px;overflow:hidden;margin-bottom:8px}
+    .pv-hdr{padding:6px 12px;background:#f7f7f5;border-bottom:1px solid #f0f0f0;font-size:11px;font-weight:500;color:#666}
+    .prog-wrap{background:#f0f0f0;border-radius:99px;height:8px;overflow:hidden;max-width:280px;margin:0 auto 8px}
+    .prog-bar{height:100%;border-radius:99px;transition:width .2s}
+    .flist{padding:12px 14px;background:#f7f7f5;border-radius:8px;margin-bottom:20px}
+    .fitem{font-size:12px;color:#333;display:flex;align-items:center;gap:6px;margin-bottom:4px}
+    .spin{display:inline-block;width:16px;height:16px;border:2px solid #e0e0e0;border-top-color:#378ADD;border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle}
+    @keyframes sp{to{transform:rotate(360deg)}}
   </style>
 </head>
 <body>
 
-<div class="header">
-  <button class="back-btn" id="btn-back">‹</button>
-  <div class="header-title" id="hdr-title">匯出圖片</div>
-  <div class="header-sub" id="hdr-sub"></div>
+<div class="hdr">
+  <button class="back" id="B_BACK">‹</button>
+  <div class="hdr-title" id="HDR_TITLE">匯出圖片</div>
+  <div class="hdr-sub" id="HDR_SUB"></div>
 </div>
 
-<!-- 頁面1：選擇區塊 -->
-<div class="page active" id="page-select">
-  <div class="main">
-    <div class="section-label">
-      選擇匯出區塊
-      <button id="btn-toggle-all" style="font-size:11px;padding:3px 12px;border:1px solid #ddd;border-radius:99px;background:#fff;color:#666;cursor:pointer;font-family:inherit">全部勾選</button>
+<!-- P1 選擇 -->
+<div class="pg act" id="P_SEL">
+  <div class="wrap">
+    <div class="sec-lbl">選擇匯出區塊
+      <button id="B_TOGALL" style="font-size:11px;padding:3px 12px;border:1px solid #ddd;border-radius:99px;background:#fff;color:#666;cursor:pointer;font-family:inherit">全部勾選</button>
     </div>
-    <div id="block-list"></div>
-
-    <div class="format-group-label">🖼️ 圖檔（PNG）</div>
-    <div class="format-grid" id="fmt-png"></div>
-    <div class="format-group-label">📄 文件（PDF）</div>
-    <div class="format-grid" id="fmt-pdf"></div>
-
-    <button class="primary-btn btn-blue" id="btn-preview" style="margin-top:20px">預覽區塊</button>
+    <div id="BLKLIST"></div>
+    <div style="font-size:12px;font-weight:500;color:#555;margin-top:14px;margin-bottom:6px">🖼️ 圖檔（PNG）</div>
+    <div class="fmt-grid" id="FMT_PNG"></div>
+    <div style="font-size:12px;font-weight:500;color:#555;margin-top:10px;margin-bottom:6px">📄 文件（PDF）</div>
+    <div class="fmt-grid" id="FMT_PDF"></div>
+    <button class="pbtn" id="B_PREV" style="background:#378ADD;margin-top:20px">預覽區塊</button>
   </div>
 </div>
 
-<!-- 頁面2：預覽 -->
-<div class="page" id="page-preview">
-  <div class="main">
-    <div class="preview-notice" id="preview-notice"></div>
-    <div id="preview-blocks"></div>
-    <div style="padding:8px 12px;background:#f7f7f5;border-radius:8px;font-size:11px;color:#aaa;margin-bottom:14px;display:flex;gap:6px">
-      <span>💡</span><span id="watermark-hint"></span>
+<!-- P2 預覽 -->
+<div class="pg" id="P_PREV">
+  <div class="wrap">
+    <div class="pv-note" id="PV_NOTE"></div>
+    <div id="PV_BLOCKS"></div>
+    <div style="padding:8px 12px;background:#f7f7f5;border-radius:8px;font-size:11px;color:#aaa;margin-bottom:14px">
+      💡 <span id="WM_HINT"></span>
     </div>
-    <div class="btn-row">
-      <button class="sec-btn" id="btn-back-to-select">返回修改</button>
-      <button class="primary-btn btn-blue" id="btn-start-export" style="flex:2;margin-top:0">下載圖片</button>
+    <div class="brow">
+      <button class="sbtn" id="B_BACK2">返回修改</button>
+      <button class="pbtn" id="B_EXPORT" style="background:#378ADD;flex:2;margin-top:0">下載圖片</button>
     </div>
   </div>
 </div>
 
-<!-- 頁面3：進行中 -->
-<div class="page" id="page-exporting">
-  <div class="main" style="text-align:center;padding-top:40px">
-    <div style="font-size:36px;margin-bottom:16px" id="export-icon">🖼️</div>
-    <div style="font-weight:500;font-size:15px;margin-bottom:8px" id="export-msg">正在產生圖片…</div>
-    <div style="font-size:12px;color:#999;margin-bottom:24px" id="export-sub"></div>
-    <div class="progress-wrap">
-      <div class="progress-bar" id="progress-bar" style="width:0%;background:#378ADD"></div>
-    </div>
-    <div style="font-size:12px;font-weight:500;margin-top:8px" id="progress-pct">0%</div>
+<!-- P3 進行中 -->
+<div class="pg" id="P_DOING">
+  <div class="wrap" style="text-align:center;padding-top:40px">
+    <div style="font-size:36px;margin-bottom:16px" id="EX_ICON">🖼️</div>
+    <div style="font-weight:500;font-size:15px;margin-bottom:8px" id="EX_MSG">正在產生圖片…</div>
+    <div style="font-size:12px;color:#999;margin-bottom:24px" id="EX_SUB"></div>
+    <div class="prog-wrap"><div class="prog-bar" id="PROG" style="width:0%;background:#378ADD"></div></div>
+    <div style="font-size:12px;font-weight:500;margin-top:8px;color:#378ADD" id="PROG_PCT">0%</div>
   </div>
 </div>
 
-<!-- 頁面4：完成 -->
-<div class="page" id="page-done">
-  <div class="main" style="text-align:center;padding-top:32px">
+<!-- P4 完成 -->
+<div class="pg" id="P_DONE">
+  <div class="wrap" style="text-align:center;padding-top:32px">
     <div style="font-size:48px;margin-bottom:16px">✅</div>
     <div style="font-weight:500;font-size:16px;margin-bottom:8px">匯出完成！</div>
-    <div style="font-size:12px;color:#999;line-height:1.8;margin-bottom:20px" id="done-msg"></div>
-    <div class="file-list" id="done-files"></div>
-    <div class="btn-row">
-      <button class="sec-btn" id="btn-redo">重新匯出</button>
-      <button class="primary-btn btn-blue" id="btn-done-finish" style="flex:2;margin-top:0">完成</button>
+    <div style="font-size:12px;color:#999;line-height:1.8;margin-bottom:20px" id="DONE_MSG"></div>
+    <div class="flist" id="DONE_FILES"></div>
+    <div class="brow">
+      <button class="sbtn" id="B_REDO">重新匯出</button>
+      <button class="pbtn" id="B_FINISH" style="background:#378ADD;flex:2;margin-top:0">完成</button>
     </div>
   </div>
 </div>
 
 <script>
-const GAS_URL = "https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec";
+// ── 設定 ─────────────────────────────────────────────────
+const GAS="https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec";
 
-const BLOCKS = [
-  { key:"summary",  label:"保單彙總一覽",   icon:"📊", desc:"保單列表、保費結構、各項保障加總、就醫情況" },
-  { key:"timeline", label:"治療前中後保障",  icon:"🏥", desc:"前期一次性給付、中期療程給付、後期生活幫助" },
-  { key:"coverage", label:"附約保障清單",    icon:"🛡️", desc:"各保單附約保障金額明細" },
-  { key:"savings",  label:"儲蓄險領回明細",  icon:"🐷", desc:"各保單領回時間表與總領回金額" },
-  { key:"monthly",  label:"每月應繳保費",    icon:"📅", desc:"月曆式繳費分配與各公司佔比" },
-  { key:"policy",   label:"保險繳費一覽",    icon:"📋", desc:"所有保單號碼、繳費方式、保費明細" },
+const BLOCKS=[
+  {key:"summary", label:"保單彙總一覽",  icon:"📊",desc:"保單列表、保費結構、各項保障加總"},
+  {key:"timeline",label:"治療前中後保障",icon:"🏥",desc:"前期一次性、中期療程、後期生活幫助"},
+  {key:"coverage",label:"附約保障清單",  icon:"🛡️",desc:"各保單附約保障金額明細"},
+  {key:"savings", label:"儲蓄險領回明細",icon:"🐷",desc:"各保單領回時間表與總領回金額"},
+  {key:"monthly", label:"每月應繳保費",  icon:"📅",desc:"月曆式繳費分配"},
+  {key:"policy",  label:"保險繳費一覽",  icon:"📋",desc:"所有保單號碼、繳費方式、保費明細"},
 ];
-
-const FORMATS = [
-  { key:"png_single",   type:"png", label:"PNG 一張長圖", desc:"所有區塊合併，適合 LINE 傳送" },
-  { key:"png_multiple", type:"png", label:"PNG 分張",     desc:"每個區塊各自一張" },
-  { key:"pdf_merge",    type:"pdf", label:"PDF 合併",     desc:"所有區塊合併為單一 PDF" },
-  { key:"pdf_pages",    type:"pdf", label:"PDF 分頁",     desc:"每個區塊各自一頁" },
+const FMTS=[
+  {key:"png_single",  type:"png",label:"PNG 一張長圖",desc:"所有區塊合併，適合 LINE 傳送"},
+  {key:"png_multiple",type:"png",label:"PNG 分張",    desc:"每個區塊各自一張"},
+  {key:"pdf_merge",   type:"pdf",label:"PDF 合併",    desc:"所有區塊合併為單一 PDF"},
+  {key:"pdf_pages",   type:"pdf",label:"PDF 分頁",    desc:"每個區塊各自一頁"},
 ];
+const CC={"壽險保障":"#4A90D9","醫療保障":"#27AE8F","意外險":"#F5A623","重大疾病險":"#9B59B6","重大傷病險":"#8E44AD","特定傷病險":"#7D3C98","儲蓄險":"#E8638A","年金險":"#C0392B","投資型保險":"#95A5A6"};
 
-let currentUser = null, familyData = null, familyFileName = null;
-let personDataMap = {}, currentPersonId = null;
-let selected = { summary:true, timeline:true, coverage:true, savings:false, monthly:false, policy:false };
-let format = "png_single";
-let personName = "", analysisDate = "";
+// ── 狀態 ─────────────────────────────────────────────────
+var sel={summary:true,timeline:true,coverage:true,savings:false,monthly:false,policy:false};
+var fmt="png_single";
+var person={},policies=[],coverage={},savings=[];
+var pName="",pDate="";
 
-// ── 初始化 ────────────────────────────────────────────────
-window.addEventListener("DOMContentLoaded", async function() {
-  // 靜態按鈕綁定
-  document.getElementById("btn-back").addEventListener("click", () => window.location.href="family.html");
-  document.getElementById("btn-toggle-all").addEventListener("click", toggleAll);
-  document.getElementById("btn-preview").addEventListener("click", showPreview);
-  document.getElementById("btn-back-to-select").addEventListener("click", showSelect);
-  document.getElementById("btn-start-export").addEventListener("click", startExport);
-  document.getElementById("btn-redo").addEventListener("click", showSelect);
-  document.getElementById("btn-done-finish").addEventListener("click", () => window.location.href="family.html");
+// ── 按鈕全部在這裡綁定（同步，一定執行）─────────────────
+document.getElementById("B_BACK").onclick    = function(){ window.location.href="family.html"; };
+document.getElementById("B_TOGALL").onclick  = doToggleAll;
+document.getElementById("B_PREV").onclick    = doShowPreview;
+document.getElementById("B_BACK2").onclick   = doShowSelect;
+document.getElementById("B_EXPORT").onclick  = doExport;
+document.getElementById("B_REDO").onclick    = doShowSelect;
+document.getElementById("B_FINISH").onclick  = function(){ window.location.href="family.html"; };
 
-  const saved = localStorage.getItem("nbs_user");
-  if (!saved) { window.location.href="index.html"; return; }
-  currentUser = JSON.parse(saved);
-  familyFileName = localStorage.getItem("nbs_current_family");
-  if (!familyFileName) { window.location.href="main.html"; return; }
-
-  try {
-    const fr = await callGAS("readFile",{email:currentUser.email,fileType:"family",fileName:familyFileName});
-    familyData = fr.content;
-    document.getElementById("hdr-sub").textContent = familyData.familyName;
-
-    for (const m of familyData.members.filter(m=>m.role!=="beneficiary_only")) {
-      const pr = await callGAS("readFile",{email:currentUser.email,fileType:"person",fileName:m.name+"_"+m.personId+".json"});
-      if (pr.status==="ok") personDataMap[m.personId] = pr.content;
+// ── 載入資料（非同步，失敗不影響按鈕）───────────────────
+(async function(){
+  var saved=localStorage.getItem("nbs_user");
+  if(!saved){window.location.href="index.html";return;}
+  var u=JSON.parse(saved);
+  var fn=localStorage.getItem("nbs_current_family");
+  if(!fn){window.location.href="main.html";return;}
+  try{
+    var fr=await gas("readFile",{email:u.email,fileType:"family",fileName:fn});
+    var fd=fr.content;
+    document.getElementById("HDR_SUB").textContent=fd.familyName;
+    var pdm={};
+    for(var m of fd.members.filter(m=>m.role!=="beneficiary_only")){
+      var pr=await gas("readFile",{email:u.email,fileType:"person",fileName:m.name+"_"+m.personId+".json"});
+      if(pr.status==="ok") pdm[m.personId]=pr.content;
     }
-
-    const savedPerson = localStorage.getItem("nbs_current_person");
-    const primary = familyData.members.find(m=>m.role==="primary");
-    currentPersonId = savedPerson || primary?.personId;
-
-    const person = personDataMap[currentPersonId];
-    personName = person?.profile?.name || "—";
-    const ad = person?.profile?.analysisDate;
-    if (ad) {
-      const d = new Date(ad);
-      analysisDate = (d.getFullYear()-1911)+"年"+(d.getMonth()+1)+"月"+d.getDate()+"日";
-    }
-
-    buildBlockList();
-    buildFormatList();
-    updatePreviewBtn();
-  } catch(e) {
-    alert("載入失敗："+e.message);
-  }
-});
+    var sp=localStorage.getItem("nbs_current_person");
+    var prim=fd.members.find(m=>m.role==="primary");
+    var pid=sp||prim?.personId;
+    person=pdm[pid]||{};
+    policies=person.policies||[];
+    coverage=person.coverage||{};
+    savings=person.savings||[];
+    pName=person.profile?.name||"—";
+    var ad=person.profile?.analysisDate;
+    if(ad){var d=new Date(ad);pDate=(d.getFullYear()-1911)+"年"+(d.getMonth()+1)+"月"+d.getDate()+"日";}
+  }catch(e){console.error(e);}
+  buildBlocks();
+  buildFmts();
+  updatePrevBtn();
+})();
 
 // ── 建立區塊清單 ──────────────────────────────────────────
-function buildBlockList() {
-  const container = document.getElementById("block-list");
-  container.innerHTML = "";
-  BLOCKS.forEach(b => {
-    const el = document.createElement("div");
-    el.className = "block-item" + (selected[b.key]?" selected":"");
-    el.dataset.key = b.key;
-    el.innerHTML = `
-      <div class="block-check">${selected[b.key]?"✓":""}</div>
-      <span class="block-icon">${b.icon}</span>
-      <div style="flex:1">
-        <div class="block-label">${b.label}</div>
-        <div class="block-desc">${b.desc}</div>
-      </div>`;
-    el.addEventListener("click", function() {
-      selected[this.dataset.key] = !selected[this.dataset.key];
-      buildBlockList();
-      updateToggleAllBtn();
-      updatePreviewBtn();
-    });
-    container.appendChild(el);
+function buildBlocks(){
+  var c=document.getElementById("BLKLIST");
+  c.innerHTML="";
+  BLOCKS.forEach(function(b){
+    var d=document.createElement("div");
+    d.className="blk"+(sel[b.key]?" on":"");
+    d.innerHTML='<div class="chk">'+(sel[b.key]?"✓":"")+'</div><span style="font-size:20px;flex-shrink:0">'+b.icon+'</span><div style="flex:1"><div class="blk-lbl">'+b.label+'</div><div class="blk-desc">'+b.desc+'</div></div>';
+    d.onclick=(function(key){return function(){
+      sel[key]=!sel[key];
+      buildBlocks();
+      updateToggleBtn();
+      updatePrevBtn();
+    };})(b.key);
+    c.appendChild(d);
   });
 }
 
 // ── 建立格式清單 ──────────────────────────────────────────
-function buildFormatList() {
-  ["png","pdf"].forEach(type => {
-    const container = document.getElementById("fmt-"+type);
-    container.innerHTML = "";
-    FORMATS.filter(f=>f.type===type).forEach(f => {
-      const el = document.createElement("div");
-      const selClass = format===f.key ? (type==="png"?"sel-png":"sel-pdf") : "";
-      el.className = "format-item " + selClass;
-      el.dataset.key = f.key;
-      el.innerHTML = `<div class="format-title">${f.label}</div><div class="format-desc">${f.desc}</div>`;
-      el.addEventListener("click", function() {
-        format = this.dataset.key;
-        buildFormatList();
-      });
-      container.appendChild(el);
+function buildFmts(){
+  ["png","pdf"].forEach(function(t){
+    var c=document.getElementById("FMT_"+t.toUpperCase());
+    c.innerHTML="";
+    FMTS.filter(function(f){return f.type===t;}).forEach(function(f){
+      var d=document.createElement("div");
+      var sc=fmt===f.key?(t==="png"?"spng":"spdf"):"";
+      d.className="fmt "+sc;
+      d.innerHTML='<div class="fmt-title">'+f.label+'</div><div class="fmt-desc">'+f.desc+'</div>';
+      d.onclick=(function(key,type){return function(){
+        fmt=key;
+        buildFmts();
+        var eb=document.getElementById("B_EXPORT");
+        eb.style.background=fmt.startsWith("pdf")?"#E74C3C":"#378ADD";
+        eb.textContent=fmt.startsWith("pdf")?"匯出 PDF":"下載圖片";
+      };})(f.key,t);
+      c.appendChild(d);
     });
   });
 }
 
-function updateToggleAllBtn() {
-  const allSel = BLOCKS.every(b=>selected[b.key]);
-  document.getElementById("btn-toggle-all").textContent = allSel?"全部取消":"全部勾選";
+function updateToggleBtn(){
+  var all=BLOCKS.every(function(b){return sel[b.key];});
+  document.getElementById("B_TOGALL").textContent=all?"全部取消":"全部勾選";
 }
 
-function updatePreviewBtn() {
-  const keys = BLOCKS.filter(b=>selected[b.key]);
-  const btn = document.getElementById("btn-preview");
-  if (keys.length === 0) {
-    btn.textContent = "請至少勾選一個區塊";
-    btn.className = "primary-btn btn-gray";
-    btn.disabled = true;
-  } else {
-    btn.textContent = `預覽 ${keys.length} 個區塊`;
-    btn.className = "primary-btn btn-blue";
-    btn.disabled = false;
+function updatePrevBtn(){
+  var keys=BLOCKS.filter(function(b){return sel[b.key];});
+  var btn=document.getElementById("B_PREV");
+  if(keys.length===0){
+    btn.textContent="請至少勾選一個區塊";
+    btn.style.background="#ccc";
+    btn.disabled=true;
+  }else{
+    btn.textContent="預覽 "+keys.length+" 個區塊";
+    btn.style.background="#378ADD";
+    btn.disabled=false;
   }
 }
 
-function toggleAll() {
-  const allSel = BLOCKS.every(b=>selected[b.key]);
-  BLOCKS.forEach(b=>{ selected[b.key]=!allSel; });
-  buildBlockList();
-  updateToggleAllBtn();
-  updatePreviewBtn();
-}
-
-// ── 顯示預覽頁 ────────────────────────────────────────────
-function showSelect() {
-  showPage("select");
-  document.getElementById("hdr-title").textContent = "匯出圖片";
-}
-
-function showPreview() {
-  const isPdf = format.startsWith("pdf");
-  const selBlocks = BLOCKS.filter(b=>selected[b.key]);
-
-  document.getElementById("hdr-title").textContent = "預覽確認";
-  document.getElementById("preview-notice").innerHTML =
-    `ℹ️ 以下為<strong>真實資料預覽</strong>，點「${isPdf?"匯出 PDF":"下載圖片"}」後系統截圖產生${isPdf?"PDF":"PNG"}檔案。`;
-
-  // 更新下載按鈕
-  const exportBtn = document.getElementById("btn-start-export");
-  exportBtn.textContent = isPdf ? "匯出 PDF" : "下載圖片";
-  exportBtn.className = `primary-btn ${isPdf?"btn-red":"btn-blue"}`;
-  exportBtn.style.flex = "2";
-  exportBtn.style.marginTop = "0";
-
-  document.getElementById("watermark-hint").textContent =
-    `匯出圖片底部將自動加上「NBS 保單體檢　${personName}　${analysisDate}」浮水印`;
-
-  // 渲染預覽區塊
-  const container = document.getElementById("preview-blocks");
-  container.innerHTML = "";
-  selBlocks.forEach((b,i) => {
-    if (format!=="png_single") {
-      const tag = document.createElement("div");
-      tag.style.cssText = "font-size:10px;color:#bbb;margin-bottom:3px";
-      tag.textContent = `第 ${i+1} ${format.startsWith("pdf")?"頁":"張"}`;
-      container.appendChild(tag);
-    }
-    const block = document.createElement("div");
-    block.className = "preview-block";
-    block.innerHTML = `<div class="preview-block-hdr">${b.icon} ${b.label}</div>
-      <div>${renderBlockHTML(b.key)}</div>`;
-    container.appendChild(block);
-    if (format!=="png_single") {
-      const gap = document.createElement("div");
-      gap.style.marginBottom = "4px";
-      container.appendChild(gap);
-    }
-  });
-
-  showPage("preview");
-}
-
-// ── 各區塊渲染 ────────────────────────────────────────────
-function renderBlockHTML(key) {
-  const person   = personDataMap[currentPersonId];
-  const policies = person?.policies || [];
-  const coverage = person?.coverage || {};
-  const active   = policies.filter(p=>p.status==="有效");
-  const CAT_COLORS={"壽險保障":"#4A90D9","醫療保障":"#27AE8F","意外險":"#F5A623","重大疾病險":"#9B59B6","重大傷病險":"#8E44AD","特定傷病險":"#7D3C98","儲蓄險":"#E8638A","年金險":"#C0392B","投資型保險":"#95A5A6"};
-
-  if (key==="summary") {
-    const totalTWD = active.reduce((s,p)=>s+(p.premiumTWD||0),0);
-    const catMap={};
-    active.forEach(p=>{ catMap[p.category]=(catMap[p.category]||0)+(p.premiumTWD||0); });
-    const pieData=Object.entries(catMap).map(([l,v])=>({label:l,value:v,color:CAT_COLORS[l]||"#999"}));
-    const pieTotal=pieData.reduce((s,d)=>s+d.value,0);
-    const cx=80,cy=80,r=70; let cum=-Math.PI/2; let paths="";
-    pieData.forEach(d=>{
-      const angle=(d.value/pieTotal)*Math.PI*2;
-      const x1=cx+r*Math.cos(cum),y1=cy+r*Math.sin(cum); cum+=angle;
-      const x2=cx+r*Math.cos(cum),y2=cy+r*Math.sin(cum);
-      paths+=`<path d="M${cx},${cy} L${x1.toFixed(1)},${y1.toFixed(1)} A${r},${r} 0 ${angle>Math.PI?1:0} 1 ${x2.toFixed(1)},${y2.toFixed(1)} Z" fill="${d.color}" stroke="#fff" stroke-width="1.5"/>`;
-    });
-    const legend=pieData.map(d=>`<div style="display:flex;align-items:center;gap:5px;font-size:11px;margin-bottom:3px"><div style="width:10px;height:10px;border-radius:2px;background:${d.color};flex-shrink:0"></div><span style="color:#555;min-width:64px">${d.label}</span><span style="color:#aaa">${Math.round(d.value/pieTotal*100)}%</span></div>`).join("");
-    return `<div style="padding:10px 12px"><div style="font-size:11px;color:#888;margin-bottom:8px">${personName}　${analysisDate}　年繳 NT$${(totalTWD/10000).toFixed(1)}萬</div><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><svg width="160" height="160" style="flex-shrink:0"><g>${paths}</g></svg><div>${legend}</div></div></div>`;
-  }
-
-  if (key==="timeline") {
-    const phases=[
-      {label:"治療前期",color:"#5BAD6F",bg:"#EAF3DE",items:[["重大疾病",null],["重大傷病",null],["特定傷病",null]]},
-      {label:"治療中期",color:"#378ADD",bg:"#E6F1FB",items:[["住院日額",null],["初次罹癌",null],["癌症住院",null],["放/化療",null]]},
-      {label:"治療後期",color:"#E8638A",bg:"#FBEAF0",items:[["長照每月",null],["失能一次金",null],["失能扶助",null]]},
-    ];
-    const arrows=phases.map((p,i)=>`<div style="flex:${i===1?1.6:1};padding:5px 6px;background:${p.color};color:#fff;font-weight:600;font-size:10px;text-align:center;clip-path:${i===0?"polygon(0 0,calc(100% - 8px) 0,100% 50%,calc(100% - 8px) 100%,0 100%)":i===2?"polygon(0 0,100% 0,100% 100%,0 100%,8px 50%)":"polygon(0 0,calc(100% - 8px) 0,100% 50%,calc(100% - 8px) 100%,0 100%,8px 50%)"};margin-left:${i>0?"-2px":"0"}">${p.label}</div>`).join("");
-    const cols=phases.map(p=>`<div style="border:1px solid ${p.color}40;border-radius:5px;overflow:hidden"><div style="height:3px;background:${p.bg}"></div><div style="padding:4px 6px">${p.items.map(([l,v])=>`<div style="display:flex;justify-content:space-between;font-size:9px;margin-bottom:2px;padding:2px 3px;background:${v?"#fff":"#f5f5f5"};border-radius:3px"><span style="color:${v?"#333":"#bbb"}">${l}</span><span style="color:${v?p.color:"#ccc"}">${v||"未投保"}</span></div>`).join("")}</div></div>`).join("");
-    return `<div style="padding:10px 12px"><div style="display:flex;margin-bottom:8px">${arrows}</div><div style="display:grid;grid-template-columns:1fr 1.6fr 1fr;gap:5px">${cols}</div></div>`;
-  }
-
-  if (key==="coverage") {
-    const groups=[{label:"意外",color:"#F5A623",keys:["acc_special","acc_disable"]},{label:"住院",color:"#27AE8F",keys:["hosp_room","daily_room"]},{label:"癌症",color:"#E74C3C",keys:["can_first","can_hosp"]},{label:"長照",color:"#27500A",keys:["ltc_monthly","ltc_dis_amt"]}];
-    let html="";
-    groups.forEach(g=>{
-      const items=g.keys.map(k=>{let t=0;policies.forEach(p=>{const v=coverage[p.id+"_"+k];if(v)t+=v;});return t>0?`<span style="font-size:10px;margin-right:8px">${k.split("_").slice(1).join("_")}：${t.toLocaleString()}</span>`:""}).filter(Boolean).join("");
-      if(items) html+=`<div style="margin-bottom:5px"><div style="font-size:10px;font-weight:500;color:${g.color};margin-bottom:1px">${g.label}</div><div>${items}</div></div>`;
-    });
-    return `<div style="padding:10px 12px">${html||'<div style="color:#aaa;font-size:12px">尚無附約保障資料</div>'}</div>`;
-  }
-
-  if (key==="savings") {
-    const sPols=policies.filter(p=>p.category==="儲蓄險"||p.category==="年金險");
-    if(!sPols.length) return `<div style="padding:12px;color:#aaa;font-size:12px">尚無儲蓄險或年金險保單</div>`;
-    const savings=person?.savings||[];
-    return `<div style="padding:10px 12px">${sPols.map(p=>{const s=savings.find(x=>x.policyId===p.id);return `<div style="font-size:12px;margin-bottom:5px;padding:6px 8px;background:#fafafa;border-radius:5px"><div style="font-weight:500">${p.itemName||p.policyNo}</div><div style="font-size:10px;color:#aaa">${p.company}　${s?`每次 NT$${(s.amount||0).toLocaleString()}　${s.mode==="month"?"月領":"年領"}`:"尚未設定"}</div></div>`;}).join("")}</div>`;
-  }
-
-  if (key==="monthly") {
-    const now=new Date().getMonth();
-    const cells=Array.from({length:12},(_,mi)=>{
-      let t=0;
-      active.forEach(p=>{
-        const sm=new Date(p.startDate||"2020-01-01").getMonth(), pr=p.premiumTWD||0;
-        if(p.payMode==="月繳") t+=Math.round(pr/12);
-        else if(p.payMode==="季繳"&&(mi-sm+12)%3===0) t+=Math.round(pr/4);
-        else if(p.payMode==="半年繳"&&(mi-sm+12)%6===0) t+=Math.round(pr/2);
-        else if(p.payMode==="年繳"&&mi===sm%12) t+=pr;
-      });
-      return `<div style="padding:3px;background:${mi===now?"#E6F1FB":"#f7f7f5"};border-radius:4px;text-align:center;border:${mi===now?"1px solid #378ADD":"1px solid transparent"}"><div style="font-size:8px;color:#aaa">${mi+1}月</div><div style="font-size:9px;font-weight:500;color:${mi===now?"#0C447C":t>0?"#333":"#ddd"}">${t>0?(t>=10000?(t/10000).toFixed(1)+"萬":t.toLocaleString()):"—"}</div></div>`;
-    }).join("");
-    return `<div style="padding:10px 12px"><div style="display:grid;grid-template-columns:repeat(6,1fr);gap:3px">${cells}</div></div>`;
-  }
-
-  if (key==="policy") {
-    const totalTWD=policies.filter(p=>p.status==="有效").reduce((s,p)=>s+(p.premiumTWD||0),0);
-    const rows=policies.slice(0,6).map(p=>`<div style="display:flex;align-items:center;gap:5px;font-size:10px;padding:3px 0;border-bottom:1px solid #f8f8f8"><span style="font-family:monospace;background:#E6F1FB;color:#0C447C;padding:1px 5px;border-radius:99px;flex-shrink:0">${p.policyNo||p.id}</span><span style="padding:1px 5px;border-radius:99px;background:${(CAT_COLORS[p.category]||"#999")}20;color:${CAT_COLORS[p.category]||"#555"};flex-shrink:0">${p.category}</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.itemName||"—"}</span><span style="font-weight:500;flex-shrink:0">NT${(p.premiumTWD||0).toLocaleString()}</span></div>`).join("");
-    return `<div style="padding:10px 12px">${rows}${policies.length>6?`<div style="font-size:10px;color:#aaa;padding-top:3px">…等共${policies.length}筆</div>`:""}<div style="font-size:11px;font-weight:500;color:#27500A;text-align:right;padding-top:5px;border-top:1px solid #e8e8e8;margin-top:3px">年繳總計 NT$${totalTWD.toLocaleString()}</div></div>`;
-  }
-
-  return `<div style="padding:12px;color:#aaa;font-size:12px">建置中</div>`;
-}
-
-// ── 匯出 ─────────────────────────────────────────────────
-async function startExport() {
-  const isPdf = format.startsWith("pdf");
-  const selBlocks = BLOCKS.filter(b=>selected[b.key]);
-  showPage("exporting");
-  document.getElementById("export-icon").textContent = isPdf?"📄":"🖼️";
-  document.getElementById("export-msg").textContent = isPdf?"正在產生 PDF…":format==="png_single"?"正在合併圖片…":"正在產生圖片…";
-  document.getElementById("export-sub").textContent = `共 ${selBlocks.length} 個區塊　${format==="png_single"?"一張 PNG":format==="png_multiple"?selBlocks.length+"張 PNG":format==="pdf_merge"?"單一 PDF":selBlocks.length+" 頁 PDF"}`;
-  document.getElementById("progress-bar").style.background = isPdf?"#E74C3C":"#378ADD";
-
-  const renderDiv = document.createElement("div");
-  renderDiv.style.cssText = "position:fixed;left:-9999px;top:0;width:560px;background:#fff;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;color:#1a1a1a";
-  document.body.appendChild(renderDiv);
-
-  try {
-    if (isPdf) await doExportPDF(selBlocks, renderDiv);
-    else await doExportPNG(selBlocks, renderDiv);
-    showDonePage(selBlocks);
-  } catch(e) {
-    alert("匯出失敗："+e.message);
-    showSelect();
-  } finally {
-    document.body.removeChild(renderDiv);
-  }
-}
-
-function setProgress(pct) {
-  document.getElementById("progress-bar").style.width = pct+"%";
-  document.getElementById("progress-pct").textContent = pct+"%";
-}
-
-async function doExportPNG(blocks, div) {
-  const wm = `<div style="padding:8px;background:#f7f7f5;text-align:center;font-size:11px;color:#aaa">NBS 保單體檢　${personName}　${analysisDate}</div>`;
-  if (format==="png_single") {
-    div.innerHTML = blocks.map(b=>`<div style="border-bottom:1px solid #f0f0f0">${renderBlockHTML(b.key)}</div>`).join("") + wm;
-    setProgress(30); await sleep(100);
-    const canvas = await html2canvas(div,{scale:2,useCORS:true,backgroundColor:"#ffffff"});
-    setProgress(80); await sleep(100);
-    const a=document.createElement("a");
-    a.download=`${personName}_保單體檢_${analysisDate}.png`;
-    a.href=canvas.toDataURL("image/png"); a.click();
-    setProgress(100);
-  } else {
-    for (let i=0; i<blocks.length; i++) {
-      div.innerHTML = renderBlockHTML(blocks[i].key) + wm;
-      setProgress(Math.round((i/blocks.length)*90)); await sleep(50);
-      const canvas = await html2canvas(div,{scale:2,useCORS:true,backgroundColor:"#ffffff"});
-      const a=document.createElement("a");
-      a.download=`${personName}_${blocks[i].label}_${analysisDate}.png`;
-      a.href=canvas.toDataURL("image/png"); a.click();
-      await sleep(300);
-    }
-    setProgress(100);
-  }
-}
-
-async function doExportPDF(blocks, div) {
-  const {jsPDF}=window.jspdf;
-  const pdf=new jsPDF("p","mm","a4");
-  const pageW=210, pageH=297;
-  const wm = `<div style="padding:8px;background:#f7f7f5;text-align:center;font-size:11px;color:#aaa">NBS 保單體檢　${personName}　${analysisDate}</div>`;
-  for (let i=0; i<blocks.length; i++) {
-    div.innerHTML = renderBlockHTML(blocks[i].key) + wm;
-    setProgress(Math.round((i/blocks.length)*90)); await sleep(50);
-    const canvas=await html2canvas(div,{scale:2,useCORS:true,backgroundColor:"#ffffff"});
-    const imgW=pageW-20, imgH=(canvas.height/canvas.width)*imgW;
-    if(i>0) pdf.addPage();
-    pdf.addImage(canvas.toDataURL("image/png"),"PNG",10,10,imgW,Math.min(imgH,pageH-20));
-  }
-  setProgress(95);
-  pdf.save(`${personName}_保單體檢_${analysisDate}.pdf`);
-  setProgress(100);
-}
-
-function showDonePage(blocks) {
-  const isPdf=format.startsWith("pdf");
-  document.getElementById("done-msg").textContent = `${isPdf?"PDF":"圖片"}已下載到您的裝置，可直接傳送給保戶`;
-  let filesHTML="<div style='font-size:11px;color:#aaa;margin-bottom:6px'>下載的檔案</div>";
-  if(format==="png_single") filesHTML+=`<div class="file-item"><span>🖼️</span>${personName}_保單體檢_${analysisDate}.png</div>`;
-  else if(format==="png_multiple") filesHTML+=blocks.map(b=>`<div class="file-item"><span>🖼️</span>${personName}_${b.label}_${analysisDate}.png</div>`).join("");
-  else filesHTML+=`<div class="file-item"><span>📄</span>${personName}_保單體檢_${analysisDate}.pdf${format==="pdf_pages"?` (${blocks.length}頁)`:""}</div>`;
-  document.getElementById("done-files").innerHTML = filesHTML;
-  showPage("done");
+function doToggleAll(){
+  var all=BLOCKS.every(function(b){return sel[b.key];});
+  BLOCKS.forEach(function(b){sel[b.key]=!all;});
+  buildBlocks();
+  updateToggleBtn();
+  updatePrevBtn();
 }
 
 // ── 頁面切換 ──────────────────────────────────────────────
-function showPage(name) {
-  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
-  document.getElementById("page-"+name).classList.add("active");
-}
-
-function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
-
-function callGAS(action,params) {
-  const url=new URL(GAS_URL);
-  url.searchParams.set("action",action);
-  Object.entries(params||{}).forEach(([k,v])=>{
-    if(typeof v==="object") url.searchParams.set(k,encodeURIComponent(JSON.stringify(v)));
-    else if(v!==null&&v!==undefined) url.searchParams.set(k,v);
+function goPage(id){
+  ["P_SEL","P_PREV","P_DOING","P_DONE"].forEach(function(p){
+    document.getElementById(p).className="pg"+(p===id?" act":"");
   });
-  return fetch(url.toString()).then(r=>r.json());
 }
+
+function doShowSelect(){
+  goPage("P_SEL");
+  document.getElementById("HDR_TITLE").textContent="匯出圖片";
+}
+
+function doShowPreview(){
+  if(document.getElementById("B_PREV").disabled) return;
+  var selBlks=BLOCKS.filter(function(b){return sel[b.key];});
+  var isPdf=fmt.startsWith("pdf");
+  document.getElementById("HDR_TITLE").textContent="預覽確認";
+  document.getElementById("PV_NOTE").innerHTML='ℹ️ 以下為<strong>真實資料預覽</strong>，點「'+(isPdf?"匯出 PDF":"下載圖片")+'」後系統截圖產生'+(isPdf?"PDF":"PNG")+'檔案。';
+  document.getElementById("WM_HINT").textContent='匯出圖片底部將自動加上「NBS 保單體檢　'+pName+'　'+pDate+'」浮水印';
+  var eb=document.getElementById("B_EXPORT");
+  eb.style.background=isPdf?"#E74C3C":"#378ADD";
+  eb.textContent=isPdf?"匯出 PDF":"下載圖片";
+  var c=document.getElementById("PV_BLOCKS");
+  c.innerHTML="";
+  selBlks.forEach(function(b,i){
+    if(fmt!=="png_single"){
+      var tag=document.createElement("div");
+      tag.style.cssText="font-size:10px;color:#bbb;margin-bottom:3px";
+      tag.textContent="第 "+(i+1)+" "+(fmt.startsWith("pdf")?"頁":"張");
+      c.appendChild(tag);
+    }
+    var div=document.createElement("div");
+    div.className="pv-blk";
+    div.innerHTML='<div class="pv-hdr">'+b.icon+" "+b.label+'</div><div>'+renderBlock(b.key)+'</div>';
+    c.appendChild(div);
+  });
+  goPage("P_PREV");
+}
+
+// ── 渲染各區塊 HTML ───────────────────────────────────────
+function renderBlock(key){
+  var active=policies.filter(function(p){return p.status==="有效";});
+
+  if(key==="summary"){
+    var totalTWD=active.reduce(function(s,p){return s+(p.premiumTWD||0);},0);
+    var catMap={};
+    active.forEach(function(p){catMap[p.category]=(catMap[p.category]||0)+(p.premiumTWD||0);});
+    var pd=Object.entries(catMap).map(function(e){return{label:e[0],value:e[1],color:CC[e[0]]||"#999"};});
+    var pt=pd.reduce(function(s,d){return s+d.value;},0);
+    var cx=80,cy=80,r=70,cum=-Math.PI/2,paths="";
+    pd.forEach(function(d){
+      var a=(d.value/pt)*Math.PI*2;
+      var x1=cx+r*Math.cos(cum),y1=cy+r*Math.sin(cum);cum+=a;
+      var x2=cx+r*Math.cos(cum),y2=cy+r*Math.sin(cum);
+      paths+='<path d="M'+cx+','+cy+' L'+x1.toFixed(1)+','+y1.toFixed(1)+' A'+r+','+r+' 0 '+(a>Math.PI?1:0)+' 1 '+x2.toFixed(1)+','+y2.toFixed(1)+' Z" fill="'+d.color+'" stroke="#fff" stroke-width="1.5"/>';
+    });
+    var legend=pd.map(function(d){return'<div style="display:flex;align-items:center;gap:5px;font-size:11px;margin-bottom:3px"><div style="width:10px;height:10px;border-radius:2px;background:'+d.color+';flex-shrink:0"></div><span style="color:#555;min-width:64px">'+d.label+'</span><span style="color:#aaa">'+Math.round(d.value/pt*100)+'%</span></div>';}).join("");
+    return'<div style="padding:10px 12px"><div style="font-size:11px;color:#888;margin-bottom:8px">'+pName+'　'+pDate+'　年繳 NT$'+(totalTWD/10000).toFixed(1)+'萬</div><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><svg width="160" height="160" style="flex-shrink:0"><g>'+paths+'</g></svg><div>'+legend+'</div></div></div>';
+  }
+
+  if(key==="timeline"){
+    var phases=[
+      {l:"治療前期",c:"#5BAD6F",items:[["重大疾病",null],["重大傷病",null],["特定傷病",null]]},
+      {l:"治療中期",c:"#378ADD",items:[["住院日額",null],["初次罹癌",null],["癌症住院",null],["放/化療",null]]},
+      {l:"治療後期",c:"#E8638A",items:[["長照每月",null],["失能一次金",null],["失能扶助",null]]},
+    ];
+    var arrows=phases.map(function(p,i){return'<div style="flex:'+(i===1?1.6:1)+';padding:5px 6px;background:'+p.c+';color:#fff;font-weight:600;font-size:10px;text-align:center;clip-path:'+(i===0?"polygon(0 0,calc(100% - 8px) 0,100% 50%,calc(100% - 8px) 100%,0 100%)":i===2?"polygon(0 0,100% 0,100% 100%,0 100%,8px 50%)":"polygon(0 0,calc(100% - 8px) 0,100% 50%,calc(100% - 8px) 100%,0 100%,8px 50%)")+';margin-left:'+(i>0?"-2px":"0")+'">'+p.l+'</div>';}).join("");
+    var cols=phases.map(function(p){return'<div style="border:1px solid '+p.c+'40;border-radius:5px;overflow:hidden"><div style="height:3px;background:'+p.c+'20"></div><div style="padding:4px 6px">'+p.items.map(function(it){return'<div style="display:flex;justify-content:space-between;font-size:9px;margin-bottom:2px;padding:2px 3px;background:'+(it[1]?"#fff":"#f5f5f5")+';border-radius:3px"><span style="color:'+(it[1]?"#333":"#bbb")+'">'+it[0]+'</span><span style="color:'+(it[1]?p.c:"#ccc")+'">'+(it[1]||"未投保")+'</span></div>';}).join("")+'</div></div>';}).join("");
+    return'<div style="padding:10px 12px"><div style="display:flex;margin-bottom:8px">'+arrows+'</div><div style="display:grid;grid-template-columns:1fr 1.6fr 1fr;gap:5px">'+cols+'</div></div>';
+  }
+
+  if(key==="coverage"){
+    var html="";
+    [["意外","#F5A623",["acc_special","acc_disable"]],["住院","#27AE8F",["hosp_room","daily_room"]],["癌症","#E74C3C",["can_first","can_hosp"]],["長照","#27500A",["ltc_monthly","ltc_dis_amt"]]].forEach(function(g){
+      var items=g[2].map(function(k){var t=0;policies.forEach(function(p){var v=coverage[p.id+"_"+k];if(v)t+=v;});return t>0?'<span style="font-size:10px;margin-right:8px">'+k.split("_").slice(1).join("_")+'：'+t.toLocaleString()+'</span>':"";}).filter(Boolean).join("");
+      if(items) html+='<div style="margin-bottom:5px"><div style="font-size:10px;font-weight:500;color:'+g[1]+';margin-bottom:1px">'+g[0]+'</div><div>'+items+'</div></div>';
+    });
+    return'<div style="padding:10px 12px">'+(html||'<div style="color:#aaa;font-size:12px">尚無附約保障資料</div>')+'</div>';
+  }
+
+  if(key==="savings"){
+    var sp=policies.filter(function(p){return p.category==="儲蓄險"||p.category==="年金險";});
+    if(!sp.length) return'<div style="padding:12px;color:#aaa;font-size:12px">尚無儲蓄險或年金險保單</div>';
+    return'<div style="padding:10px 12px">'+sp.map(function(p){var s=(savings||[]).find(function(x){return x.policyId===p.id;});return'<div style="font-size:12px;margin-bottom:5px;padding:6px 8px;background:#fafafa;border-radius:5px"><div style="font-weight:500">'+(p.itemName||p.policyNo)+'</div><div style="font-size:10px;color:#aaa">'+p.company+'　'+(s?'每次 NT$'+(s.amount||0).toLocaleString()+'　'+(s.mode==="month"?"月領":"年領"):"尚未設定")+'</div></div>';}).join("")+'</div>';
+  }
+
+  if(key==="monthly"){
+    var now=new Date().getMonth();
+    var active2=policies.filter(function(p){return p.status==="有效";});
+    var cells=Array.from({length:12},function(_,mi){
+      var t=0;
+      active2.forEach(function(p){
+        var sm=new Date(p.startDate||"2020-01-01").getMonth(),pr=p.premiumTWD||0;
+        if(p.payMode==="月繳")t+=Math.round(pr/12);
+        else if(p.payMode==="季繳"&&(mi-sm+12)%3===0)t+=Math.round(pr/4);
+        else if(p.payMode==="半年繳"&&(mi-sm+12)%6===0)t+=Math.round(pr/2);
+        else if(p.payMode==="年繳"&&mi===sm%12)t+=pr;
+      });
+      return'<div style="padding:3px;background:'+(mi===now?"#E6F1FB":"#f7f7f5")+';border-radius:4px;text-align:center;border:'+(mi===now?"1px solid #378ADD":"1px solid transparent")+'"><div style="font-size:8px;color:#aaa">'+(mi+1)+'月</div><div style="font-size:9px;font-weight:500;color:'+(mi===now?"#0C447C":t>0?"#333":"#ddd")+'">'+(t>0?(t>=10000?(t/10000).toFixed(1)+"萬":t.toLocaleString()):"—")+'</div></div>';
+    }).join("");
+    return'<div style="padding:10px 12px"><div style="display:grid;grid-template-columns:repeat(6,1fr);gap:3px">'+cells+'</div></div>';
+  }
+
+  if(key==="policy"){
+    var tt=policies.filter(function(p){return p.status==="有效";}).reduce(function(s,p){return s+(p.premiumTWD||0);},0);
+    var rows=policies.slice(0,6).map(function(p){return'<div style="display:flex;align-items:center;gap:5px;font-size:10px;padding:3px 0;border-bottom:1px solid #f8f8f8"><span style="font-family:monospace;background:#E6F1FB;color:#0C447C;padding:1px 5px;border-radius:99px;flex-shrink:0">'+(p.policyNo||p.id)+'</span><span style="padding:1px 5px;border-radius:99px;background:'+(CC[p.category]||"#999")+'20;color:'+(CC[p.category]||"#555")+';flex-shrink:0">'+p.category+'</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(p.itemName||"—")+'</span><span style="font-weight:500;flex-shrink:0">NT'+(p.premiumTWD||0).toLocaleString()+'</span></div>';}).join("");
+    return'<div style="padding:10px 12px">'+rows+(policies.length>6?'<div style="font-size:10px;color:#aaa;padding-top:3px">…等共'+policies.length+'筆</div>':'')+'<div style="font-size:11px;font-weight:500;color:#27500A;text-align:right;padding-top:5px;border-top:1px solid #e8e8e8;margin-top:3px">年繳總計 NT$'+tt.toLocaleString()+'</div></div>';
+  }
+
+  return'<div style="padding:12px;color:#aaa;font-size:12px">建置中</div>';
+}
+
+// ── 匯出主流程 ────────────────────────────────────────────
+function doExport(){
+  var selBlks=BLOCKS.filter(function(b){return sel[b.key];});
+  var isPdf=fmt.startsWith("pdf");
+  goPage("P_DOING");
+  document.getElementById("EX_ICON").textContent=isPdf?"📄":"🖼️";
+  document.getElementById("EX_MSG").textContent=isPdf?"正在產生 PDF…":fmt==="png_single"?"正在合併圖片…":"正在產生圖片…";
+  document.getElementById("EX_SUB").textContent="共 "+selBlks.length+" 個區塊　"+(fmt==="png_single"?"一張 PNG":fmt==="png_multiple"?selBlks.length+"張 PNG":fmt==="pdf_merge"?"單一 PDF":selBlks.length+" 頁 PDF");
+  document.getElementById("PROG").style.background=isPdf?"#E74C3C":"#378ADD";
+  document.getElementById("PROG_PCT").style.color=isPdf?"#E74C3C":"#378ADD";
+
+  var div=document.createElement("div");
+  div.style.cssText="position:fixed;left:-9999px;top:0;width:560px;background:#fff;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;color:#1a1a1a";
+  document.body.appendChild(div);
+
+  var p=(isPdf?doExportPDF(selBlks,div):doExportPNG(selBlks,div));
+  p.then(function(){
+    document.body.removeChild(div);
+    showDone(selBlks);
+  }).catch(function(e){
+    document.body.removeChild(div);
+    alert("匯出失敗："+e.message);
+    doShowSelect();
+  });
+}
+
+function setP(v){
+  document.getElementById("PROG").style.width=v+"%";
+  document.getElementById("PROG_PCT").textContent=v+"%";
+}
+function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
+
+async function doExportPNG(blks,div){
+  var wm='<div style="padding:8px;background:#f7f7f5;text-align:center;font-size:11px;color:#aaa">NBS 保單體檢　'+pName+'　'+pDate+'</div>';
+  if(fmt==="png_single"){
+    div.innerHTML=blks.map(function(b){return'<div style="border-bottom:1px solid #f0f0f0">'+renderBlock(b.key)+'</div>';}).join("")+wm;
+    setP(30);await sleep(200);
+    var c=await html2canvas(div,{scale:2,useCORS:true,backgroundColor:"#ffffff"});
+    setP(80);await sleep(100);
+    var a=document.createElement("a");
+    a.download=pName+"_保單體檢_"+pDate+".png";
+    a.href=c.toDataURL("image/png");a.click();
+    setP(100);
+  }else{
+    for(var i=0;i<blks.length;i++){
+      div.innerHTML=renderBlock(blks[i].key)+wm;
+      setP(Math.round(i/blks.length*90));await sleep(100);
+      var c2=await html2canvas(div,{scale:2,useCORS:true,backgroundColor:"#ffffff"});
+      var a2=document.createElement("a");
+      a2.download=pName+"_"+blks[i].label+"_"+pDate+".png";
+      a2.href=c2.toDataURL("image/png");a2.click();
+      await sleep(400);
+    }
+    setP(100);
+  }
+}
+
+async function doExportPDF(blks,div){
+  var J=window.jspdf.jsPDF;
+  var pdf=new J("p","mm","a4");
+  var wm='<div style="padding:8px;background:#f7f7f5;text-align:center;font-size:11px;color:#aaa">NBS 保單體檢　'+pName+'　'+pDate+'</div>';
+  for(var i=0;i<blks.length;i++){
+    div.innerHTML=renderBlock(blks[i].key)+wm;
+    setP(Math.round(i/blks.length*90));await sleep(100);
+    var c=await html2canvas(div,{scale:2,useCORS:true,backgroundColor:"#ffffff"});
+    var iw=190,ih=(c.height/c.width)*iw;
+    if(i>0)pdf.addPage();
+    pdf.addImage(c.toDataURL("image/png"),"PNG",10,10,iw,Math.min(ih,277));
+  }
+  setP(95);
+  pdf.save(pName+"_保單體檢_"+pDate+".pdf");
+  setP(100);
+}
+
+function showDone(blks){
+  var isPdf=fmt.startsWith("pdf");
+  document.getElementById("DONE_MSG").textContent=(isPdf?"PDF":"圖片")+"已下載到您的裝置，可直接傳送給保戶";
+  var h='<div style="font-size:11px;color:#aaa;margin-bottom:6px">下載的檔案</div>';
+  if(fmt==="png_single")h+='<div class="fitem">🖼️ '+pName+'_保單體檢_'+pDate+'.png</div>';
+  else if(fmt==="png_multiple")h+=blks.map(function(b){return'<div class="fitem">🖼️ '+pName+'_'+b.label+'_'+pDate+'.png</div>';}).join("");
+  else h+='<div class="fitem">📄 '+pName+'_保單體檢_'+pDate+'.pdf'+(fmt==="pdf_pages"?" ("+blks.length+"頁)":"")+'</div>';
+  document.getElementById("DONE_FILES").innerHTML=h;
+  goPage("P_DONE");
+}
+
+// ── GAS 呼叫 ─────────────────────────────────────────────
+function gas(action,params){
+  var url=new URL(GAS);
+  url.searchParams.set("action",action);
+  Object.entries(params||{}).forEach(function(kv){
+    var k=kv[0],v=kv[1];
+    if(typeof v==="object")url.searchParams.set(k,encodeURIComponent(JSON.stringify(v)));
+    else if(v!==null&&v!==undefined)url.searchParams.set(k,v);
+  });
+  return fetch(url.toString()).then(function(r){return r.json();});
+}
+
+// ── 頁面載入後建立清單 ────────────────────────────────────
+window.addEventListener("load",function(){
+  buildBlocks();
+  buildFmts();
+  updatePrevBtn();
+});
 </script>
 </body>
 </html>
