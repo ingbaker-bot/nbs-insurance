@@ -171,7 +171,7 @@ function renderSelectStep() {
   let html = `
     <div class="section-label">
       選擇匯出區塊
-      <button onclick="toggleAll()" style="font-size:11px;padding:2px 10px;border:1px solid #ddd;border-radius:99px;background:transparent;color:#666;cursor:pointer;font-family:inherit">
+      <button id="toggle-all-btn" style="font-size:11px;padding:2px 10px;border:1px solid #ddd;border-radius:99px;background:transparent;color:#666;cursor:pointer;font-family:inherit">
         ${allSel?"全部取消":"全部勾選"}
       </button>
     </div>
@@ -179,7 +179,7 @@ function renderSelectStep() {
 
   BLOCKS.forEach(b => {
     const isSel = selected[b.key];
-    html += `<div class="block-item ${isSel?'selected':''}" onclick="toggleBlock('${b.key}')">
+    html += `<div class="block-item ${isSel?'selected':''}" data-key="${b.key}">
       <div class="block-check">${isSel?'✓':''}</div>
       <span class="block-icon">${b.icon}</span>
       <div style="flex:1">
@@ -196,7 +196,7 @@ function renderSelectStep() {
 
   FORMATS.filter(f=>f.type==="png").forEach(f => {
     const isSel = format===f.key;
-    html += `<div class="format-item ${isSel?'selected-png':''}" onclick="setFormat('${f.key}')">
+    html += `<div class="format-item ${isSel?'selected-png':''}" data-key="${f.key}">
       <div class="format-title">${f.label}</div>
       <div class="format-desc">${f.desc}</div>
     </div>`;
@@ -208,20 +208,32 @@ function renderSelectStep() {
 
   FORMATS.filter(f=>f.type==="pdf").forEach(f => {
     const isSel = format===f.key;
-    html += `<div class="format-item ${isSel?'selected-pdf':''}" onclick="setFormat('${f.key}')">
+    html += `<div class="format-item ${isSel?'selected-pdf':''}" data-key="${f.key}">
       <div class="format-title">${f.label}</div>
       <div class="format-desc">${f.desc.replace("N",selectedKeys.length)}</div>
     </div>`;
   });
 
   html += `</div>
-    <button class="primary-btn ${selectedKeys.length>0?'blue':''}"
-      ${selectedKeys.length===0?"disabled":""} onclick="renderPreviewStep()">
+    <button id="preview-btn" class="primary-btn ${selectedKeys.length>0?'blue':''}"
+      ${selectedKeys.length===0?"disabled":""}>
       ${selectedKeys.length===0?"請至少勾選一個區塊":`預覽 ${selectedKeys.length} 個區塊`}
     </button>`;
 
   document.getElementById("loading").style.display = "none";
   document.getElementById("main-content").innerHTML = html;
+
+  // 重新綁定事件（Safari innerHTML onclick 有時失效）
+  document.querySelectorAll(".block-item").forEach(el => {
+    el.addEventListener("click", () => toggleBlock(el.dataset.key));
+  });
+  document.querySelectorAll(".format-item").forEach(el => {
+    el.addEventListener("click", () => setFormat(el.dataset.key));
+  });
+  const toggleAllBtn = document.getElementById("toggle-all-btn");
+  if (toggleAllBtn) toggleAllBtn.addEventListener("click", toggleAll);
+  const previewBtn = document.getElementById("preview-btn");
+  if (previewBtn) previewBtn.addEventListener("click", () => { if (!previewBtn.disabled) renderPreviewStep(); });
 }
 
 function toggleBlock(key) {
@@ -273,11 +285,19 @@ function renderPreviewStep() {
     <span>💡</span><span>匯出圖片底部將自動加上「NBS 保單體檢　${personName}　${analysisDate}」浮水印</span>
   </div>
   <div class="btn-row">
-    <button class="secondary-btn" onclick="renderSelectStep()">返回修改</button>
-    <button class="primary-btn ${isPdf?'red':'blue'}" style="flex:2" onclick="startExport()">
+    <button id="back-to-select-btn" class="secondary-btn">返回修改</button>
+    <button id="start-export-btn" class="primary-btn ${isPdf?'red':'blue'}" style="flex:2">
       ${isPdf?"匯出 PDF":"下載圖片"}
     </button>
   </div>`;
+
+  // 綁定預覽頁按鈕
+  setTimeout(() => {
+    const backBtn = document.getElementById("back-to-select-btn");
+    if (backBtn) backBtn.addEventListener("click", renderSelectStep);
+    const exportBtn = document.getElementById("start-export-btn");
+    if (exportBtn) exportBtn.addEventListener("click", startExport);
+  }, 50);
 
   document.getElementById("main-content").innerHTML = html;
 }
