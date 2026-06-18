@@ -116,10 +116,12 @@ document.getElementById("apply-btn").onclick       = doApply;
 
 // ── 頁面載入 ─────────────────────────────────────────────
 window.onload = function() {
-  var params = new URLSearchParams(window.location.search);
-  var code  = params.get("code");
-  var token = params.get("id_token"); // implicit flow
-  var err   = params.get("error");
+  // implicit flow 把參數放在 hash (#) 後面，需要用 hash 讀取
+  var hashParams = new URLSearchParams(window.location.hash.replace(/^#/,""));
+  var searchParams = new URLSearchParams(window.location.search);
+  var token = hashParams.get("id_token");
+  var code  = searchParams.get("code");
+  var err   = hashParams.get("error") || searchParams.get("error");
 
   if (err) {
     clearUrl();
@@ -129,7 +131,7 @@ window.onload = function() {
   }
 
   if (token) {
-    // implicit flow：直接解析 id_token
+    // implicit flow：直接解析 id_token（在 hash 中）
     clearUrl();
     var info = parseJwt(token);
     if (info && info.email) {
@@ -291,6 +293,7 @@ function showStatus(id, type, msg) {
 }
 
 function clearUrl() {
+  // 清除 search 和 hash 兩種參數
   window.history.replaceState({},"",location.pathname);
 }
 
