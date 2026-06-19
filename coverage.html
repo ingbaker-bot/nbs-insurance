@@ -134,25 +134,28 @@ const GAS_URL = "https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_Mgrd
 
 const GROUPS = [
   { key:"accident", label:"意外險", icon:"⚡", color:"#633806", bg:"#FAEEDA", fields:[
-    { key:"acc_special",    label:"特定事故加倍給付",  unit:"萬元" },
-    { key:"acc_opd",        label:"門診醫療",          unit:"萬元/次" },
-    { key:"acc_food",       label:"食物中毒",          unit:"元/次" },
-    { key:"acc_fracture",   label:"骨折未住院",        unit:"元" },
-    { key:"acc_dislocation",label:"脫臼復位術",        unit:"元" },
-    { key:"acc_icu",        label:"加護病房",          unit:"元/日" },
-    { key:"acc_burn",       label:"重大燒燙傷",        unit:"萬元" },
-    { key:"acc_disable",    label:"意外失能（殘廢）",  unit:"萬元" },
-    { key:"acc_work",       label:"意外喪失工作能力",  unit:"萬元/月" },
-    { key:"acc_support",    label:"失能扶助",          unit:"萬元/月" },
+    { key:"acc_age",      label:"保障到幾歲",        unit:"歲",    type:"age" },
+    { key:"acc_opd",      label:"門診醫療",          unit:"萬元/次" },
+    { key:"acc_hosp",     label:"意外住院日額",      unit:"元/日" },
+    { key:"acc_icu",      label:"加護病房",          unit:"元/日" },
+    { key:"acc_fracture", label:"骨折療養金",        unit:"元",    type:"range" },
+    { key:"acc_burn",     label:"重大／特定燒燙傷",  unit:"萬元",  type:"range" },
+    { key:"acc_special",  label:"特定事故加倍給付",  unit:"萬元",  type:"range" },
+    { key:"acc_food",     label:"食物中毒",          unit:"元/次" },
+    { key:"acc_disable",  label:"意外失能（殘廢）",  unit:"萬元",  type:"range" },
+    { key:"acc_work",     label:"意外喪失工作能力",  unit:"萬元/月" },
+    { key:"acc_support",  label:"失能扶助金（月）",  unit:"萬元/月" },
   ]},
   { key:"hospitalize", label:"住院醫療（實支實付）", icon:"🏥", color:"#085041", bg:"#E1F5EE", fields:[
-    { key:"hosp_room",       label:"病房費",          unit:"元/日" },
-    { key:"hosp_surgery",    label:"手術費",          unit:"元/次" },
-    { key:"hosp_misc",       label:"醫療雜費",        unit:"元/次" },
-    { key:"hosp_icu",        label:"加護病房費",      unit:"元/日" },
-    { key:"hosp_organ",      label:"重大器官移植",    unit:"萬元" },
-    { key:"hosp_limit_per",  label:"每次住院總限額",  unit:"元/次" },
-    { key:"hosp_limit_acct", label:"給付限額（帳戶）",unit:"萬元" },
+    { key:"hosp_age",        label:"保障到幾歲",        unit:"歲",    type:"age_hosp" },
+    { key:"hosp_room",       label:"病房費",            unit:"元/日" },
+    { key:"hosp_surgery",    label:"手術費",            unit:"元/次" },
+    { key:"hosp_misc",       label:"醫療雜費",          unit:"元/次" },
+    { key:"hosp_icu",        label:"加護病房費",        unit:"元/日" },
+    { key:"hosp_organ",      label:"重大器官移植",      unit:"萬元",  type:"range" },
+    { key:"hosp_deduct",     label:"自負額",            unit:"元" },
+    { key:"hosp_limit_per",  label:"每次住院總限額",    unit:"元/次" },
+    { key:"hosp_limit_acct", label:"醫療給付總限額",    unit:"萬元" },
   ]},
   { key:"daily", label:"日額型住院", icon:"📅", color:"#0C447C", bg:"#E6F1FB", fields:[
     { key:"daily_room",      label:"住院日額病房費",        unit:"元/日" },
@@ -434,14 +437,48 @@ function renderCoverageEdit(policy) {
     if (isOpen) {
       html += `<div class="group-body"><div class="fields-grid">`;
       g.fields.forEach(f => {
-        if (f.type === "checkbox") {
+        // ── 保障到幾歲（意外險）
+        if (f.type === "age") {
+          const av = cov[f.key]||"";
+          html += `<div class="field field-full">
+            <label>${f.label}</label>
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+              ${[70,75,80,85].map(a=>`<button onclick="setAge('${f.key}',${a})" style="padding:4px 12px;font-size:12px;border-radius:99px;cursor:pointer;font-family:inherit;border:1.5px solid ${av==a?'#633806':'#ddd'};background:${av==a?'#FAEEDA':'#fff'};color:${av==a?'#633806':'#666'}">${a}歲</button>`).join("")}
+              <input type="number" id="cov_${f.key}" value="${av}" placeholder="自填" style="width:64px;padding:5px 8px;font-size:13px;border:1px solid #ddd;border-radius:6px;outline:none;font-family:inherit" oninput="markDirty()" />
+              <span style="font-size:11px;color:#aaa">歲</span>
+            </div>
+          </div>`;
+        }
+        // ── 保障到幾歲（實支實付，含類型）
+        else if (f.type === "age_hosp") {
+          const av  = cov[f.key]||"";
+          const tv  = cov[f.key+"_type"]||"一般";
+          html += `<div class="field field-full">
+            <label>${f.label}</label>
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
+              ${[75,80,85].map(a=>`<button onclick="setAge('${f.key}',${a})" style="padding:4px 12px;font-size:12px;border-radius:99px;cursor:pointer;font-family:inherit;border:1.5px solid ${av==a?'#085041':'#ddd'};background:${av==a?'#E1F5EE':'#fff'};color:${av==a?'#085041':'#666'}">${a}歲</button>`).join("")}
+              <input type="number" id="cov_${f.key}" value="${av}" placeholder="自填" style="width:64px;padding:5px 8px;font-size:13px;border:1px solid #ddd;border-radius:6px;outline:none;font-family:inherit" oninput="markDirty()" />
+              <span style="font-size:11px;color:#aaa">歲</span>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+              <span style="font-size:11px;color:#666">保障類型：</span>
+              ${["一般","增高保障","延長保障"].map(t=>`<button onclick="setHospType('${f.key}','${t}')" style="padding:4px 12px;font-size:12px;border-radius:99px;cursor:pointer;font-family:inherit;border:1.5px solid ${tv===t?'#085041':'#ddd'};background:${tv===t?'#E1F5EE':'#fff'};color:${tv===t?'#085041':'#666'}">${t}</button>`).join("")}
+            </div>
+            ${tv==="增高保障"?`<div style="font-size:11px;color:#085041;margin-top:4px;padding:4px 8px;background:#E1F5EE;border-radius:5px">📌 增高保障：同時有兩張實支實付，理賠時互補給付</div>`:""}
+            ${tv==="延長保障"?`<div style="font-size:11px;color:#085041;margin-top:4px;padding:4px 8px;background:#E1F5EE;border-radius:5px">📌 延長保障：舊保單到齡後，新保單接續實支實付給付</div>`:""}
+          </div>`;
+        }
+        // ── 勾選
+        else if (f.type === "checkbox") {
           html += `<div class="field field-full">
             <label class="checkbox-row">
               <input type="checkbox" id="cov_${f.key}" ${cov[f.key]?"checked":""} onchange="markDirty()" />
               <span>${f.label}</span>
             </label>
           </div>`;
-        } else if (f.type === "range") {
+        }
+        // ── 範圍值
+        else if (f.type === "range") {
           html += `<div class="field field-full">
             <label>${f.label}</label>
             <div class="range-row">
@@ -451,7 +488,9 @@ function renderCoverageEdit(policy) {
               <span class="range-unit">${f.unit}</span>
             </div>
           </div>`;
-        } else {
+        }
+        // ── 一般數值
+        else {
           html += `<div class="field">
             <label>${f.label}</label>
             <div class="input-unit">
@@ -479,6 +518,34 @@ function toggleGroup(policyId, key) {
 
 function markDirty() { dirty = true; }
 
+function setAge(key, val) {
+  const person = personDataMap[currentPersonId];
+  if (!person) return;
+  if (!person.coverage) person.coverage = {};
+  const policy = person?.policies?.find(p => p.id === currentPolicyId);
+  if (policy) {
+    if (!policy.coverage) policy.coverage = {};
+    policy.coverage[key] = val;
+  }
+  dirty = true;
+  // 重新渲染以更新按鈕狀態
+  const p2 = person?.policies?.find(p => p.id === currentPolicyId);
+  if (p2) renderCoverageEdit(p2);
+}
+
+function setHospType(key, val) {
+  const person = personDataMap[currentPersonId];
+  if (!person) return;
+  const policy = person?.policies?.find(p => p.id === currentPolicyId);
+  if (policy) {
+    if (!policy.coverage) policy.coverage = {};
+    policy.coverage[key+"_type"] = val;
+  }
+  dirty = true;
+  const p2 = person?.policies?.find(p => p.id === currentPolicyId);
+  if (p2) renderCoverageEdit(p2);
+}
+
 // ── 收集畫面上的值 ────────────────────────────────────────
 function collectCurrentValues() {
   const person = personDataMap[currentPersonId];
@@ -490,7 +557,11 @@ function collectCurrentValues() {
   GROUPS.forEach(g => {
     if (!openGroups[g.key]) return;
     g.fields.forEach(f => {
-      if (f.type === "checkbox") {
+      if (f.type === "age" || f.type === "age_hosp") {
+        const el = document.getElementById("cov_"+f.key);
+        if (el) { const v = parseInt(el.value); policy.coverage[f.key] = isNaN(v)?null:v; }
+        // _type 由 setHospType 直接寫入，不需要再讀
+      } else if (f.type === "checkbox") {
         const el = document.getElementById("cov_"+f.key);
         if (el) policy.coverage[f.key] = el.checked;
       } else if (f.type === "range") {
