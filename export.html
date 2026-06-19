@@ -174,7 +174,7 @@ document.getElementById("B_FINISH").onclick  = function(){ window.location.href=
   }catch(e){console.error(e);}
   buildBlocks();
   buildFmts();
-  updatePrevBtn();
+  updatePrevBtn();  // 資料載入完成，按鈕回復可用
 })();
 
 // ── 建立區塊清單 ──────────────────────────────────────────
@@ -258,6 +258,11 @@ function doShowSelect(){
 
 function doShowPreview(){
   if(document.getElementById("B_PREV").disabled) return;
+  // 確保資料已載入
+  if(!policies || policies.length === 0) {
+    alert("資料仍在載入中，請稍後再試");
+    return;
+  }
   var selBlks=BLOCKS.filter(function(b){return sel[b.key];});
   var isPdf=fmt.startsWith("pdf");
   document.getElementById("HDR_TITLE").textContent="預覽確認";
@@ -486,11 +491,15 @@ function gas(action,params){
   return fetch(url.toString()).then(function(r){return r.json();});
 }
 
-// ── 頁面載入後建立清單 ────────────────────────────────────
+// ── 頁面載入後建立清單（空狀態，等 async 資料回來後再更新）
 window.addEventListener("load",function(){
   buildBlocks();
   buildFmts();
-  updatePrevBtn();
+  // 先 disable 預覽按鈕，等 async 資料載入完才 enable
+  var btn=document.getElementById("B_PREV");
+  btn.disabled=true;
+  btn.textContent="資料載入中…";
+  btn.style.background="#ccc";
 });
 </script>
 </body>
