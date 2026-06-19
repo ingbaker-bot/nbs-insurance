@@ -309,11 +309,11 @@ function renderContent() {
     <span style="color:#F5A623"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#F5A623;opacity:.5;margin-right:3px;border:1.5px dashed #F5A623"></span>不足</span>
     <span style="color:#bbb"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#e0e0e0;margin-right:3px"></span>缺口</span>
   </div>`;
-  html += `<div class="pie-wrap">${buildDonutChart(active, coverage, targets)}</div>`;
+  html += `<div class="pie-wrap">${buildDonutChart(active, coverage, targets, overrides)}</div>`;
 
   // 缺口／不足分析
   html += `<div class="section-label" style="margin-top:16px">缺口 / 不足分析</div>`;
-  html += `<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:12px 14px;margin-bottom:16px">${buildGapAnalysis(active, coverage, targets)}</div>`;
+  html += `<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:12px 14px;margin-bottom:16px">${buildGapAnalysis(active, coverage, targets, overrides)}</div>`;
 
   // 各項保障加總
   html += `<div class="section-label">各項保障加總</div>`;
@@ -414,34 +414,64 @@ const GAP_GROUPS = [
   ]},
 ];
 
+// KEY_MAP: GAP item key → coverage 欄位陣列
 const GAP_KEY_MAP = {
-  life_permanent:  ["life_basic"],
-  life_term:       ["life_term"],
-  ci_special:      ["can_first"],
-  cancer:          ["can_first","can_hosp"],
-  hosp_medical:    ["hosp_room","daily_room_1_30"],
-  medical_surgery: ["surg_hosp_max","daily_icu"],
-  accident:        ["acc_special_max","acc_disable_max"],
-  ltc_disable:     ["ltc_dis_amt"],
-  ltc_support:     ["ltc_dis_life","acc_support"],
-  ltc_care:        ["ltc_monthly","ltc_care"],
+  life_permanent:  { cats:["壽險保障"],          keys:["life_basic"] },
+  life_term:       { cats:["壽險保障"],          keys:["life_term"] },
+  investment:      { cats:["投資型保險"],        keys:[] },
+  savings:         { cats:["儲蓄險","年金險"],   keys:[] },
+  ci_special:      { cats:["重大疾病險","重大傷病險","特定傷病險"], keys:["can_first"] },
+  cancer:          { cats:["重大疾病險"],        keys:["can_first","can_hosp"] },
+  hosp_medical:    { cats:["醫療保障"],          keys:["hosp_room","daily_room_1_30","hosp_room_1_30"] },
+  medical_surgery: { cats:["醫療保障"],          keys:["surg_hosp_max","surg_hosp","daily_room"] },
+  accident:        { cats:["意外險"],            keys:["acc_special_max","acc_special","acc_disable_max","acc_disable"] },
+  ltc_disable:     { cats:[],                   keys:["ltc_dis_amt"] },
+  ltc_support:     { cats:[],                   keys:["ltc_dis_life","acc_support","ltc_support"] },
+  ltc_care:        { cats:[],                   keys:["ltc_monthly","ltc_care"] },
+  waiver:          { cats:[],                   keys:["ltc_waiver"] },
 };
 
-// 讀取某項目的目前合計值
-function getItemCurrent(key, policies) {
-  if(key==="investment") return policies.some(p=>p.category==="投資型保險")?1:0;
-  if(key==="savings")    return policies.some(p=>p.category==="儲蓄險"||p.category==="年金險")?1:0;
-  if(key==="waiver")     return policies.some(p=>p.coverage?.ltc_waiver)?1:0;
-  const keys=GAP_KEY_MAP[key]||[key];
-  let t=0;
-  policies.forEach(p=>keys.forEach(k=>{if(p.coverage?.[k])t+=p.coverage[k];}));
-  return t;
+// 讀取某項目的目前合計值（同時支援 category 判斷和 coverage 欄位加總）
+function getItemCurrent(key, policies, covOverrides) {
+  const map = GAP_KEY_MAP[key];
+  if(!map) return 0;
+
+  // 手動覆蓋（overrides）優先
+  const pid = currentPersonId;
+  const manualKey = pid+"_"+key;
+  if(covOverrides && covOverrides[manualKey] !== undefined) {
+    return covOverrides[manualKey] ? 1 : 0;
+  }
+
+  // boolean 類型：依保單 category 判斷有/無
+  if(["investment","savings","waiver"].includes(key)) {
+    if(key==="investment") return policies.some(p=>p.category==="投資型保險")?1:0;
+    if(key==="savings")    return policies.some(p=>["儲蓄險","年金險"].includes(p.category))?1:0;
+    if(key==="waiver")     return policies.some(p=>p.coverage?.ltc_waiver)?1:0;
+    return 0;
+  }
+
+  // 先看有無符合 category 的保單
+  const hasCat = map.cats.length > 0 && policies.some(p=>map.cats.includes(p.category));
+
+  // 再從各保單的 coverage 加總金額
+  let total = 0;
+  policies.forEach(p => {
+    map.keys.forEach(k => {
+      const v = p.coverage?.[k];
+      if(v && typeof v === "number") total += v;
+    });
+  });
+
+  // 有 category 但沒有 coverage 金額：回傳 1（表示有規劃但未填金額）
+  if(hasCat && total === 0) return 1;
+  return total;
 }
 
 // 取得單一項目狀態
-function getItemStatus(key, policies, targets) {
+function getItemStatus(key, policies, targets, covOverrides) {
   const item = GAP_GROUPS.flatMap(g=>g.items).find(i=>i.key===key);
-  const current = getItemCurrent(key, policies);
+  const current = getItemCurrent(key, policies, covOverrides);
   const target  = targets[key];
   const isBool  = item?.isBool;
   if(!current) return {status:"gap", current:0, target, pct:0};
@@ -451,7 +481,7 @@ function getItemStatus(key, policies, targets) {
 }
 
 // ── 環形圓餅圖 ────────────────────────────────────────────
-function buildDonutChart(policies, coverage, targets) {
+function buildDonutChart(policies, coverage, targets, covOverrides) {
   const allItems = GAP_GROUPS.flatMap(g=>g.items);
   const n = allItems.length;
   const cx=120,cy=120,OR=100,IR=52;
@@ -476,7 +506,7 @@ function buildDonutChart(policies, coverage, targets) {
 
   // SVG 扇形
   allItems.forEach(item => {
-    const {status,pct} = getItemStatus(item.key, policies, targets);
+    const {status,pct} = getItemStatus(item.key, policies, targets, covOverrides);
     const start = angle+gapA/2;
     const end   = angle+gapA/2+sliceA;
     const filledEnd = start + sliceA*pct;
@@ -497,9 +527,9 @@ function buildDonutChart(policies, coverage, targets) {
     }
   });
 
-  const okN = allItems.filter(item=>getItemStatus(item.key,policies,targets).status==="ok").length;
-  const gapN = allItems.filter(item=>getItemStatus(item.key,policies,targets).status==="gap").length;
-  const insN = allItems.filter(item=>getItemStatus(item.key,policies,targets).status==="insufficient").length;
+  const okN = allItems.filter(item=>getItemStatus(item.key,policies,targets,covOverrides).status==="ok").length;
+  const gapN = allItems.filter(item=>getItemStatus(item.key,policies,targets,covOverrides).status==="gap").length;
+  const insN = allItems.filter(item=>getItemStatus(item.key,policies,targets,covOverrides).status==="insufficient").length;
 
   return `<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center">
     <svg width="240" height="240" style="flex-shrink:0">
@@ -514,11 +544,11 @@ function buildDonutChart(policies, coverage, targets) {
 }
 
 // ── 缺口／不足分析 ────────────────────────────────────────
-function buildGapAnalysis(policies, coverage, targets) {
+function buildGapAnalysis(policies, coverage, targets, covOverrides) {
   const allItems = GAP_GROUPS.flatMap(g=>g.items);
   const gaps = [], insufficients = [];
   allItems.forEach(item => {
-    const s = getItemStatus(item.key, policies, targets);
+    const s = getItemStatus(item.key, policies, targets, covOverrides);
     if(s.status==="gap") gaps.push({item, ...s});
     if(s.status==="insufficient") insufficients.push({item, ...s});
   });
@@ -637,7 +667,17 @@ function buildPieChart(active, covTypes) {
 
 function sumCov(keys,policies,coverage) {
   let t=0;
-  policies.forEach(p=>{ keys.forEach(k=>{ const v=coverage[p.id+"_"+k]; if(v) t+=v; }); });
+  // 新格式：從各保單的 coverage 讀取
+  policies.forEach(p=>{
+    keys.forEach(k=>{
+      const v = p.coverage?.[k];
+      if(v && typeof v==="number") t+=v;
+    });
+  });
+  // 相容舊格式：coverage 是 {policyId_key: value} 格式
+  if(t===0) {
+    policies.forEach(p=>{ keys.forEach(k=>{ const v=coverage[p.id+"_"+k]; if(v) t+=v; }); });
+  }
   return t;
 }
 
@@ -755,6 +795,20 @@ function toggleOverride(key) {
 }
 
 function closeModal() { document.getElementById("edit-modal").classList.remove("active"); renderContent(); }
+// 手動調整 toggleOverride 後自動重新渲染圓餅圖
+const _origToggle = toggleOverride;
+function toggleOverride(key) {
+  const fk=currentPersonId+"_"+key;
+  const person=personDataMap[currentPersonId];
+  const active=(person?.policies||[]).filter(p=>p.status==="有效");
+  const cov=person?.coverage||{};
+  const t=COVERAGE_TYPES.find(x=>x.key===key);
+  const auto=t?t.detect(active,cov):false;
+  const cur=overrides[fk];
+  if(cur===undefined) overrides[fk]=!auto;
+  else delete overrides[fk];
+  openModal(); // 重新渲染 modal
+}
 function handleModalOverlay(e) { if(e.target===document.getElementById("edit-modal")) closeModal(); }
 
 function goBack() { window.location.href="family.html"; }
