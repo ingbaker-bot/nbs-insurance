@@ -239,12 +239,15 @@ function renderContent() {
   document.getElementById("content").style.display="block";
   const person  = personDataMap[currentPersonId];
   const policies= person?.policies||[];
-  const coverage= person?.coverage||{};
   const active  = policies.filter(p=>p.status==="有效");
   const totalTWD= active.reduce((s,p)=>s+(p.premiumTWD||0),0);
 
-  // 從所有保單彙整 coverage
+  // 從所有保單彙整 coverage（相容舊格式 person.coverage + 新格式 policy.coverage）
   const coverage = {};
+  Object.entries(person?.coverage||{}).forEach(([k,v])=>{
+    if(typeof v==="number") coverage[k]=(coverage[k]||0)+v;
+    else coverage[k]=v;
+  });
   policies.forEach(p => {
     Object.entries(p.coverage||{}).forEach(([k,v]) => {
       if(typeof v === "number") coverage[k] = (coverage[k]||0)+v;
