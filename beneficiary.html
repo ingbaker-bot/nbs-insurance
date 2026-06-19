@@ -200,16 +200,22 @@
 const GAS_URL = "https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec";
 
 const BENEF_RULES = {
+  // 壽險：身故可指定，生存金可指定
   "壽險保障":   { death:"可設定", live:"可設定" },
+  // 醫療相關：全鎖定被保險人本人
   "醫療保障":   { death:"鎖定本人", live:"鎖定本人" },
-  "意外險":     { death:"可設定", live:"鎖定本人" },
-  "重大疾病險": { death:"可設定", live:"鎖定本人" },
-  "重大傷病險": { death:"可設定", live:"鎖定本人" },
-  "特定傷病險": { death:"可設定", live:"鎖定本人" },
+  "意外險":     { death:"鎖定本人", live:"鎖定本人" },
+  "重大疾病險": { death:"鎖定本人", live:"鎖定本人" },
+  "重大傷病險": { death:"鎖定本人", live:"鎖定本人" },
+  "特定傷病險": { death:"鎖定本人", live:"鎖定本人" },
+  // 儲蓄險：身故可指定，生存金/滿期金可指定
   "儲蓄險":     { death:"可設定", live:"可設定", liveLabel:"生存金/滿期金" },
   "年金險":     { death:"年金險", live:"不適用" },
   "投資型保險": { death:"可設定", live:"鎖定本人" },
 };
+
+// 可設定身故受益人的險種
+const CAN_SET_DEATH = ["壽險保障","儲蓄險","年金險","投資型保險"];
 
 let currentUser    = null;
 let familyData     = null;
@@ -471,10 +477,15 @@ function renderTplBenefArea() {
 function renderBenefRow(item) {
   const isCustom = !item.personId;
   const usedIds = tplItems.filter(i=>i.personId&&i._key!==item._key).map(i=>i.personId);
-  const memberOptions = familyData.members.map(m=>
-    `<option value="${m.personId}" ${item.personId===m.personId?'selected':''} ${usedIds.includes(m.personId)?'disabled':''}>
-      ${m.name}（${m.relation}）${usedIds.includes(m.personId)?'✓已選':''}
-    </option>`).join('');
+  const members = (familyData&&familyData.members)||[];
+  const memberOptions = (members.length ?
+    '<option value="">請選擇成員</option>' +
+    members.map(m=>
+      `<option value="${m.personId}" ${item.personId===m.personId?'selected':''} ${usedIds.includes(m.personId)&&item.personId!==m.personId?'disabled':''}>
+        ${m.name}（${m.relation||m.role}）
+      </option>`).join('') +
+    '<option value="__custom__">＋ 自訂姓名…</option>'
+    : '<option value="">（載入中）</option>');
 
   return `<div class="benef-item-row" id="brow_${item._key}">
     <div class="benef-avatar">${isCustom?"?":getMemberName(item.personId)[0]||"?"}</div>
@@ -498,6 +509,21 @@ function addBenefFromMember(rank) {
   const key = Date.now();
   tplItems.push({ personId:"", customName:null, ratio:null, rank:rank||1, _key:key });
   renderTplBenefArea();
+}
+
+// 從成員下拉選取（確保 familyData.members 已載入）
+function getMemberOptions(excludeKeys) {
+  if(!familyData || !familyData.members || !familyData.members.length) {
+    return '<option value="">（尚無家庭成員）</option>';
+  }
+  const usedIds = excludeKeys || [];
+  return '<option value="">請選擇成員</option>' +
+    familyData.members.map(m =>
+      `<option value="${m.personId}" ${usedIds.includes(m.personId)?'disabled':''}>
+        ${m.name}（${m.relation||m.role}）${usedIds.includes(m.personId)?'✓已選':''}
+      </option>`
+    ).join('') +
+    '<option value="__custom__">＋ 自訂姓名…</option>';
 }
 function addBenefCustom(rank) {
   const key = Date.now();
@@ -639,8 +665,9 @@ function renderBenefSetArea(type, policy, templates) {
             <option value="">請選擇模板</option>${tplOptions}</select>`
         : `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">${customHtml||'<span style="color:#ccc;font-size:12px">未設定</span>'}</div>
            <div style="display:flex;gap:6px;flex-wrap:wrap">
-             ${familyData.members.map(m=>`<button onclick="addCustomBenef('${type}','${m.personId}')"
-               style="font-size:12px;padding:4px 10px;border:1px solid #ddd;border-radius:99px;background:#fff;cursor:pointer;font-family:inherit">${m.name}</button>`).join('')}
+             ${(familyData&&familyData.members||[]).map(m=>`<button onclick="addCustomBenef('${type}','${m.personId}')"
+               style="font-size:12px;padding:4px 10px;border:1px solid #ddd;border-radius:99px;background:#fff;cursor:pointer;font-family:inherit">${m.name}（${m.relation||''}）</button>`).join('')}
+             ${(!familyData||!familyData.members||!familyData.members.length)?'<span style="font-size:12px;color:#bbb">載入中…</span>':''}
              <button onclick="clearCustomBenef('${type}')"
                style="font-size:12px;padding:4px 10px;border:1px solid #fcc;border-radius:99px;background:#fff;cursor:pointer;color:#e74c3c;font-family:inherit">清除</button>
            </div>`
@@ -672,8 +699,9 @@ function renderBenefSetAreaWithMode(type, policy, templates, mode) {
             <option value="">請選擇模板</option>${tplOptions}</select>`
         : `<div id="${type}-custom-tags" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px"></div>
            <div style="display:flex;gap:6px;flex-wrap:wrap">
-             ${familyData.members.map(m=>`<button onclick="addCustomBenef('${type}','${m.personId}')"
-               style="font-size:12px;padding:4px 10px;border:1px solid #ddd;border-radius:99px;background:#fff;cursor:pointer;font-family:inherit">${m.name}</button>`).join('')}
+             ${(familyData&&familyData.members||[]).map(m=>`<button onclick="addCustomBenef('${type}','${m.personId}')"
+               style="font-size:12px;padding:4px 10px;border:1px solid #ddd;border-radius:99px;background:#fff;cursor:pointer;font-family:inherit">${m.name}（${m.relation||''}）</button>`).join('')}
+             ${(!familyData||!familyData.members||!familyData.members.length)?'<span style="font-size:12px;color:#bbb">載入中…</span>':''}
              <button onclick="clearCustomBenef('${type}')"
                style="font-size:12px;padding:4px 10px;border:1px solid #fcc;border-radius:99px;background:#fff;cursor:pointer;color:#e74c3c;font-family:inherit">清除</button>
            </div>`
