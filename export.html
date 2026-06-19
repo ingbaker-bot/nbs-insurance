@@ -443,6 +443,13 @@ function showDone(blks){
 
 // ── GAS 呼叫 ─────────────────────────────────────────────
 function gas(action,params){
+  if(action==="saveFile"){
+    return fetch(GAS,{
+      method:"POST",
+      headers:{"Content-Type":"text/plain"},
+      body:JSON.stringify(Object.assign({action:action},params)),
+    }).then(function(r){return r.json();});
+  }
   var url=new URL(GAS);
   url.searchParams.set("action",action);
   Object.entries(params||{}).forEach(function(kv){
