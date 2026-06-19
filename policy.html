@@ -451,7 +451,25 @@
     <!-- 保險項目名稱 -->
     <div class="field">
       <label>保險項目名稱</label>
-      <input type="text" id="f-item" placeholder="如：鑫利終身壽險（主約）" />
+      <input type="text" id="f-item" placeholder="如：AD&D意外身故及殘廢保險附約" />
+    </div>
+
+    <!-- 保險金額 -->
+    <div class="grid-2">
+      <div class="field">
+        <label>保險金額（元）</label>
+        <input type="number" id="f-amount" placeholder="如 300000" />
+      </div>
+      <div class="field">
+        <label>幣別（保額）</label>
+        <select id="f-amount-currency">
+          <option>TWD</option>
+          <option>USD</option>
+          <option>AUD</option>
+          <option>JPY</option>
+          <option>EUR</option>
+        </select>
+      </div>
     </div>
 
     <!-- 起始日 + 繳費期滿日 + 保障期滿日 -->
@@ -652,7 +670,10 @@ function renderPolicies() {
         <div class="pr-cell"><span class="cat-badge ${catClass}">${p.category||'—'}</span></div>
         <div class="pr-cell" style="overflow:hidden">
           <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px">${p.itemName||'—'}</div>
-          <div style="font-size:10px;color:#bbb;font-family:monospace">${p.policyNo||''}</div>
+          <div style="font-size:10px;color:#bbb;margin-top:1px;display:flex;gap:8px">
+            <span style="font-family:monospace">${p.policyNo||''}</span>
+            ${p.insuredAmount?`<span style="color:#0C447C;font-weight:500">${p.insuredAmountCurrency==='TWD'?'NT$':''}${(p.insuredAmount||0).toLocaleString()} ${p.insuredAmountCurrency!=='TWD'?p.insuredAmountCurrency:''}</span>`:''}
+          </div>
         </div>
         <div class="pr-cell pr-amount">
           ${isFx?`<span style="font-size:10px;color:#aaa">${p.currency} </span>`:''}
@@ -718,6 +739,8 @@ function openForm(mode, memberId, policyIdOrNo) {
     document.getElementById("f-owner").value     = policy.owner || "本人";
     document.getElementById("f-status").value    = policy.status || "有效";
     document.getElementById("f-item").value      = policy.itemName || "";
+    document.getElementById("f-amount").value    = policy.insuredAmount || "";
+    document.getElementById("f-amount-currency").value = policy.insuredAmountCurrency || "TWD";
     document.getElementById("f-start").value     = policy.startDateRaw || "";
     document.getElementById("f-payend").value    = policy.payEndRaw || "";
     document.getElementById("f-covend").value    = policy.covEndRaw || "";
@@ -899,6 +922,8 @@ async function savePolicy() {
     company,
     owner:       document.getElementById("f-owner").value,
     itemName:    item,
+    insuredAmount:         parseFloat(document.getElementById("f-amount").value) || null,
+    insuredAmountCurrency: document.getElementById("f-amount-currency").value || "TWD",
     startDateRaw:  startRaw,
     payEndRaw,
     covEndRaw,
