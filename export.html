@@ -361,15 +361,19 @@ function renderBlock(key){
       if(!groups[k]) groups[k]=[];
       groups[k].push(p);
     });
+    // 欄位標題（只出現一次在最上方）
+    var colHeader='<div style="display:grid;grid-template-columns:80px 1fr 80px 70px;gap:4px;font-size:9px;color:#aaa;padding:3px 8px;border-bottom:1px solid #e8e8e8;margin-bottom:4px;font-weight:500">'+
+      '<span>類別</span><span>保險項目名稱</span><span style="text-align:right">保額</span><span style="text-align:right">年繳保費</span></div>';
+
     var groupHtml=Object.entries(groups).map(function(entry){
       var no=entry[0], rows=entry[1];
       var groupTotal=rows.reduce(function(s,p){return s+(p.premiumTWD||0);},0);
       var rowsHtml=rows.map(function(p){
-        return'<div style="display:flex;align-items:center;gap:5px;font-size:10px;padding:3px 8px;border-top:1px solid #f5f5f5">'+
-          '<span style="padding:1px 6px;border-radius:99px;background:'+(CC[p.category]||"#999")+'20;color:'+(CC[p.category]||"#555")+';flex-shrink:0;font-size:10px">'+p.category+'</span>'+
-          '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(p.itemName||"—")+'</span>'+
-          (p.insuredAmount?'<span style="color:#0C447C;flex-shrink:0;font-size:10px">'+p.insuredAmount+(p.insuredAmountUnit||'萬元')+'</span>':'')+''+
-          '<span style="font-weight:500;flex-shrink:0;min-width:52px;text-align:right">NT'+(p.premiumTWD||0).toLocaleString()+'</span>'+
+        return'<div style="display:grid;grid-template-columns:80px 1fr 80px 70px;align-items:center;gap:4px;font-size:10px;padding:4px 8px;border-top:1px solid #f5f5f5">'+
+          '<span style="padding:1px 6px;border-radius:99px;background:'+(CC[p.category]||"#999")+'20;color:'+(CC[p.category]||"#555")+';text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+p.category+'</span>'+
+          '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#333">'+(p.itemName||"—")+'</span>'+
+          '<span style="text-align:right;color:#0C447C;font-weight:500">'+(p.insuredAmount?p.insuredAmount+(p.insuredAmountUnit||'萬元'):'—')+'</span>'+
+          '<span style="font-weight:500;text-align:right;color:#333">NT'+(p.premiumTWD||0).toLocaleString()+'</span>'+
         '</div>';
       }).join("");
       return'<div style="border:1px solid #e8e8e8;border-radius:7px;overflow:hidden;margin-bottom:6px">'+
@@ -381,7 +385,7 @@ function renderBlock(key){
         rowsHtml+
       '</div>';
     }).join("");
-    return'<div style="padding:10px 12px">'+groupHtml+'<div style="font-size:11px;font-weight:500;color:#27500A;text-align:right;padding-top:5px;border-top:1px solid #e8e8e8;margin-top:3px">年繳總計 NT$'+tt.toLocaleString()+'</div></div>';
+    return'<div style="padding:10px 12px">'+colHeader+groupHtml+'<div style="font-size:11px;font-weight:500;color:#27500A;text-align:right;padding-top:5px;border-top:1px solid #e8e8e8;margin-top:3px">年繳總計 NT$'+tt.toLocaleString()+'</div></div>';
   }
 
   return'<div style="padding:12px;color:#aaa;font-size:12px">建置中</div>';
