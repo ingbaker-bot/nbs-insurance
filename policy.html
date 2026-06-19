@@ -455,21 +455,20 @@
     </div>
 
     <!-- 保險金額 -->
-    <div class="grid-2">
-      <div class="field">
-        <label>保險金額（元）</label>
-        <input type="number" id="f-amount" placeholder="如 300000" />
-      </div>
-      <div class="field">
-        <label>幣別（保額）</label>
-        <select id="f-amount-currency">
-          <option>TWD</option>
-          <option>USD</option>
-          <option>AUD</option>
-          <option>JPY</option>
-          <option>EUR</option>
+    <div class="field">
+      <label>保險金額／計畫</label>
+      <div style="display:flex;gap:8px;align-items:flex-start">
+        <input type="text" id="f-amount" placeholder="如 300 / 高額型4 / 計劃3" style="flex:1;padding:8px 10px;font-size:14px;border:1px solid #e0e0e0;border-radius:7px;outline:none;font-family:inherit" />
+        <select id="f-amount-unit" onchange="toggleAmountCustom()" style="width:90px;padding:8px 8px;font-size:13px;border:1px solid #e0e0e0;border-radius:7px;outline:none;font-family:inherit;background:#fff">
+          <option value="萬元">萬元</option>
+          <option value="元">元</option>
+          <option value="計劃">計劃</option>
+          <option value="型">型</option>
+          <option value="份">份</option>
+          <option value="custom">自訂…</option>
         </select>
       </div>
+      <input type="text" id="f-amount-unit-custom" placeholder="請輸入單位名稱" style="display:none;margin-top:6px;width:100%;padding:8px 10px;font-size:13px;border:1px solid #378ADD;border-radius:7px;outline:none;font-family:inherit" />
     </div>
 
     <!-- 起始日 + 繳費期滿日 + 保障期滿日 -->
@@ -672,7 +671,7 @@ function renderPolicies() {
           <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px">${p.itemName||'—'}</div>
           <div style="font-size:10px;color:#bbb;margin-top:1px;display:flex;gap:8px">
             <span style="font-family:monospace">${p.policyNo||''}</span>
-            ${p.insuredAmount?`<span style="color:#0C447C;font-weight:500">${p.insuredAmountCurrency==='TWD'?'NT$':''}${(p.insuredAmount||0).toLocaleString()} ${p.insuredAmountCurrency!=='TWD'?p.insuredAmountCurrency:''}</span>`:''}
+            ${p.insuredAmount?`<span style="color:#0C447C;font-weight:500">保額 ${p.insuredAmount} ${p.insuredAmountUnit||'萬元'}</span>`:''}
           </div>
         </div>
         <div class="pr-cell pr-amount">
@@ -713,6 +712,10 @@ function openForm(mode, memberId, policyIdOrNo) {
   document.getElementById("f-status").value = "有效";
   document.getElementById("f-paymode").value = "年繳";
   document.getElementById("f-currency").value = "TWD";
+  document.getElementById("f-amount").value = "";
+  document.getElementById("f-amount-unit").value = "萬元";
+  document.getElementById("f-amount-unit-custom").style.display = "none";
+  document.getElementById("f-amount-unit-custom").value = "";
   document.getElementById("twd-display").style.display = "none";
   document.getElementById("form-error").style.display = "none";
   document.getElementById("delete-btn").style.display = "none";
@@ -739,8 +742,19 @@ function openForm(mode, memberId, policyIdOrNo) {
     document.getElementById("f-owner").value     = policy.owner || "本人";
     document.getElementById("f-status").value    = policy.status || "有效";
     document.getElementById("f-item").value      = policy.itemName || "";
-    document.getElementById("f-amount").value    = policy.insuredAmount || "";
-    document.getElementById("f-amount-currency").value = policy.insuredAmountCurrency || "TWD";
+    document.getElementById("f-amount").value = policy.insuredAmount || "";
+    var savedUnit = policy.insuredAmountUnit || "萬元";
+    var unitOptions = ["萬元","元","計劃","型","份"];
+    var unitSel = document.getElementById("f-amount-unit");
+    var customEl = document.getElementById("f-amount-unit-custom");
+    if (unitOptions.includes(savedUnit)) {
+      unitSel.value = savedUnit;
+      customEl.style.display = "none";
+    } else {
+      unitSel.value = "custom";
+      customEl.value = savedUnit;
+      customEl.style.display = "block";
+    }
     document.getElementById("f-start").value     = policy.startDateRaw || "";
     document.getElementById("f-payend").value    = policy.payEndRaw || "";
     document.getElementById("f-covend").value    = policy.covEndRaw || "";
@@ -847,6 +861,18 @@ function rocToWestern(raw) {
   return null;
 }
 
+// ── 保額單位自訂切換 ─────────────────────────────────────
+function toggleAmountCustom() {
+  var unit = document.getElementById("f-amount-unit").value;
+  var customEl = document.getElementById("f-amount-unit-custom");
+  if (unit === "custom") {
+    customEl.style.display = "block";
+    customEl.focus();
+  } else {
+    customEl.style.display = "none";
+  }
+}
+
 // ── 幣別切換 ─────────────────────────────────────────────
 function toggleFx() {
   const currency = document.getElementById("f-currency").value;
@@ -922,8 +948,12 @@ async function savePolicy() {
     company,
     owner:       document.getElementById("f-owner").value,
     itemName:    item,
-    insuredAmount:         parseFloat(document.getElementById("f-amount").value) || null,
-    insuredAmountCurrency: document.getElementById("f-amount-currency").value || "TWD",
+    insuredAmount:     document.getElementById("f-amount").value.trim() || null,
+    insuredAmountUnit: (function(){
+      var u = document.getElementById("f-amount-unit").value;
+      if (u === "custom") return document.getElementById("f-amount-unit-custom").value.trim() || "萬元";
+      return u;
+    })(),
     startDateRaw:  startRaw,
     payEndRaw,
     covEndRaw,
