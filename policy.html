@@ -1043,6 +1043,15 @@ function toRoc(dateStr) {
 function goBack() { window.location.href = "family.html"; }
 
 function callGAS(action, params) {
+  // saveFile 用 POST（資料量大，GET 會超過 URL 長度限制）
+  if (action === "saveFile") {
+    return fetch(GAS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({ action, ...params }),
+    }).then(res => res.json());
+  }
+  // 其他 action 用 GET
   const url = new URL(GAS_URL);
   url.searchParams.set("action", action);
   Object.entries(params || {}).forEach(([k, v]) => {
