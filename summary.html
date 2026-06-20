@@ -88,15 +88,12 @@
     .spinner { display:inline-block; width:16px; height:16px; border:2px solid #e0e0e0; border-top-color:#378ADD; border-radius:50%; animation:spin 0.7s linear infinite; vertical-align:middle; }
     @keyframes spin { to { transform:rotate(360deg); } }
   </style>
+  <script src="nav.js"></script>
 </head>
 <body>
 
-<div class="header">
-  <button class="back-btn" onclick="goBack()">‹</button>
-  <div class="header-title">保單彙總一覽</div>
   <div class="header-sub" id="header-sub"></div>
 </div>
-<div class="member-tabs" id="member-tabs"></div>
 <div class="main">
   <div id="loading" class="loading"><span class="spinner"></span> 載入中…</div>
   <div id="content" style="display:none"></div>
@@ -830,6 +827,23 @@ function callGAS(action,params) {
   });
   return fetch(url.toString()).then(r=>r.json());
 }
+
+// ── NBS 導覽初始化 ───────────────────────────────────────
+window.addEventListener("DOMContentLoaded", function() {
+  NBS_NAV.onMemberChange = function(personId) {
+    currentPersonId = personId;
+    // 重新渲染頁面資料
+    if (typeof renderContent === "function") renderContent();
+    if (typeof renderTabs === "function") renderTabs();
+    if (typeof showListView === "function") showListView();
+  };
+  NBS_NAV.init({
+    page: "summary",
+    onReady: function() {
+      // 頁面原本的初始化已在 window.onload 執行
+    }
+  });
+});
 </script>
 </body>
 </html>
