@@ -507,6 +507,12 @@
         <div class="hint" id="edit-analysis-hint"></div>
       </div>
 
+      <div class="field">
+        <label>住家地址</label>
+        <input type="text" id="edit-address" placeholder="如：台北市中正區重慶南路1段" style="width:100%;padding:9px 12px;font-size:14px;border:1px solid #e0e0e0;border-radius:7px;outline:none;font-family:inherit" />
+        <div style="font-size:11px;color:#aaa;margin-top:3px">填入縣市+區/鄉鎮，用於保單彙總查詢附近醫院病房費</div>
+      </div>
+
       <div class="btn-row">
         <button class="btn-secondary" onclick="closeEditPerson()">取消</button>
         <button class="btn-primary" onclick="saveEditPerson()">儲存</button>
@@ -760,6 +766,7 @@
       document.getElementById("edit-name").value = person.profile.name || "";
       document.getElementById("edit-birth").value = person.profile.birthDate || "";
       document.getElementById("edit-analysis").value = person.profile.analysisDate || "";
+      document.getElementById("edit-address").value = person.profile.address || "";
       updateEditAge();
       updateEditAnalysis();
       document.getElementById("edit-person-modal").classList.add("active");
@@ -792,10 +799,12 @@
       const newName     = document.getElementById("edit-name").value.trim();
       const newBirth    = document.getElementById("edit-birth").value;
       const newAnalysis = document.getElementById("edit-analysis").value;
+      const newAddress  = document.getElementById("edit-address").value.trim();
 
-      person.profile.name        = newName || person.profile.name;
-      person.profile.birthDate   = newBirth || null;
+      person.profile.name         = newName || person.profile.name;
+      person.profile.birthDate    = newBirth || null;
       person.profile.analysisDate = newAnalysis;
+      person.profile.address      = newAddress || null;
       person.updatedAt = new Date().toISOString();
 
       try {
