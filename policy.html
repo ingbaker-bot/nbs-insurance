@@ -567,22 +567,31 @@ window.addEventListener("nbs_nav_ready", async function(e) {
   familyData        = e.detail.familyData;
   currentPersonId   = e.detail.currentPersonId;
   familyFileName    = e.detail.familyFileName;
+
+  if (!currentUser || !familyData) {
+    document.getElementById("loading").innerHTML = "載入失敗：請重新登入";
+    return;
+  }
+
   try {
-    // 載入家庭
-    // 家庭資料已由 nav.js 載入，直接使用 e.detail.familyData
-    // familyData 已在 handler 開頭設定
     // 載入所有成員個人資料
     for (const m of familyData.members.filter(m => m.role !== "beneficiary_only")) {
-      const pr = await callGAS("readFile", { email: currentUser.email, fileType:"person", fileName: m.name+"_"+m.personId+".json" });
+      const pr = await callGAS("readFile", {
+        email: currentUser.email,
+        fileType: "person",
+        fileName: m.name + "_" + m.personId + ".json"
+      });
       if (pr.status === "ok") personDataMap[m.personId] = pr.content;
     }
-
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("content").style.display = "block";
     renderTabs();
     renderPolicies();
-  } catch(e) {
-    alert("載入失敗：" + e.message);
+  } catch(err) {
+    console.error("policy.html init error", err);
+    document.getElementById("loading").innerHTML = "載入失敗：" + err.message;
   }
-};
+});
 
 // ── 成員 Tab ──────────────────────────────────────────────
 function renderTabs() {

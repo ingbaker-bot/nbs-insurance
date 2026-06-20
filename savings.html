@@ -137,21 +137,30 @@ window.addEventListener("nbs_nav_ready", async function(e) {
   currentPersonId   = e.detail.currentPersonId;
   familyFileName    = e.detail.familyFileName;
 
+  if (!currentUser || !familyData) {
+    document.getElementById("loading").innerHTML = "載入失敗：請重新登入";
+    return;
+  }
+
   try {
-    for (const m of familyData.members.filter(m=>m.role!=="beneficiary_only")) {
-      const pr = await callGAS("readFile",{email:currentUser.email,fileType:"person",fileName:m.name+"_"+m.personId+".json"});
-      if (pr.status==="ok") personDataMap[m.personId] = pr.content;
+    // 載入所有成員個人資料
+    for (const m of familyData.members.filter(m => m.role !== "beneficiary_only")) {
+      const pr = await callGAS("readFile", {
+        email: currentUser.email,
+        fileType: "person",
+        fileName: m.name + "_" + m.personId + ".json"
+      });
+      if (pr.status === "ok") personDataMap[m.personId] = pr.content;
     }
-    const savedPerson = localStorage.getItem("nbs_current_person");
-    const primary = familyData.members.find(m=>m.role==="primary");
-    currentPersonId = savedPerson || primary?.personId;
-    loadSettings();
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("content").style.display = "block";
     renderTabs();
     renderContent();
-  } catch(e) {
-    document.getElementById("loading").innerHTML='<div style="color:#e74c3c">載入失敗：'+e.message+'</div>';
+  } catch(err) {
+    console.error("savings.html init error", err);
+    document.getElementById("loading").innerHTML = "載入失敗：" + err.message;
   }
-};
+});
 
 function loadSettings() {
   Object.keys(personDataMap).forEach(pid => {
