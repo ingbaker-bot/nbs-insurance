@@ -357,19 +357,15 @@
     .search-wrap input:focus { border-color: #378ADD; }
     .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #bbb; pointer-events: none; }
   </style>
+  <script src="nav.js"></script>
 </head>
 <body>
 
 <!-- Header -->
-<div class="header">
-  <button class="back-btn" onclick="goBack()">‹</button>
-  <div class="header-title">保險繳費輸入</div>
   <div class="header-sub" id="header-sub"></div>
 </div>
 
 <!-- 成員 Tab -->
-<div class="member-tabs" id="member-tabs"></div>
-
 <!-- 主內容 -->
 <div class="main">
   <div class="stats-row" id="stats-row"></div>
@@ -1063,6 +1059,23 @@ function callGAS(action, params) {
   });
   return fetch(url.toString()).then(res => res.json());
 }
+
+// ── NBS 導覽初始化 ───────────────────────────────────────
+window.addEventListener("DOMContentLoaded", function() {
+  NBS_NAV.onMemberChange = function(personId) {
+    currentPersonId = personId;
+    // 重新渲染頁面資料
+    if (typeof renderContent === "function") renderContent();
+    if (typeof renderTabs === "function") renderTabs();
+    if (typeof showListView === "function") showListView();
+  };
+  NBS_NAV.init({
+    page: "policy",
+    onReady: function() {
+      // 頁面原本的初始化已在 window.onload 執行
+    }
+  });
+});
 </script>
 </body>
 </html>
