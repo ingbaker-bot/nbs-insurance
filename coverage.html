@@ -135,10 +135,7 @@ let personDataMap={},currentPersonId=null,currentPolicyId=null;
 let openGroups={accident:true},dirty=false,viewMode="list";
 
 // ── 初始化 ────────────────────────────────────────────────
-window.addEventListener("nbs_nav_ready", async function(e){
-  var currentUser=e.detail.user;
-  familyData=e.detail.familyData;
-  currentPersonId=e.detail.currentPersonId;
+window.onload=async function(){
   const saved=localStorage.getItem("nbs_user");
   if(!saved){window.location.href="index.html";return;}
   currentUser=JSON.parse(saved);
@@ -573,16 +570,13 @@ function callGAS(action,params){
   return fetch(url.toString()).then(r=>r.json());
 }
 
-// ── NBS 導覽初始化 ───────────────────────────────────────
-NBS_NAV.onMemberChange = function(personId) {
-  currentPersonId = personId;
-  if (typeof renderContent === "function") renderContent();
-  if (typeof showListView === "function") showListView();
-  if (typeof renderEdit === "function" && typeof currentPolicyId !== "undefined" && currentPolicyId) {
-    var person = personDataMap && personDataMap[personId];
-    var pol = person && person.policies && person.policies.find(function(p){ return p.id === currentPolicyId; });
-    if (pol) renderEdit(pol);
-  }
+
+// ── NBS 導覽 ──────────────────────────────────────────────
+NBS_NAV.onMemberChange = function(pid) {
+  currentPersonId = pid;
+  if (typeof renderContent  === "function") renderContent();
+  if (typeof showListView   === "function") showListView();
+  if (typeof renderContent  === "function") renderContent();
 };
 NBS_NAV.init({ page: "coverage" });
 </script>
