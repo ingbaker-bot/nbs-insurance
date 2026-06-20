@@ -184,7 +184,7 @@ let medicalOverrides = {}; // rowkey_colkey → value
 let targets        = {}; // itemKey → 目標值
 
 window.addEventListener("nbs_nav_ready", async function(e) {
-  var currentUser   = e.detail.user;
+  currentUser       = e.detail.user;  // 賦值給全域變數
   familyData        = e.detail.familyData;
   currentPersonId   = e.detail.currentPersonId;
   familyFileName    = e.detail.familyFileName;

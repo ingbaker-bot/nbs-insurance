@@ -86,6 +86,7 @@
 </div>
 
 <script>
+var familyFileName = null;
 const GAS_URL="https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec";
 
 // ── 群組定義 ──────────────────────────────────────────────
@@ -137,7 +138,7 @@ let openGroups={accident:true},dirty=false,viewMode="list";
 
 // ── 初始化 ────────────────────────────────────────────────
 window.addEventListener("nbs_nav_ready", async function(e) {
-  var currentUser   = e.detail.user;
+  currentUser       = e.detail.user;  // 賦值給全域變數
   familyData        = e.detail.familyData;
   currentPersonId   = e.detail.currentPersonId;
   familyFileName    = e.detail.familyFileName;
