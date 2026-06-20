@@ -46,12 +46,10 @@
     .spin{display:inline-block;width:16px;height:16px;border:2px solid #e0e0e0;border-top-color:#378ADD;border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle}
     @keyframes sp{to{transform:rotate(360deg)}}
   </style>
+  <script src="nav.js"></script>
 </head>
 <body>
 
-<div class="hdr">
-  <button class="back" id="B_BACK">‹</button>
-  <div class="hdr-title" id="HDR_TITLE">匯出圖片</div>
   <div class="hdr-sub" id="HDR_SUB"></div>
 </div>
 
@@ -560,6 +558,23 @@ window.addEventListener("load",function(){
   btn.disabled=true;
   btn.textContent="資料載入中…";
   btn.style.background="#ccc";
+});
+
+// ── NBS 導覽初始化 ───────────────────────────────────────
+window.addEventListener("DOMContentLoaded", function() {
+  NBS_NAV.onMemberChange = function(personId) {
+    currentPersonId = personId;
+    // 重新渲染頁面資料
+    if (typeof renderContent === "function") renderContent();
+    if (typeof renderTabs === "function") renderTabs();
+    if (typeof showListView === "function") showListView();
+  };
+  NBS_NAV.init({
+    page: "export",
+    onReady: function() {
+      // 頁面原本的初始化已在 window.onload 執行
+    }
+  });
 });
 </script>
 </body>
