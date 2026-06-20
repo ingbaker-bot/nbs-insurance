@@ -125,14 +125,11 @@
     .saved-hint { font-size:11px; color:#27AE8F; text-align:center; padding:6px 0; display:none; }
     .empty-state { text-align:center; padding:32px 20px; color:#bbb; font-size:13px; }
   </style>
+  <script src="nav.js"></script>
 </head>
 <body>
 
-<div class="header">
-  <button class="back-btn" onclick="goBack()">‹</button>
-  <div class="header-title">受益人設定</div>
 </div>
-<div class="member-tabs" id="member-tabs"></div>
 <div class="sub-tabs">
   <div class="sub-tab active" id="tab-tpl" onclick="switchSubTab('tpl')">受益人模板</div>
   <div class="sub-tab" id="tab-policy" onclick="switchSubTab('policy')">保單套用</div>
@@ -828,6 +825,23 @@ function callGAS(action,params) {
   });
   return fetch(url.toString()).then(r=>r.json());
 }
+
+// ── NBS 導覽初始化 ───────────────────────────────────────
+window.addEventListener("DOMContentLoaded", function() {
+  NBS_NAV.onMemberChange = function(personId) {
+    currentPersonId = personId;
+    // 重新渲染頁面資料
+    if (typeof renderContent === "function") renderContent();
+    if (typeof renderTabs === "function") renderTabs();
+    if (typeof showListView === "function") showListView();
+  };
+  NBS_NAV.init({
+    page: "beneficiary",
+    onReady: function() {
+      // 頁面原本的初始化已在 window.onload 執行
+    }
+  });
+});
 </script>
 </body>
 </html>
