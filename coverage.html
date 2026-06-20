@@ -135,7 +135,10 @@ let personDataMap={},currentPersonId=null,currentPolicyId=null;
 let openGroups={accident:true},dirty=false,viewMode="list";
 
 // ── 初始化 ────────────────────────────────────────────────
-window.onload=async function(){
+window.addEventListener("nbs_nav_ready", async function(e){
+  var currentUser=e.detail.user;
+  familyData=e.detail.familyData;
+  currentPersonId=e.detail.currentPersonId;
   const saved=localStorage.getItem("nbs_user");
   if(!saved){window.location.href="index.html";return;}
   currentUser=JSON.parse(saved);
@@ -571,21 +574,17 @@ function callGAS(action,params){
 }
 
 // ── NBS 導覽初始化 ───────────────────────────────────────
-window.addEventListener("DOMContentLoaded", function() {
-  NBS_NAV.onMemberChange = function(personId) {
-    currentPersonId = personId;
-    // 重新渲染頁面資料
-    if (typeof renderContent === "function") renderContent();
-    if (typeof renderTabs === "function") renderTabs();
-    if (typeof showListView === "function") showListView();
-  };
-  NBS_NAV.init({
-    page: "coverage",
-    onReady: function() {
-      // 頁面原本的初始化已在 window.onload 執行
-    }
-  });
-});
+NBS_NAV.onMemberChange = function(personId) {
+  currentPersonId = personId;
+  if (typeof renderContent === "function") renderContent();
+  if (typeof showListView === "function") showListView();
+  if (typeof renderEdit === "function" && typeof currentPolicyId !== "undefined" && currentPolicyId) {
+    var person = personDataMap && personDataMap[personId];
+    var pol = person && person.policies && person.policies.find(function(p){ return p.id === currentPolicyId; });
+    if (pol) renderEdit(pol);
+  }
+};
+NBS_NAV.init({ page: "coverage" });
 </script>
 </body>
 </html>

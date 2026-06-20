@@ -550,7 +550,10 @@ function gas(action,params){
 }
 
 // ── 頁面載入後建立清單（空狀態，等 async 資料回來後再更新）
-window.addEventListener("load",function(){
+window.addEventListener("nbs_nav_ready",function(e){
+  var currentUser=e.detail.user;
+  familyData=e.detail.familyData;
+  currentPersonId=e.detail.currentPersonId;
   buildBlocks();
   buildFmts();
   // 先 disable 預覽按鈕，等 async 資料載入完才 enable
@@ -561,21 +564,17 @@ window.addEventListener("load",function(){
 });
 
 // ── NBS 導覽初始化 ───────────────────────────────────────
-window.addEventListener("DOMContentLoaded", function() {
-  NBS_NAV.onMemberChange = function(personId) {
-    currentPersonId = personId;
-    // 重新渲染頁面資料
-    if (typeof renderContent === "function") renderContent();
-    if (typeof renderTabs === "function") renderTabs();
-    if (typeof showListView === "function") showListView();
-  };
-  NBS_NAV.init({
-    page: "export",
-    onReady: function() {
-      // 頁面原本的初始化已在 window.onload 執行
-    }
-  });
-});
+NBS_NAV.onMemberChange = function(personId) {
+  currentPersonId = personId;
+  if (typeof renderContent === "function") renderContent();
+  if (typeof showListView === "function") showListView();
+  if (typeof renderEdit === "function" && typeof currentPolicyId !== "undefined" && currentPolicyId) {
+    var person = personDataMap && personDataMap[personId];
+    var pol = person && person.policies && person.policies.find(function(p){ return p.id === currentPolicyId; });
+    if (pol) renderEdit(pol);
+  }
+};
+NBS_NAV.init({ page: "export" });
 </script>
 </body>
 </html>

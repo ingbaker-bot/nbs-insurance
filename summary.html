@@ -183,12 +183,11 @@ let overrides      = {}; // pid_key → true/false
 let medicalOverrides = {}; // rowkey_colkey → value
 let targets        = {}; // itemKey → 目標值
 
-window.onload = async function() {
-  const saved = localStorage.getItem("nbs_user");
-  if (!saved) { window.location.href="index.html"; return; }
-  currentUser = JSON.parse(saved);
-  familyFileName = localStorage.getItem("nbs_current_family");
-  if (!familyFileName) { window.location.href="main.html"; return; }
+window.addEventListener("nbs_nav_ready", async function(e) {
+  var currentUser = e.detail.user;
+  familyData = e.detail.familyData;
+  currentPersonId = e.detail.currentPersonId;
+  // currentUser, familyData, currentPersonId 已由 nav.js 載入
   try {
     const fr = await callGAS("readFile",{email:currentUser.email,fileType:"family",fileName:familyFileName});
     familyData = fr.content;
@@ -829,21 +828,17 @@ function callGAS(action,params) {
 }
 
 // ── NBS 導覽初始化 ───────────────────────────────────────
-window.addEventListener("DOMContentLoaded", function() {
-  NBS_NAV.onMemberChange = function(personId) {
-    currentPersonId = personId;
-    // 重新渲染頁面資料
-    if (typeof renderContent === "function") renderContent();
-    if (typeof renderTabs === "function") renderTabs();
-    if (typeof showListView === "function") showListView();
-  };
-  NBS_NAV.init({
-    page: "summary",
-    onReady: function() {
-      // 頁面原本的初始化已在 window.onload 執行
-    }
-  });
-});
+NBS_NAV.onMemberChange = function(personId) {
+  currentPersonId = personId;
+  if (typeof renderContent === "function") renderContent();
+  if (typeof showListView === "function") showListView();
+  if (typeof renderEdit === "function" && typeof currentPolicyId !== "undefined" && currentPolicyId) {
+    var person = personDataMap && personDataMap[personId];
+    var pol = person && person.policies && person.policies.find(function(p){ return p.id === currentPolicyId; });
+    if (pol) renderEdit(pol);
+  }
+};
+NBS_NAV.init({ page: "summary" });
 </script>
 </body>
 </html>

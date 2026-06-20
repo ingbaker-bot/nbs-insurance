@@ -35,16 +35,24 @@
   function init(opts) {
     currentPage = opts.page || "";
 
-    // 樣式注入
+    // 樣式注入（同步，不依賴 DOM）
     injectStyles();
 
+    // 等 DOM ready 後才操作
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", function() { doInit(opts); });
+    } else {
+      doInit(opts);
+    }
+  }
+
+  function doInit(opts) {
     // 建立導覽 DOM 結構
     wrapBody();
 
     // 載入資料後渲染
     loadData().then(function() {
       renderNav();
-      // 觸發外部初始化（頁面本身的 init）
       if (typeof opts.onReady === "function") opts.onReady();
     }).catch(function(e) {
       console.error("NBS_NAV: 資料載入失敗", e);
@@ -64,18 +72,31 @@
     var saved = localStorage.getItem("nbs_user");
     if (!saved) { window.location.href = "index.html"; return; }
     var user = JSON.parse(saved);
+    // 把 user 存到全域讓各頁面可以用
+    global._nbs_user = user;
 
     var fn = localStorage.getItem("nbs_current_family");
     if (!fn) { window.location.href = "main.html"; return; }
 
-    var fr = await callGAS("readFile", { email: user.email, fileType: "family", fileName: fn });
-    familyData = fr.content;
+    try {
+      var fr = await callGAS("readFile", { email: user.email, fileType: "family", fileName: fn });
+      familyData = fr.content;
+    } catch(e) {
+      console.error("NBS_NAV: 無法載入家庭資料", e);
+      return;
+    }
 
     currentPersonId = localStorage.getItem("nbs_current_person");
     if (!currentPersonId) {
       var prim = familyData.members.find(function(m) { return m.role === "primary"; });
-      currentPersonId = prim ? prim.personId : familyData.members[0]?.personId;
+      currentPersonId = prim ? prim.personId : (familyData.members[0] && familyData.members[0].personId);
+      if (currentPersonId) localStorage.setItem("nbs_current_person", currentPersonId);
     }
+
+    // 觸發頁面就緒事件
+    global.dispatchEvent(new CustomEvent("nbs_nav_ready", {
+      detail: { user: user, familyData: familyData, currentPersonId: currentPersonId }
+    }));
   }
 
   // ── DOM 結構包裹 ─────────────────────────────────────────
@@ -108,9 +129,11 @@
     var bodyContent = document.createElement("div");
     bodyContent.id = "nbs-page-content";
     bodyContent.style.cssText = "flex:1;overflow-y:auto";
-    while (document.body.firstChild) {
-      bodyContent.appendChild(document.body.firstChild);
-    }
+    // 移動 body 的直接子元素（排除 script）
+    var children = Array.from(document.body.childNodes);
+    children.forEach(function(child) {
+      bodyContent.appendChild(child);
+    });
     main.appendChild(mobileHdr);
     main.appendChild(bodyContent);
 
