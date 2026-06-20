@@ -367,11 +367,16 @@
 
 <!-- 成員 Tab -->
 <!-- 主內容 -->
+<div class="member-tabs" id="member-tabs"></div>
 <div class="main">
+  <div id="loading" style="text-align:center;padding:40px;color:#bbb;font-size:13px"><span class="spinner"></span> 載入中…</div>
+  <div id="content" style="display:none">
   <div class="stats-row" id="stats-row"></div>
   <div id="policy-list"></div>
   <button class="add-main-btn" onclick="openForm('new', null, null)">＋ 新增主約保單</button>
 </div>
+  </div><!-- /content -->
+</div><!-- /main wrapper -->
 
 <!-- 表單 Modal -->
 <div class="modal-overlay" id="form-modal" onclick="handleOverlayClick(event)">
