@@ -310,10 +310,26 @@ function renderBlock(key){
   }
 
   if(key==="timeline"){
+    // 從各保單的 coverage 加總
+    function sumKey(k){ var t=0; policies.forEach(function(p){ var v=p.coverage&&p.coverage[k]; if(v&&typeof v==="number") t+=v; }); return t||null; }
+    function hasCat(cats){ return policies.some(function(p){ return cats.indexOf(p.category)>=0; }); }
     var phases=[
-      {l:"治療前期",c:"#5BAD6F",items:[["重大疾病",null],["重大傷病",null],["特定傷病",null]]},
-      {l:"治療中期",c:"#378ADD",items:[["住院日額",null],["初次罹癌",null],["癌症住院",null],["放/化療",null]]},
-      {l:"治療後期",c:"#E8638A",items:[["長照每月",null],["失能一次金",null],["失能扶助",null]]},
+      {l:"治療前期",c:"#5BAD6F",items:[
+        ["重大疾病", hasCat(["重大疾病險"])?(sumKey("can_first")||"有規劃"):null],
+        ["重大傷病", hasCat(["重大傷病險"])?"有規劃":null],
+        ["特定傷病", hasCat(["特定傷病險"])?"有規劃":null],
+      ]},
+      {l:"治療中期",c:"#378ADD",items:[
+        ["住院日額",  sumKey("daily_room_1_30")||sumKey("daily_room")||(hasCat(["醫療保障"])?"有規劃":null)],
+        ["初次罹癌",  sumKey("can_first")?(sumKey("can_first")+"萬"):null],
+        ["癌症住院",  sumKey("can_hosp")?(sumKey("can_hosp")+"元/日"):null],
+        ["放/化療",   sumKey("daily_radiation")?"有規劃":null],
+      ]},
+      {l:"治療後期",c:"#E8638A",items:[
+        ["長照每月",  sumKey("ltc_monthly")?(sumKey("ltc_monthly")+"萬/月"):null],
+        ["失能一次金",sumKey("ltc_dis_amt")?(sumKey("ltc_dis_amt")+"萬"):null],
+        ["失能扶助",  sumKey("ltc_dis_life")||sumKey("acc_support")?(( sumKey("ltc_dis_life")||sumKey("acc_support"))+"萬/月"):null],
+      ]},
     ];
     var arrows=phases.map(function(p,i){return'<div style="flex:'+(i===1?1.6:1)+';padding:5px 6px;background:'+p.c+';color:#fff;font-weight:600;font-size:10px;text-align:center;clip-path:'+(i===0?"polygon(0 0,calc(100% - 8px) 0,100% 50%,calc(100% - 8px) 100%,0 100%)":i===2?"polygon(0 0,100% 0,100% 100%,0 100%,8px 50%)":"polygon(0 0,calc(100% - 8px) 0,100% 50%,calc(100% - 8px) 100%,0 100%,8px 50%)")+';margin-left:'+(i>0?"-2px":"0")+'">'+p.l+'</div>';}).join("");
     var cols=phases.map(function(p){return'<div style="border:1px solid '+p.c+'40;border-radius:5px;overflow:hidden"><div style="height:3px;background:'+p.c+'20"></div><div style="padding:4px 6px">'+p.items.map(function(it){return'<div style="display:flex;justify-content:space-between;font-size:9px;margin-bottom:2px;padding:2px 3px;background:'+(it[1]?"#fff":"#f5f5f5")+';border-radius:3px"><span style="color:'+(it[1]?"#333":"#bbb")+'">'+it[0]+'</span><span style="color:'+(it[1]?p.c:"#ccc")+'">'+(it[1]||"未投保")+'</span></div>';}).join("")+'</div></div>';}).join("");
@@ -322,17 +338,57 @@ function renderBlock(key){
 
   if(key==="coverage"){
     var html="";
-    [["意外","#F5A623",["acc_special","acc_disable"]],["住院","#27AE8F",["hosp_room","daily_room"]],["癌症","#E74C3C",["can_first","can_hosp"]],["長照","#27500A",["ltc_monthly","ltc_dis_amt"]]].forEach(function(g){
-      var items=g[2].map(function(k){var t=0;policies.forEach(function(p){var v=coverage[p.id+"_"+k];if(v)t+=v;});return t>0?'<span style="font-size:10px;margin-right:8px">'+k.split("_").slice(1).join("_")+'：'+t.toLocaleString()+'</span>':"";}).filter(Boolean).join("");
-      if(items) html+='<div style="margin-bottom:5px"><div style="font-size:10px;font-weight:500;color:'+g[1]+';margin-bottom:1px">'+g[0]+'</div><div>'+items+'</div></div>';
+    var covGroups=[
+      {label:"意外險",color:"#F5A623",fields:[
+        {k:"acc_opd",l:"門診醫療",u:"萬/次"},{k:"acc_hosp",l:"住院日額",u:"元/日"},
+        {k:"acc_icu",l:"加護病房",u:"元/日"},{k:"acc_special_max",l:"特定事故加倍",u:"萬元"},
+        {k:"acc_burn_max",l:"燒燙傷",u:"萬元"},{k:"acc_disable_max",l:"意外失能",u:"萬元"},
+        {k:"acc_work",l:"喪失工作能力",u:"萬/月"},{k:"acc_support",l:"失能扶助",u:"萬/月"},
+      ]},
+      {label:"住院醫療（實支）",color:"#27AE8F",fields:[
+        {k:"hosp_room",l:"病房費",u:"元/日"},{k:"hosp_surgery",l:"手術費",u:"元/次"},
+        {k:"hosp_misc",l:"醫療雜費",u:"元/次"},{k:"hosp_icu",l:"加護病房",u:"元/日"},
+        {k:"hosp_limit_per",l:"住院總限額",u:"元"},
+      ]},
+      {label:"日額型住院",color:"#1E8A72",fields:[
+        {k:"daily_room_1_30",l:"日額(1-30日)",u:"元/日"},{k:"daily_room_31",l:"日額(31日起)",u:"元/日"},
+        {k:"daily_icu",l:"加護病房",u:"元/日"},{k:"daily_discharge",l:"出院療養",u:"元/日"},
+      ]},
+      {label:"癌症醫療",color:"#E74C3C",fields:[
+        {k:"can_first",l:"初次罹患",u:"萬元"},{k:"can_hosp",l:"癌症住院",u:"元/日"},
+        {k:"can_target",l:"標靶藥物",u:"萬元"},
+      ]},
+      {label:"失能長照",color:"#27500A",fields:[
+        {k:"ltc_monthly",l:"長照每月",u:"萬/月"},{k:"ltc_dis_amt",l:"失能一次金",u:"萬元"},
+        {k:"ltc_dis_life",l:"失能扶助金",u:"萬/月"},
+      ]},
+    ];
+    covGroups.forEach(function(g){
+      var items=g.fields.map(function(f){
+        var t=0;
+        policies.forEach(function(p){ var v=p.coverage&&p.coverage[f.k]; if(v&&typeof v==="number") t+=v; });
+        return t>0?'<span style="font-size:10px;margin-right:8px;color:#555">'+f.l+'：<strong>'+t.toLocaleString()+f.u+'</strong></span>':"";
+      }).filter(Boolean).join("");
+      if(items) html+='<div style="margin-bottom:7px"><div style="font-size:10px;font-weight:500;color:'+g.color+';margin-bottom:3px">'+g.label+'</div><div style="line-height:2">'+items+'</div></div>';
     });
-    return'<div style="padding:10px 12px">'+(html||'<div style="color:#aaa;font-size:12px">尚無附約保障資料</div>')+'</div>';
+    return'<div style="padding:10px 12px">'+(html||'<div style="color:#aaa;font-size:12px">尚無附約保障資料（請先至附約保障清單填寫）</div>')+'</div>';
   }
 
   if(key==="savings"){
     var sp=policies.filter(function(p){return p.category==="儲蓄險"||p.category==="年金險";});
     if(!sp.length) return'<div style="padding:12px;color:#aaa;font-size:12px">尚無儲蓄險或年金險保單</div>';
-    return'<div style="padding:10px 12px">'+sp.map(function(p){var s=(savings||[]).find(function(x){return x.policyId===p.id;});return'<div style="font-size:12px;margin-bottom:5px;padding:6px 8px;background:#fafafa;border-radius:5px"><div style="font-weight:500">'+(p.itemName||p.policyNo)+'</div><div style="font-size:10px;color:#aaa">'+p.company+'　'+(s?'每次 NT$'+(s.amount||0).toLocaleString()+'　'+(s.mode==="month"?"月領":"年領"):"尚未設定")+'</div></div>';}).join("")+'</div>';
+    var savArr=savings||person.savings||[];
+    return'<div style="padding:10px 12px">'+sp.map(function(p){
+      var s=savArr.find(function(x){return x.policyId===p.id;})||null;
+      var sMode=s?s.mode:""; var sAmt=s?(s.amount||0):0;
+      var modeLabel=sMode==="month"?"月領":sMode==="year"?"年領":sMode==="lump"?"期滿整筆":"尚未設定";
+      return'<div style="font-size:12px;margin-bottom:6px;padding:8px 10px;background:#fafafa;border-radius:6px">'+
+        '<div style="font-weight:500;margin-bottom:2px">'+(p.itemName||p.policyNo)+'</div>'+
+        '<div style="font-size:10px;color:#666">'+p.company+'</div>'+
+        (s?'<div style="font-size:11px;color:#0C447C;margin-top:3px">'+modeLabel+(sAmt?' NT$'+sAmt.toLocaleString():'')+'</div>':
+          '<div style="font-size:11px;color:#aaa;margin-top:3px">尚未設定領回方式</div>')+
+      '</div>';
+    }).join("")+'</div>';
   }
 
   if(key==="monthly"){
