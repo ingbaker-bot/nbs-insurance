@@ -85,6 +85,22 @@
     .manual-badge { font-size:8px; color:#F5A623; font-weight:600; margin-left:2px; }
 
     .loading { text-align:center; padding:40px; color:#bbb; font-size:13px; }
+    /* 醫院病房費 */
+    .hosp-filter { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px }
+    .hosp-filter-btn { padding:4px 12px; border:1.5px solid #ddd; border-radius:99px; font-size:12px; cursor:pointer; background:#fff; color:#666; font-family:inherit }
+    .hosp-filter-btn.active { border-color:#378ADD; background:#E6F1FB; color:#0C447C; }
+    .hosp-card { background:#fff; border:1px solid #e8e8e8; border-radius:8px; padding:10px 12px; margin-bottom:8px }
+    .hosp-name { font-size:13px; font-weight:500; color:#1a1a1a }
+    .hosp-badge { display:inline-block; font-size:10px; padding:1px 7px; border-radius:99px; margin-left:6px }
+    .hosp-badge.醫學中心 { background:#E6F1FB; color:#0C447C }
+    .hosp-badge.區域醫院 { background:#EAF3DE; color:#27500A }
+    .hosp-badge.地區醫院 { background:#f5f5f3; color:#888 }
+    .hosp-rooms { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-top:8px }
+    .hosp-room { text-align:center; padding:6px; background:#fafafa; border-radius:6px }
+    .hosp-room-label { font-size:10px; color:#aaa; margin-bottom:2px }
+    .hosp-room-price { font-size:13px; font-weight:500; color:#378ADD }
+    .hosp-suggest { margin-top:8px; padding:7px 10px; background:#E6F1FB; border-radius:6px; font-size:11px; color:#0C447C }
+    .hosp-fallback { font-size:11px; color:#aaa; padding:6px 0; font-style:italic }
     .spinner { display:inline-block; width:16px; height:16px; border:2px solid #e0e0e0; border-top-color:#378ADD; border-radius:50%; animation:spin 0.7s linear infinite; vertical-align:middle; }
     @keyframes spin { to { transform:rotate(360deg); } }
   </style>
@@ -180,6 +196,7 @@ let familyFileName = null;
 let personDataMap  = {};
 let currentPersonId = null;
 let overrides      = {}; // pid_key → true/false
+let hospitalsCache = null; // 醫院病房費資料庫快取
 let medicalOverrides = {}; // rowkey_colkey → value
 let targets        = {}; // itemKey → 目標值
 
@@ -389,7 +406,22 @@ function renderContent() {
     意外住院＝意外日額＋疾病日額　·　癌症住院＝癌症日額＋疾病日額　·　可手動修正
   </div>`;
 
+
+  // 附近醫院病房費參考
+  html += sl("附近醫院病房費參考");
+  html += `<div id="hosp-section" style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:12px 14px;margin-bottom:16px">
+    <div class="hosp-filter">
+      <button class="hosp-filter-btn active" onclick="filterHosp('all')">全部</button>
+      <button class="hosp-filter-btn" onclick="filterHosp('醫學中心')">醫學中心</button>
+      <button class="hosp-filter-btn" onclick="filterHosp('區域醫院')">區域醫院</button>
+      <button class="hosp-filter-btn" onclick="filterHosp('地區醫院')">地區醫院</button>
+    </div>
+    <div id="hosp-content"><div style="color:#bbb;font-size:12px;text-align:center;padding:10px">載入醫院資料中…</div></div>
+  </div>`;
   document.getElementById("content").innerHTML = html;
+
+  // 載入醫院資料
+  loadHospitals();
 }
 
 // ── 圓餅圖 SVG ───────────────────────────────────────────
@@ -844,6 +876,159 @@ NBS_NAV.onMemberChange = function(pid) {
   if (typeof renderContent  === "function") renderContent();
 };
 NBS_NAV.init({ page: "summary" });
+
+// ── 醫院病房費模組 ────────────────────────────────────────
+var hospFilter = "all";
+var hospData   = null;
+
+// 取得保戶地址的縣市區
+function getPatientLocation() {
+  const person = personDataMap[currentPersonId];
+  const addr   = person?.profile?.address || "";
+  // 解析縣市
+  const cityMatch = addr.match(/(台北市|新北市|基隆市|桃園市|新竹市|新竹縣|苗栗縣|台中市|彰化縣|南投縣|雲林縣|嘉義市|嘉義縣|台南市|高雄市|屏東縣|宜蘭縣|花蓮縣|台東縣|澎湖縣|金門縣|連江縣)/);
+  const city   = cityMatch ? cityMatch[1] : null;
+  // 解析區
+  const distMatch = addr.match(/([^\s市縣]{1,6}[區鄉鎮市])/);
+  const district  = distMatch ? distMatch[1] : null;
+  return { city, district, addr };
+}
+
+// 查詢附近醫院（同區 → 同市 → 同大區 → 全台）
+function findNearbyHospitals(hospitals, city, district, maxCount) {
+  maxCount = maxCount || 3;
+  let result = [];
+  let fallbackLevel = "";
+
+  // 1. 同區
+  if (district) {
+    result = hospitals.filter(h => h.city === city && h.district === district);
+    if (result.length) { fallbackLevel = "同區（" + district + "）"; }
+  }
+  // 2. 同市
+  if (!result.length && city) {
+    result = hospitals.filter(h => h.city === city);
+    if (result.length) { fallbackLevel = "同市（" + city + "）"; }
+  }
+  // 3. 同大區
+  if (!result.length && city) {
+    const regionMap = {
+      "大台北地區": ["台北市","新北市","基隆市"],
+      "北部地區":   ["桃園市","新竹市","新竹縣","苗栗縣"],
+      "中部地區":   ["台中市","彰化縣","南投縣","雲林縣"],
+      "宜花東地區": ["宜蘭縣","花蓮縣","台東縣"],
+      "南部地區":   ["嘉義市","嘉義縣","台南市","高雄市","屏東縣"]
+    };
+    let region = null;
+    for (const [r, cities] of Object.entries(regionMap)) {
+      if (cities.includes(city)) { region = r; break; }
+    }
+    if (region) {
+      result = hospitals.filter(h => h.region === region);
+      fallbackLevel = "同大區（" + region + "）";
+    }
+  }
+  // 4. 全台
+  if (!result.length) {
+    result = hospitals;
+    fallbackLevel = "全台（無當地資料）";
+  }
+
+  // 篩選等級
+  if (hospFilter !== "all") {
+    const filtered = result.filter(h => h.level === hospFilter);
+    if (filtered.length) result = filtered;
+  }
+
+  // 取前 N 筆，依等級排序（醫學中心優先）
+  const levelOrder = { "醫學中心":0, "區域醫院":1, "地區醫院":2 };
+  result.sort((a,b) => (levelOrder[a.level]||9) - (levelOrder[b.level]||9));
+
+  return { hospitals: result.slice(0, maxCount), fallbackLevel };
+}
+
+// 渲染醫院病房費
+function renderHospSection() {
+  const el = document.getElementById("hosp-content");
+  if (!el) return;
+  if (!hospData) {
+    el.innerHTML = '<div style="color:#bbb;font-size:12px;text-align:center;padding:10px">尚未載入醫院資料</div>';
+    return;
+  }
+
+  const { city, district, addr } = getPatientLocation();
+  const hospitals = hospData.hospitals || [];
+  const { hospitals: nearby, fallbackLevel } = findNearbyHospitals(hospitals, city, district, 3);
+
+  if (!city) {
+    el.innerHTML = '<div style="font-size:12px;color:#aaa;padding:6px 0">📍 請在成員資料填寫地址，以顯示附近醫院病房費參考</div>';
+    return;
+  }
+
+  let html = '<div style="font-size:11px;color:#888;margin-bottom:8px">📍 ' + city + (district?" "+district:"") + '　顯示範圍：' + fallbackLevel + '</div>';
+
+  // 計算建議目標（取單人房中位數）
+  const singles = nearby.map(h => h.rooms.single).filter(Boolean);
+  const suggest = singles.length ? Math.round(singles.reduce((a,b)=>a+b,0)/singles.length/100)*100 : null;
+
+  nearby.forEach(h => {
+    const r = h.rooms;
+    html += `<div class="hosp-card">
+      <div>
+        <span class="hosp-name">${h.name}</span>
+        <span class="hosp-badge ${h.level}">${h.level}</span>
+      </div>
+      <div class="hosp-rooms">
+        <div class="hosp-room">
+          <div class="hosp-room-label">二人房差額</div>
+          <div class="hosp-room-price">${r.double ? r.double.toLocaleString()+"元/日" : "—"}</div>
+        </div>
+        <div class="hosp-room">
+          <div class="hosp-room-label">一人房差額</div>
+          <div class="hosp-room-price">${r.single ? r.single.toLocaleString()+"元/日" : "—"}</div>
+        </div>
+        <div class="hosp-room">
+          <div class="hosp-room-label">套房差額</div>
+          <div class="hosp-room-price">${r.single_hi ? r.single_hi.toLocaleString()+"元/日" : "—"}</div>
+        </div>
+      </div>
+    </div>`;
+  });
+
+  if (suggest) {
+    html += `<div class="hosp-suggest">💡 建議實支實付病房費目標：<strong>${suggest.toLocaleString()} 元/日</strong>（鄰近醫院一人房平均）</div>`;
+  }
+
+  html += `<div style="font-size:10px;color:#ccc;margin-top:6px;text-align:right">資料來源：${hospData.source || ""}　${hospData.updated || ""}</div>`;
+  el.innerHTML = html;
+}
+
+// 篩選等級按鈕
+function filterHosp(level) {
+  hospFilter = level;
+  document.querySelectorAll(".hosp-filter-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.textContent === (level==="all"?"全部":level));
+  });
+  renderHospSection();
+}
+
+// 載入醫院資料（每次進 summary 時呼叫一次，有快取就不重新載入）
+async function loadHospitals() {
+  if (hospData) { renderHospSection(); return; }
+  try {
+    const res = await callGAS("getHospitals", {});
+    if (res.status === "ok") {
+      hospData = res.data;
+      hospitalsCache = res.data;
+    } else {
+      console.warn("getHospitals:", res.message);
+    }
+  } catch(e) {
+    console.error("loadHospitals error:", e);
+  }
+  renderHospSection();
+}
+
 </script>
 </body>
 </html>
