@@ -774,6 +774,15 @@ function openForm(mode, memberId, policyIdOrNo) {
   } else if (mode === "rider") {
     document.getElementById("form-title").textContent = "新增附約（保單號碼：" + policyIdOrNo + "）";
     document.getElementById("f-policyno").value = policyIdOrNo;
+
+    // 自動帶入主約的保險公司
+    const riderPerson = personDataMap[editingPersonId];
+    const masterPols = (riderPerson?.policies || []).filter(p => p.policyNo === policyIdOrNo);
+    if (masterPols.length > 0) {
+      const masterCompany = masterPols[0].company || "";
+      document.getElementById("f-company-search").value = masterCompany;
+      document.getElementById("f-company").value = masterCompany;
+    }
   } else {
     document.getElementById("form-title").textContent = "新增主約保單";
   }
