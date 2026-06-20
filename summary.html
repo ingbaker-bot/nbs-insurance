@@ -93,7 +93,7 @@
 <body>
 
   <div class="header-sub" id="header-sub"></div>
-</div>
+<div class="member-tabs" id="member-tabs"></div>
 <div class="main">
   <div id="loading" class="loading"><span class="spinner"></span> 載入中…</div>
   <div id="content" style="display:none"></div>
@@ -183,11 +183,13 @@ let overrides      = {}; // pid_key → true/false
 let medicalOverrides = {}; // rowkey_colkey → value
 let targets        = {}; // itemKey → 目標值
 
-window.onload = async function() {
+window.addEventListener("nbs_nav_ready", async function(e) {
+  var currentUser   = e.detail.user;
+  familyData        = e.detail.familyData;
+  currentPersonId   = e.detail.currentPersonId;
+  familyFileName    = e.detail.familyFileName;
+
   try {
-    const fr = await callGAS("readFile",{email:currentUser.email,fileType:"family",fileName:familyFileName});
-    familyData = fr.content;
-    document.getElementById("header-sub").textContent = familyData.familyName;
     for (const m of familyData.members.filter(m=>m.role!=="beneficiary_only")) {
       const pr = await callGAS("readFile",{email:currentUser.email,fileType:"person",fileName:m.name+"_"+m.personId+".json"});
       if (pr.status==="ok") personDataMap[m.personId] = pr.content;
@@ -714,11 +716,11 @@ function openTargetModal() {
   overlay.innerHTML = `<div style="background:#fff;border-radius:16px 16px 0 0;padding:20px;width:100%;max-width:560px;max-height:85vh;overflow-y:auto">
     <div style="display:flex;justify-content:space-between;margin-bottom:14px">
       <span style="font-weight:500;font-size:15px">🎯 設定目標保額</span>
-      <button onclick="document.getElementById('target-modal-overlay').remove()" style="background:none;border:none;font-size:22px;color:#999;cursor:pointer;line-height:1">×</button>
+      <button onclick="document.getElementById('target-modal-overlay')?.remove()" style="background:none;border:none;font-size:22px;color:#999;cursor:pointer;line-height:1">×</button>
     </div>
     ${bodyHtml}
     <div style="display:flex;gap:8px;margin-top:8px">
-      <button onclick="document.getElementById('target-modal-overlay').remove()"
+      <button onclick="document.getElementById('target-modal-overlay')?.remove()"
         style="flex:1;padding:10px;background:transparent;color:#666;border:1px solid #ddd;border-radius:8px;cursor:pointer;font-family:inherit">取消</button>
       <button onclick="saveTargets()"
         style="flex:2;padding:10px;background:#378ADD;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit">儲存目標</button>

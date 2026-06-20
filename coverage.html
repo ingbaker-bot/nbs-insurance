@@ -75,8 +75,9 @@
   <script src="nav.js"></script>
 </head>
 <body>
+<div style="display:none" id="header-title"></div>
   <button class="save-btn" id="save-btn" onclick="saveCoverage()">儲存</button>
-</div>
+<div class="member-tabs" id="member-tabs"></div>
 <div class="main">
   <div id="stats-row" class="stats-row"></div>
   <div id="loading" class="loading"><span class="spinner"></span> 載入中…</div>
@@ -135,12 +136,11 @@ let personDataMap={},currentPersonId=null,currentPolicyId=null;
 let openGroups={accident:true},dirty=false,viewMode="list";
 
 // ── 初始化 ────────────────────────────────────────────────
-window.onload=async function(){
-  const saved=localStorage.getItem("nbs_user");
-  if(!saved){window.location.href="index.html";return;}
-  currentUser=JSON.parse(saved);
-  familyFileName=localStorage.getItem("nbs_current_family");
-  if(!familyFileName){window.location.href="main.html";return;}
+window.addEventListener("nbs_nav_ready", async function(e) {
+  var currentUser   = e.detail.user;
+  familyData        = e.detail.familyData;
+  currentPersonId   = e.detail.currentPersonId;
+  familyFileName    = e.detail.familyFileName;
   try{
     const fr=await callGAS("readFile",{email:currentUser.email,fileType:"family",fileName:familyFileName});
     familyData=fr.content;

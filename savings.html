@@ -104,7 +104,7 @@
 <body>
 
   <div class="header-sub" id="header-sub"></div>
-</div>
+<div class="member-tabs" id="member-tabs"></div>
 <div class="main">
   <div id="loading" class="loading"><span class="spinner"></span> 載入中…</div>
   <div id="content" style="display:none"></div>
@@ -131,11 +131,13 @@ let currentPersonId = null;
 // settings: policyId → { type, maturityYear, maturityAmount, periodAmount, periodInterval, periodStartYear, afterMaturityAmount, customRows:[{year,amount}] }
 let settings = {};
 
-window.onload = async function() {
+window.addEventListener("nbs_nav_ready", async function(e) {
+  var currentUser   = e.detail.user;
+  familyData        = e.detail.familyData;
+  currentPersonId   = e.detail.currentPersonId;
+  familyFileName    = e.detail.familyFileName;
+
   try {
-    const fr = await callGAS("readFile",{email:currentUser.email,fileType:"family",fileName:familyFileName});
-    familyData = fr.content;
-    document.getElementById("header-sub").textContent = familyData.familyName;
     for (const m of familyData.members.filter(m=>m.role!=="beneficiary_only")) {
       const pr = await callGAS("readFile",{email:currentUser.email,fileType:"person",fileName:m.name+"_"+m.personId+".json"});
       if (pr.status==="ok") personDataMap[m.personId] = pr.content;

@@ -144,36 +144,9 @@ document.getElementById("B_REDO").onclick    = doShowSelect;
 document.getElementById("B_FINISH").onclick  = function(){ window.location.href="family.html"; };
 
 // ── 載入資料（非同步，失敗不影響按鈕）───────────────────
-(async function(){
-  var saved=localStorage.getItem("nbs_user");
-  if(!saved){window.location.href="index.html";return;}
-  var u=JSON.parse(saved);
-  var fn=localStorage.getItem("nbs_current_family");
-  if(!fn){window.location.href="main.html";return;}
-  try{
-    var fr=await gas("readFile",{email:u.email,fileType:"family",fileName:fn});
-    var fd=fr.content;
-    document.getElementById("HDR_SUB").textContent=fd.familyName;
-    var pdm={};
-    for(var m of fd.members.filter(m=>m.role!=="beneficiary_only")){
-      var pr=await gas("readFile",{email:u.email,fileType:"person",fileName:m.name+"_"+m.personId+".json"});
-      if(pr.status==="ok") pdm[m.personId]=pr.content;
-    }
-    var sp=localStorage.getItem("nbs_current_person");
-    var prim=fd.members.find(m=>m.role==="primary");
-    var pid=sp||prim?.personId;
-    person=pdm[pid]||{};
-    policies=person.policies||[];
-    coverage=person.coverage||{};
-    savings=person.savings||[];
-    pName=person.profile?.name||"—";
-    var ad=person.profile?.analysisDate;
-    if(ad){var d=new Date(ad);pDate=(d.getFullYear()-1911)+"年"+(d.getMonth()+1)+"月"+d.getDate()+"日";}
-  }catch(e){console.error(e);}
-  buildBlocks();
-  buildFmts();
-  updatePrevBtn();  // 資料載入完成，按鈕回復可用
-})();
+// ── 資料由 nbs_nav_ready 載入（見下方 handler）──────────────
+// buildBlocks/buildFmts/updatePrevBtn 在 nbs_nav_ready 後呼叫
+
 
 // ── 建立區塊清單 ──────────────────────────────────────────
 function buildBlocks(){
@@ -550,14 +523,36 @@ function gas(action,params){
 }
 
 // ── 頁面載入後建立清單（空狀態，等 async 資料回來後再更新）
-window.onload=function(){
+window.addEventListener("nbs_nav_ready", async function(e) {
+  var currentUser   = e.detail.user;
+  familyData        = e.detail.familyData;
+  currentPersonId   = e.detail.currentPersonId;
+  familyFileName    = e.detail.familyFileName;
+
   buildBlocks();
   buildFmts();
-  // 先 disable 預覽按鈕，等 async 資料載入完才 enable
   var btn=document.getElementById("B_PREV");
-  btn.disabled=true;
-  btn.textContent="資料載入中…";
-  btn.style.background="#ccc";
+  if(btn){btn.disabled=true;btn.textContent="資料載入中…";btn.style.background="#ccc";}
+
+  // 載入個人資料
+  try {
+    var pdm={};
+    var fmem=(familyData&&familyData.members)||[];
+    for(var mi=0;mi<fmem.length;mi++){
+      var mem=fmem[mi];
+      if(mem.role==="beneficiary_only") continue;
+      var pr=await gas("readFile",{email:currentUser.email,fileType:"person",fileName:mem.name+"_"+mem.personId+".json"});
+      if(pr.status==="ok") pdm[mem.personId]=pr.content;
+    }
+    person=pdm[currentPersonId]||{};
+    policies=person.policies||[];
+    coverage=person.coverage||{};
+    savings=person.savings||[];
+    pName=(person.profile&&person.profile.name)||"—";
+    var ad=person.profile&&person.profile.analysisDate;
+    if(ad){var d=new Date(ad);pDate=(d.getFullYear()-1911)+"年"+(d.getMonth()+1)+"月"+d.getDate()+"日";}
+  }catch(ex){console.error("export load error",ex);}
+  updatePrevBtn();
 });
 
 

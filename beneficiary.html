@@ -128,8 +128,8 @@
   <script src="nav.js"></script>
 </head>
 <body>
+<div style="display:none" id="header-sub"></div>
 
-</div>
 <div class="sub-tabs">
   <div class="sub-tab active" id="tab-tpl" onclick="switchSubTab('tpl')">受益人模板</div>
   <div class="sub-tab" id="tab-policy" onclick="switchSubTab('policy')">保單套用</div>
@@ -231,10 +231,13 @@ let maxRank     = 1;
 // 保單受益人編輯狀態
 let editPolicyId = null;
 
-window.onload = async function() {
+window.addEventListener("nbs_nav_ready", async function(e) {
+  var currentUser   = e.detail.user;
+  familyData        = e.detail.familyData;
+  currentPersonId   = e.detail.currentPersonId;
+  familyFileName    = e.detail.familyFileName;
+
   try {
-    const fr = await callGAS("readFile",{email:currentUser.email,fileType:"family",fileName:familyFileName});
-    familyData = fr.content;
     for (const m of familyData.members.filter(m=>m.role!=="beneficiary_only")) {
       const pr = await callGAS("readFile",{email:currentUser.email,fileType:"person",fileName:m.name+"_"+m.personId+".json"});
       if (pr.status==="ok") personDataMap[m.personId] = pr.content;

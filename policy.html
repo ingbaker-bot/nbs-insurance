@@ -360,10 +360,8 @@
   <script src="nav.js"></script>
 </head>
 <body>
+<div style="display:none" id="header-sub"></div>
 
-<!-- Header -->
-  <div class="header-sub" id="header-sub"></div>
-</div>
 
 <!-- 成員 Tab -->
 <!-- 主內容 -->
@@ -564,21 +562,15 @@ let editingPolicy  = null;   // null=新增, object=編輯中的保單
 let editingPersonId = null;
 
 // ── 初始化 ────────────────────────────────────────────────
-window.onload = async function() {
-  const saved = localStorage.getItem("nbs_user");
-  if (!saved) { window.location.href = "index.html"; return; }
-  currentUser = JSON.parse(saved);
-
-  familyFileName = localStorage.getItem("nbs_current_family");
-  if (!familyFileName) { window.location.href = "main.html"; return; }
-
+window.addEventListener("nbs_nav_ready", async function(e) {
+  var currentUser   = e.detail.user;
+  familyData        = e.detail.familyData;
+  currentPersonId   = e.detail.currentPersonId;
+  familyFileName    = e.detail.familyFileName;
   try {
     // 載入家庭
-    const fr = await callGAS("readFile", { email: currentUser.email, fileType:"family", fileName: familyFileName });
-    familyData = fr.content;
-
-    document.getElementById("header-sub").textContent = familyData.familyName + "　" + toRoc(familyData.analysisDate);
-
+    // 家庭資料已由 nav.js 載入，直接使用 e.detail.familyData
+    // familyData 已在 handler 開頭設定
     // 載入所有成員個人資料
     for (const m of familyData.members.filter(m => m.role !== "beneficiary_only")) {
       const pr = await callGAS("readFile", { email: currentUser.email, fileType:"person", fileName: m.name+"_"+m.personId+".json" });

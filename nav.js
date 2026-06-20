@@ -112,14 +112,24 @@
         _renderAll();
         // 通知頁面 nav 已就緒
         window.dispatchEvent(new CustomEvent("nbs_nav_ready", {
-          detail: { user: _user, familyData: _family, currentPersonId: _personId }
+          detail: {
+            user:            _user,
+            familyData:      _family,
+            currentPersonId: _personId,
+            familyFileName:  localStorage.getItem("nbs_current_family"),
+          }
         }));
       })
       .catch(function(e) {
         console.error("NBS_NAV load error", e);
         // 就算失敗也通知頁面繼續（避免無限等待）
         window.dispatchEvent(new CustomEvent("nbs_nav_ready", {
-          detail: { user: _user, familyData: null, currentPersonId: null }
+          detail: {
+            user:            _user,
+            familyData:      null,
+            currentPersonId: null,
+            familyFileName:  localStorage.getItem("nbs_current_family"),
+          }
         }));
       });
   }
