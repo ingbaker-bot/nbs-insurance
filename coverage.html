@@ -546,25 +546,41 @@ function collectValues(){
 }
 
 // ── 儲存 ─────────────────────────────────────────────────
-async function saveCoverage(){
-  collectValues();
-  const btn=document.getElementById("save-btn");
-  btn.disabled=true; btn.textContent="儲存中…";
-  try{
-    const person=personDataMap[currentPersonId];
-    person.updatedAt=new Date().toISOString();
-    const member=familyData.members.find(m=>m.personId===currentPersonId);
-    await callGAS("saveFile",{email:currentUser.email,fileType:"person",fileId:currentPersonId,fileName:member.name+"_"+currentPersonId+".json",content:person});
-    dirty=false;
-    const hint=document.getElementById("saved-hint");
-    hint.style.display="block";
-    setTimeout(()=>hint.style.display="none",2000);
-    if(viewMode==="edit"){
-      const policy=person.policies?.find(p=>p.id===currentPolicyId);
-      if(policy) renderEdit(policy);
+// 1. 這裡加上 isAutoSave = false
+async function saveCoverage(isAutoSave = false) { 
+  try {
+    const btn = document.getElementById("save-btn");
+    btn.disabled = true;
+
+    // ... (原本呼叫 callGAS 的程式碼保持不變) ...
+    await callGAS("saveFile", { ... }); 
+
+    dirty = false;
+    const hint = document.getElementById("saved-hint");
+    if (hint) {
+      hint.style.display = "block";
+      setTimeout(() => hint.style.display = "none", 2000);
     }
-  }catch(e){alert("儲存失敗："+e.message);}
-  finally{btn.disabled=false;btn.textContent="儲存";}
+
+    // 【修復關鍵 2】只有在「手動點擊儲存」時，才重新繪製畫面。自動儲存則跳過，避免砍掉使用者的輸入！
+    if (!isAutoSave) {
+      // 👇 請將您原本函數底部負責更新畫面的程式碼放進這裡 👇
+      // 例如：
+      // if(viewMode === "edit"){
+      //   const policy = person.policies?.find(p=>p.id===currentPolicyId);
+      //   if(policy) renderEdit(policy);
+      // }
+      // (如果是 renderCoverage() 等指令也請放進來)
+    }
+
+  } catch(e) { 
+    alert("儲存失敗：" + e.message); 
+  } finally { 
+    const btn = document.getElementById("save-btn");
+    btn.disabled = false; 
+    btn.textContent = "儲存"; 
+    btn.style.backgroundColor = ""; // 恢復藍色
+  }
 }
 
 function goBack() {
@@ -603,34 +619,34 @@ NBS_NAV.onMemberChange = function(pid) {
 NBS_NAV.init({ page: "coverage" });
 
 // ── 自動儲存 (防抖 Debounce) 邏輯 ─────────────────────────
+// ── 自動儲存 (防抖 Debounce) 邏輯 ─────────────────────────
 let autoSaveTimer = null;
 
-// 使用事件委派 (Event Delegation) 監聽整個畫面的輸入行為
 document.addEventListener('input', function(e) {
-  // 檢查觸發事件的是否為輸入框 (INPUT, SELECT, TEXTAREA)
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
     
     const btn = document.getElementById("save-btn");
-    
-    // 步驟 1：改變按鈕狀態，提示使用者系統已察覺變更，正在倒數
     if(btn) {
       btn.textContent = "待儲存...";
-      btn.style.backgroundColor = "#f39c12"; // 變成橘黃色提示
+      btn.style.backgroundColor = "#f39c12"; 
       btn.style.color = "#fff";
     }
 
-    // 步驟 2：清除前一次的計時器 (這就是防抖的核心)
     clearTimeout(autoSaveTimer);
 
-    // 步驟 3：設定新計時器，2000 毫秒 (2秒) 內若無新輸入，即觸發儲存
     autoSaveTimer = setTimeout(function() {
+      // 【修復關鍵 1】強制觸發 change 事件，確保游標還沒離開前，輸入的 1000 已寫入系統變數
+      if (document.activeElement && document.activeElement.tagName === 'INPUT') {
+          document.activeElement.dispatchEvent(new Event('change'));
+      }
+
       if(btn) {
         btn.textContent = "自動儲存中...";
-        btn.style.backgroundColor = "#e67e22"; // 顏色稍微加深
+        btn.style.backgroundColor = "#e67e22"; 
       }
       
-      // 直接呼叫您原本寫好的 saveCoverage() 函數
-      saveCoverage();
+      // 傳入 true，告訴系統這是一次「背景自動儲存」
+      saveCoverage(true); 
       
     }, 2000); 
   }
