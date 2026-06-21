@@ -643,81 +643,52 @@ function switchTab(tab) {
 
 // ── 渲染保單列表 ──────────────────────────────────────────
 function renderPolicies() {
-  const members = familyData.members.filter(m => m.role !== "beneficiary_only");
-
-  // 蒐集要顯示的保單
-  let allPolicies = [];
-  members.forEach(m => {
-    const policies = personDataMap[m.personId]?.policies || [];
-    policies.forEach(p => allPolicies.push({ ...p, _memberId: m.personId, _memberName: m.name }));
-  });
-
-  const filtered = currentTab === "all" ? allPolicies : allPolicies.filter(p => p._memberId === currentTab);
-
-  // 統計
-  const totalTWD = filtered.filter(p => p.status === "有效").reduce((s, p) => s + (p.premiumTWD || 0), 0);
-  document.getElementById("stats-row").innerHTML = `
-    <div class="stat-card"><div class="stat-label">${currentTab==='all'?'全家保單':'本人保單'}</div><div class="stat-value">${filtered.length} 筆</div></div>
-    <div class="stat-card"><div class="stat-label">年繳總保費</div><div class="stat-value">NT$ ${(totalTWD/10000).toFixed(1)}萬</div></div>
-    <div class="stat-card"><div class="stat-label">月均保費</div><div class="stat-value">${Math.round(totalTWD/12).toLocaleString()}</div></div>`;
-
-  if (filtered.length === 0) {
-    document.getElementById("policy-list").innerHTML =
-      '<div class="empty-state">尚無保單，點下方「新增主約保單」開始輸入</div>';
-    return;
-  }
-
-  // 依保單號碼分組
-  const groups = {};
-  filtered.forEach(p => {
-    const key = p.policyNo || p.id;
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(p);
-  });
-
+  const person = personDataMap[currentPersonId];
+  const policies = person?.policies || [];
+  
+  // 1. 篩選出主約：沒有 parentId 的就是主約
+  const mainPolicies = policies.filter(p => !p.parentId || p.parentId === "");
+  
   let html = "";
-  Object.entries(groups).forEach(([policyNo, rows]) => {
-    const groupTotal = rows.reduce((s,p) => s+(p.premiumTWD||0), 0);
-    const member = familyData.members.find(m => m.personId === rows[0]._memberId);
-
-    html += `<div class="policy-group">
-      <div class="group-header">
-        <span class="policy-no-badge">${policyNo}</span>
-        <span class="group-company">${rows[0].company||'—'}</span>
-        ${currentTab==='all' && member ? `<span class="group-member-badge">${member.name}</span>` : ''}
-        <span class="group-total">年繳 NT${groupTotal.toLocaleString()}</span>
-      </div>`;
-
-    rows.forEach(p => {
-      const catClass = "cat-" + (p.category||"");
-      const statusClass = "status-" + (p.status||"有效");
-      const isFx = p.currency && p.currency !== "TWD";
-      html += `<div class="policy-row" onclick="openForm('edit','${p._memberId}','${p.id}')">
-        <div class="pr-cell"><span class="cat-badge ${catClass}">${p.category||'—'}</span></div>
-        <div class="pr-cell" style="overflow:hidden">
-          <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px">${p.itemName||'—'}</div>
-          <div style="font-size:10px;color:#bbb;margin-top:1px;display:flex;gap:8px">
-            <span style="font-family:monospace">${p.policyNo||''}</span>
-            ${p.insuredAmount?`<span style="color:#0C447C;font-weight:500">保額 ${p.insuredAmount} ${p.insuredAmountUnit||'萬元'}</span>`:''}
-          </div>
-        </div>
-        <div class="pr-cell pr-amount">
-          ${isFx?`<span style="font-size:10px;color:#aaa">${p.currency} </span>`:''}
-          ${(p.premiumTWD||0).toLocaleString()}
-        </div>
-        <div class="pr-cell"><span class="status-badge ${statusClass}">${p.status||'有效'}</span></div>
-        <div class="pr-cell pr-chevron">›</div>
-      </div>`;
-    });
-
-    // 新增附約
-    html += `<button class="add-rider-btn" onclick="openForm('rider','${rows[0]._memberId}','${policyNo}')">
-      ＋ 在此保單下新增附約</button>`;
-
-    html += `</div>`;
+  mainPolicies.forEach(p => {
+    // 2. 篩選出屬於該主約的附約
+    const pRiders = policies.filter(r => r.parentId === p.id);
+    const hasRiders = pRiders.length > 0;
+    
+    // 3. 渲染主約列
+    html += `
+    <div class="policy-card" id="card_${p.id}">
+      <div class="policy-main-row" onclick="toggleRiders('${p.id}')" style="display:flex; align-items:center; padding:12px; cursor:pointer; background:#fff; border-bottom:1px solid #eee;">
+        ${hasRiders ? `<span class="expand-icon" id="icon_${p.id}" style="margin-right:10px; transition:0.2s">▶</span>` : '<span style="margin-right:20px"></span>'}
+        <div style="font-size: 20px;">${p.itemName || "主約保單"}</div>
+      </div>
+      
+      ${hasRiders ? `
+        <div class="rider-row" id="riders_${p.id}" style="display:none; background:#f9f9f9; padding: 10px 10px 10px 40px;">
+          ${pRiders.map(r => `
+            <div style="padding: 8px 0; font-size: 18px; color: #555; border-bottom: 1px solid #eee;">
+              ${r.itemName || "附約"}
+            </div>
+          `).join('')}
+        </div>` : ''}
+    </div>`;
   });
+  
+  document.getElementById("content").innerHTML = html;
+}
 
-  document.getElementById("policy-list").innerHTML = html;
+// 展開/收合的控制邏輯
+function toggleRiders(parentId) {
+  const row = document.getElementById("riders_" + parentId);
+  const icon = document.getElementById("icon_" + parentId);
+  
+  if (row.style.display === "block") {
+    row.style.display = "none";
+    icon.style.transform = "rotate(0deg)";
+  } else {
+    row.style.display = "block";
+    icon.style.transform = "rotate(90deg)";
+  }
 }
 
 // ── 表單開啟 ─────────────────────────────────────────────
