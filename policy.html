@@ -157,6 +157,10 @@
     .status-有效    { background:#EAF3DE; color:#27500A; }
     .status-停效    { background:#FCEBEB; color:#791F1F; }
     .status-減額繳清 { background:#FAEEDA; color:#633806; }
+    .status-繳費期滿 { background:#E6F1FB; color:#0C447C; } /* 藍色：完成階段任務 */
+    .status-自動墊繳 { background:#FFF4E5; color:#D84315; } /* 橘色：需特別提醒與注意 */
+    .status-展期     { background:#EEEDFE; color:#3C3489; } /* 紫色：契約結構變更 */
+    .status-緩繳     { background:#FFF4E5; color:#D84315; } /* 橘色：需特別提醒與注意 */
 
     .pr-amount { font-size: 13px; font-weight: 500; text-align: right; }
     .pr-chevron { color: #ccc; font-size: 16px; text-align: center; }
@@ -438,12 +442,16 @@
         </select>
       </div>
       <div class="field">
-        <label>保單狀態</label>
-        <select id="f-status">
-          <option>有效</option>
-          <option>停效</option>
-          <option>減額繳清</option>
-        </select>
+  	<label>保單狀態</label>
+  	<select id="policy_status">
+    	  <option value="有效">有效</option>
+    	  <option value="繳費期滿">繳費期滿</option>
+    	  <option value="自動墊繳">自動墊繳</option>
+    	  <option value="展期">展期</option>
+    	  <option value="緩繳">緩繳</option>
+    	  <option value="停效">停效</option>
+    	  <option value="減額繳清">減額繳清</option>
+  	</select>
       </div>
     </div>
 
