@@ -567,9 +567,16 @@ async function saveCoverage(){
   finally{btn.disabled=false;btn.textContent="儲存";}
 }
 
-function goBack(){
-  if(dirty&&!confirm("有未儲存的變更，確定要離開？"))return;
-  window.location.href="family.html";
+function goBack() {
+  // 如果自動儲存的計時器還在跑（代表有剛剛輸入但還沒存的資料）
+  if (autoSaveTimer) {
+    clearTimeout(autoSaveTimer); // 停下計時器
+    saveCoverage();              // 強制立刻存檔
+  }
+  
+  // 原本的返回邏輯
+  if(dirty && !confirm("有未儲存的變更，確定要離開？")) return;
+  window.location.href = "family.html";
 }
 
 function callGAS(action,params){
