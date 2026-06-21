@@ -100,9 +100,12 @@
     var fn = localStorage.getItem("nbs_current_family");
     if (!fn) { window.location.href = "main.html"; return; }
 
-    _callGAS("readFile", { email: _user.email, fileType: "family", fileName: fn })
-      .then(function(fr) {
-        _family = fr.content;
+    // sessionStorage 快取：同一次瀏覽切換功能頁不重複呼叫 GAS
+    var cacheKey = "nbs_fam_" + fn;
+    var cached = sessionStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        _family = JSON.parse(cached);
         _personId = localStorage.getItem("nbs_current_person");
         if (!_personId) {
           var prim = _family.members.find(function(m){ return m.role==="primary"; });
@@ -110,26 +113,33 @@
           if (_personId) localStorage.setItem("nbs_current_person", _personId);
         }
         _renderAll();
-        // 通知頁面 nav 已就緒
         window.dispatchEvent(new CustomEvent("nbs_nav_ready", {
-          detail: {
-            user:            _user,
-            familyData:      _family,
-            currentPersonId: _personId,
-            familyFileName:  localStorage.getItem("nbs_current_family"),
-          }
+          detail: { user:_user, familyData:_family, currentPersonId:_personId, familyFileName:fn }
+        }));
+        return;
+      } catch(e) { sessionStorage.removeItem(cacheKey); }
+    }
+
+    // 快取沒有 → 呼叫 GAS
+    _callGAS("readFile", { email: _user.email, fileType: "family", fileName: fn })
+      .then(function(fr) {
+        _family = fr.content;
+        try { sessionStorage.setItem(cacheKey, JSON.stringify(_family)); } catch(e) {}
+        _personId = localStorage.getItem("nbs_current_person");
+        if (!_personId) {
+          var prim = _family.members.find(function(m){ return m.role==="primary"; });
+          _personId = prim ? prim.personId : (_family.members[0] && _family.members[0].personId);
+          if (_personId) localStorage.setItem("nbs_current_person", _personId);
+        }
+        _renderAll();
+        window.dispatchEvent(new CustomEvent("nbs_nav_ready", {
+          detail: { user:_user, familyData:_family, currentPersonId:_personId, familyFileName:fn }
         }));
       })
       .catch(function(e) {
         console.error("NBS_NAV load error", e);
-        // 就算失敗也通知頁面繼續（避免無限等待）
         window.dispatchEvent(new CustomEvent("nbs_nav_ready", {
-          detail: {
-            user:            _user,
-            familyData:      null,
-            currentPersonId: null,
-            familyFileName:  localStorage.getItem("nbs_current_family"),
-          }
+          detail: { user:_user, familyData:null, currentPersonId:null, familyFileName:fn }
         }));
       });
   }
@@ -269,7 +279,19 @@
       #nbs-sidebar {
         position:fixed;top:0;left:0;bottom:0;width:220px;
         background:#1A2B4A;display:flex;flex-direction:column;
-        overflow-y:auto;z-index:200;
+        overflow-y:hidden;z-index:200;
+      }
+      /* 成員區：最多顯示4個，超過可捲動 */
+      .nbs-msec {
+        max-height:220px;
+        overflow-y:auto;
+        flex-shrink:0;
+      }
+      /* 功能區：剩餘空間，可捲動 */
+      .nbs-nsec {
+        flex:1;
+        overflow-y:auto;
+        min-height:0;
       }
       #nbs-mobile-hdr {
         position:fixed;top:0;left:0;right:0;height:50px;
