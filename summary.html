@@ -547,21 +547,22 @@ function getItemStatus(key, policies, targets, covOverrides) {
 }
 
 // ── 環形圓餅圖 ────────────────────────────────────────────
-// ── 環形圓餅圖 ────────────────────────────────────────────
 function buildDonutChart(policies, coverage, targets, covOverrides) {
   const allItems = GAP_GROUPS.flatMap(g=>g.items);
   const n = allItems.length;
-  const cx=120,cy=120,OR=100,IR=52;
+  
+  // 擴大畫布 viewBox (從 240 變為 400)，為外圍指引線與文字保留完美空間
+  const cx=200, cy=140, OR=90, IR=48;
   const gapA=0.03, sliceA=(Math.PI*2-n*gapA)/n;
 
   let angle=-Math.PI/2;
   let paths="";
+  let labels=""; // 收集外圍指引線與文字
 
   // 1. 建立獨立提取單一區塊圖例的工具函式
   function renderLegend(g) {
     let legendHtml = `<div style="font-size:12px;font-weight:500;color:${g.color};margin-bottom:8px;border-bottom:1px solid ${g.color}30;padding-bottom:4px">${g.label}</div>`;
     g.items.forEach(item => {
-      // 這裡補上 covOverrides，修復原本手動調整後圖例不會跟著變動的 Bug
       const {status,pct} = getItemStatus(item.key, policies, targets, covOverrides);
       const icon = status==="gap"?"❌":status==="insufficient"?"⚠️":"✅";
       const dotColor = status==="gap"?"#e0e0e0":item.color;
@@ -580,41 +581,62 @@ function buildDonutChart(policies, coverage, targets, covOverrides) {
   const legendDuring = renderLegend(GAP_GROUPS[2]);
   const legendAfter  = renderLegend(GAP_GROUPS[3]);
 
-  // 3. 繪製 SVG 扇形
+  // 3. 繪製 SVG 扇形與外圍標籤
   allItems.forEach(item => {
     const {status,pct} = getItemStatus(item.key, policies, targets, covOverrides);
     const start = angle+gapA/2;
     const end   = angle+gapA/2+sliceA;
     const filledEnd = start + sliceA*pct;
+    const midA  = start + sliceA/2; // 計算此扇形的正中央角度
     angle += sliceA+gapA;
 
     const px=(r,a)=>cx+r*Math.cos(a), py=(r,a)=>cy+r*Math.sin(a);
     const arc=(r,a1,a2,lg)=>`M${px(r,a1)},${py(r,a1)} A${r},${r} 0 ${lg} 1 ${px(r,a2)},${py(r,a2)}`;
     const donut=(a1,a2,lg,r1,r2)=>`M${px(r1,a1)},${py(r1,a1)} A${r1},${r1} 0 ${lg} 1 ${px(r1,a2)},${py(r1,a2)} L${px(r2,a2)},${py(r2,a2)} A${r2},${r2} 0 ${lg} 0 ${px(r2,a1)},${py(r2,a1)} Z`;
 
-    // 底層灰
+    // 畫底層灰
     paths += `<path d="${donut(start,end,sliceA>Math.PI?1:0,OR,IR)}" fill="#f0f0f0"/>`;
-    // 已規劃
+    // 畫已規劃
     if(pct>0.01) paths += `<path d="${donut(start,filledEnd,sliceA*pct>Math.PI?1:0,OR,IR)}" fill="${item.color}"/>`;
-    // 不足虛線
+    // 畫不足虛線
     if(status==="insufficient" && pct<0.99) {
       const gapSize=sliceA*(1-pct);
       paths += `<path d="${donut(filledEnd,end,gapSize>Math.PI?1:0,OR,IR)}" fill="none" stroke="${item.color}" stroke-width="2.5" stroke-dasharray="4 3" opacity="0.45"/>`;
     }
+
+    // ── 自動計算外圍指引線 (Leader Lines) ──
+    const isRight = Math.cos(midA) >= 0; // 判斷在左半邊還是右半邊
+    const x0 = px(OR, midA), y0 = py(OR, midA); // 起點在圓餅邊緣
+    const x1 = px(OR + 12, midA), y1 = py(OR + 12, midA); // 往外延伸的轉折點
+    const x2 = x1 + (isRight ? 15 : -15), y2 = y1; // 水平延伸線
+
+    // 文字屬性
+    const textAnchor = isRight ? "start" : "end";
+    const textX = x2 + (isRight ? 4 : -4);
+    const textColor = status === "gap" ? "#aaa" : "#555";
+    const fw = status === "ok" ? "500" : "400";
+    const prefix = status === "gap" ? "❌ " : status === "insufficient" ? "⚠️ " : "";
+
+    labels += `
+      <polyline points="${x0},${y0} ${x1},${y1} ${x2},${y2}" fill="none" stroke="${item.color}60" stroke-width="1.2"/>
+      <circle cx="${x0}" cy="${y0}" r="2" fill="${item.color}"/>
+      <text x="${textX}" y="${y2+4}" text-anchor="${textAnchor}" style="font-size:11px;fill:${textColor};font-weight:${fw};letter-spacing:0.03em">${prefix}${item.label}</text>
+    `;
   });
 
   const okN = allItems.filter(item=>getItemStatus(item.key,policies,targets,covOverrides).status==="ok").length;
   const gapN = allItems.filter(item=>getItemStatus(item.key,policies,targets,covOverrides).status==="gap").length;
   const insN = allItems.filter(item=>getItemStatus(item.key,policies,targets,covOverrides).status==="insufficient").length;
 
-  // 4. 全新網格排版輸出
+  // 4. 全新網格排版輸出 (支援 RWD 自適應縮放)
   return `<div style="display:flex;flex-direction:column;width:100%">
-    <div style="display:flex;align-items:center;justify-content:center;gap:32px;flex-wrap:wrap;margin-bottom:20px;padding:0 10px">
-      <svg width="240" height="240" style="flex-shrink:0">
+    <div style="display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap;margin-bottom:20px;padding:0">
+      <svg viewBox="0 0 400 280" style="width:100%; max-width:440px; flex-shrink:0;">
         ${paths}
-        <text x="${cx}" y="${cy-16}" text-anchor="middle" style="font-size:10px;fill:#888">✅ 達標</text>
-        <text x="${cx}" y="${cy+2}"  text-anchor="middle" style="font-size:22px;font-weight:bold;fill:#333">${okN}</text>
-        <text x="${cx}" y="${cy+18}" text-anchor="middle" style="font-size:10px;fill:#E74C3C">❌ 缺口 ${gapN}</text>
+        ${labels}
+        <text x="${cx}" y="${cy-14}" text-anchor="middle" style="font-size:11px;fill:#888">✅ 達標</text>
+        <text x="${cx}" y="${cy+4}"  text-anchor="middle" style="font-size:24px;font-weight:bold;fill:#333">${okN}</text>
+        <text x="${cx}" y="${cy+20}" text-anchor="middle" style="font-size:10px;fill:#E74C3C">❌ 缺口 ${gapN}</text>
         <text x="${cx}" y="${cy+34}" text-anchor="middle" style="font-size:10px;fill:#F5A623">⚠ 不足 ${insN}</text>
       </svg>
       <div style="min-width:170px;background:#fafafa;padding:12px 16px;border-radius:10px;border:1px solid #f0f0f0">
@@ -629,7 +651,6 @@ function buildDonutChart(policies, coverage, targets, covOverrides) {
     </div>
   </div>`;
 }
-
 // ── 缺口／不足分析 ────────────────────────────────────────
 function buildGapAnalysis(policies, coverage, targets, covOverrides) {
   const allItems = GAP_GROUPS.flatMap(g=>g.items);
