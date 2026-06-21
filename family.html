@@ -354,7 +354,15 @@
     }
 
     @keyframes spin { to { transform: rotate(360deg); } }
+    /* nav.js 側欄整合 */
+    @media (min-width: 768px) {
+      body { padding-left: 220px !important; }
+    }
+    @media (max-width: 767px) {
+      body { padding-top: 50px !important; padding-bottom: 66px !important; }
+    }
   </style>
+  <script src="nav.js"></script>
 </head>
 <body>
 
@@ -473,6 +481,13 @@
           <option value="secondary">次要成員（有自己的保單）</option>
           <option value="beneficiary_only">僅受益人（不列入保單彙總）</option>
         </select>
+      </div>
+
+      <div class="field">
+        <label>住家地址 <span style="font-size:10px;color:#aaa">（非必填）</span></label>
+        <input type="text" id="new-address" placeholder="如：台北市中正區"
+          style="width:100%;padding:9px 12px;font-size:14px;border:1px solid #e0e0e0;border-radius:7px;outline:none;font-family:inherit" />
+        <div style="font-size:11px;color:#aaa;margin-top:3px">填入後可在保單彙總查詢附近醫院病房費</div>
       </div>
 
       <div class="btn-row">
@@ -694,6 +709,7 @@
       const relation = document.getElementById("new-relation").value;
       const birth    = document.getElementById("new-birth").value;
       const role     = document.getElementById("new-role").value;
+      const address  = (document.getElementById("new-address")||{}).value||"";
       if (!name) return;
 
       const btn = document.getElementById("add-member-btn");
@@ -713,6 +729,7 @@
           name,
           birthDate: birth || null,
           analysisDate: familyData.analysisDate,
+          address: address || null,
           note: "",
         },
         policies: [],
@@ -909,6 +926,13 @@
       return fetch(url.toString())
         .then(res => res.json());
     }
-  </script>
+  
+// ── NBS 導覽 ──────────────────────────────────────────────
+NBS_NAV.onMemberChange = function(pid) {
+  selectedPersonId = pid;
+  renderMemberCard();
+};
+NBS_NAV.init({ page: "family" });
+</script>
 </body>
 </html>

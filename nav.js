@@ -65,6 +65,41 @@
     // 讓頁面內容往右推（桌面），往下推（手機）
     _applyLayout();
     window.addEventListener("resize", _debounce(_applyLayout, 150));
+
+    // 家庭成員管理 Modal
+    var modal = document.createElement("div");
+    modal.id = "nbs-member-modal";
+    modal.innerHTML =
+      '<div id="nbs-member-modal-box">'+
+        '<div class="nbs-mm-head">'+
+          '<span class="nbs-mm-title">👨‍👩‍👧 家庭成員管理</span>'+
+          '<button class="nbs-mm-close" onclick="NBS_NAV._closeMemberModal()">×</button>'+
+        '</div>'+
+        '<div class="nbs-mm-body" id="nbs-mm-list"></div>'+
+        '<div id="nbs-edit-member-form">'+
+          '<div class="nbs-ef-row">'+
+            '<div><label class="nbs-ef-label">姓名 *</label><input class="nbs-ef-input" id="nbs-ef-name" placeholder="姓名"/></div>'+
+            '<div><label class="nbs-ef-label">關係</label>'+
+              '<select class="nbs-ef-input" id="nbs-ef-relation" style="padding:7px 11px">'+
+                '<option value="本人">本人</option><option value="配偶">配偶</option>'+
+                '<option value="子女">子女</option><option value="父母">父母</option>'+
+                '<option value="其他">其他</option>'+
+              '</select>'+
+            '</div>'+
+          '</div>'+
+          '<label class="nbs-ef-label">出生日期</label>'+
+          '<input class="nbs-ef-input" id="nbs-ef-birth" type="date" oninput="NBS_NAV._updateEfAge()"/>'+
+          '<div class="nbs-ef-hint" id="nbs-ef-age-hint"></div>'+
+          '<label class="nbs-ef-label">住家地址（縣市＋區，用於醫院病房費查詢）</label>'+
+          '<input class="nbs-ef-input" id="nbs-ef-address" placeholder="如：台北市中正區"/>'+
+          '<div class="nbs-ef-btns">'+
+            '<button class="nbs-ef-cancel" onclick="NBS_NAV._closeEfForm()">取消</button>'+
+            '<button class="nbs-ef-save" onclick="NBS_NAV._saveEfMember()">儲存</button>'+
+          '</div>'+
+        '</div>'+
+      '</div>';
+    modal.onclick = function(e){ if(e.target===modal) NBS_NAV._closeMemberModal(); };
+    document.body.appendChild(modal);
   }
 
   function _applyLayout() {
@@ -188,9 +223,12 @@
         '<div class="nbs-fd">分析日 '+_fmtROC(_family.analysisDate)+'</div>'+
       '</div>'+
       '<div class="nbs-msec">'+
-        '<div class="nbs-sl">家庭成員</div>'+
+        '<div class="nbs-sl" style="display:flex;align-items:center;justify-content:space-between">'+
+          '<span>家庭成員</span>'+
+          '<button onclick="NBS_NAV._openMemberModal()" style="font-size:10px;padding:1px 8px;border:1px solid rgba(255,255,255,0.2);border-radius:99px;background:transparent;color:rgba(255,255,255,0.5);cursor:pointer;font-family:inherit">管理</button>'+
+        '</div>'+
         membersHtml+
-        '<div class="nbs-add" onclick="NBS_NAV._addMember()">'+
+        '<div class="nbs-add" onclick="NBS_NAV._openMemberModal('new')">'+
           '<div class="nbs-av nbs-av-add">＋</div>'+
           '<span class="nbs-ms">新增成員</span>'+
         '</div>'+
@@ -198,6 +236,10 @@
       '<div class="nbs-nsec">'+
         '<div class="nbs-sl">功能模組</div>'+
         navHtml+
+      '</div>'+
+      '<div class="nbs-member-entry" onclick="NBS_NAV._openMemberModal()">'+
+        '<span class="nbs-nicon">👨‍👩‍👧</span>'+
+        '<span class="nbs-nlabel">家庭成員管理</span>'+
       '</div>'+
       '<div class="nbs-foot">'+
         '<button class="nbs-pbtn" onclick="NBS_NAV._print()">🖨️ 快速列印此頁</button>'+
@@ -236,6 +278,184 @@
   }
 
   // ── 動作 ─────────────────────────────────────────────────
+  // ── 家庭成員管理 Modal ───────────────────────────────────
+  global.NBS_NAV._openMemberModal = function(mode, personId) {
+    // 移除已存在的 Modal
+    var exist = document.getElementById("nbs-member-modal");
+    if (exist) exist.remove();
+
+    var members = (_family && _family.members || []).filter(function(m){ return m.role !== "beneficiary_only"; });
+    var editPerson = personId ? members.find(function(m){ return m.personId === personId; }) : null;
+    var isNew = mode === "new" || !personId;
+
+    // Modal HTML
+    var overlay = document.createElement("div");
+    overlay.id = "nbs-member-modal";
+    overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:500;display:flex;align-items:flex-end;justify-content:center";
+
+    // 成員列表或編輯表單
+    var content = "";
+    if (isNew) {
+      content = _memberEditForm(null, true);
+    } else if (editPerson) {
+      content = _memberEditForm(editPerson, false);
+    } else {
+      // 顯示成員列表
+      content = _memberListHTML(members);
+    }
+
+    overlay.innerHTML = '<div style="background:#fff;border-radius:16px 16px 0 0;padding:20px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">' +
+        '<span style="font-size:15px;font-weight:600">' + (isNew ? "新增成員" : editPerson ? "編輯："+editPerson.name : "家庭成員管理") + '</span>' +
+        '<button onclick="document.getElementById('nbs-member-modal').remove()" style="background:none;border:none;font-size:22px;color:#999;cursor:pointer;line-height:1">×</button>' +
+      '</div>' +
+      content +
+    '</div>';
+
+    overlay.onclick = function(e) { if(e.target===overlay) overlay.remove(); };
+    document.body.appendChild(overlay);
+  };
+
+  function _memberListHTML(members) {
+    var rows = members.map(function(m) {
+      return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f0f0f0">' +
+        '<div style="width:36px;height:36px;border-radius:50%;background:#378ADD;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#fff;flex-shrink:0">' + m.name[0] + '</div>' +
+        '<div style="flex:1">' +
+          '<div style="font-size:13px;font-weight:500">' + m.name + '</div>' +
+          '<div style="font-size:11px;color:#aaa">' + (m.relation||m.role) + (m.profile && m.profile.address ? '　' + m.profile.address : '') + '</div>' +
+        '</div>' +
+        '<button onclick="NBS_NAV._openMemberModal('edit','' + m.personId + '')" style="padding:4px 12px;font-size:12px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer;font-family:inherit">編輯</button>' +
+      '</div>';
+    }).join("");
+
+    return rows +
+      '<button onclick="NBS_NAV._openMemberModal('new')" style="width:100%;margin-top:12px;padding:10px;background:transparent;border:1.5px dashed #ddd;border-radius:8px;font-size:13px;color:#666;cursor:pointer;font-family:inherit">＋ 新增成員</button>';
+  }
+
+  function _memberEditForm(person, isNew) {
+    var p = (person && person.profile) || {};
+    var relation = (person && person.relation) || "";
+    var role = (person && person.role) || "secondary";
+
+    return '<div id="nbs-member-form">' +
+      // 姓名
+      '<div style="margin-bottom:12px">' +
+        '<label style="font-size:12px;color:#666;display:block;margin-bottom:4px">姓名 <span style="color:#e74c3c">*</span></label>' +
+        '<input id="nmf-name" type="text" value="' + (p.name||"") + '" placeholder="請輸入姓名" style="width:100%;padding:9px 12px;font-size:14px;border:1px solid #e0e0e0;border-radius:7px;outline:none;font-family:inherit">' +
+      '</div>' +
+      // 關係
+      '<div style="margin-bottom:12px">' +
+        '<label style="font-size:12px;color:#666;display:block;margin-bottom:4px">關係</label>' +
+        '<select id="nmf-relation" style="width:100%;padding:9px 12px;font-size:14px;border:1px solid #e0e0e0;border-radius:7px;outline:none;font-family:inherit;background:#fff">' +
+          '<option value="本人" ' + (relation==="本人"?"selected":"") + '>本人</option>' +
+          '<option value="配偶" ' + (relation==="配偶"?"selected":"") + '>配偶</option>' +
+          '<option value="子女" ' + (relation==="子女"?"selected":"") + '>子女</option>' +
+          '<option value="父母" ' + (relation==="父母"?"selected":"") + '>父母</option>' +
+          '<option value="兄弟姐妹" ' + (relation==="兄弟姐妹"?"selected":"") + '>兄弟姐妹</option>' +
+          '<option value="其他" ' + (!["本人","配偶","子女","父母","兄弟姐妹"].includes(relation)&&relation?"selected":"") + '>其他</option>' +
+        '</select>' +
+      '</div>' +
+      // 出生日期
+      '<div style="margin-bottom:12px">' +
+        '<label style="font-size:12px;color:#666;display:block;margin-bottom:4px">出生日期</label>' +
+        '<input id="nmf-birth" type="date" value="' + (p.birthDate||"") + '" style="width:100%;padding:9px 12px;font-size:14px;border:1px solid #e0e0e0;border-radius:7px;outline:none;font-family:inherit">' +
+      '</div>' +
+      // 住家地址
+      '<div style="margin-bottom:12px">' +
+        '<label style="font-size:12px;color:#666;display:block;margin-bottom:4px">住家地址</label>' +
+        '<input id="nmf-address" type="text" value="' + (p.address||"") + '" placeholder="如：台北市中正區（用於查詢附近醫院）" style="width:100%;padding:9px 12px;font-size:14px;border:1px solid #e0e0e0;border-radius:7px;outline:none;font-family:inherit">' +
+      '</div>' +
+      // 按鈕
+      '<div style="display:flex;gap:8px;margin-top:16px">' +
+        (isNew ? '' : '<button onclick="NBS_NAV._openMemberModal()" style="flex:1;padding:10px;background:transparent;color:#666;border:1px solid #ddd;border-radius:8px;cursor:pointer;font-family:inherit">返回列表</button>') +
+        (!isNew ? '' : '<button onclick="document.getElementById('nbs-member-modal').remove()" style="flex:1;padding:10px;background:transparent;color:#666;border:1px solid #ddd;border-radius:8px;cursor:pointer;font-family:inherit">取消</button>') +
+        '<button onclick="NBS_NAV._saveMember(' + (person?'''+person.personId+''':'null') + ',' + (isNew?'true':'false') + ')" style="flex:2;padding:10px;background:#378ADD;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit">儲存</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  global.NBS_NAV._saveMember = function(personId, isNew) {
+    var name    = (document.getElementById("nmf-name")||{}).value||"";
+    var rel     = (document.getElementById("nmf-relation")||{}).value||"secondary";
+    var birth   = (document.getElementById("nmf-birth")||{}).value||"";
+    var address = (document.getElementById("nmf-address")||{}).value||"";
+
+    if (!name.trim()) { alert("請填寫姓名"); return; }
+
+    // 呼叫頁面的成員儲存函式（如果存在），否則用 GAS 直接儲存
+    if (typeof window.navSaveMember === "function") {
+      window.navSaveMember({ personId:personId, isNew:isNew, name:name.trim(), relation:rel, birthDate:birth, address:address });
+    } else {
+      // 通用儲存邏輯
+      _saveNavMember({ personId:personId, isNew:isNew, name:name.trim(), relation:rel, birthDate:birth, address:address });
+    }
+  };
+
+  async function _saveNavMember(data) {
+    var user = _user;
+    if (!user) return;
+    var fn = localStorage.getItem("nbs_current_family");
+
+    try {
+      var pid = data.isNew ? ("p_" + Date.now()) : data.personId;
+
+      // 更新 family 成員資料
+      if (!_family) return;
+      if (data.isNew) {
+        _family.members.push({ personId:pid, name:data.name, relation:data.relation, role:"secondary" });
+      } else {
+        var m = _family.members.find(function(x){ return x.personId===pid; });
+        if (m) { m.name=data.name; m.relation=data.relation; }
+      }
+
+      // 讀取或建立個人 JSON
+      var personFileName = data.name + "_" + pid + ".json";
+      var person;
+      if (!data.isNew) {
+        try {
+          var pr = await _callGAS("readFile", { email:user.email, fileType:"person", fileName:personFileName });
+          person = pr.status==="ok" ? pr.content : null;
+        } catch(e) { person = null; }
+      }
+      if (!person) {
+        person = { personId:pid, profile:{}, policies:[], coverage:{}, savings:[] };
+      }
+      person.profile = person.profile || {};
+      person.profile.name       = data.name;
+      person.profile.birthDate  = data.birthDate || null;
+      person.profile.address    = data.address || null;
+      person.profile.analysisDate = _family.analysisDate || new Date().toISOString().slice(0,10);
+      person.updatedAt = new Date().toISOString();
+
+      // 儲存 person
+      await _callGAS("saveFile", {
+        email:user.email, fileType:"person", fileId:pid,
+        fileName:personFileName, content:person
+      });
+
+      // 儲存 family
+      await _callGAS("saveFile", {
+        email:user.email, fileType:"family", fileId:_family.familyId||fn,
+        fileName:fn, content:_family
+      });
+
+      // 清除快取，重新渲染側欄
+      var cacheKey = "nbs_fam_" + fn;
+      try { sessionStorage.removeItem(cacheKey); } catch(e) {}
+
+      // 重新渲染側欄
+      _renderAll();
+      // 關閉 Modal
+      var modal = document.getElementById("nbs-member-modal");
+      if (modal) modal.remove();
+      // 通知頁面重新載入
+      if (typeof NBS_NAV.onMemberChange === "function") NBS_NAV.onMemberChange(_personId);
+
+    } catch(e) {
+      alert("儲存失敗：" + e.message);
+    }
+  }
+
   global.NBS_NAV._setPerson = function(id) {
     if (id === "__add__") { NBS_NAV._addMember(); return; }
     _personId = id;
@@ -247,8 +467,131 @@
   global.NBS_NAV._print   = function() { window.print(); };
   global.NBS_NAV._back    = function() { window.location.href = "main.html"; };
   global.NBS_NAV._addMember = function() {
-    if (typeof openAddMember === "function") openAddMember();
-    else window.location.href = "family.html?action=addMember";
+    NBS_NAV._openMemberModal();
+    NBS_NAV._openEfForm(null); // 新增模式
+  };
+
+  // ── 家庭成員 Modal ──────────────────────────────────────
+  var _editingPersonId = null;
+
+  global.NBS_NAV._openMemberModal = function() {
+    if (!_family) return;
+    var listEl = document.getElementById("nbs-mm-list");
+    if (!listEl) return;
+    var members = (_family.members||[]).filter(function(m){ return m.role!=="beneficiary_only"; });
+    var html = "";
+    members.forEach(function(m) {
+      var age = "";
+      if (m.birthDate || (window.personDataMap && window.personDataMap[m.personId])) {
+        var bd = m.birthDate || (window.personDataMap&&window.personDataMap[m.personId]&&window.personDataMap[m.personId].profile&&window.personDataMap[m.personId].profile.birthDate);
+        var ad = _family.analysisDate || new Date().toISOString().slice(0,10);
+        if (bd) { var b=new Date(bd),a=new Date(ad); var y=a.getFullYear()-b.getFullYear(); if((a-new Date(b.getFullYear()+y,b.getMonth(),b.getDate()))/(1000*60*60*24*30.4375)>=6)y++; age=y+"歲"; }
+      }
+      html += '<div class="nbs-mm-member">'+
+        '<div class="nbs-mm-avatar">'+m.name[0]+'</div>'+
+        '<div class="nbs-mm-info">'+
+          '<div class="nbs-mm-name">'+m.name+'</div>'+
+          '<div class="nbs-mm-sub">'+(m.relation||m.role)+(age?" · "+age:"")+'</div>'+
+        '</div>'+
+        '<button class="nbs-mm-edit" onclick="NBS_NAV._openEfForm(''+m.personId+'')">✏️ 編輯</button>'+
+      '</div>';
+    });
+    html += '<button class="nbs-mm-add" onclick="NBS_NAV._openEfForm(null)">＋ 新增家庭成員</button>';
+    listEl.innerHTML = html;
+    document.getElementById("nbs-edit-member-form").style.display = "none";
+    document.getElementById("nbs-member-modal").classList.add("open");
+  };
+
+  global.NBS_NAV._closeMemberModal = function() {
+    document.getElementById("nbs-member-modal").classList.remove("open");
+  };
+
+  global.NBS_NAV._openEfForm = function(personId) {
+    _editingPersonId = personId;
+    var form = document.getElementById("nbs-edit-member-form");
+    form.style.display = "block";
+    // 填入現有資料
+    if (personId && window.personDataMap && window.personDataMap[personId]) {
+      var p = window.personDataMap[personId];
+      var m = (_family.members||[]).find(function(x){ return x.personId===personId; });
+      document.getElementById("nbs-ef-name").value    = p.profile.name || "";
+      document.getElementById("nbs-ef-relation").value = m ? (m.relation||"本人") : "本人";
+      document.getElementById("nbs-ef-birth").value   = p.profile.birthDate || "";
+      document.getElementById("nbs-ef-address").value = p.profile.address || "";
+      NBS_NAV._updateEfAge();
+    } else {
+      document.getElementById("nbs-ef-name").value    = "";
+      document.getElementById("nbs-ef-relation").value = "本人";
+      document.getElementById("nbs-ef-birth").value   = "";
+      document.getElementById("nbs-ef-address").value = "";
+      document.getElementById("nbs-ef-age-hint").textContent = "";
+    }
+    form.scrollIntoView({behavior:"smooth"});
+  };
+
+  global.NBS_NAV._closeEfForm = function() {
+    document.getElementById("nbs-edit-member-form").style.display = "none";
+    _editingPersonId = null;
+  };
+
+  global.NBS_NAV._updateEfAge = function() {
+    var birth = document.getElementById("nbs-ef-birth").value;
+    var hint  = document.getElementById("nbs-ef-age-hint");
+    if (!birth) { hint.textContent=""; return; }
+    var b=new Date(birth), a=new Date(_family&&_family.analysisDate||new Date());
+    var y=a.getFullYear()-b.getFullYear();
+    if((a-new Date(b.getFullYear()+y,b.getMonth(),b.getDate()))/(1000*60*60*24*30.4375)>=6)y++;
+    hint.textContent = "保險年齡："+y+"歲";
+  };
+
+  global.NBS_NAV._saveEfMember = async function() {
+    var name    = document.getElementById("nbs-ef-name").value.trim();
+    var rel     = document.getElementById("nbs-ef-relation").value;
+    var birth   = document.getElementById("nbs-ef-birth").value;
+    var address = document.getElementById("nbs-ef-address").value.trim();
+    if (!name) { alert("請填寫姓名"); return; }
+    if (!_user) { alert("登入資訊遺失，請重新整理"); return; }
+
+    var saveBtn = document.querySelector(".nbs-ef-save");
+    saveBtn.textContent = "儲存中…"; saveBtn.disabled = true;
+
+    try {
+      if (_editingPersonId) {
+        // 編輯現有成員
+        var p = window.personDataMap && window.personDataMap[_editingPersonId];
+        if (p) {
+          p.profile.name    = name;
+          p.profile.birthDate = birth || null;
+          p.profile.address   = address || null;
+          p.updatedAt = new Date().toISOString();
+          var m = (_family.members||[]).find(function(x){ return x.personId===_editingPersonId; });
+          if (m) m.relation = rel;
+          await _callGAS_POST("saveFile", { email:_user.email, fileType:"person", fileId:_editingPersonId, fileName:name+"_"+_editingPersonId+".json", content:p });
+          // 更新家庭
+          await _callGAS_POST("saveFile", { email:_user.email, fileType:"family", fileId:_family.id||"", fileName:_family.familyName+"_f_"+(_family.id||"")+".json", content:_family });
+          // 清除 sessionStorage 快取
+          sessionStorage.clear();
+          if (typeof NBS_NAV.onMemberChange === "function") NBS_NAV.onMemberChange(_editingPersonId);
+        }
+      } else {
+        // 新增成員
+        var newId = "p_" + Date.now();
+        var newPerson = { profile:{ name:name, birthDate:birth||null, analysisDate:_family.analysisDate, address:address||null }, policies:[], coverage:{}, savings:[], updatedAt:new Date().toISOString() };
+        if (!window.personDataMap) window.personDataMap = {};
+        window.personDataMap[newId] = newPerson;
+        _family.members.push({ personId:newId, name:name, role:"secondary", relation:rel, birthDate:birth||null });
+        await _callGAS_POST("saveFile", { email:_user.email, fileType:"person", fileId:newId, fileName:name+"_"+newId+".json", content:newPerson });
+        await _callGAS_POST("saveFile", { email:_user.email, fileType:"family", fileId:_family.id||"", fileName:localStorage.getItem("nbs_current_family"), content:_family });
+        sessionStorage.clear();
+      }
+      NBS_NAV._closeMemberModal();
+      _renderSidebar();
+      alert("已儲存！");
+    } catch(e) {
+      alert("儲存失敗："+e.message);
+    } finally {
+      saveBtn.textContent = "儲存"; saveBtn.disabled = false;
+    }
   };
 
   // ── 工具 ─────────────────────────────────────────────────
@@ -259,6 +602,14 @@
     return (d.getFullYear()-1911)+"年"+(d.getMonth()+1)+"月"+d.getDate()+"日";
   }
   function _debounce(fn, ms) { var t; return function(){ clearTimeout(t); t=setTimeout(fn,ms); }; }
+  function _callGAS_POST(action, params) {
+    return fetch(GAS_URL, {
+      method:"POST",
+      headers:{"Content-Type":"text/plain"},
+      body:JSON.stringify(Object.assign({action:action},params))
+    }).then(function(r){ return r.json(); });
+  }
+
   function _callGAS(action, params) {
     var url = new URL(GAS_URL);
     url.searchParams.set("action", action);
@@ -340,6 +691,35 @@
       .nbs-tl{font-size:9px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
       .nbs-ti-on .nbs-tl{font-weight:500}
       .nbs-tdot{width:20px;height:2px;background:#378ADD;border-radius:99px;margin-top:2px}
+      /* 家庭成員入口 */
+      .nbs-member-entry{display:flex;align-items:center;gap:10px;padding:9px 10px;margin:4px 10px 0;border-radius:8px;cursor:pointer;border:1px dashed rgba(255,255,255,0.2);transition:all .15s}
+      .nbs-member-entry:hover{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.35)}
+      /* 成員 Modal */
+      #nbs-member-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:500;align-items:center;justify-content:center;padding:20px}
+      #nbs-member-modal.open{display:flex}
+      #nbs-member-modal-box{background:#fff;border-radius:14px;width:100%;max-width:460px;max-height:85vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.2)}
+      .nbs-mm-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid #f0f0f0}
+      .nbs-mm-title{font-size:15px;font-weight:600;color:#1a1a1a}
+      .nbs-mm-close{background:none;border:none;font-size:22px;color:#aaa;cursor:pointer;line-height:1}
+      .nbs-mm-body{padding:14px 18px}
+      .nbs-mm-member{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;margin-bottom:6px;background:#f7f7f5;border:1px solid #eee}
+      .nbs-mm-avatar{width:36px;height:36px;border-radius:50%;background:#378ADD;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#fff;flex-shrink:0}
+      .nbs-mm-info{flex:1;min-width:0}
+      .nbs-mm-name{font-size:13px;font-weight:500;color:#333}
+      .nbs-mm-sub{font-size:11px;color:#aaa;margin-top:1px}
+      .nbs-mm-edit{padding:5px 12px;font-size:12px;border:1px solid #ddd;border-radius:99px;background:#fff;cursor:pointer;color:#555;font-family:inherit;flex-shrink:0}
+      .nbs-mm-edit:hover{border-color:#378ADD;color:#378ADD}
+      .nbs-mm-add{width:100%;padding:10px;background:#378ADD;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;margin-top:6px}
+      /* 編輯/新增成員表單 */
+      #nbs-edit-member-form{display:none;padding:14px 18px;border-top:1px solid #f0f0f0}
+      .nbs-ef-label{font-size:12px;color:#666;margin-bottom:3px;display:block}
+      .nbs-ef-input{width:100%;padding:8px 11px;font-size:13px;border:1px solid #e0e0e0;border-radius:7px;outline:none;font-family:inherit;margin-bottom:10px}
+      .nbs-ef-input:focus{border-color:#378ADD}
+      .nbs-ef-hint{font-size:11px;color:#378ADD;margin-top:-8px;margin-bottom:8px}
+      .nbs-ef-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+      .nbs-ef-btns{display:flex;gap:8px;margin-top:4px}
+      .nbs-ef-cancel{flex:1;padding:9px;background:transparent;color:#666;border:1px solid #ddd;border-radius:7px;cursor:pointer;font-family:inherit;font-size:13px}
+      .nbs-ef-save{flex:2;padding:9px;background:#378ADD;color:#fff;border:none;border-radius:7px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:500}
       @media print {
         #nbs-sidebar,#nbs-mobile-hdr,#nbs-bottom-tab{display:none!important}
         body{padding-left:0!important;padding-top:0!important;padding-bottom:0!important}
