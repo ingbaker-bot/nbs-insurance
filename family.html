@@ -777,9 +777,16 @@
 
         closeAddMember();
         
-        // 終極修復：清除側邊欄暫存，並自動重新載入網頁以確保資料 100% 同步
-        sessionStorage.clear(); 
-        window.location.reload();
+        // 終極修復：徹底清除 nav.js 隱藏的深層快取 (Deep Cache)
+        const keepUser = localStorage.getItem("nbs_user");
+        const keepFam = localStorage.getItem("nbs_current_family");
+        localStorage.clear();    // 炸掉所有長效快取
+        sessionStorage.clear();  // 炸掉所有短效快取
+        // 還原必要的登入與家庭指標
+        if (keepUser) localStorage.setItem("nbs_user", keepUser);
+        if (keepFam) localStorage.setItem("nbs_current_family", keepFam);
+        
+        window.location.reload(true); // true 代表強制忽略瀏覽器 HTTP 快取
 
       } catch(e) {
         alert("新增失敗：" + e.message);
@@ -862,9 +869,16 @@
 
         closeEditPerson();
         
-        // 終極修復：清除側邊欄暫存，並自動重新載入網頁以確保資料 100% 同步
-        sessionStorage.clear(); 
-        window.location.reload();
+        // 終極修復：徹底清除 nav.js 隱藏的深層快取 (Deep Cache)
+        const keepUser = localStorage.getItem("nbs_user");
+        const keepFam = localStorage.getItem("nbs_current_family");
+        localStorage.clear();    // 炸掉所有長效快取
+        sessionStorage.clear();  // 炸掉所有短效快取
+        // 還原必要的登入與家庭指標
+        if (keepUser) localStorage.setItem("nbs_user", keepUser);
+        if (keepFam) localStorage.setItem("nbs_current_family", keepFam);
+        
+        window.location.reload(true); // true 代表強制忽略瀏覽器 HTTP 快取
 
       } catch(e) {
         alert("儲存失敗：" + e.message);
