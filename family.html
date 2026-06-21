@@ -590,17 +590,21 @@
         familyData = result.content;
 
         // 載入所有成員資料
+        // 載入所有成員資料 (效能優化：使用 Promise.all 併發請求)
         const activeMembers = familyData.members.filter(m => m.role !== "beneficiary_only");
-        for (const m of activeMembers) {
-          try {
-            const pr = await callGAS("readFile", {
-              email: currentUser.email,
-              fileType: "person",
-              fileName: m.name + "_" + m.personId + ".json",
-            });
+        
+        const fetchPromises = activeMembers.map(m => {
+          return callGAS("readFile", {
+            email: currentUser.email,
+            fileType: "person",
+            fileName: m.name + "_" + m.personId + ".json",
+          }).then(pr => {
             if (pr.status === "ok") personDataMap[m.personId] = pr.content;
-          } catch(e) {}
-        }
+          }).catch(e => console.error("讀取 " + m.name + " 失敗", e));
+        });
+
+        // 讓系統同時發出所有請求，並等待所有人一起回來
+        await Promise.all(fetchPromises);
 
         renderPage();
       } catch(e) {
