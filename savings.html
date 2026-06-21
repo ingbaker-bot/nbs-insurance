@@ -155,14 +155,34 @@ window.addEventListener("nbs_nav_ready", async function(e) {
   try {
     // 載入所有成員個人資料
     // 載入所有成員個人資料
-    for (const m of familyData.members.filter(m => m.role !== "beneficiary_only")) {
-      const pr = await callGAS("readFile", {
-        email: currentUser.email,
-        fileType: "person",
-        fileName: m.name + "_" + m.personId + ".json"
-      });
-      if (pr.status === "ok") personDataMap[m.personId] = pr.content;
-    }
+    // 載入所有成員個人資料 (效能優化：導入本地快取 SessionStorage + 併發請求)
+    const activeMembers = familyData.members.filter(m => m.role !== "beneficiary_only");
+    
+    const fetchPromises = activeMembers.map(m => {
+      const cacheKey = "nbs_person_" + m.personId;
+      const cachedData = sessionStorage.getItem(cacheKey);
+
+      if (cachedData) {
+        // ⚡ 命中快取：0.01 秒瞬間載入，免等待雲端
+        personDataMap[m.personId] = JSON.parse(cachedData);
+        return Promise.resolve();
+      } else {
+        // ☁️ 無快取：向 GAS 抓取，拿完後立刻存入快取供下次使用
+        return callGAS("readFile", {
+          email: currentUser.email,
+          fileType: "person",
+          fileName: m.name + "_" + m.personId + ".json"
+        }).then(pr => {
+          if (pr.status === "ok") {
+            personDataMap[m.personId] = pr.content;
+            sessionStorage.setItem(cacheKey, JSON.stringify(pr.content));
+          }
+        }).catch(err => console.error("讀取 " + m.name + " 失敗", err));
+      }
+    });
+
+    // 讓系統同時發出所有尚未快取的請求
+    await Promise.all(fetchPromises);
     document.getElementById("loading").style.display = "none";
     document.getElementById("content").style.display = "block";
     renderTabs();
