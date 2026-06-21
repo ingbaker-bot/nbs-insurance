@@ -43,7 +43,17 @@
     .header-date { font-size: 11px; color: #bbb; }
 
     /* ── 主內容 ── */
-    .main { padding: 16px; max-width: 520px; margin: 0 auto; }
+    .main { 
+  padding: 16px 24px; /* 電腦版左右留白稍微加大，視覺更舒適 */
+  max-width: 1200px;  /* 將原本的 560px 放大，讓大螢幕可以滿版展開 */
+  margin: 0 auto;
+  width: 100%;        /* 確保絕對不會超出手機螢幕邊界 */
+}
+
+/* 針對手機版自動微調邊距，保持原本的緊湊感 */
+@media (max-width: 768px) {
+  .main { padding: 16px; }
+}
 
     /* ── 區塊標題 ── */
     .section-label {
