@@ -4,6 +4,18 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>NBS 雲端保單體檢 - 家庭詳細</title>
+
+  <script>
+    (function(){
+      // 在 nav.js 與畫面載入前，強制炸掉所有舊的暫存，強迫兩邊資料 100% 同步
+      const keepUser = localStorage.getItem("nbs_user");
+      const keepFam = localStorage.getItem("nbs_current_family");
+      localStorage.clear();
+      sessionStorage.clear();
+      if (keepUser) localStorage.setItem("nbs_user", keepUser);
+      if (keepFam) localStorage.setItem("nbs_current_family", keepFam);
+    })();
+  </script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
