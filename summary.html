@@ -547,6 +547,7 @@ function getItemStatus(key, policies, targets, covOverrides) {
 }
 
 // ── 環形圓餅圖 ────────────────────────────────────────────
+// ── 環形圓餅圖 ────────────────────────────────────────────
 function buildDonutChart(policies, coverage, targets, covOverrides) {
   const allItems = GAP_GROUPS.flatMap(g=>g.items);
   const n = allItems.length;
@@ -555,22 +556,31 @@ function buildDonutChart(policies, coverage, targets, covOverrides) {
 
   let angle=-Math.PI/2;
   let paths="";
-  const legendByGroup = GAP_GROUPS.map(g => {
-    let legendHtml = `<div style="font-size:10px;font-weight:500;color:${g.color};margin-bottom:3px">${g.label}</div>`;
+
+  // 1. 建立獨立提取單一區塊圖例的工具函式
+  function renderLegend(g) {
+    let legendHtml = `<div style="font-size:12px;font-weight:500;color:${g.color};margin-bottom:8px;border-bottom:1px solid ${g.color}30;padding-bottom:4px">${g.label}</div>`;
     g.items.forEach(item => {
-      const {status,pct} = getItemStatus(item.key, policies, targets);
+      // 這裡補上 covOverrides，修復原本手動調整後圖例不會跟著變動的 Bug
+      const {status,pct} = getItemStatus(item.key, policies, targets, covOverrides);
       const icon = status==="gap"?"❌":status==="insufficient"?"⚠️":"✅";
       const dotColor = status==="gap"?"#e0e0e0":item.color;
-      legendHtml += `<div style="display:flex;align-items:center;gap:5px;font-size:11px;margin-bottom:2px">
-        <div style="width:9px;height:9px;border-radius:2px;background:${dotColor};flex-shrink:0"></div>
-        <span style="color:${status==="gap"?"#bbb":"#444"};min-width:80px">${item.label}</span>
+      legendHtml += `<div style="display:flex;align-items:center;gap:6px;font-size:11px;margin-bottom:5px">
+        <div style="width:10px;height:10px;border-radius:2px;background:${dotColor};flex-shrink:0"></div>
+        <span style="color:${status==="gap"?"#bbb":"#444"};flex:1;white-space:nowrap">${item.label}</span>
         <span>${icon}</span>
       </div>`;
     });
     return legendHtml;
-  }).join("<div style='margin-bottom:8px'></div>");
+  }
 
-  // SVG 扇形
+  // 2. 分別產生四大區塊的圖例
+  const legendFamily = renderLegend(GAP_GROUPS[0]);
+  const legendBefore = renderLegend(GAP_GROUPS[1]);
+  const legendDuring = renderLegend(GAP_GROUPS[2]);
+  const legendAfter  = renderLegend(GAP_GROUPS[3]);
+
+  // 3. 繪製 SVG 扇形
   allItems.forEach(item => {
     const {status,pct} = getItemStatus(item.key, policies, targets, covOverrides);
     const start = angle+gapA/2;
@@ -597,15 +607,26 @@ function buildDonutChart(policies, coverage, targets, covOverrides) {
   const gapN = allItems.filter(item=>getItemStatus(item.key,policies,targets,covOverrides).status==="gap").length;
   const insN = allItems.filter(item=>getItemStatus(item.key,policies,targets,covOverrides).status==="insufficient").length;
 
-  return `<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;justify-content:center">
-    <svg width="240" height="240" style="flex-shrink:0">
-      ${paths}
-      <text x="${cx}" y="${cy-16}" text-anchor="middle" style="font-size:10px;fill:#888">✅ 達標</text>
-      <text x="${cx}" y="${cy+2}"  text-anchor="middle" style="font-size:22px;font-weight:bold;fill:#333">${okN}</text>
-      <text x="${cx}" y="${cy+18}" text-anchor="middle" style="font-size:10px;fill:#E74C3C">❌ 缺口 ${gapN}</text>
-      <text x="${cx}" y="${cy+34}" text-anchor="middle" style="font-size:10px;fill:#F5A623">⚠ 不足 ${insN}</text>
-    </svg>
-    <div style="display:flex;flex-direction:column;gap:8px">${legendByGroup}</div>
+  // 4. 全新網格排版輸出
+  return `<div style="display:flex;flex-direction:column;width:100%">
+    <div style="display:flex;align-items:center;justify-content:center;gap:32px;flex-wrap:wrap;margin-bottom:20px;padding:0 10px">
+      <svg width="240" height="240" style="flex-shrink:0">
+        ${paths}
+        <text x="${cx}" y="${cy-16}" text-anchor="middle" style="font-size:10px;fill:#888">✅ 達標</text>
+        <text x="${cx}" y="${cy+2}"  text-anchor="middle" style="font-size:22px;font-weight:bold;fill:#333">${okN}</text>
+        <text x="${cx}" y="${cy+18}" text-anchor="middle" style="font-size:10px;fill:#E74C3C">❌ 缺口 ${gapN}</text>
+        <text x="${cx}" y="${cy+34}" text-anchor="middle" style="font-size:10px;fill:#F5A623">⚠ 不足 ${insN}</text>
+      </svg>
+      <div style="min-width:170px;background:#fafafa;padding:12px 16px;border-radius:10px;border:1px solid #f0f0f0">
+        ${legendFamily}
+      </div>
+    </div>
+    
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:16px;border-top:1px dashed #e8e8e8;padding-top:20px">
+      <div>${legendBefore}</div>
+      <div>${legendDuring}</div>
+      <div>${legendAfter}</div>
+    </div>
   </div>`;
 }
 
