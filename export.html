@@ -535,23 +535,50 @@ window.addEventListener("nbs_nav_ready", async function(e) {
   if(btn){btn.disabled=true;btn.textContent="資料載入中…";btn.style.background="#ccc";}
 
   // 載入個人資料
+  // 載入個人資料 (效能優化：導入本地快取 SessionStorage + 併發請求)
   try {
-    var pdm={};
-    var fmem=(familyData&&familyData.members)||[];
-    for(var mi=0;mi<fmem.length;mi++){
-      var mem=fmem[mi];
-      if(mem.role==="beneficiary_only") continue;
-      var pr=await gas("readFile",{email:currentUser.email,fileType:"person",fileName:mem.name+"_"+mem.personId+".json"});
-      if(pr.status==="ok") pdm[mem.personId]=pr.content;
+    var pdm = {};
+    var fmem = (familyData && familyData.members) || [];
+    var activeMembers = fmem.filter(function(m) { return m.role !== "beneficiary_only"; });
+
+    var fetchPromises = activeMembers.map(function(mem) {
+      var cacheKey = "nbs_person_" + mem.personId;
+      var cachedData = sessionStorage.getItem(cacheKey);
+
+      if (cachedData) {
+        // ⚡ 命中快取：瞬間載入
+        pdm[mem.personId] = JSON.parse(cachedData);
+        return Promise.resolve();
+      } else {
+        // ☁️ 無快取：向雲端併發抓取，拿完後立刻存入快取
+        return gas("readFile", {
+          email: currentUser.email,
+          fileType: "person",
+          fileName: mem.name + "_" + mem.personId + ".json"
+        }).then(function(pr) {
+          if (pr.status === "ok") {
+            pdm[mem.personId] = pr.content;
+            sessionStorage.setItem(cacheKey, JSON.stringify(pr.content));
+          }
+        }).catch(function(err) { console.error("讀取 " + mem.name + " 失敗", err); });
+      }
+    });
+
+    await Promise.all(fetchPromises);
+
+    person = pdm[currentPersonId] || {};
+    policies = person.policies || [];
+    coverage = person.coverage || {};
+    savings = person.savings || [];
+    pName = (person.profile && person.profile.name) || "—";
+    var ad = person.profile && person.profile.analysisDate;
+    if (ad) {
+      var d = new Date(ad);
+      pDate = (d.getFullYear() - 1911) + "年" + (d.getMonth() + 1) + "月" + d.getDate() + "日";
     }
-    person=pdm[currentPersonId]||{};
-    policies=person.policies||[];
-    coverage=person.coverage||{};
-    savings=person.savings||[];
-    pName=(person.profile&&person.profile.name)||"—";
-    var ad=person.profile&&person.profile.analysisDate;
-    if(ad){var d=new Date(ad);pDate=(d.getFullYear()-1911)+"年"+(d.getMonth()+1)+"月"+d.getDate()+"日";}
-  }catch(ex){console.error("export load error",ex);}
+  } catch (ex) { 
+    console.error("export load error", ex); 
+  }
   updatePrevBtn();
 });
 
