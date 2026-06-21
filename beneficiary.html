@@ -169,9 +169,9 @@
 <div style="display:none" id="header-sub"></div>
 
 <div class="sub-tabs">
-  <div class="sub-tab" id="tab-policy" onclick="switchSubTab('policy')">保單套用</div>
-  <div class="sub-tab active" id="tab-tpl" onclick="switchSubTab('tpl')">受益人模板</div>
-  </div>
+  <div class="sub-tab active" id="tab-policy" onclick="switchSubTab('policy')">保單套用</div>
+  <div class="sub-tab" id="tab-tpl" onclick="switchSubTab('tpl')">受益人模板</div>
+</div>
 <div class="member-tabs" id="member-tabs"></div>
 <div class="main">
   <div id="loading" class="loading"><span class="spinner"></span> 載入中…</div>
@@ -311,7 +311,7 @@ window.addEventListener("nbs_nav_ready", async function(e) {
     await Promise.all(fetchPromises);
     document.getElementById("loading").style.display = "none";
     renderTabs();
-    renderPolicyView();
+    switchSubTab("policy"); // 👈 統一交給 switch 函數處理標籤狀態與畫面顯示
   } catch(err) {
     console.error("beneficiary.html init error", err);
     document.getElementById("loading").innerHTML = "載入失敗：" + err.message;
