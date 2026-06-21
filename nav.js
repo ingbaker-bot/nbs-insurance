@@ -228,7 +228,7 @@
           '<button onclick="NBS_NAV._openMemberModal()" style="font-size:10px;padding:1px 8px;border:1px solid rgba(255,255,255,0.2);border-radius:99px;background:transparent;color:rgba(255,255,255,0.5);cursor:pointer;font-family:inherit">管理</button>'+
         '</div>'+
         membersHtml+
-        '<div class="nbs-add" onclick="NBS_NAV._openMemberModal('new')">'+
+        '<div class="nbs-add" onclick="NBS_NAV._openMemberModal(&apos;new&apos;)">'+
           '<div class="nbs-av nbs-av-add">＋</div>'+
           '<span class="nbs-ms">新增成員</span>'+
         '</div>'+
@@ -307,7 +307,7 @@
     overlay.innerHTML = '<div style="background:#fff;border-radius:16px 16px 0 0;padding:20px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto">' +
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">' +
         '<span style="font-size:15px;font-weight:600">' + (isNew ? "新增成員" : editPerson ? "編輯："+editPerson.name : "家庭成員管理") + '</span>' +
-        '<button onclick="document.getElementById('nbs-member-modal').remove()" style="background:none;border:none;font-size:22px;color:#999;cursor:pointer;line-height:1">×</button>' +
+        '<button onclick="document.getElementById(\'nbs-member-modal\').remove()" style="background:none;border:none;font-size:22px;color:#999;cursor:pointer;line-height:1">×</button>' +
       '</div>' +
       content +
     '</div>';
@@ -324,12 +324,12 @@
           '<div style="font-size:13px;font-weight:500">' + m.name + '</div>' +
           '<div style="font-size:11px;color:#aaa">' + (m.relation||m.role) + (m.profile && m.profile.address ? '　' + m.profile.address : '') + '</div>' +
         '</div>' +
-        '<button onclick="NBS_NAV._openMemberModal('edit','' + m.personId + '')" style="padding:4px 12px;font-size:12px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer;font-family:inherit">編輯</button>' +
+        '<button onclick="NBS_NAV._openMemberModal(\'edit\',' + JSON.stringify(m.personId) + ')" style="padding:4px 12px;font-size:12px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer;font-family:inherit">編輯</button>' +
       '</div>';
     }).join("");
 
     return rows +
-      '<button onclick="NBS_NAV._openMemberModal('new')" style="width:100%;margin-top:12px;padding:10px;background:transparent;border:1.5px dashed #ddd;border-radius:8px;font-size:13px;color:#666;cursor:pointer;font-family:inherit">＋ 新增成員</button>';
+      '<button onclick="NBS_NAV._openMemberModal(&apos;new&apos;)" style="width:100%;margin-top:12px;padding:10px;background:transparent;border:1.5px dashed #ddd;border-radius:8px;font-size:13px;color:#666;cursor:pointer;font-family:inherit">＋ 新增成員</button>';
   }
 
   function _memberEditForm(person, isNew) {
@@ -368,8 +368,8 @@
       // 按鈕
       '<div style="display:flex;gap:8px;margin-top:16px">' +
         (isNew ? '' : '<button onclick="NBS_NAV._openMemberModal()" style="flex:1;padding:10px;background:transparent;color:#666;border:1px solid #ddd;border-radius:8px;cursor:pointer;font-family:inherit">返回列表</button>') +
-        (!isNew ? '' : '<button onclick="document.getElementById('nbs-member-modal').remove()" style="flex:1;padding:10px;background:transparent;color:#666;border:1px solid #ddd;border-radius:8px;cursor:pointer;font-family:inherit">取消</button>') +
-        '<button onclick="NBS_NAV._saveMember(' + (person?'''+person.personId+''':'null') + ',' + (isNew?'true':'false') + ')" style="flex:2;padding:10px;background:#378ADD;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit">儲存</button>' +
+        (!isNew ? '' : '<button onclick="document.getElementById(\'nbs-member-modal\').remove()" style="flex:1;padding:10px;background:transparent;color:#666;border:1px solid #ddd;border-radius:8px;cursor:pointer;font-family:inherit">取消</button>') +
+        '<button onclick="NBS_NAV._saveMember(' + (person ? JSON.stringify(person.personId) : 'null') + ',' + (isNew?'true':'false') + ')" style="flex:2;padding:10px;background:#378ADD;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit">儲存</button>' +
       '</div>' +
     '</div>';
   }
@@ -493,7 +493,7 @@
           '<div class="nbs-mm-name">'+m.name+'</div>'+
           '<div class="nbs-mm-sub">'+(m.relation||m.role)+(age?" · "+age:"")+'</div>'+
         '</div>'+
-        '<button class="nbs-mm-edit" onclick="NBS_NAV._openEfForm(''+m.personId+'')">✏️ 編輯</button>'+
+        '<button class="nbs-mm-edit" onclick="NBS_NAV._openEfForm(\''+m.personId+'\')">✏️ 編輯</button>'+
       '</div>';
     });
     html += '<button class="nbs-mm-add" onclick="NBS_NAV._openEfForm(null)">＋ 新增家庭成員</button>';
