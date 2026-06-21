@@ -101,8 +101,11 @@ const GROUPS=[
     {key:"surg_opd",label:"門診手術醫療保險金",unit:"元",type:"range"},
     {key:"surg_special",label:"特定處置項目保險金",unit:"元",type:"range"},
     {key:"surg_hosp",label:"住院手術醫療保險金",unit:"元",type:"range"},
-    {key:"surg_nurse",label:"住院手術療養保險金",unit:"元"},
+    // 👇 1. 修改：更名為「手術看護療養金」並加上 type:"range" 支援最高/最低區間輸入
+    {key:"surg_nurse",label:"手術看護療養金",unit:"元",type:"range"},
     {key:"surg_limit",label:"保險給付限制",unit:"萬元"},
+    // 👇 2. 新增：健康增值保險金，使用勾選框 (checkbox)
+    {key:"health_bonus",label:"健康增值保險金 (無理賠回饋)",unit:"",type:"checkbox"},
   ]},
   {key:"cancer",label:"癌症醫療",icon:"🎗️",color:"#791F1F",bg:"#FCEBEB",fields:[
     {key:"can_low",label:"低侵襲性／特定癌症",unit:"元"},
