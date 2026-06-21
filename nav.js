@@ -192,18 +192,6 @@
     var el = document.getElementById("nbs-sidebar");
     if (!el || !_family) return;
 
-    var members = (_family.members||[]).filter(function(m){ return m.role !== "beneficiary_only"; });
-
-    var membersHtml = members.map(function(m) {
-      var active = m.personId === _personId;
-      return '<div class="nbs-mi'+(active?" nbs-mi-on":"")+'" onclick="NBS_NAV._setPerson(\''+m.personId+'\')">' +
-        '<div class="nbs-av'+(active?" nbs-av-on":"")+'">'+m.name[0]+'</div>' +
-        '<div style="flex:1;min-width:0"><div class="nbs-mn'+(active?" nbs-mn-on":"")+'">'+m.name+'</div>' +
-        '<div class="nbs-ms">'+(m.relation||m.role)+'</div></div>' +
-        (active?'<div class="nbs-dot"></div>':'') +
-      '</div>';
-    }).join("");
-
     var navHtml = NAV_ITEMS.map(function(item) {
       var active = _page === item.key;
       return '<div class="nbs-ni'+(active?" nbs-ni-on":"")+'" onclick="NBS_NAV._go(\''+item.href+'\')">' +
@@ -222,17 +210,7 @@
         '<div class="nbs-fn">'+_family.familyName+'</div>'+
         '<div class="nbs-fd">分析日 '+_fmtROC(_family.analysisDate)+'</div>'+
       '</div>'+
-      '<div class="nbs-msec">'+
-        '<div class="nbs-sl" style="display:flex;align-items:center;justify-content:space-between">'+
-          '<span>家庭成員</span>'+
-          '<button onclick="NBS_NAV._openMemberModal()" style="font-size:10px;padding:1px 8px;border:1px solid rgba(255,255,255,0.2);border-radius:99px;background:transparent;color:rgba(255,255,255,0.5);cursor:pointer;font-family:inherit">管理</button>'+
-        '</div>'+
-        membersHtml+
-        '<div class="nbs-add" onclick="NBS_NAV._openMemberModal(&apos;new&apos;)">'+
-          '<div class="nbs-av nbs-av-add">＋</div>'+
-          '<span class="nbs-ms">新增成員</span>'+
-        '</div>'+
-      '</div>'+
+      // 移除原本的 nbs-msec 區塊，讓功能模組直接接在家庭資訊下方
       '<div class="nbs-nsec">'+
         '<div class="nbs-sl">功能模組</div>'+
         navHtml+
