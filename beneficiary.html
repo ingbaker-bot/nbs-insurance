@@ -857,6 +857,7 @@ function closePolicyModal() { document.getElementById("policy-modal").classList.
 function handlePolicyOverlay(e) { if(e.target===document.getElementById("policy-modal")) closePolicyModal(); }
 
 // ── 共用儲存 ─────────────────────────────────────────────
+// ── 共用儲存 ─────────────────────────────────────────────
 async function savePerson() {
   const person = personDataMap[currentPersonId];
   person.updatedAt = new Date().toISOString();
@@ -868,8 +869,11 @@ async function savePerson() {
     sessionStorage.setItem("nbs_person_" + currentPersonId, JSON.stringify(person));
 
     const hint = document.getElementById("saved-hint");
-  hint.style.display="block";
-  setTimeout(()=>hint.style.display="none",2000);
+    hint.style.display="block";
+    setTimeout(()=>hint.style.display="none",2000);
+  } catch(e) { 
+    alert("儲存失敗：" + e.message); 
+  }
 }
 
 // ── 工具函式 ──────────────────────────────────────────────
