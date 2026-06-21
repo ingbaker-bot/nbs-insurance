@@ -337,6 +337,7 @@ function getGroupFields(type){
     {key:"daily_room_1_30",unit:"元/日"},{key:"daily_room_31",unit:"元/日"},
     {key:"daily_icu",unit:"元/日"},{key:"daily_burn",unit:"元/日"},
     {key:"daily_senior",unit:"元/次"},{key:"daily_discharge",unit:"元/日"},
+    {key:"daily_nurse",unit:"元/日"},
     {key:"daily_opd",unit:"元/次"},{key:"daily_er",unit:"元/次"},
     {key:"daily_transport",unit:"元/次"},{key:"daily_device",unit:"元/次"},
     {key:"daily_major",unit:"元"},{key:"daily_antirej",unit:"元"},
@@ -490,6 +491,8 @@ function renderDaily(cov,pid){
     <div class="field"><label>燒燙傷中心</label><div class="input-unit"><input type="number" id="cov_daily_burn" placeholder="—" value="${cov.daily_burn||''}" oninput="markDirty()"/><span class="unit">元/日</span></div></div>
     <div class="field"><label>老年住院關懷</label><div class="input-unit"><input type="number" id="cov_daily_senior" placeholder="—" value="${cov.daily_senior||''}" oninput="markDirty()"/><span class="unit">元/次</span></div></div>
     <div class="field"><label>出院療養金</label><div class="input-unit"><input type="number" id="cov_daily_discharge" placeholder="—" value="${cov.daily_discharge||''}" oninput="markDirty()"/><span class="unit">元/日</span></div></div>
+    <div class="field"><label>住院看護療養金</label><div class="input-unit"><input type="number" id="cov_daily_nurse" placeholder="—" value="${cov.daily_nurse||''}" oninput="markDirty()"/><span class="unit">元/日</span></div></div>    
+
     <div class="sub-title blue">門診 / 急診 / 轉送</div>
     <div class="field"><label>住院前後門診（1週）</label><div class="input-unit"><input type="number" id="cov_daily_opd" placeholder="—" value="${cov.daily_opd||''}" oninput="markDirty()"/><span class="unit">元/次</span></div></div>
     <div class="field"><label>住院前急診</label><div class="input-unit"><input type="number" id="cov_daily_er" placeholder="—" value="${cov.daily_er||''}" oninput="markDirty()"/><span class="unit">元/次</span></div></div>
