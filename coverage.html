@@ -546,14 +546,32 @@ function collectValues(){
 }
 
 // ── 儲存 ─────────────────────────────────────────────────
-// 1. 這裡加上 isAutoSave = false
+// ── 儲存 ─────────────────────────────────────────────────
 async function saveCoverage(isAutoSave = false) { 
-  try {
-    const btn = document.getElementById("save-btn");
+  // 1. 確保最新輸入已被收集
+  collectValues();
+  
+  const btn = document.getElementById("save-btn");
+  if(btn && !isAutoSave) {
     btn.disabled = true;
+    btn.textContent = "儲存中…";
+  }
 
-    // ... (原本呼叫 callGAS 的程式碼保持不變) ...
-    await callGAS("saveFile", { ... }); 
+  const person = personDataMap[currentPersonId];
+  if(!person) return;
+  
+  person.updatedAt = new Date().toISOString();
+  const member = familyData.members.find(m => m.personId === currentPersonId);
+
+  try {
+    // 執行真實的 GAS 儲存 API
+    await callGAS("saveFile", {
+      email: currentUser.email,
+      fileType: "person",
+      fileId: currentPersonId,
+      fileName: member.name + "_" + currentPersonId + ".json",
+      content: person
+    });
 
     dirty = false;
     const hint = document.getElementById("saved-hint");
@@ -562,27 +580,23 @@ async function saveCoverage(isAutoSave = false) {
       setTimeout(() => hint.style.display = "none", 2000);
     }
 
-    // 【修復關鍵 2】只有在「手動點擊儲存」時，才重新繪製畫面。自動儲存則跳過，避免砍掉使用者的輸入！
+    // 只有「手動點擊儲存」時，才重新繪製畫面。自動儲存則跳過，避免砍掉使用者的輸入
     if (!isAutoSave) {
-      // 👇 請將您原本函數底部負責更新畫面的程式碼放進這裡 👇
-      // 例如：
-      // if(viewMode === "edit"){
-      //   const policy = person.policies?.find(p=>p.id===currentPolicyId);
-      //   if(policy) renderEdit(policy);
-      // }
-      // (如果是 renderCoverage() 等指令也請放進來)
+      if (viewMode === "edit") {
+        const policy = person.policies?.find(p => p.id === currentPolicyId);
+        if (policy) renderEdit(policy);
+      }
     }
-
   } catch(e) { 
     alert("儲存失敗：" + e.message); 
   } finally { 
-    const btn = document.getElementById("save-btn");
-    btn.disabled = false; 
-    btn.textContent = "儲存"; 
-    btn.style.backgroundColor = ""; // 恢復藍色
+    if(btn) {
+      btn.disabled = false; 
+      btn.textContent = "儲存"; 
+      btn.style.backgroundColor = ""; // 恢復預設藍色
+    }
   }
 }
-
 function goBack() {
   // 如果自動儲存的計時器還在跑（代表有剛剛輸入但還沒存的資料）
   if (autoSaveTimer) {
