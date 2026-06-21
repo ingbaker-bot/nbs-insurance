@@ -154,6 +154,7 @@ window.addEventListener("nbs_nav_ready", async function(e) {
 
   try {
     // 載入所有成員個人資料
+    // 載入所有成員個人資料
     for (const m of familyData.members.filter(m => m.role !== "beneficiary_only")) {
       const pr = await callGAS("readFile", {
         email: currentUser.email,
