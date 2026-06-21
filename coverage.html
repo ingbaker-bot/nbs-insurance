@@ -75,8 +75,12 @@
   <script src="nav.js"></script>
 </head>
 <body>
-<div style="display:none" id="header-title"></div>
-  <button class="save-btn" id="save-btn" onclick="saveCoverage()">儲存</button>
+  <div class="header">
+    <button class="back-btn" onclick="goBack()">‹</button>
+    <div class="header-title">附約保障清單</div>
+    <button class="save-btn" id="save-btn" onclick="saveCoverage()">儲存</button>
+  </div>
+
 <div class="member-tabs" id="member-tabs"></div>
 <div class="main">
   <div id="stats-row" class="stats-row"></div>
