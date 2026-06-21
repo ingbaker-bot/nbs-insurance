@@ -777,6 +777,23 @@
 
         closeAddMember();
         renderMembers();
+	closeAddMember();
+        renderMembers();
+
+        // 👇 加在這裡：新增成員後，廣播通知 nav.js 同步最新資料 👇
+        window.dispatchEvent(new CustomEvent("nbs_nav_ready", {
+          detail: { 
+            user: currentUser, 
+            familyData: familyData, 
+            currentPersonId: selectedPersonId, // 注意這裡使用的是 selectedPersonId
+            familyFileName: familyFileName 
+          }
+        }));
+
+      } catch(e) {
+        alert("新增失敗：" + e.message);
+      } finally {
+
 
       } catch(e) {
         alert("新增失敗：" + e.message);
@@ -860,6 +877,15 @@
         closeEditPerson();
         renderMembers();
         selectMember(selectedPersonId);
+	// 👇 加在這裡：編輯成員後，廣播通知 nav.js 同步最新資料 👇
+        window.dispatchEvent(new CustomEvent("nbs_nav_ready", {
+          detail: { 
+            user: currentUser, 
+            familyData: familyData, 
+            currentPersonId: selectedPersonId, 
+            familyFileName: familyFileName 
+          }
+        }));
 
       } catch(e) {
         alert("儲存失敗：" + e.message);
