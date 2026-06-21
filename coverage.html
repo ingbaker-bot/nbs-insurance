@@ -594,6 +594,40 @@ NBS_NAV.onMemberChange = function(pid) {
   if (typeof renderContent  === "function") renderContent();
 };
 NBS_NAV.init({ page: "coverage" });
+
+// ── 自動儲存 (防抖 Debounce) 邏輯 ─────────────────────────
+let autoSaveTimer = null;
+
+// 使用事件委派 (Event Delegation) 監聽整個畫面的輸入行為
+document.addEventListener('input', function(e) {
+  // 檢查觸發事件的是否為輸入框 (INPUT, SELECT, TEXTAREA)
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
+    
+    const btn = document.getElementById("save-btn");
+    
+    // 步驟 1：改變按鈕狀態，提示使用者系統已察覺變更，正在倒數
+    if(btn) {
+      btn.textContent = "待儲存...";
+      btn.style.backgroundColor = "#f39c12"; // 變成橘黃色提示
+      btn.style.color = "#fff";
+    }
+
+    // 步驟 2：清除前一次的計時器 (這就是防抖的核心)
+    clearTimeout(autoSaveTimer);
+
+    // 步驟 3：設定新計時器，2000 毫秒 (2秒) 內若無新輸入，即觸發儲存
+    autoSaveTimer = setTimeout(function() {
+      if(btn) {
+        btn.textContent = "自動儲存中...";
+        btn.style.backgroundColor = "#e67e22"; // 顏色稍微加深
+      }
+      
+      // 直接呼叫您原本寫好的 saveCoverage() 函數
+      saveCoverage();
+      
+    }, 2000); 
+  }
+});
 </script>
 </body>
 </html>
