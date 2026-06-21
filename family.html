@@ -776,17 +776,10 @@
         });
 
         closeAddMember();
-        renderMembers();
-
-        // 廣播通知 nav.js 同步最新資料
-        window.dispatchEvent(new CustomEvent("nbs_nav_ready", {
-          detail: { 
-            user: currentUser, 
-            familyData: familyData, 
-            currentPersonId: selectedPersonId, 
-            familyFileName: familyFileName 
-          }
-        }));
+        
+        // 終極修復：清除側邊欄暫存，並自動重新載入網頁以確保資料 100% 同步
+        sessionStorage.clear(); 
+        window.location.reload();
 
       } catch(e) {
         alert("新增失敗：" + e.message);
@@ -868,17 +861,10 @@
         }
 
         closeEditPerson();
-        renderMembers();
-        selectMember(selectedPersonId);
-	// 👇 加在這裡：編輯成員後，廣播通知 nav.js 同步最新資料 👇
-        window.dispatchEvent(new CustomEvent("nbs_nav_ready", {
-          detail: { 
-            user: currentUser, 
-            familyData: familyData, 
-            currentPersonId: selectedPersonId, 
-            familyFileName: familyFileName 
-          }
-        }));
+        
+        // 終極修復：清除側邊欄暫存，並自動重新載入網頁以確保資料 100% 同步
+        sessionStorage.clear(); 
+        window.location.reload();
 
       } catch(e) {
         alert("儲存失敗：" + e.message);
