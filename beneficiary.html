@@ -134,16 +134,44 @@
     @keyframes spin { to { transform:rotate(360deg); } }
     .saved-hint { font-size:11px; color:#27AE8F; text-align:center; padding:6px 0; display:none; }
     .empty-state { text-align:center; padding:32px 20px; color:#bbb; font-size:13px; }
-  </style>
+  
+    /* ── 視覺優化：手機版微調過小的標籤 ── */
+    .policy-no, .cat-badge, .mode-badge { font-size: 11px; padding: 2px 6px; }
+    .benef-tag, .rider-tag, .locked-tag { font-size: 12px; }
+    .tpl-name, .policy-name { font-size: 14px; }
+    .benef-cell-label { font-size: 12px; }
+
+    /* ── 視覺優化：平板與電腦版字體自動放大 ── */
+    @media (min-width: 768px) {
+      .member-tab { font-size: 15px; padding: 12px 18px; }
+      .sub-tab { font-size: 15px; padding: 12px 20px; }
+      
+      .tpl-name, .policy-name { font-size: 17px; }
+      .policy-no, .cat-badge, .mode-badge { font-size: 13px; padding: 3px 8px; }
+      
+      /* 受益人標籤放大 */
+      .benef-tag, .rider-tag, .locked-tag { font-size: 14px; padding: 4px 12px; }
+      .benef-cell-label { font-size: 13px; }
+      
+      /* 強制覆寫 JS 中寫死的行內樣式 (inline-styles) */
+      .benef-row div[style*="font-size:12px"] { font-size: 15px !important; }
+      div[style*="font-size:11px"] { font-size: 14px !important; }
+      
+      .used-count, .benef-ratio, .rank-label { font-size: 13px; }
+      .add-tpl-btn, .add-benef-btn { font-size: 14px; padding: 8px 16px; }
+      .set-btn, .edit-btn { font-size: 14px; padding: 6px 14px; }
+      .empty-state { font-size: 16px; }
+    }
+</style>
   <script src="nav.js"></script>
 </head>
 <body>
 <div style="display:none" id="header-sub"></div>
 
 <div class="sub-tabs">
-  <div class="sub-tab active" id="tab-tpl" onclick="switchSubTab('tpl')">受益人模板</div>
   <div class="sub-tab" id="tab-policy" onclick="switchSubTab('policy')">保單套用</div>
-</div>
+  <div class="sub-tab active" id="tab-tpl" onclick="switchSubTab('tpl')">受益人模板</div>
+  </div>
 <div class="member-tabs" id="member-tabs"></div>
 <div class="main">
   <div id="loading" class="loading"><span class="spinner"></span> 載入中…</div>
@@ -230,7 +258,7 @@ let familyData     = null;
 let familyFileName = null;
 let personDataMap  = {};
 let currentPersonId = null;
-let currentSubTab  = "tpl";
+let currentSubTab  = "policy";
 
 // 模板編輯狀態
 let editTplId   = null;
@@ -263,7 +291,6 @@ window.addEventListener("nbs_nav_ready", async function(e) {
       if (pr.status === "ok") personDataMap[m.personId] = pr.content;
     }
     document.getElementById("loading").style.display = "none";
-    document.getElementById("content").style.display = "block";
     renderTabs();
     renderPolicyView();
   } catch(err) {
