@@ -384,137 +384,129 @@ function renderTplView() {
   document.getElementById("tpl-view").innerHTML = html;
 }
 
-// ── 保單套用頁 ────────────────────────────────────────────
 function renderPolicyView() {
   const person = personDataMap[currentPersonId];
   // 1. 取得所有保單
-const allPolicies = person?.policies || [];
+  const allPolicies = person?.policies || [];
 
-// 2. 定義具有「身故/滿期/生存給付」意義，需要討論受益人的險種
-const targetCategories = [
-  "壽險保障", 
-  "儲蓄險", 
-  "年金險", 
-  "投資型保險", 
-  "重大疾病險", 
-  "重大傷病險", 
-  "特定傷病險"
-];
+  // 2. 定義具有「身故/滿期/生存給付」意義，需要討論受益人的險種
+  const targetCategories = [
+    "壽險保障", "儲蓄險", "年金險", "投資型保險", "重大疾病險", "重大傷病險", "特定傷病險"
+  ];
 
-// 3. 過濾出符合條件的保單
-const policies = allPolicies.filter(p => targetCategories.includes(p.category));
-  const templates = person?.beneficiaryTemplates || [];
+  // 3. 過濾出符合條件的保單
+  const policies = allPolicies.filter(p => targetCategories.includes(p.category));
 
-  if (!policies.length) {
-    document.getElementById("policy-view").innerHTML='<div class="empty-state">尚無保單，請先至「保險繳費」頁面輸入保單資料</div>';
+  if (policies.length === 0) {
+    document.getElementById("policy-list").innerHTML = '<div style="padding:40px 20px;text-align:center;color:#bbb;font-size:13px">此成員尚無具有傳承或生存金意義之保單</div>';
     return;
   }
 
   let html = `<div style="font-size:11px;color:#999;margin-bottom:10px">為每筆保單設定受益人，灰色鎖定項目依法令規定無法更改。</div>`;
 
-policies.forEach(p => {
-  const amountText = p.insuredAmount ? `${p.insuredAmount} ${p.insuredAmountUnit || '萬元'}` : '—';
-  const catClass = "cat-" + (p.category||"");
+  policies.forEach(p => {
+    const amountText = p.insuredAmount ? `${p.insuredAmount} ${p.insuredAmountUnit || '萬元'}` : '—';
+    const catClass = "cat-" + (p.category||"");
 
-  // 1. 解析身故受益人資料 (將資料庫轉為文字)
-  let dStr = "未設定";
-  if (p.isRider) {
-    dStr = '<span class="locked-tag">同主約</span>';
-  } else if (p.beneficiaryDeathTplId) {
-    const t = templates.find(x=>x.id===p.beneficiaryDeathTplId);
-    if (t) {
-       if (t.mode === "rank") {
-           // 處理多個順位的排版
-           const ranks = [...new Set((t.items||[]).map(i=>i.rank))].sort();
-           dStr = ranks.map(r => `<div style="margin-bottom:3px"><span style="color:#aaa;font-size:10px">順位${r}：</span>` + t.items.filter(i=>i.rank===r).map(i=>i.customName || getMemberName(i.personId)).join("、") + `</div>`).join("");
-       } else if (t.mode === "ratio") {
-           dStr = (t.items||[]).map(i=> `${i.customName || getMemberName(i.personId)}(${i.ratio}%)`).join("、");
-       } else {
-           dStr = (t.items||[]).map(i=> i.customName || getMemberName(i.personId)).join("、") + " (均分)";
-       }
-    }
-  } else if (p.beneficiaryDeathCustom && p.beneficiaryDeathCustom.length>0) {
-    dStr = p.beneficiaryDeathCustom.map(c=>c.customName || getMemberName(c.personId)).join("、");
-  } else if (BENEF_RULES[p.category]?.death === "鎖定本人") {
-    dStr = '<span class="locked-tag">被保險人本人</span>';
-  }
-
-  // 2. 解析生存與滿期金受益人資料
-  let lStr = "未設定";
-  if (p.beneficiaryLiveType === "self") lStr = "被保險人本人";
-  else if (p.beneficiaryLiveType === "owner") lStr = "要保人";
-  else if (p.beneficiaryLiveType === "other") lStr = p.beneficiaryLiveOther || "指定其他";
-  else if (p.beneficiaryLiveType === "none" || !p.beneficiaryLiveType) lStr = "無";
-
-  let mStr = "未設定";
-  if (p.beneficiaryMaturityType === "self") mStr = "被保險人本人";
-  else if (p.beneficiaryMaturityType === "owner") mStr = "要保人";
-  else if (p.beneficiaryMaturityType === "other") mStr = p.beneficiaryMaturityOther || "指定其他";
-  else if (p.beneficiaryMaturityType === "none" || !p.beneficiaryMaturityType) mStr = "無";
-
-  if (p.category==="年金險" || p.category==="投資型保險" || BENEF_RULES[p.category]?.live === "鎖定本人") {
-     lStr = '<span class="locked-tag">被保險人本人</span>';
-  }
-
-  // 3. 實務邏輯判斷：隱藏無生存/滿期金的項目，有設定才獨立顯示
-  let liveMatHtml = "";
-  if (BENEF_RULES[p.category]?.live === "可設定") {
-      if (lStr === "無" && mStr === "無") {
-          liveMatHtml = `
-          <div style="flex:1;">
-            <div style="font-size:11px; color:#888; margin-bottom:4px;">生存 / 滿期金</div>
-            <div style="font-size:13px; color:#ccc; line-height:1.5;">無 / 不適用</div>
-          </div>`;
-      } else {
-          if (lStr !== "無") {
-              liveMatHtml += `
-              <div style="flex:1;">
-                <div style="font-size:11px; color:#888; margin-bottom:4px;">生存金受益人</div>
-                <div style="font-size:13px; color:#333; line-height:1.5;">${lStr}</div>
-              </div>`;
-          }
-          if (mStr !== "無") {
-              liveMatHtml += `
-              <div style="flex:1;">
-                <div style="font-size:11px; color:#888; margin-bottom:4px;">滿期金受益人</div>
-                <div style="font-size:13px; color:#333; line-height:1.5;">${mStr}</div>
-              </div>`;
-          }
+    // 1. 解析身故受益人資料 (將資料庫轉為文字)
+    let dStr = "未設定";
+    if (p.isRider) {
+      dStr = '<span class="locked-tag">同主約</span>';
+    } else if (p.beneficiaryDeathTplId) {
+      const t = templates.find(x=>x.id===p.beneficiaryDeathTplId);
+      if (t) {
+         if (t.mode === "rank") {
+             const ranks = [...new Set((t.items||[]).map(i=>i.rank))].sort();
+             dStr = ranks.map(r => `<div style="margin-bottom:3px"><span style="color:#aaa;font-size:10px">順位${r}：</span>` + t.items.filter(i=>i.rank===r).map(i=>i.customName || getMemberName(i.personId)).join("、") + `</div>`).join("");
+         } else if (t.mode === "ratio") {
+             dStr = (t.items||[]).map(i=> `${i.customName || getMemberName(i.personId)}(${i.ratio}%)`).join("、");
+         } else {
+             dStr = (t.items||[]).map(i=> i.customName || getMemberName(i.personId)).join("、") + " (均分)";
+         }
       }
-  } else {
-      liveMatHtml = `
-      <div style="flex:1;">
-        <div style="font-size:11px; color:#888; margin-bottom:4px;">生存金受益人</div>
-        <div style="font-size:13px; color:#333; line-height:1.5;">${lStr}</div>
-      </div>`;
-  }
+    } else if (p.beneficiaryDeathCustom && p.beneficiaryDeathCustom.length>0) {
+      dStr = p.beneficiaryDeathCustom.map(c=>c.customName || getMemberName(c.personId)).join("、");
+    } else if (BENEF_RULES[p.category]?.death === "鎖定本人") {
+      dStr = '<span class="locked-tag">被保險人本人</span>';
+    }
 
-  // 渲染 HTML 卡片
-  html += `<div class="policy-card" style="background:#fff; border:1px solid #e8e8e8; border-radius:10px; margin-bottom:12px; overflow:hidden;">
-    
-    <div class="card-header" style="display:flex; align-items:center; padding:12px 14px; border-bottom:1px solid #f0f0f0;">
-      <span style="font-family:monospace; font-size:11px; background:#E6F1FB; color:#0C447C; padding:1px 7px; border-radius:99px; margin-right:8px;">${p.policyNo || p.id}</span>
-      <span style="font-size:14px; font-weight:500; flex:1;">${p.itemName || '—'}</span>
-      <span class="cat-badge ${catClass}" style="font-size:11px; padding:2px 6px; border-radius:99px; margin-right:8px;">${p.category || '—'}</span>
-      <button onclick="openPolicyModal('${p.id}')" style="padding:4px 12px; font-size:12px; border:1px solid #ddd; border-radius:6px; background:#fff; cursor:pointer;">設定</button>
-    </div>
+    // 2. 解析生存與滿期金受益人資料
+    let lStr = "未設定";
+    if (p.beneficiaryLiveType === "self") lStr = "被保險人本人";
+    else if (p.beneficiaryLiveType === "owner") lStr = "要保人";
+    else if (p.beneficiaryLiveType === "other") lStr = p.beneficiaryLiveOther || "指定其他";
+    else if (p.beneficiaryLiveType === "none" || !p.beneficiaryLiveType) lStr = "無";
 
-    <div style="background:#F5FAFF; padding:8px 14px; border-bottom:1px solid #E6F1FB; display:flex; align-items:center;">
-      <span style="font-size:12px; color:#555;">🎯 當年度保額：</span>
-      <span style="font-size:15px; font-weight:600; color:#0C447C; margin-left:6px; font-family:monospace;">${amountText}</span>
-    </div>
+    let mStr = "未設定";
+    if (p.beneficiaryMaturityType === "self") mStr = "被保險人本人";
+    else if (p.beneficiaryMaturityType === "owner") mStr = "要保人";
+    else if (p.beneficiaryMaturityType === "other") mStr = p.beneficiaryMaturityOther || "指定其他";
+    else if (p.beneficiaryMaturityType === "none" || !p.beneficiaryMaturityType) mStr = "無";
 
-    <div class="card-body" style="display:flex; gap:16px; padding:12px 14px;">
-      <div style="flex:1;">
-        <div style="font-size:11px; color:#888; margin-bottom:4px;">受益人 (身故)</div>
-        <div style="font-size:13px; color:${dStr==='未設定'?'#ccc':'#333'}; line-height:1.5;">${dStr}</div>
+    if (p.category==="年金險" || p.category==="投資型保險" || BENEF_RULES[p.category]?.live === "鎖定本人") {
+       lStr = '<span class="locked-tag">被保險人本人</span>';
+    }
+
+    // 3. 實務邏輯判斷：隱藏無生存/滿期金的項目，有設定才獨立顯示
+    let liveMatHtml = "";
+    if (BENEF_RULES[p.category]?.live === "可設定") {
+        if (lStr === "無" && mStr === "無") {
+            liveMatHtml = `
+            <div style="flex:1;">
+              <div style="font-size:11px; color:#888; margin-bottom:4px;">生存 / 滿期金</div>
+              <div style="font-size:13px; color:#ccc; line-height:1.5;">無 / 不適用</div>
+            </div>`;
+        } else {
+            if (lStr !== "無") {
+                liveMatHtml += `
+                <div style="flex:1;">
+                  <div style="font-size:11px; color:#888; margin-bottom:4px;">生存金受益人</div>
+                  <div style="font-size:13px; color:#333; line-height:1.5;">${lStr}</div>
+                </div>`;
+            }
+            if (mStr !== "無") {
+                liveMatHtml += `
+                <div style="flex:1;">
+                  <div style="font-size:11px; color:#888; margin-bottom:4px;">滿期金受益人</div>
+                  <div style="font-size:13px; color:#333; line-height:1.5;">${mStr}</div>
+                </div>`;
+            }
+        }
+    } else {
+        liveMatHtml = `
+        <div style="flex:1;">
+          <div style="font-size:11px; color:#888; margin-bottom:4px;">生存金受益人</div>
+          <div style="font-size:13px; color:#333; line-height:1.5;">${lStr}</div>
+        </div>`;
+    }
+
+    // 渲染 HTML 卡片
+    html += `<div class="policy-card" style="background:#fff; border:1px solid #e8e8e8; border-radius:10px; margin-bottom:12px; overflow:hidden;">
+      
+      <div class="card-header" style="display:flex; align-items:center; padding:12px 14px; border-bottom:1px solid #f0f0f0;">
+        <span style="font-family:monospace; font-size:11px; background:#E6F1FB; color:#0C447C; padding:1px 7px; border-radius:99px; margin-right:8px;">${p.policyNo || p.id}</span>
+        <span style="font-size:14px; font-weight:500; flex:1;">${p.itemName || '—'}</span>
+        <span class="cat-badge ${catClass}" style="font-size:11px; padding:2px 6px; border-radius:99px; margin-right:8px;">${p.category || '—'}</span>
+        <button onclick="openPolicyModal('${p.id}')" style="padding:4px 12px; font-size:12px; border:1px solid #ddd; border-radius:6px; background:#fff; cursor:pointer;">設定</button>
       </div>
-      ${liveMatHtml}
-    </div>
-  </div>`;
-  document.getElementById("policy-view").innerHTML = html;
-}
 
+      <div style="background:#F5FAFF; padding:8px 14px; border-bottom:1px solid #E6F1FB; display:flex; align-items:center;">
+        <span style="font-size:12px; color:#555;">🎯 當年度保額：</span>
+        <span style="font-size:15px; font-weight:600; color:#0C447C; margin-left:6px; font-family:monospace;">${amountText}</span>
+      </div>
+
+      <div class="card-body" style="display:flex; gap:16px; padding:12px 14px;">
+        <div style="flex:1;">
+          <div style="font-size:11px; color:#888; margin-bottom:4px;">受益人 (身故)</div>
+          <div style="font-size:13px; color:${dStr==='未設定'?'#ccc':'#333'}; line-height:1.5;">${dStr}</div>
+        </div>
+        ${liveMatHtml}
+      </div>
+    </div>`;
+  });
+
+  document.getElementById("policy-list").innerHTML = html;
+}
 // ── 模板 Modal ────────────────────────────────────────────
 function openTplModal(tplId) {
   const person = personDataMap[currentPersonId];
