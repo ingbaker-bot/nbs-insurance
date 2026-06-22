@@ -37,6 +37,7 @@
     .cat-badge { font-size:10px; padding:1px 6px; border-radius:99px; margin-left:6px; }
     .cat-儲蓄險 { background:#FBEAF0; color:#72243E; }
     .cat-年金險 { background:#FCEBEB; color:#791F1F; }
+    .cat-投資型保險 { background:#f0f0f0; color:#555; }
     .card-name { font-size:14px; font-weight:500; margin:4px 0 2px; }
     .card-meta { font-size:11px; color:#aaa; }
 
@@ -130,6 +131,7 @@ const TYPES = [
   { key:"2", title:"期間領＋期滿整筆",desc:"定期生存金＋期滿整筆" },
   { key:"3", title:"期間不領＋期滿領",desc:"期滿後每年持續領回" },
   { key:"4", title:"期間領＋期滿領",  desc:"定期生存金＋期滿後繼續領" },
+  { key:"5", title:"月領 / 月配息",    desc:"每月領回生存金或配息" },
   { key:"custom", title:"自訂",       desc:"手動設定每一筆領回" },
 ];
 
@@ -214,7 +216,8 @@ function renderContent() {
   document.getElementById("loading").style.display="none";
   document.getElementById("content").style.display="block";
   const person = personDataMap[currentPersonId];
-  const policies = (person?.policies||[]).filter(p=>p.category==="儲蓄險"||p.category==="年金險"||p.category==="儲蓄年金");
+  // ▼ 加入 "投資型保險" 到過濾條件中
+  const policies = (person?.policies||[]).filter(p=>["儲蓄險","年金險","儲蓄年金","投資型保險"].includes(p.category));
   if (!policies.length) {
     document.getElementById("content").innerHTML='<div class="empty-state">此成員尚無儲蓄險或年金險保單<br/>請先至「保險繳費」頁面新增保單</div>';
     return;
@@ -377,6 +380,29 @@ function renderFields(policy, s) {
       </div>
     </div>`;
 
+  if (t==="5") return `
+    <div class="fields-grid">
+      <div class="field">
+        <label>每月領回 / 配息（元）</label>
+        <div class="input-unit">
+          <input type="number" id="monthlyAmt_${policy.id}" value="${s.monthlyAmount||''}" placeholder="如 5000"
+            onblur="applyAndRefreshTable('${policy.id}')" />
+          <span class="unit">元/月</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>起始年（民國）</label>
+        <input type="number" id="perStart_${policy.id}" value="${s.periodStartYear||''}" placeholder="如 115"
+          onblur="applyAndRefreshTable('${policy.id}')" />
+      </div>
+      <div class="field">
+        <label>顯示幾年</label>
+        <select id="displayYears_${policy.id}" onchange="applyAndRefreshTable('${policy.id}')">
+          ${[10,15,20,25,30].map(n=>`<option value="${n}" ${(s.displayYears||20)==n?'selected':''}>${n} 年</option>`).join('')}
+        </select>
+      </div>
+    </div>`;
+
   // 自訂
   const rows = s.customRows||[];
   return `
@@ -520,6 +546,16 @@ function renderTable(policy, s) {
       }
     }
   }
+  else if (t==="5") {
+    // 月領 / 月配息 (自動 x12 換算年化)
+    if (s.periodStartYear && s.monthlyAmount) {
+      const annualAmount = s.monthlyAmount * 12;
+      for (let i=0; i<dispYears; i++) {
+        const y = s.periodStartYear + i;
+        yearMap[y] = (yearMap[y]||0) + annualAmount;
+      }
+    }
+  }
 
   if (!Object.keys(yearMap).length) return `<div style="font-size:12px;color:#bbb;padding:8px 0">請填寫上方欄位後自動計算</div>`;
 
@@ -532,9 +568,17 @@ function renderTable(policy, s) {
   let html = `<div class="table-title">領回明細　共 ${count} 次　合計 NT$${total.toLocaleString()}</div>
     <table class="return-table"><thead><tr><th>民國年</th><th>領回金額</th></tr></thead><tbody>`;
 
+  // ▼ 替換產生表格內容的這幾行：
   for (let y=minY; y<=maxY; y++) {
     const amt = yearMap[y]||0;
-    html += `<tr><td>${y}年</td><td class="${amt>0?'has-return':'no-return'}">${amt>0?'NT$'+amt.toLocaleString():'—'}</td></tr>`;
+    let tdHtml = amt > 0 ? 'NT$' + amt.toLocaleString() : '—';
+    
+    // 如果是月配息，在表格中多加一行淺色小字註明月領金額
+    if (t === "5" && s.monthlyAmount && amt > 0) {
+      tdHtml += `<div style="font-size:10px; color:#aaa; margin-top:2px; font-weight:normal;">(${s.monthlyAmount.toLocaleString()} / 月)</div>`;
+    }
+    
+    html += `<tr><td>${y}年</td><td class="${amt>0?'has-return':'no-return'}">${tdHtml}</td></tr>`;
   }
   html += `<tr class="total-row"><td>合計</td><td>NT$${total.toLocaleString()}</td></tr>`;
   html += `</tbody></table>`;
