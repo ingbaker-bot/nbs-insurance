@@ -387,7 +387,22 @@ function renderTplView() {
 // ── 保單套用頁 ────────────────────────────────────────────
 function renderPolicyView() {
   const person = personDataMap[currentPersonId];
-  const policies = person?.policies || [];
+  // 1. 取得所有保單
+const allPolicies = person?.policies || [];
+
+// 2. 定義具有「身故/滿期/生存給付」意義，需要討論受益人的險種
+const targetCategories = [
+  "壽險保障", 
+  "儲蓄險", 
+  "年金險", 
+  "投資型保險", 
+  "重大疾病險", 
+  "重大傷病險", 
+  "特定傷病險"
+];
+
+// 3. 過濾出符合條件的保單
+const policies = allPolicies.filter(p => targetCategories.includes(p.category));
   const templates = person?.beneficiaryTemplates || [];
 
   if (!policies.length) {
@@ -397,87 +412,39 @@ function renderPolicyView() {
 
   let html = `<div style="font-size:11px;color:#999;margin-bottom:10px">為每筆保單設定受益人，灰色鎖定項目依法令規定無法更改。</div>`;
 
-  policies.forEach(p => {
-    const rule = BENEF_RULES[p.category] || { death:"可設定", live:"可設定" };
-    const isRider = p.isRider || false;
+ let html = "";
+policies.forEach(p => {
+  // ▼ 1. 新增這行：組合保額與單位（如果沒填則顯示 '—'）
+  const amountText = p.insuredAmount ? `${p.insuredAmount} ${p.insuredAmountUnit || '萬元'}` : '—';
+  const catClass = "cat-" + (p.category||"");
 
-    // 判斷是否全部鎖定被保險人本人
-    const allLocked = rule.death==="鎖定本人" && rule.live==="鎖定本人";
+  // 這是您原本的卡片外框
+  html += `<div class="policy-card" style="background:#fff; border:1px solid #e8e8e8; border-radius:10px; margin-bottom:12px; overflow:hidden;">
+    
+    <div class="card-header" style="display:flex; align-items:center; padding:12px 14px; border-bottom:1px solid #f0f0f0;">
+      <span style="font-family:monospace; font-size:11px; background:#E6F1FB; color:#0C447C; padding:1px 7px; border-radius:99px; margin-right:8px;">${p.policyNo || p.id}</span>
+      <span style="font-size:14px; font-weight:500; flex:1;">${p.itemName || '—'}</span>
+      <span class="cat-badge ${catClass}" style="font-size:11px; padding:2px 6px; border-radius:99px; margin-right:8px;">${p.category || '—'}</span>
+      <button onclick="openSetting('${p.id}')" style="padding:4px 12px; font-size:12px; border:1px solid #ddd; border-radius:6px; background:#fff; cursor:pointer;">設定</button>
+    </div>
 
-    // 身故受益人顯示
-    let deathDisplay = "";
-    if (isRider) {
-      deathDisplay = `<span class="rider-tag">📎 同主約（${p.policyNo}）</span>`;
-    } else if (rule.death==="鎖定本人") {
-      deathDisplay = null; // 全鎖定時不單獨顯示
-    } else if (rule.death==="年金險") {
-      deathDisplay = `<span class="locked-tag legal">繳費期：法定繼承人</span>`;
-    } else if (p.beneficiaryDeathTplId) {
-      const t = templates.find(t=>t.id===p.beneficiaryDeathTplId);
-      deathDisplay = t ? `<span class="benef-tag">${t.name}</span>` : `<span style="color:#ccc;font-size:11px">模板已刪除</span>`;
-    } else if (p.beneficiaryDeathCustom?.length) {
-      deathDisplay = p.beneficiaryDeathCustom.map(i=>`<span class="benef-tag">${i.customName||getMemberName(i.personId)}</span>`).join("");
-    } else {
-      deathDisplay = `<span style="color:#ccc;font-size:11px">未設定</span>`;
-    }
+    <div style="background:#F5FAFF; padding:8px 14px; border-bottom:1px solid #E6F1FB; display:flex; align-items:center;">
+      <span style="font-size:12px; color:#555;">🎯 當年度保額：</span>
+      <span style="font-size:15px; font-weight:600; color:#0C447C; margin-left:6px; font-family:monospace;">${amountText}</span>
+    </div>
 
-    // 生存金顯示
-    let liveDisplay = "";
-    if (rule.live==="鎖定本人") {
-      liveDisplay = null; // 全鎖定時不單獨顯示
-    } else if (rule.live==="不適用") {
-      liveDisplay = null;
-    } else if (p.beneficiaryLiveType==="self") {
-      liveDisplay = `<span class="locked-tag">被保險人本人</span>`;
-    } else if (p.beneficiaryLiveType==="owner") {
-      liveDisplay = `<span class="rider-tag">要保人</span>`;
-    } else if (p.beneficiaryLiveType==="other" && p.beneficiaryLiveOther) {
-      liveDisplay = `<span class="benef-tag">${p.beneficiaryLiveOther}</span>`;
-    } else {
-      liveDisplay = `<span style="color:#ccc;font-size:11px">未設定</span>`;
-    }
-
-    if (allLocked) {
-      // 全鎖定：只顯示一行「受益人：被保險人本人（法規規定）」
-      html += `<div class="policy-benef-card">
-        <div class="policy-benef-header">
-          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-            <span class="policy-no">${p.policyNo||p.id}</span>
-            <span class="policy-name">${p.itemName||'—'}</span>
-            <span class="cat-badge cat-${p.category||''}">${p.category||''}</span>
-          </div>
-        </div>
-        <div style="font-size:12px;color:#888;padding:2px 0">
-          受益人：<span style="background:#EAF3DE;color:#27500A;padding:2px 8px;border-radius:99px;font-size:11px">被保險人本人（法規規定）</span>
-        </div>
-      </div>`;
-    } else {
-      // 可設定：顯示身故/生存金欄位
-      html += `<div class="policy-benef-card">
-        <div class="policy-benef-header">
-          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-            <span class="policy-no">${p.policyNo||p.id}</span>
-            <span class="policy-name">${p.itemName||'—'}</span>
-            <span class="cat-badge cat-${p.category||''}">${p.category||''}</span>
-            ${isRider?'<span style="font-size:10px;padding:1px 6px;border-radius:99px;background:#FAEEDA;color:#633806">附約</span>':''}
-          </div>
-          <button class="set-btn" onclick="openPolicyModal('${p.id}')">設定</button>
-        </div>
-        <div class="benef-row">
-          ${deathDisplay!==null?`
-          <div class="benef-cell">
-            <div class="benef-cell-label">受益人（身故）</div>
-            <div style="font-size:12px">${deathDisplay}</div>
-          </div>`:''}
-          ${liveDisplay!==null?`
-          <div class="benef-cell">
-            <div class="benef-cell-label">${rule.liveLabel||'生存金受益人'}</div>
-            <div style="font-size:12px">${liveDisplay}</div>
-          </div>`:''}
-        </div>
-      </div>`;
-    }
-  });
+    <div class="card-body" style="display:flex; gap:16px; padding:12px 14px;">
+      <div style="flex:1;">
+        <div style="font-size:11px; color:#888; margin-bottom:4px;">受益人 (身故)</div>
+        <div style="font-size:13px; color:#ccc;">未設定</div>
+      </div>
+      <div style="flex:1;">
+        <div style="font-size:11px; color:#888; margin-bottom:4px;">生存/滿期金受益人</div>
+        <div style="font-size:13px; color:#ccc;">未設定</div>
+      </div>
+    </div>
+  </div>`;
+});
 
   document.getElementById("policy-view").innerHTML = html;
 }
