@@ -552,13 +552,11 @@ function setVal(key,val,policyId){
 function markDirty(){ dirty=true; }
 
 // ── 收集所有輸入值 ────────────────────────────────────────
+// ── 收集所有輸入值 ────────────────────────────────────────
 function collectValues(){
   const person=personDataMap[currentPersonId];
   if(!person||!currentPolicyId) return;
-  
-  // ▼ 這裡的 policyId 要改成「全域變數 currentPolicyId」
   const policy = person?.policies?.find(p=>p.id===currentPolicyId) || person?.savings?.find(p=>p.id===currentPolicyId);
-  
   if(!policy) return;
   if(!policy.coverage) policy.coverage={};
   const cov=policy.coverage;
@@ -567,15 +565,20 @@ function collectValues(){
   document.querySelectorAll("[id^='cov_']").forEach(el=>{
     const key=el.id.replace("cov_","");
     if(el.type==="checkbox") cov[key]=el.checked;
-    else if(el.value!==""){
-      const v=parseFloat(el.value);
-      cov[key]=isNaN(v)?el.value:v;
+    else {
+      // ▼ 修正：如果使用者把欄位清空，就確實把該筆資料刪除
+      if (el.value === "") {
+        delete cov[key];
+      } else {
+        const v=parseFloat(el.value);
+        cov[key]=isNaN(v)?el.value:v;
+      }
     }
   });
 }
+
 // ── 儲存 ─────────────────────────────────────────────────
 async function saveCoverage(isAutoSave = false) { 
-  // 1. 確保最新輸入已被收集
   collectValues();
   
   const btn = document.getElementById("save-btn");
@@ -591,7 +594,6 @@ async function saveCoverage(isAutoSave = false) {
   const member = familyData.members.find(m => m.personId === currentPersonId);
 
   try {
-    // 執行真實的 GAS 儲存 API
     await callGAS("saveFile", {
       email: currentUser.email,
       fileType: "person",
@@ -600,6 +602,10 @@ async function saveCoverage(isAutoSave = false) {
       content: person
     });
 
+    // ▼ 關鍵修復：每次存檔後，強制清除瀏覽器的舊暫存！
+    // 這樣切換到保單彙總時，系統就會重新去雲端抓最新資料
+    sessionStorage.clear(); 
+
     dirty = false;
     const hint = document.getElementById("saved-hint");
     if (hint) {
@@ -607,10 +613,8 @@ async function saveCoverage(isAutoSave = false) {
       setTimeout(() => hint.style.display = "none", 2000);
     }
 
-    // 只有「手動點擊儲存」時，才重新繪製畫面。自動儲存則跳過，避免砍掉使用者的輸入
     if (!isAutoSave) {
       if (viewMode === "edit") {
-        // ▼ 這裡的 policyId 也要改成「全域變數 currentPolicyId」
         const policy = person?.policies?.find(p=>p.id===currentPolicyId) || person?.savings?.find(p=>p.id===currentPolicyId);
         if (policy) renderEdit(policy);
       }
@@ -621,11 +625,10 @@ async function saveCoverage(isAutoSave = false) {
     if(btn) {
       btn.disabled = false; 
       btn.textContent = "儲存"; 
-      btn.style.backgroundColor = ""; // 恢復預設藍色
+      btn.style.backgroundColor = ""; 
     }
   }
-}
-function goBack() {
+}function goBack() {
   // 如果自動儲存的計時器還在跑（代表有剛剛輸入但還沒存的資料）
   if (autoSaveTimer) {
     clearTimeout(autoSaveTimer); // 停下計時器
