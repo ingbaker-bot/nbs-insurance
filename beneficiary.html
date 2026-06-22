@@ -413,18 +413,54 @@ const policies = allPolicies.filter(p => targetCategories.includes(p.category));
   let html = `<div style="font-size:11px;color:#999;margin-bottom:10px">為每筆保單設定受益人，灰色鎖定項目依法令規定無法更改。</div>`;
 
 policies.forEach(p => {
-  // ▼ 1. 新增這行：組合保額與單位（如果沒填則顯示 '—'）
   const amountText = p.insuredAmount ? `${p.insuredAmount} ${p.insuredAmountUnit || '萬元'}` : '—';
   const catClass = "cat-" + (p.category||"");
 
-  // 這是您原本的卡片外框
+  // 1. 解析身故受益人資料 (將資料庫轉為文字)
+  let dStr = "未設定";
+  if (p.isRider) {
+    dStr = '<span class="locked-tag">同主約</span>';
+  } else if (p.beneficiaryDeathTplId) {
+    const t = templates.find(x=>x.id===p.beneficiaryDeathTplId);
+    if (t) {
+       if (t.mode === "rank") {
+           // 處理多個順位的排版
+           const ranks = [...new Set((t.items||[]).map(i=>i.rank))].sort();
+           dStr = ranks.map(r => `<div style="margin-bottom:3px"><span style="color:#aaa;font-size:10px">順位${r}：</span>` + t.items.filter(i=>i.rank===r).map(i=>i.customName || getMemberName(i.personId)).join("、") + `</div>`).join("");
+       } else if (t.mode === "ratio") {
+           dStr = (t.items||[]).map(i=> `${i.customName || getMemberName(i.personId)}(${i.ratio}%)`).join("、");
+       } else {
+           dStr = (t.items||[]).map(i=> i.customName || getMemberName(i.personId)).join("、") + " (均分)";
+       }
+    }
+  } else if (p.beneficiaryDeathCustom && p.beneficiaryDeathCustom.length>0) {
+    dStr = p.beneficiaryDeathCustom.map(c=>c.customName || getMemberName(c.personId)).join("、");
+  } else if (BENEF_RULES[p.category]?.death === "鎖定本人") {
+    dStr = '<span class="locked-tag">被保險人本人</span>';
+  }
+
+  // 2. 解析生存/滿期金受益人資料
+  let lStr = "未設定";
+  if (p.beneficiaryLiveType === "self") lStr = "被保險人本人";
+  else if (p.beneficiaryLiveType === "owner") lStr = "要保人";
+  else if (p.beneficiaryLiveType === "other") lStr = p.beneficiaryLiveOther || "指定其他";
+  
+  if (p.category==="年金險" || p.category==="投資型保險" || BENEF_RULES[p.category]?.live === "鎖定本人") {
+     lStr = '<span class="locked-tag">被保險人本人</span>';
+  }
+
+  // 3. 實務邏輯判斷：隱藏傳統壽險的生存金、變更儲蓄險標題
+  const hideLive = (p.category === '壽險保障' && lStr === '未設定');
+  const liveLabel = p.category === '儲蓄險' ? '生存 / 滿期金受益人' : '生存金受益人';
+
+  // 渲染 HTML 卡片
   html += `<div class="policy-card" style="background:#fff; border:1px solid #e8e8e8; border-radius:10px; margin-bottom:12px; overflow:hidden;">
     
     <div class="card-header" style="display:flex; align-items:center; padding:12px 14px; border-bottom:1px solid #f0f0f0;">
       <span style="font-family:monospace; font-size:11px; background:#E6F1FB; color:#0C447C; padding:1px 7px; border-radius:99px; margin-right:8px;">${p.policyNo || p.id}</span>
       <span style="font-size:14px; font-weight:500; flex:1;">${p.itemName || '—'}</span>
       <span class="cat-badge ${catClass}" style="font-size:11px; padding:2px 6px; border-radius:99px; margin-right:8px;">${p.category || '—'}</span>
-     <button onclick="openPolicyModal('${p.id}')" style="padding:4px 12px; font-size:12px; border:1px solid #ddd; border-radius:6px; background:#fff; cursor:pointer;">設定</button>
+      <button onclick="openPolicyModal('${p.id}')" style="padding:4px 12px; font-size:12px; border:1px solid #ddd; border-radius:6px; background:#fff; cursor:pointer;">設定</button>
     </div>
 
     <div style="background:#F5FAFF; padding:8px 14px; border-bottom:1px solid #E6F1FB; display:flex; align-items:center;">
@@ -435,16 +471,17 @@ policies.forEach(p => {
     <div class="card-body" style="display:flex; gap:16px; padding:12px 14px;">
       <div style="flex:1;">
         <div style="font-size:11px; color:#888; margin-bottom:4px;">受益人 (身故)</div>
-        <div style="font-size:13px; color:#ccc;">未設定</div>
+        <div style="font-size:13px; color:${dStr==='未設定'?'#ccc':'#333'}; line-height:1.5;">${dStr}</div>
       </div>
+      ${hideLive ? '' : `
       <div style="flex:1;">
-        <div style="font-size:11px; color:#888; margin-bottom:4px;">生存/滿期金受益人</div>
-        <div style="font-size:13px; color:#ccc;">未設定</div>
+        <div style="font-size:11px; color:#888; margin-bottom:4px;">${liveLabel}</div>
+        <div style="font-size:13px; color:${lStr==='未設定'?'#ccc':'#333'}; line-height:1.5;">${lStr}</div>
       </div>
+      `}
     </div>
   </div>`;
 });
-
   document.getElementById("policy-view").innerHTML = html;
 }
 
@@ -753,7 +790,8 @@ function renderBenefSetAreaWithMode(type, policy, templates, mode) {
              ${(!familyData||!familyData.members||!familyData.members.length)?'<span style="font-size:12px;color:#bbb">載入中…</span>':''}
              <button onclick="clearCustomBenef('${type}')"
                style="font-size:12px;padding:4px 10px;border:1px solid #fcc;border-radius:99px;background:#fff;cursor:pointer;color:#e74c3c;font-family:inherit">清除</button>
-           </div>`
+           </div>
+           <div style="font-size:11px; color:#999; margin-top:10px; line-height:1.4;">💡 提示：若需設定「多個順位」或「分配比例」，請點擊左方【套用模板】進行設定。</div>`
       }
     </div>`;
 }
