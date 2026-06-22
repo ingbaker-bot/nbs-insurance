@@ -119,7 +119,12 @@ const BLOCKS=[
   {key:"savings", label:"儲蓄險領回明細",icon:"🐷",desc:"各保單領回時間表與總領回金額"},
   {key:"monthly", label:"每月應繳保費",  icon:"📅",desc:"月曆式繳費分配"},
   {key:"policy",  label:"保險繳費一覽",  icon:"📋",desc:"所有保單號碼、繳費方式、保費明細"},
+  // ▼ 新增這行：第七個匯出區塊
+  {key:"beneficiary", label:"受益人與傳承", icon:"👥",desc:"傳承規劃與保額對應關係"}, 
 ];
+
+// ▼ 將 beneficiary:true 加入預設勾選清單中
+var sel={summary:true,timeline:true,coverage:true,savings:false,monthly:false,policy:false,beneficiary:true};
 const FMTS=[
   {key:"png_single",  type:"png",label:"PNG 一張長圖",desc:"所有區塊合併，適合 LINE 傳送"},
   {key:"png_multiple",type:"png",label:"PNG 分張",    desc:"每個區塊各自一張"},
@@ -413,6 +418,74 @@ function renderBlock(key){
       '</div>';
     }).join("");
     return'<div style="padding:10px 12px">'+colHeader+groupHtml+'<div style="font-size:11px;font-weight:500;color:#27500A;text-align:right;padding-top:5px;border-top:1px solid #e8e8e8;margin-top:3px">年繳總計 NT$'+tt.toLocaleString()+'</div></div>';
+  }
+
+// ── 匯出模塊：受益人與傳承 ─────────────────────────────────────
+  if(key==="beneficiary"){
+    // 1. 篩選出具有傳承與生存金意義的險種
+    var targetCats = ["壽險保障", "儲蓄險", "年金險", "投資型保險", "重大疾病險", "重大傷病險", "特定傷病險"];
+    var bp = policies.filter(function(p){ return targetCats.indexOf(p.category)>=0; });
+    
+    if(bp.length===0) return '<div style="padding:12px;color:#aaa;font-size:12px">尚無具傳承性質之保單</div>';
+
+    // 取得成員名稱的輔助函數
+    function getMemName(id){
+      if(!id) return "—";
+      var m = (familyData&&familyData.members)?familyData.members.find(function(x){return x.personId===id;}):null;
+      return m?m.name:id;
+    }
+
+    var html = '<div style="padding:10px 12px">';
+    html += '<div style="font-size:11px;color:#666;margin-bottom:12px;line-height:1.6">💡 保單檢視的核心精神：釐清每一筆準備好的額度，在未來將代替我們照顧誰。</div>';
+    
+    bp.forEach(function(p){
+      var amtText = p.insuredAmount ? p.insuredAmount + " " + (p.insuredAmountUnit || '萬元') : '—';
+      
+      // 解析身故受益人
+      var dStr = "未設定";
+      if(p.isRider) {
+        dStr = "同主約";
+      } else if(p.beneficiaryDeathTplId) {
+        var t = (person.beneficiaryTemplates||[]).find(function(x){return x.id===p.beneficiaryDeathTplId;});
+        if(t) dStr = '<span style="color:#0C447C;font-weight:600">['+t.name+']</span>';
+      } else if(p.beneficiaryDeathCustom && p.beneficiaryDeathCustom.length>0) {
+        dStr = p.beneficiaryDeathCustom.map(function(c){ return (c.customName || getMemName(c.personId)); }).join("、");
+      }
+      
+      // 解析生存金受益人
+      var lStr = "未設定";
+      if(p.beneficiaryLiveType === "self") lStr = "被保險人本人";
+      else if(p.beneficiaryLiveType === "owner") lStr = "要保人";
+      else if(p.beneficiaryLiveType === "other") lStr = p.beneficiaryLiveOther || "指定其他";
+      if(p.category==="年金險") lStr = "不適用";
+      if(p.category==="投資型保險") lStr = "鎖定本人";
+
+      var cc = CC[p.category] || "#999";
+      
+      // 組合出精美的報表卡片
+      html += '<div style="background:#fff; border:1px solid #e8e8e8; border-radius:8px; margin-bottom:10px; overflow:hidden;">' +
+        '<div style="padding:8px 12px; border-bottom:1px solid #f0f0f0; display:flex; align-items:center;">' +
+          '<span style="font-size:10px; padding:2px 6px; border-radius:99px; background:'+cc+'20; color:'+cc+'; margin-right:8px;">' + (p.category||'—') + '</span>' +
+          '<span style="font-size:13px; font-weight:500; color:#333;">' + (p.itemName||p.policyNo) + '</span>' +
+        '</div>' +
+        '<div style="background:#F5FAFF; padding:8px 12px; border-bottom:1px solid #E6F1FB; display:flex; align-items:center;">' +
+          '<span style="font-size:11px; color:#555;">🎯 當年度保額：</span>' +
+          '<span style="font-size:15px; font-weight:600; color:#0C447C; margin-left:6px; font-family:monospace;">' + amtText + '</span>' +
+        '</div>' +
+        '<div style="display:flex; gap:10px; padding:10px 12px;">' +
+          '<div style="flex:1;">' +
+            '<div style="font-size:10px; color:#888; margin-bottom:4px;">身故受益人 (留愛)</div>' +
+            '<div style="font-size:13px; color:'+(dStr==='未設定'?'#ccc':'#333')+'; font-weight:500;">' + dStr + '</div>' +
+          '</div>' +
+          '<div style="flex:1;">' +
+            '<div style="font-size:10px; color:#888; margin-bottom:4px;">生存/滿期金 (照顧自己)</div>' +
+            '<div style="font-size:13px; color:'+(lStr==='未設定'?'#ccc':'#333')+'; font-weight:500;">' + lStr + '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    });
+    html += '</div>';
+    return html;
   }
 
   return'<div style="padding:12px;color:#aaa;font-size:12px">建置中</div>';
