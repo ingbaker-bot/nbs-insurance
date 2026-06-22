@@ -71,8 +71,16 @@
       .coverage-grid { grid-template-columns: repeat(2, 1fr); }
     }
     /* 電腦螢幕 (大於 1024px) 變 3 欄，並讓卡片各自獨立高度 */
+    /* 電腦螢幕 (大於 1024px) 變 3 欄，並啟用跨列排版魔法 */
     @media (min-width: 1024px) {
       .coverage-grid { grid-template-columns: repeat(3, 1fr); align-items: start; }
+      
+      /* 讓左右兩側較長的卡片跨越兩列，迫使中間空出完美的專屬空位 */
+      .card-日額型住院 { grid-row: span 2; }
+      .card-癌症醫療   { grid-row: span 2; }
+      
+      /* 強制將「失能長照」擠入第 2 欄（剛好無縫接軌在定額手術正下方） */
+      .card-失能長照   { grid-column: 2; }
     }
 
     /* 獨立保障卡片 */
@@ -445,7 +453,11 @@ function renderContent() {
   html += `<div class="coverage-grid">`;
 
   COVERAGE_GROUPS.forEach((g) => {
-    html += `<div class="coverage-card" style="border-top: 3px solid ${g.color};">
+    // 產生專屬 Class，移除名稱中的空白與括號（例如：card-癌症醫療）
+    const safeClass = "card-" + g.label.replace(/[\s\(\)（）]/g, '');
+    
+    // ▼ 將 safeClass 加入到 coverage-card 旁邊
+    html += `<div class="coverage-card ${safeClass}" style="border-top: 3px solid ${g.color};">
       <div class="cov-group-header" style="background:${g.color}0D">
         <span class="cov-group-label" style="color:${g.color}">${g.label}</span>
       </div>
