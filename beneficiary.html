@@ -76,9 +76,9 @@
     .set-btn { font-size:12px; padding:3px 10px; border:1px solid #ddd; border-radius:5px; background:transparent; cursor:pointer; color:#666; font-family:inherit; }
 
     /* Modal */
-    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:200; align-items:flex-end; justify-content:center; }
+    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:200; align-items:center; justify-content:center; }
     .modal-overlay.active { display:flex; }
-    .modal { background:#fff; border-radius:16px 16px 0 0; padding:20px; width:100%; max-width:560px; max-height:90vh; overflow-y:auto; }
+    .modal { background:#fff; border-radius:16px; padding:20px; width:100%; max-width:560px; max-height:90vh; overflow-y:auto; }
     .modal-title { font-size:15px; font-weight:600; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; }
     .modal-close { background:none; border:none; font-size:22px; color:#999; cursor:pointer; line-height:1; }
 
@@ -124,8 +124,8 @@
     .btn-secondary { flex:1; padding:10px; background:transparent; color:#666; border:1px solid #e0e0e0; border-radius:8px; font-size:13px; cursor:pointer; font-family:inherit; }
     .btn-danger { padding:10px 12px; background:transparent; color:#e74c3c; border:1px solid #fcc; border-radius:8px; font-size:12px; cursor:pointer; font-family:inherit; }
 
-    /* 生存金三選項 */
-    .live-opts { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:8px; }
+     /* 生存金/滿期金四選項網格 */
+    .live-opts { display:grid; grid-template-columns:repeat(2,1fr); gap:6px; margin-bottom:8px; }
     .live-opt { padding:8px; border:1px solid #e0e0e0; border-radius:7px; cursor:pointer; text-align:center; background:#fff; font-family:inherit; font-size:12px; }
     .live-opt.active { border-color:#378ADD; background:#E6F1FB; color:#0C447C; font-weight:500; }
 
@@ -439,19 +439,55 @@ policies.forEach(p => {
     dStr = '<span class="locked-tag">被保險人本人</span>';
   }
 
-  // 2. 解析生存/滿期金受益人資料
+  // 2. 解析生存與滿期金受益人資料
   let lStr = "未設定";
   if (p.beneficiaryLiveType === "self") lStr = "被保險人本人";
   else if (p.beneficiaryLiveType === "owner") lStr = "要保人";
   else if (p.beneficiaryLiveType === "other") lStr = p.beneficiaryLiveOther || "指定其他";
-  
+  else if (p.beneficiaryLiveType === "none" || !p.beneficiaryLiveType) lStr = "無";
+
+  let mStr = "未設定";
+  if (p.beneficiaryMaturityType === "self") mStr = "被保險人本人";
+  else if (p.beneficiaryMaturityType === "owner") mStr = "要保人";
+  else if (p.beneficiaryMaturityType === "other") mStr = p.beneficiaryMaturityOther || "指定其他";
+  else if (p.beneficiaryMaturityType === "none" || !p.beneficiaryMaturityType) mStr = "無";
+
   if (p.category==="年金險" || p.category==="投資型保險" || BENEF_RULES[p.category]?.live === "鎖定本人") {
      lStr = '<span class="locked-tag">被保險人本人</span>';
   }
 
-  // 3. 實務邏輯判斷：隱藏傳統壽險的生存金、變更儲蓄險標題
-  const hideLive = (p.category === '壽險保障' && lStr === '未設定');
-  const liveLabel = p.category === '儲蓄險' ? '生存 / 滿期金受益人' : '生存金受益人';
+  // 3. 實務邏輯判斷：隱藏無生存/滿期金的項目，有設定才獨立顯示
+  let liveMatHtml = "";
+  if (BENEF_RULES[p.category]?.live === "可設定") {
+      if (lStr === "無" && mStr === "無") {
+          liveMatHtml = `
+          <div style="flex:1;">
+            <div style="font-size:11px; color:#888; margin-bottom:4px;">生存 / 滿期金</div>
+            <div style="font-size:13px; color:#ccc; line-height:1.5;">無 / 不適用</div>
+          </div>`;
+      } else {
+          if (lStr !== "無") {
+              liveMatHtml += `
+              <div style="flex:1;">
+                <div style="font-size:11px; color:#888; margin-bottom:4px;">生存金受益人</div>
+                <div style="font-size:13px; color:#333; line-height:1.5;">${lStr}</div>
+              </div>`;
+          }
+          if (mStr !== "無") {
+              liveMatHtml += `
+              <div style="flex:1;">
+                <div style="font-size:11px; color:#888; margin-bottom:4px;">滿期金受益人</div>
+                <div style="font-size:13px; color:#333; line-height:1.5;">${mStr}</div>
+              </div>`;
+          }
+      }
+  } else {
+      liveMatHtml = `
+      <div style="flex:1;">
+        <div style="font-size:11px; color:#888; margin-bottom:4px;">生存金受益人</div>
+        <div style="font-size:13px; color:#333; line-height:1.5;">${lStr}</div>
+      </div>`;
+  }
 
   // 渲染 HTML 卡片
   html += `<div class="policy-card" style="background:#fff; border:1px solid #e8e8e8; border-radius:10px; margin-bottom:12px; overflow:hidden;">
@@ -473,15 +509,9 @@ policies.forEach(p => {
         <div style="font-size:11px; color:#888; margin-bottom:4px;">受益人 (身故)</div>
         <div style="font-size:13px; color:${dStr==='未設定'?'#ccc':'#333'}; line-height:1.5;">${dStr}</div>
       </div>
-      ${hideLive ? '' : `
-      <div style="flex:1;">
-        <div style="font-size:11px; color:#888; margin-bottom:4px;">${liveLabel}</div>
-        <div style="font-size:13px; color:${lStr==='未設定'?'#ccc':'#333'}; line-height:1.5;">${lStr}</div>
-      </div>
-      `}
+      ${liveMatHtml}
     </div>
   </div>`;
-});
   document.getElementById("policy-view").innerHTML = html;
 }
 
@@ -702,22 +732,31 @@ function openPolicyModal(policyId) {
       <div style="font-size:12px;font-weight:500;color:#666;margin-bottom:6px">生存金受益人</div>
       <div style="padding:10px 14px;background:#EAF3DE;border-radius:8px;font-size:13px;font-weight:500;color:#27500A">🔒 依法令規定為被保險人本人</div>
     </div>`;
-  } else if (rule.live==="不適用") {
+  } else {
     html += `<div>
       <div style="font-size:12px;font-weight:500;color:#666;margin-bottom:6px">生存金受益人</div>
-      <div style="padding:8px 12px;background:#f0f0f0;border-radius:8px;font-size:12px;color:#888">此險種無生存金</div>
-    </div>`;
-  } else {
-    const liveLabel = rule.liveLabel || "生存金受益人";
-    html += `<div>
-      <div style="font-size:12px;font-weight:500;color:#666;margin-bottom:6px">${liveLabel}</div>
       <div class="live-opts">
-        <button class="live-opt ${policy.beneficiaryLiveType==='self'||!policy.beneficiaryLiveType?'active':''}" onclick="setLiveType('self')">被保險人本人</button>
+        <button class="live-opt ${policy.beneficiaryLiveType==='none'||!policy.beneficiaryLiveType?'active':''}" onclick="setLiveType('none')">無 / 不適用</button>
+        <button class="live-opt ${policy.beneficiaryLiveType==='self'?'active':''}" onclick="setLiveType('self')">被保險人本人</button>
         <button class="live-opt ${policy.beneficiaryLiveType==='owner'?'active':''}" onclick="setLiveType('owner')">要保人</button>
         <button class="live-opt ${policy.beneficiaryLiveType==='other'?'active':''}" onclick="setLiveType('other')">其他（指定）</button>
       </div>
-      <div id="live-other-input" style="display:${policy.beneficiaryLiveType==='other'?'block':'none'}">
-        <input type="text" id="live-other-text" value="${policy.beneficiaryLiveOther||''}" placeholder="請輸入受益人姓名"
+      <div id="live-other-input" style="display:${policy.beneficiaryLiveType==='other'?'block':'none'}; margin-bottom:14px;">
+        <input type="text" id="live-other-text" value="${policy.beneficiaryLiveOther||''}" placeholder="請輸入生存金受益人姓名"
+          style="width:100%;padding:8px 10px;font-size:14px;border:1px solid #e0e0e0;border-radius:7px;outline:none;font-family:inherit" />
+      </div>
+    </div>`;
+
+    html += `<div>
+      <div style="font-size:12px;font-weight:500;color:#666;margin-bottom:6px">滿期金受益人</div>
+      <div class="live-opts">
+        <button class="mat-opt ${policy.beneficiaryMaturityType==='none'||!policy.beneficiaryMaturityType?'active':''}" onclick="setMatType('none')">無 / 不適用</button>
+        <button class="mat-opt ${policy.beneficiaryMaturityType==='self'?'active':''}" onclick="setMatType('self')">被保險人本人</button>
+        <button class="mat-opt ${policy.beneficiaryMaturityType==='owner'?'active':''}" onclick="setMatType('owner')">要保人</button>
+        <button class="mat-opt ${policy.beneficiaryMaturityType==='other'?'active':''}" onclick="setMatType('other')">其他（指定）</button>
+      </div>
+      <div id="mat-other-input" style="display:${policy.beneficiaryMaturityType==='other'?'block':'none'}">
+        <input type="text" id="mat-other-text" value="${policy.beneficiaryMaturityOther||''}" placeholder="請輸入滿期金受益人姓名"
           style="width:100%;padding:8px 10px;font-size:14px;border:1px solid #e0e0e0;border-radius:7px;outline:none;font-family:inherit" />
       </div>
     </div>`;
@@ -814,12 +853,19 @@ function clearCustomBenef(type) {
 }
 
 function setLiveType(t) {
-  ["self","owner","other"].forEach(type=>{
-    document.querySelectorAll(".live-opt").forEach((el,i)=>{
-      if(i===["self","owner","other"].indexOf(type)) el.classList.toggle("active",type===t);
-    });
+  const types = ["none", "self", "owner", "other"];
+  document.querySelectorAll(".live-opt").forEach((el, i) => {
+    el.classList.toggle("active", types[i] === t);
   });
   document.getElementById("live-other-input").style.display = t==="other"?"block":"none";
+}
+
+function setMatType(t) {
+  const types = ["none", "self", "owner", "other"];
+  document.querySelectorAll(".mat-opt").forEach((el, i) => {
+    el.classList.toggle("active", types[i] === t);
+  });
+  document.getElementById("mat-other-input").style.display = t==="other"?"block":"none";
 }
 
 async function savePolicyBenef() {
@@ -840,15 +886,20 @@ async function savePolicyBenef() {
     }
   }
 
-  // 生存金
+  // 生存金與滿期金
   if (rule.live!=="鎖定本人" && rule.live!=="不適用") {
+    const liveTypes = ["none", "self", "owner", "other"];
+    const liveOptTexts = ["無 / 不適用", "被保險人本人", "要保人", "其他（指定）"];
+    
     const activeLiveOpt = document.querySelector(".live-opt.active");
-    const liveTypes = ["self","owner","other"];
-    const liveOptTexts = ["被保險人本人","要保人","其他（指定）"];
-    const idx = activeLiveOpt ? liveOptTexts.indexOf(activeLiveOpt.textContent.trim()) : 0;
+    let idx = activeLiveOpt ? liveOptTexts.indexOf(activeLiveOpt.textContent.trim()) : 0;
     policy.beneficiaryLiveType  = liveTypes[idx>=0?idx:0];
-    policy.beneficiaryLiveOther = policy.beneficiaryLiveType==="other"
-      ? (document.getElementById("live-other-text")?.value||"") : "";
+    policy.beneficiaryLiveOther = policy.beneficiaryLiveType==="other" ? (document.getElementById("live-other-text")?.value||"") : "";
+
+    const activeMatOpt = document.querySelector(".mat-opt.active");
+    idx = activeMatOpt ? liveOptTexts.indexOf(activeMatOpt.textContent.trim()) : 0;
+    policy.beneficiaryMaturityType  = liveTypes[idx>=0?idx:0];
+    policy.beneficiaryMaturityOther = policy.beneficiaryMaturityType==="other" ? (document.getElementById("mat-other-text")?.value||"") : "";
   }
 
   await savePerson();
