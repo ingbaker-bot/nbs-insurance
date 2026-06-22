@@ -669,10 +669,11 @@ function toggleRiders(safeId) {
 }
 
 // ── 替換：重新渲染保單列表 ──────────────────────────────────────────
+// ── 替換：重新渲染保單列表 (加入主/附約數量統計) ──────────────────────────
 function renderPolicies() {
   const members = familyData.members.filter(m => m.role !== "beneficiary_only");
 
-  // 蒐集要顯示的保單
+  // 1. 蒐集要顯示的保單
   let allPolicies = [];
   members.forEach(m => {
     const policies = personDataMap[m.personId]?.policies || [];
@@ -681,20 +682,17 @@ function renderPolicies() {
 
   const filtered = currentTab === "all" ? allPolicies : allPolicies.filter(p => p._memberId === currentTab);
 
-  // 統計
-  const totalTWD = filtered.filter(p => p.status === "有效").reduce((s, p) => s + (p.premiumTWD || 0), 0);
-  document.getElementById("stats-row").innerHTML = `
-    <div class="stat-card"><div class="stat-label">${currentTab==='all'?'全家保單':'本人保單'}</div><div class="stat-value">${filtered.length} 筆</div></div>
-    <div class="stat-card"><div class="stat-label">年繳總保費</div><div class="stat-value">NT$ ${(totalTWD/10000).toFixed(1)}萬</div></div>
-    <div class="stat-card"><div class="stat-label">月均保費</div><div class="stat-value">${Math.round(totalTWD/12).toLocaleString()}</div></div>`;
-
   if (filtered.length === 0) {
+    document.getElementById("stats-row").innerHTML = `
+      <div class="stat-card"><div class="stat-label">${currentTab==='all'?'全家保單':'本人保單'}</div><div class="stat-value">0 筆</div></div>
+      <div class="stat-card"><div class="stat-label">年繳總保費</div><div class="stat-value">NT$ 0</div></div>
+      <div class="stat-card"><div class="stat-label">月均保費</div><div class="stat-value">0</div></div>`;
     document.getElementById("policy-list").innerHTML =
       '<div class="empty-state">尚無保單，點下方「新增主約保單」開始輸入</div>';
     return;
   }
 
-  // 依保單號碼分組
+  // 2. 依保單號碼分組 (提早執行，以便計算主附約數量)
   const groups = {};
   filtered.forEach(p => {
     const key = p.policyNo || p.id;
@@ -702,17 +700,32 @@ function renderPolicies() {
     groups[key].push(p);
   });
 
+  // 3. 計算統計數據：群組數=主約數，剩餘=附約數
+  const mainCount = Object.keys(groups).length;
+  const riderCount = filtered.length - mainCount;
+  const totalTWD = filtered.filter(p => p.status === "有效").reduce((s, p) => s + (p.premiumTWD || 0), 0);
+
+  // 4. 渲染統計卡片 (修改筆數顯示方式)
+  document.getElementById("stats-row").innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">${currentTab==='all'?'全家保單':'本人保單'}</div>
+      <div class="stat-value" style="font-size:14px; color:#0C447C;">${mainCount}主 / ${riderCount}附</div>
+    </div>
+    <div class="stat-card"><div class="stat-label">年繳總保費</div><div class="stat-value">NT$ ${(totalTWD/10000).toFixed(1)}萬</div></div>
+    <div class="stat-card"><div class="stat-label">月均保費</div><div class="stat-value">${Math.round(totalTWD/12).toLocaleString()}</div></div>`;
+
+  // 5. 渲染保單列表 (維持主附約摺疊邏輯)
   let html = "";
   Object.entries(groups).forEach(([policyNo, rows]) => {
     const groupTotal = rows.reduce((s,p) => s+(p.premiumTWD||0), 0);
     const member = familyData.members.find(m => m.personId === rows[0]._memberId);
 
-    // 判斷主約與附約 (理論上第一筆或是帶有 isMain=true 標記的為主約)
+    // 判斷主約與附約
     let mainPol = rows.find(p => p.isMain === true);
     if (!mainPol) mainPol = rows[0]; // 向下相容舊資料
     const riders = rows.filter(p => p !== mainPol);
 
-    // 產生一個安全的 ID 用於 DOM 操作
+    // 產生安全 ID 用於 DOM 操作
     const safeId = policyNo.replace(/[^a-zA-Z0-9]/g, '') + "_" + Math.random().toString(36).substr(2, 5);
 
     // 渲染群組標題 (點擊可展開/收合附約)
@@ -725,7 +738,7 @@ function renderPolicies() {
         <span class="group-total">年繳 NT${groupTotal.toLocaleString()}</span>
       </div>`;
 
-    // 建立一個渲染單列的輔助函數
+    // 單列渲染輔助函數
     const renderRow = (p, isMainNode) => {
       const catClass = "cat-" + (p.category||"");
       const statusClass = "status-" + (p.status||"有效");
@@ -752,27 +765,21 @@ function renderPolicies() {
       </div>`;
     };
 
-    // 渲染主約 (永遠顯示)
+    // 渲染主約
     html += renderRow(mainPol, true);
 
-    // 渲染附約區塊 (預設隱藏)
-    if (riders.length > 0 || true) { // 永遠印出 container，確保使用者可以新增附約
-      html += `<div class="riders-container" id="riders-${safeId}" style="display:none; background:#fafafa; border-top:1px solid #f0f0f0;">`;
-      riders.forEach(r => {
-        html += renderRow(r, false);
-      });
-      // 新增附約按鈕放在附約容器內
-      html += `<button class="add-rider-btn" onclick="event.stopPropagation(); openForm('rider','${rows[0]._memberId}','${policyNo}')" style="background:#f9f9f9;">
-        ＋ 在此保單下新增附約</button>`;
-      html += `</div>`;
-    }
-
-    html += `</div>`;
+    // 渲染附約區塊
+    html += `<div class="riders-container" id="riders-${safeId}" style="display:none; background:#fafafa; border-top:1px solid #f0f0f0;">`;
+    riders.forEach(r => {
+      html += renderRow(r, false);
+    });
+    html += `<button class="add-rider-btn" onclick="event.stopPropagation(); openForm('rider','${rows[0]._memberId}','${policyNo}')" style="background:#f9f9f9;">
+      ＋ 在此保單下新增附約</button>`;
+    html += `</div></div>`;
   });
 
   document.getElementById("policy-list").innerHTML = html;
-}
-// ── 表單開啟 ─────────────────────────────────────────────
+}// ── 表單開啟 ─────────────────────────────────────────────
 function openForm(mode, memberId, policyIdOrNo) {
   editingPolicy = null;
   editingPersonId = memberId || (currentTab !== "all" ? currentTab : familyData.members.find(m=>m.role==="primary")?.personId);
