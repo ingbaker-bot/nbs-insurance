@@ -555,7 +555,10 @@ function markDirty(){ dirty=true; }
 function collectValues(){
   const person=personDataMap[currentPersonId];
   if(!person||!currentPolicyId) return;
-  const policy = person?.policies?.find(p=>p.id===policyId) || person?.savings?.find(p=>p.id===policyId);
+  
+  // ▼ 這裡的 policyId 要改成「全域變數 currentPolicyId」
+  const policy = person?.policies?.find(p=>p.id===currentPolicyId) || person?.savings?.find(p=>p.id===currentPolicyId);
+  
   if(!policy) return;
   if(!policy.coverage) policy.coverage={};
   const cov=policy.coverage;
@@ -570,8 +573,6 @@ function collectValues(){
     }
   });
 }
-
-// ── 儲存 ─────────────────────────────────────────────────
 // ── 儲存 ─────────────────────────────────────────────────
 async function saveCoverage(isAutoSave = false) { 
   // 1. 確保最新輸入已被收集
@@ -609,7 +610,8 @@ async function saveCoverage(isAutoSave = false) {
     // 只有「手動點擊儲存」時，才重新繪製畫面。自動儲存則跳過，避免砍掉使用者的輸入
     if (!isAutoSave) {
       if (viewMode === "edit") {
-        const policy = person?.policies?.find(p=>p.id===policyId) || person?.savings?.find(p=>p.id===policyId);
+        // ▼ 這裡的 policyId 也要改成「全域變數 currentPolicyId」
+        const policy = person?.policies?.find(p=>p.id===currentPolicyId) || person?.savings?.find(p=>p.id===currentPolicyId);
         if (policy) renderEdit(policy);
       }
     }
