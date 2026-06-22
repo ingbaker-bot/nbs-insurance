@@ -59,15 +59,55 @@
     .pie-dot { width:12px; height:12px; border-radius:3px; flex-shrink:0; }
 
     /* 保障加總 */
-    .coverage-block { background:#fff; border:1px solid #e8e8e8; border-radius:10px; overflow:hidden; margin-bottom:16px; }
-    .cov-group-header { display:flex; align-items:center; gap:8px; padding:8px 14px; }
-    .cov-group-dot { width:8px; height:8px; border-radius:50%; }
-    .cov-group-label { font-size:12px; font-weight:500; }
-    .cov-item { display:flex; align-items:flex-start; justify-content:space-between; padding:7px 14px 7px 26px; border-top:1px solid #f8f8f8; }
-    .cov-item-label { font-size:12px; color:#333; }
-    .cov-item-label.zero { color:#bbb; }
-    .cov-item-value { font-size:13px; font-weight:500; }
-    .cov-breakdown { font-size:10px; color:#aaa; margin-top:2px; }
+    /* 保障加總 (全新網格排版) */
+    .coverage-grid {
+      display: grid;
+      grid-template-columns: 1fr; /* 手機預設 1 欄 */
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    /* 平板螢幕 (大於 768px) 變 2 欄 */
+    @media (min-width: 768px) {
+      .coverage-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    /* 電腦螢幕 (大於 1024px) 變 3 欄，並讓卡片各自獨立高度 */
+    @media (min-width: 1024px) {
+      .coverage-grid { grid-template-columns: repeat(3, 1fr); align-items: start; }
+    }
+
+    /* 獨立保障卡片 */
+    .coverage-card {
+      background: #fff;
+      border: 1px solid #e8e8e8;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+    }
+    .cov-group-header {
+      display: flex;
+      align-items: center;
+      padding: 8px 14px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .cov-group-label { font-size: 13px; font-weight: 600; letter-spacing: 0.05em; }
+    
+    /* 細項列 (仿 Excel 虛線分隔) */
+    .cov-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 7px 14px;
+      border-bottom: 1px dashed #f5f5f5;
+    }
+    .cov-item:last-child { border-bottom: none; }
+    .cov-item-label { font-size: 12px; color: #444; }
+    .cov-item-label.zero { color: #bbb; }
+    
+    /* 數值與明細 */
+    .cov-value-wrap { text-align: right; }
+    .cov-item-value { font-size: 14px; font-weight: 600; font-family: monospace; }
+    .cov-unit { font-size: 10px; color: #999; font-weight: normal; font-family: sans-serif; margin-left: 2px; }
+    .cov-breakdown { font-size: 10px; color: #aaa; margin-top: 2px; line-height: 1.2; }
 
     /* 就醫情況 */
     .medical-table { width:100%; border-collapse:collapse; }
@@ -351,29 +391,40 @@ function renderContent() {
   html += `<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:12px 14px;margin-bottom:16px">${buildGapAnalysis(active, coverage, targets, overrides)}</div>`;
 
   // 各項保障加總
+  // ── 替換開始：各項保障加總 (網格卡片版) ──
   html += `<div class="section-label">各項保障加總</div>`;
-  html += `<div class="coverage-block">`;
-  COVERAGE_GROUPS.forEach((g,gi)=>{
-    html+=`<div style="border-top:${gi>0?'1px solid #f0f0f0':'none'}">
-      <div class="cov-group-header" style="background:${g.color}12">
-        <div class="cov-group-dot" style="background:${g.color}"></div>
+  html += `<div class="coverage-grid">`; // 改用 Grid 容器
+
+  COVERAGE_GROUPS.forEach((g) => {
+    // 每一大類變成一張獨立的卡片，頂部加上專屬顏色粗邊框 (仿 Excel 標題框)
+    html += `<div class="coverage-card" style="border-top: 3px solid ${g.color};">
+      <div class="cov-group-header" style="background:${g.color}0D">
         <span class="cov-group-label" style="color:${g.color}">${g.label}</span>
-      </div>`;
-    g.items.forEach(item=>{
-      const total=sumCov(item.keys,policies,coverage);
-      const breakdown=policies.map(p=>{
-        const v=item.keys.reduce((s,k)=>s+(coverage[p.id+"_"+k]||0),0);
-        return v>0?{name:p.company,val:v}:null;
+      </div>
+      <div style="padding: 4px 0;">`; // 卡片內層
+
+    g.items.forEach(item => {
+      const total = sumCov(item.keys, policies, coverage);
+      const breakdown = policies.map(p => {
+        const v = item.keys.reduce((s, k) => s + (coverage[p.id + "_" + k] || 0), 0);
+        return v > 0 ? { name: p.company.substring(0,2), val: v } : null; // 公司名取前兩字防太長
       }).filter(Boolean);
-      html+=`<div class="cov-item" style="background:${total>0?'#fff':'#fafafa'};opacity:${total>0?1:0.5}">
-        <div>
-          <div class="cov-item-label ${total>0?'':'zero'}">${item.label}</div>
-          ${breakdown.length>1?`<div class="cov-breakdown">${breakdown.map(b=>`${b.name}：${b.val.toLocaleString()}${item.unit}`).join('　')}</div>`:''}
+
+      // 單一列
+      html += `<div class="cov-item" style="background:${total > 0 ? '#fff' : '#fafafa'};opacity:${total > 0 ? 1 : 0.6}">
+        <div class="cov-item-label ${total > 0 ? '' : 'zero'}">${item.label}</div>
+        <div class="cov-value-wrap">
+          <div class="cov-item-value" style="color:${total > 0 ? g.color : '#ccc'}">
+            ${total > 0 ? total.toLocaleString() + `<span class="cov-unit">${item.unit}</span>` : '—'}
+          </div>
+          ${breakdown.length > 1 ? `<div class="cov-breakdown">${breakdown.map(b => `${b.name}:${b.val.toLocaleString()}`).join(' ')}</div>` : ''}
         </div>
-        <span class="cov-item-value" style="color:${total>0?g.color:'#ddd'}">${total>0?total.toLocaleString()+item.unit:'—'}</span>
       </div>`;
     });
-    html+=`</div>`;
+    html += `</div></div>`; // 結束卡片內層與卡片
+  });
+  html += `</div>`; // 結束 Grid 容器
+  // ── 替換結束 ──
   });
   html+=`</div>`;
 
