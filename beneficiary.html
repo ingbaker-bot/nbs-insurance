@@ -19,6 +19,7 @@
     .content-area { padding:16px; max-width:600px; margin:0 auto; padding-bottom:80px; }
     .locked-tag { font-size:11px; background:#f0f0f0; color:#888; padding:2px 6px; border-radius:4px; }
     
+    /* 險種顏色設定 */
     .cat-壽險保障 { background:#E6F1FB; color:#0C447C; }
     .cat-意外險 { background:#FFF3E0; color:#E67E22; }
     .cat-醫療險 { background:#EAF3DE; color:#27500A; }
@@ -32,6 +33,7 @@
     .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:200; align-items:center; justify-content:center; }
     .modal { background:#fff; border-radius:16px; padding:20px; width:100%; max-width:560px; max-height:90vh; overflow-y:auto; }
     
+    /* 選項按鈕 2x2 網格 */
     .live-opts, .mat-opts { display:grid; grid-template-columns:repeat(2,1fr); gap:6px; margin-bottom:8px; }
     .live-opt, .mat-opt { padding:8px; font-size:12px; border:1px solid #e0e0e0; border-radius:6px; background:#fff; color:#666; cursor:pointer; font-family:inherit; text-align:center;}
     .live-opt.active, .mat-opt.active { background:#E6F1FB; color:#0C447C; border-color:#378ADD; font-weight:500; }
@@ -49,7 +51,7 @@
   <div id="saved-hint">✓ 已儲存</div>
 
   <div class="content-area">
-    <div id="policy-list"><div style="text-align:center;padding:40px;color:#bbb;font-size:13px">載入中...</div></div>
+    <div id="policy-list"><div style="text-align:center;padding:40px;color:#bbb;font-size:13px">載入資料中，請稍候...</div></div>
   </div>
 
   <div class="modal-overlay" id="edit-modal" onclick="if(event.target===this) closeModal()">
@@ -68,6 +70,8 @@
 
   <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec";
+    
+    // 實務規則：哪些險種可以設定身故或生存金
     const BENEF_RULES = {
       "壽險保障":   { death:"可設定", live:"不適用" },
       "意外險":     { death:"可設定", live:"不適用" },
@@ -83,6 +87,7 @@
     let currentUser = null, familyData = null, personDataMap = {};
     let currentPersonId = null, currentPolicyId = null;
 
+    // 初始化與資料載入
     window.onload = async () => {
       const u = localStorage.getItem("nbs_user");
       if(!u) return window.location.href="login.html";
@@ -96,27 +101,45 @@
         if(cachedFam) familyData = JSON.parse(cachedFam);
         else {
           const r = await callGAS("getFamily", { email: currentUser.email });
-          if(r.status==="ok") { familyData = r.data; sessionStorage.setItem("nbs_family", JSON.stringify(familyData)); }
+          if(r && r.status === "ok") { 
+              familyData = r.data; 
+              sessionStorage.setItem("nbs_family", JSON.stringify(familyData)); 
+          }
         }
-        if(!familyData || !familyData.members || familyData.members.length===0) return;
         
+        if(!familyData || !familyData.members || familyData.members.length === 0) return;
         currentPersonId = familyData.members[0].personId;
         renderTabs();
 
+        // 穩定抓取每個成員的保單資料
         const promises = familyData.members.map(async m => {
-          const cached = sessionStorage.getItem("nbs_person_"+m.personId);
-          if(cached) personDataMap[m.personId] = JSON.parse(cached);
-          else {
+          try {
+            const cached = sessionStorage.getItem("nbs_person_"+m.personId);
+            if(cached) { personDataMap[m.personId] = JSON.parse(cached); return; }
+            
             const pr = await callGAS("readFile", { email:currentUser.email, fileType:"person", fileName:m.name+"_"+m.personId+".json" });
-            if(pr.status==="ok") { personDataMap[m.personId] = pr.content; sessionStorage.setItem("nbs_person_"+m.personId, JSON.stringify(pr.content)); }
+            if(pr && pr.status === "ok") { 
+                personDataMap[m.personId] = pr.content; 
+                sessionStorage.setItem("nbs_person_"+m.personId, JSON.stringify(pr.content)); 
+            } else {
+                personDataMap[m.personId] = { policies: [] };
+            }
+          } catch(err) {
+            console.error("載入成員失敗", m.name, err);
+            personDataMap[m.personId] = { policies: [] };
           }
         });
+        
         await Promise.all(promises);
         renderPolicyView();
-      } catch(e) { console.error("載入失敗", e); }
+      } catch(e) { 
+        console.error("整體載入失敗", e); 
+        document.getElementById("policy-list").innerHTML = '<div style="text-align:center;padding:40px;color:#e74c3c;">資料載入異常，請重新整理網頁。</div>';
+      }
     }
 
     function renderTabs() {
+      if(!familyData || !familyData.members) return;
       const html = familyData.members.map(m => 
         `<div class="member-tab ${m.personId===currentPersonId?'active':''}" onclick="switchMember('${m.personId}')">${m.name}</div>`
       ).join('');
@@ -129,11 +152,13 @@
       renderPolicyView();
     }
 
-    // ── 主畫面渲染 ──────────────────────────
+    // ── 主畫面卡片渲染 ──────────────────────────
     function renderPolicyView() {
       const person = personDataMap[currentPersonId];
       if(!person) return;
+      
       const allPolicies = person.policies || [];
+      // 過濾出需要檢視受益人的險種
       const targetCategories = ["壽險保障", "儲蓄險", "年金險", "投資型保險", "重大疾病險", "重大傷病險", "特定傷病險"];
       const policies = allPolicies.filter(p => targetCategories.includes(p.category));
 
@@ -146,48 +171,63 @@
 
       policies.forEach(p => {
         const amountText = p.insuredAmount ? `${p.insuredAmount} ${p.insuredAmountUnit || '萬元'}` : '—';
-        const catClass = "cat-" + (p.category||"");
+        const catClass = "cat-" + (p.category || "");
+        const rule = BENEF_RULES[p.category] || { death:"可設定", live:"可設定" };
 
-        // 解析身故受益人
+        // 1. 解析身故受益人 (優先讀取自由文字框)
         let dStr = "未設定";
-        if (p.isRider) dStr = '<span class="locked-tag">同主約</span>';
-        else if (BENEF_RULES[p.category]?.death === "鎖定本人") dStr = '<span class="locked-tag">被保險人本人</span>';
-        else if (p.beneficiaryDeathText) dStr = p.beneficiaryDeathText; // 使用自由填寫文字
+        if (p.isRider) {
+          dStr = '<span class="locked-tag">同主約</span>';
+        } else if (rule.death === "鎖定本人") {
+          dStr = '<span class="locked-tag">被保險人本人</span>';
+        } else if (p.beneficiaryDeathText) {
+          dStr = p.beneficiaryDeathText; 
+        } else if (p.beneficiaryDeathCustom && p.beneficiaryDeathCustom.length > 0) {
+          // 兼容舊資料
+          dStr = p.beneficiaryDeathCustom.map(c => c.customName || "指定家人").join("、");
+        }
 
-        // 解析生存與滿期金
+        // 2. 解析生存與滿期金
         let lStr = "未設定", mStr = "未設定";
         if (p.beneficiaryLiveType === "self") lStr = "被保險人本人";
         else if (p.beneficiaryLiveType === "owner") lStr = "要保人";
         else if (p.beneficiaryLiveType === "other") lStr = p.beneficiaryLiveOther || "指定其他";
-        else if (p.beneficiaryLiveType === "none" || !p.beneficiaryLiveType) lStr = "無";
+        else if (p.beneficiaryLiveType === "none" || !p.beneficiaryLiveType) lStr = "無 / 不適用";
 
         if (p.beneficiaryMaturityType === "self") mStr = "被保險人本人";
         else if (p.beneficiaryMaturityType === "owner") mStr = "要保人";
         else if (p.beneficiaryMaturityType === "other") mStr = p.beneficiaryMaturityOther || "指定其他";
-        else if (p.beneficiaryMaturityType === "none" || !p.beneficiaryMaturityType) mStr = "無";
+        else if (p.beneficiaryMaturityType === "none" || !p.beneficiaryMaturityType) mStr = "無 / 不適用";
 
-        if (p.category==="年金險" || p.category==="投資型保險" || BENEF_RULES[p.category]?.live === "鎖定本人") {
+        if (p.category === "年金險" || p.category === "投資型保險" || rule.live === "鎖定本人") {
            lStr = '<span class="locked-tag">被保險人本人</span>';
+           mStr = "無 / 不適用";
         }
 
-        // 實務邏輯隱藏
+        // 3. 實務邏輯：自動隱藏不適用的區塊
         let liveMatHtml = "";
-        if (BENEF_RULES[p.category]?.live === "可設定") {
-            if (lStr === "無" && mStr === "無") {
+        if (rule.live === "可設定") {
+            if (lStr.includes("無") && mStr.includes("無")) {
                 liveMatHtml = `<div style="flex:1;"><div style="font-size:11px; color:#888; margin-bottom:4px;">生存 / 滿期金</div><div style="font-size:13px; color:#ccc; line-height:1.5;">無 / 不適用</div></div>`;
             } else {
-                if (lStr !== "無") liveMatHtml += `<div style="flex:1;"><div style="font-size:11px; color:#888; margin-bottom:4px;">生存金受益人</div><div style="font-size:13px; color:#333; line-height:1.5;">${lStr}</div></div>`;
-                if (mStr !== "無") liveMatHtml += `<div style="flex:1;"><div style="font-size:11px; color:#888; margin-bottom:4px;">滿期金受益人</div><div style="font-size:13px; color:#333; line-height:1.5;">${mStr}</div></div>`;
+                if (!lStr.includes("無")) liveMatHtml += `<div style="flex:1;"><div style="font-size:11px; color:#888; margin-bottom:4px;">生存金受益人</div><div style="font-size:13px; color:#333; line-height:1.5;">${lStr}</div></div>`;
+                if (!mStr.includes("無")) liveMatHtml += `<div style="flex:1;"><div style="font-size:11px; color:#888; margin-bottom:4px;">滿期金受益人</div><div style="font-size:13px; color:#333; line-height:1.5;">${mStr}</div></div>`;
             }
         } else {
-            liveMatHtml = `<div style="flex:1;"><div style="font-size:11px; color:#888; margin-bottom:4px;">生存金受益人</div><div style="font-size:13px; color:#333; line-height:1.5;">${lStr}</div></div>`;
+            // 傳統壽險隱藏生存金
+            if (p.category === "壽險保障") {
+                 liveMatHtml = `<div style="flex:1;"><div style="font-size:11px; color:#888; margin-bottom:4px;">生存金受益人</div><div style="font-size:13px; color:#ccc; line-height:1.5;">無 / 不適用</div></div>`;
+            } else {
+                 liveMatHtml = `<div style="flex:1;"><div style="font-size:11px; color:#888; margin-bottom:4px;">生存金受益人</div><div style="font-size:13px; color:#333; line-height:1.5;">${lStr}</div></div>`;
+            }
         }
 
+        // 產出卡片 HTML
         html += `<div class="policy-card" style="background:#fff; border:1px solid #e8e8e8; border-radius:10px; margin-bottom:12px; overflow:hidden;">
           <div class="card-header" style="display:flex; align-items:center; padding:12px 14px; border-bottom:1px solid #f0f0f0;">
             <span style="font-family:monospace; font-size:11px; background:#E6F1FB; color:#0C447C; padding:1px 7px; border-radius:99px; margin-right:8px;">${p.policyNo || p.id}</span>
-            <span style="font-size:14px; font-weight:500; flex:1;">${p.itemName || '—'}</span>
-            <span class="cat-badge ${catClass}" style="font-size:11px; padding:2px 6px; border-radius:99px; margin-right:8px;">${p.category || '—'}</span>
+            <span style="font-size:14px; font-weight:500; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.itemName || '—'}</span>
+            <span class="cat-badge ${catClass}" style="font-size:11px; padding:2px 6px; border-radius:99px; margin-right:8px; white-space:nowrap;">${p.category || '—'}</span>
             <button onclick="openPolicyModal('${p.id}')" style="padding:4px 12px; font-size:12px; border:1px solid #ddd; border-radius:6px; background:#fff; cursor:pointer;">設定</button>
           </div>
           <div style="background:#F5FAFF; padding:8px 14px; border-bottom:1px solid #E6F1FB; display:flex; align-items:center;">
@@ -203,14 +243,16 @@
           </div>
         </div>`;
       });
+      
       document.getElementById("policy-list").innerHTML = html;
     }
 
-    // ── Modal 設定與存檔 ─────────────────────────────
+    // ── Modal 設定彈窗與選項切換 ─────────────────────────────
     function openPolicyModal(policyId) {
       currentPolicyId = policyId;
       const person = personDataMap[currentPersonId];
-      const policy = (person?.policies||[]).find(p=>p.id===policyId);
+      if(!person) return;
+      const policy = (person.policies || []).find(p => p.id === policyId);
       if(!policy) return;
 
       document.getElementById("modal-policy-name").textContent = policy.itemName || "保單設定";
@@ -218,7 +260,7 @@
 
       let html = "";
       
-      // 身故受益人 (自由填寫框)
+      // ▼ 1. 身故受益人 (全新自由文字框)
       html += `<div style="margin-bottom:20px">
         <div style="font-size:13px;font-weight:600;color:#0C447C;margin-bottom:10px;border-bottom:1px solid #E6F1FB;padding-bottom:4px">身故受益人</div>`;
 
@@ -227,13 +269,15 @@
       } else if (rule.death === "鎖定本人") {
         html += `<div style="font-size:13px;color:#888;padding:10px;background:#f9f9f9;border-radius:8px">依法令或險種規定，身故理賠金限被保險人本人。</div>`;
       } else {
-        html += `<div style="font-size:12px;color:#666;margin-bottom:6px">請自由填寫身故受益人 (支援多順位與比例)：</div>
-        <textarea id="death-custom-text" placeholder="例如：\n順位一：配偶 (李明)\n順位二：子女均分 (李小華、李大明)" style="width:100%;height:80px;padding:10px;font-size:13px;border:1px solid #ddd;border-radius:6px;outline:none;font-family:inherit;resize:vertical;line-height:1.5">${policy.beneficiaryDeathText || ''}</textarea>
+        // 自由文字輸入框與快速家人按鈕
+        html += `<div style="font-size:12px;color:#666;margin-bottom:6px">請自由輸入受益人分配 (支援多順位與比例)：</div>
+        <textarea id="death-custom-text" placeholder="例如：\\n順位一：配偶\\n順位二：子女均分" style="width:100%;height:80px;padding:10px;font-size:13px;border:1px solid #ddd;border-radius:6px;outline:none;font-family:inherit;resize:vertical;line-height:1.5">${policy.beneficiaryDeathText || ''}</textarea>
         
         <div style="font-size:11px;color:#888;margin-top:8px;margin-bottom:6px">💡 點擊下方家人快速加入文字框：</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">`;
         
-        (familyData?.members||[]).forEach(m => {
+        const members = familyData?.members || [];
+        members.forEach(m => {
            html += `<button onclick="document.getElementById('death-custom-text').value += '${m.name} '" style="font-size:12px;padding:4px 10px;border:1px solid #ddd;border-radius:99px;background:#fff;cursor:pointer">${m.name}</button>`;
         });
         
@@ -241,7 +285,7 @@
       }
       html += `</div>`; 
 
-      // 生存金/滿期金
+      // ▼ 2. 生存與滿期金受益人
       html += `<div>
         <div style="font-size:13px;font-weight:600;color:#0C447C;margin-bottom:10px;border-bottom:1px solid #E6F1FB;padding-bottom:4px">生存 / 滿期金受益人</div>`;
 
@@ -298,29 +342,36 @@
 
     function closeModal() { document.getElementById("edit-modal").style.display = "none"; }
 
+    // ── 儲存與寫入雲端 ─────────────────────────────
     function savePolicyBenef() {
       const person = personDataMap[currentPersonId];
-      const policy = (person?.policies||[]).find(p=>p.id===currentPolicyId);
+      if(!person) return;
+      const policy = (person.policies || []).find(p => p.id === currentPolicyId);
       if(!policy) return;
 
       const rule = BENEF_RULES[policy.category] || { death:"可設定", live:"可設定" };
 
       // 儲存身故文字框
       if (!policy.isRider && rule.death !== "鎖定本人") {
-         policy.beneficiaryDeathText = document.getElementById("death-custom-text")?.value || "";
+         const dText = document.getElementById("death-custom-text");
+         if (dText) policy.beneficiaryDeathText = dText.value.trim();
       }
 
       // 儲存生存與滿期金
       if (rule.live !== "鎖定本人" && rule.live !== "不適用" && policy.category !== "年金險" && policy.category !== "投資型保險") {
         const liveTypes = ["none", "self", "owner", "other"];
         let lType = "none", mType = "none";
+        
         document.querySelectorAll(".live-opt").forEach((el, i) => { if (el.classList.contains("active")) lType = liveTypes[i]; });
         document.querySelectorAll(".mat-opt").forEach((el, i) => { if (el.classList.contains("active")) mType = liveTypes[i]; });
         
         policy.beneficiaryLiveType = lType;
-        policy.beneficiaryLiveOther = (lType === "other") ? (document.getElementById("live-other-text")?.value || "") : "";
+        const lOther = document.getElementById("live-other-text");
+        policy.beneficiaryLiveOther = (lType === "other" && lOther) ? lOther.value.trim() : "";
+        
         policy.beneficiaryMaturityType = mType;
-        policy.beneficiaryMaturityOther = (mType === "other") ? (document.getElementById("mat-other-text")?.value || "") : "";
+        const mOther = document.getElementById("mat-other-text");
+        policy.beneficiaryMaturityOther = (mType === "other" && mOther) ? mOther.value.trim() : "";
       }
 
       closeModal();
@@ -332,16 +383,21 @@
       const person = personDataMap[currentPersonId];
       if(!person) return;
       person.updatedAt = new Date().toISOString();
+      
       try {
-        const member = familyData.members.find(m=>m.personId===currentPersonId);
+        const member = familyData.members.find(m => m.personId === currentPersonId);
         await callGAS("saveFile", { email: currentUser.email, fileType: "person", fileId: currentPersonId, fileName: member.name+"_"+currentPersonId+".json", content: person });
         sessionStorage.setItem("nbs_person_" + currentPersonId, JSON.stringify(person));
+        
         const hint = document.getElementById("saved-hint");
         hint.style.display="block";
-        setTimeout(()=>hint.style.display="none",2000);
-      } catch(e) { alert("儲存失敗：" + e.message); }
+        setTimeout(()=>hint.style.display="none", 2000);
+      } catch(e) { 
+        alert("儲存失敗：" + e.message); 
+      }
     }
 
+    // ── 工具函式與 NBS 連動 ─────────────────────────────
     function goBack() { window.location.href="family.html"; }
     function callGAS(action,params) {
       if (action === "saveFile") return fetch(GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain" }, body: JSON.stringify({ action, ...params }) }).then(r => r.json());
@@ -353,7 +409,14 @@
       return fetch(url.toString()).then(r=>r.json());
     }
 
-    if (typeof NBS_NAV !== "undefined") { NBS_NAV.init({ page: "beneficiary" }); }
+    if (typeof NBS_NAV !== "undefined") { 
+        NBS_NAV.onMemberChange = function(pid) {
+          currentPersonId = pid;
+          renderTabs();
+          renderPolicyView();
+        };
+        NBS_NAV.init({ page: "beneficiary" }); 
+    }
   </script>
   <script src="nav.js"></script>
 </body>
