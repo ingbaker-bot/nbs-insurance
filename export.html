@@ -53,11 +53,10 @@
 <button style="display:none" id="B_BACK"></button>
 <div style="display:none" id="HDR_TITLE"></div>
 
-<!-- P1 選擇 -->
 <div class="pg act" id="P_SEL">
   <div class="wrap">
     <div class="sec-lbl">選擇匯出區塊
-      <button id="B_TOGALL" style="font-size:11px;padding:3px 12px;border:1px solid #ddd;border-radius:99px;background:#fff;color:#666;cursor:pointer;font-family:inherit">全部勾選</button>
+      <button id="B_TOGALL" style="font-size:11px;padding:3px 12px;border:1px solid #ddd;border-radius:99px;background:#fff;color:#666;cursor:pointer;font-family:inherit">全部取消</button>
     </div>
     <div id="BLKLIST"></div>
     <div style="font-size:12px;font-weight:500;color:#555;margin-top:14px;margin-bottom:6px">🖼️ 圖檔（PNG）</div>
@@ -68,7 +67,6 @@
   </div>
 </div>
 
-<!-- P2 預覽 -->
 <div class="pg" id="P_PREV">
   <div class="wrap">
     <div class="pv-note" id="PV_NOTE"></div>
@@ -83,7 +81,6 @@
   </div>
 </div>
 
-<!-- P3 進行中 -->
 <div class="pg" id="P_DOING">
   <div class="wrap" style="text-align:center;padding-top:40px">
     <div style="font-size:36px;margin-bottom:16px" id="EX_ICON">🖼️</div>
@@ -94,7 +91,6 @@
   </div>
 </div>
 
-<!-- P4 完成 -->
 <div class="pg" id="P_DONE">
   <div class="wrap" style="text-align:center;padding-top:32px">
     <div style="font-size:48px;margin-bottom:16px">✅</div>
@@ -112,6 +108,7 @@
 // ── 設定 ─────────────────────────────────────────────────
 const GAS="https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec";
 
+// ▼ 新增受益人模塊
 const BLOCKS=[
   {key:"summary", label:"保單彙總一覽",  icon:"📊",desc:"保單列表、保費結構、各項保障加總"},
   {key:"timeline",label:"治療前中後保障",icon:"🏥",desc:"前期一次性、中期療程、後期生活幫助"},
@@ -119,12 +116,8 @@ const BLOCKS=[
   {key:"savings", label:"儲蓄險領回明細",icon:"🐷",desc:"各保單領回時間表與總領回金額"},
   {key:"monthly", label:"每月應繳保費",  icon:"📅",desc:"月曆式繳費分配"},
   {key:"policy",  label:"保險繳費一覽",  icon:"📋",desc:"所有保單號碼、繳費方式、保費明細"},
-  // ▼ 新增這行：第七個匯出區塊
-  {key:"beneficiary", label:"受益人與傳承", icon:"👥",desc:"傳承規劃與保額對應關係"}, 
+  {key:"beneficiary", label:"受益人與傳承", icon:"👥",desc:"傳承規劃與保額對應關係"},
 ];
-
-// ▼ 將 beneficiary:true 加入預設勾選清單中
-var sel={summary:true,timeline:true,coverage:true,savings:false,monthly:false,policy:false,beneficiary:true};
 const FMTS=[
   {key:"png_single",  type:"png",label:"PNG 一張長圖",desc:"所有區塊合併，適合 LINE 傳送"},
   {key:"png_multiple",type:"png",label:"PNG 分張",    desc:"每個區塊各自一張"},
@@ -134,12 +127,12 @@ const FMTS=[
 const CC={"壽險保障":"#4A90D9","醫療保障":"#27AE8F","意外險":"#F5A623","重大疾病險":"#9B59B6","重大傷病險":"#8E44AD","特定傷病險":"#7D3C98","儲蓄險":"#E8638A","年金險":"#C0392B","投資型保險":"#95A5A6"};
 
 // ── 狀態 ─────────────────────────────────────────────────
-var sel={summary:true,timeline:true,coverage:true,savings:false,monthly:false,policy:false};
+var sel={summary:true,timeline:true,coverage:true,savings:false,monthly:false,policy:false,beneficiary:true};
 var fmt="png_single";
 var person={},policies=[],coverage={},savings=[];
 var pName="",pDate="";
 
-// ── 按鈕全部在這裡綁定（同步，一定執行）─────────────────
+// ── 按鈕綁定 ─────────────────────────────────────────────
 document.getElementById("B_BACK").onclick    = function(){ window.location.href="family.html"; };
 document.getElementById("B_TOGALL").onclick  = doToggleAll;
 document.getElementById("B_PREV").onclick    = doShowPreview;
@@ -147,11 +140,6 @@ document.getElementById("B_BACK2").onclick   = doShowSelect;
 document.getElementById("B_EXPORT").onclick  = doExport;
 document.getElementById("B_REDO").onclick    = doShowSelect;
 document.getElementById("B_FINISH").onclick  = function(){ window.location.href="family.html"; };
-
-// ── 載入資料（非同步，失敗不影響按鈕）───────────────────
-// ── 資料由 nbs_nav_ready 載入（見下方 handler）──────────────
-// buildBlocks/buildFmts/updatePrevBtn 在 nbs_nav_ready 後呼叫
-
 
 // ── 建立區塊清單 ──────────────────────────────────────────
 function buildBlocks(){
@@ -171,7 +159,6 @@ function buildBlocks(){
   });
 }
 
-// ── 建立格式清單 ──────────────────────────────────────────
 function buildFmts(){
   ["png","pdf"].forEach(function(t){
     var c=document.getElementById("FMT_"+t.toUpperCase());
@@ -220,7 +207,6 @@ function doToggleAll(){
   updatePrevBtn();
 }
 
-// ── 頁面切換 ──────────────────────────────────────────────
 function goPage(id){
   ["P_SEL","P_PREV","P_DOING","P_DONE"].forEach(function(p){
     document.getElementById(p).className="pg"+(p===id?" act":"");
@@ -234,16 +220,12 @@ function doShowSelect(){
 
 function doShowPreview(){
   if(document.getElementById("B_PREV").disabled) return;
-  // 確保資料已載入
-  if(!policies || policies.length === 0) {
-    alert("資料仍在載入中，請稍後再試");
-    return;
-  }
+  if(!policies) { alert("資料仍在載入中，請稍後再試"); return; }
   var selBlks=BLOCKS.filter(function(b){return sel[b.key];});
   var isPdf=fmt.startsWith("pdf");
   document.getElementById("HDR_TITLE").textContent="預覽確認";
-  document.getElementById("PV_NOTE").innerHTML='ℹ️ 以下為<strong>真實資料預覽</strong>，點「'+(isPdf?"匯出 PDF":"下載圖片")+'」後系統截圖產生'+(isPdf?"PDF":"PNG")+'檔案。';
-  document.getElementById("WM_HINT").textContent='匯出圖片底部將自動加上「NBS 保單體檢　'+pName+'　'+pDate+'」浮水印';
+  document.getElementById("PV_NOTE").innerHTML='ℹ️ 以下為<strong>真實資料預覽</strong>，點「'+(isPdf?"匯出 PDF":"下載圖片")+'」後系統產生'+(isPdf?"PDF":"PNG")+'檔案。';
+  document.getElementById("WM_HINT").textContent='匯出圖片底部將自動加上「NBS 保單體檢 '+pName+' '+pDate+'」浮水印';
   var eb=document.getElementById("B_EXPORT");
   eb.style.background=isPdf?"#E74C3C":"#378ADD";
   eb.textContent=isPdf?"匯出 PDF":"下載圖片";
@@ -268,6 +250,92 @@ function doShowPreview(){
 function renderBlock(key){
   var active=policies.filter(function(p){return p.status==="有效";});
 
+  // ▼ 新版受益人與傳承模塊渲染
+  if(key==="beneficiary"){
+    var targetCats = ["壽險保障", "儲蓄險", "年金險", "投資型保險", "重大疾病險", "重大傷病險", "特定傷病險"];
+    var bp = policies.filter(function(p){ return targetCats.indexOf(p.category)>=0; });
+    
+    if(bp.length===0) return '<div style="padding:12px;color:#aaa;font-size:12px;text-align:center">此成員尚無具傳承或生存金意義之保單</div>';
+
+    var html = '<div style="padding:10px 12px; background:#fff;">';
+    html += '<div style="font-size:11px;color:#666;margin-bottom:12px;line-height:1.6;padding:8px;background:#f9f9f9;border-radius:6px">💡 釐清每一筆準備好的額度，在未來將代替我們照顧誰。</div>';
+    
+    bp.forEach(function(p){
+      var amtText = p.insuredAmount ? p.insuredAmount + " " + (p.insuredAmountUnit || '萬元') : '—';
+      var cc = CC[p.category] || "#999";
+      
+      // 解析要保人姓名
+      var ownerName = p.proposer || p.applicant || "要保人";
+
+      // 1. 解析身故受益人 (對接最新自由文字框)
+      var dStr = "未設定";
+      if(p.isRider) {
+        dStr = "同主約";
+      } else if(p.category==="醫療保障" || p.category==="癌症醫療" || p.category==="重大傷病險" || p.category==="特定傷病險") {
+        dStr = "被保險人本人";
+      } else if(p.beneficiaryDeathText) {
+        dStr = p.beneficiaryDeathText;
+      } else if(p.beneficiaryDeathCustom && p.beneficiaryDeathCustom.length>0) {
+        dStr = p.beneficiaryDeathCustom.map(function(c){ return c.customName || "指定家人"; }).join("、");
+      }
+      
+      // 2. 解析生存與滿期金
+      var lStr = "未設定", mStr = "未設定";
+
+      if (p.beneficiaryLiveType === "self") lStr = "被保險人本人";
+      else if (p.beneficiaryLiveType === "owner") lStr = ownerName + " (要保人)";
+      else if (p.beneficiaryLiveType === "other") lStr = p.beneficiaryLiveOther || "指定其他";
+      else if (p.beneficiaryLiveType === "none" || !p.beneficiaryLiveType) lStr = "無 / 不適用";
+
+      if (p.beneficiaryMaturityType === "self") mStr = "被保險人本人";
+      else if (p.beneficiaryMaturityType === "owner") mStr = ownerName + " (要保人)";
+      else if (p.beneficiaryMaturityType === "other") mStr = p.beneficiaryMaturityOther || "指定其他";
+      else if (p.beneficiaryMaturityType === "none" || !p.beneficiaryMaturityType) mStr = "無 / 不適用";
+
+      // 壽險與年金險特例保護
+      if (p.category === "壽險保障") {
+          lStr = "無 / 不適用";
+          mStr = "無 / 不適用";
+      } else if (p.category === "年金險" || p.category === "投資型保險") {
+          lStr = "被保險人本人";
+          mStr = "無 / 不適用";
+      }
+
+      // 3. 組合滿期/生存金顯示 HTML
+      var liveMatHtml = "";
+      if (p.category === "儲蓄險") {
+          // 儲蓄險同時顯示生存與滿期金
+          liveMatHtml += '<div style="flex:1;"><div style="font-size:10px; color:#888; margin-bottom:4px;">生存金受益人</div><div style="font-size:13px; color:'+(lStr.includes('無')?'#ccc':'#333')+'; font-weight:500;">' + lStr + '</div></div>';
+          liveMatHtml += '<div style="flex:1;"><div style="font-size:10px; color:#888; margin-bottom:4px;">滿期金受益人</div><div style="font-size:13px; color:'+(mStr.includes('無')?'#ccc':'#333')+'; font-weight:500;">' + mStr + '</div></div>';
+      } else {
+          // 其他險種只顯示一欄 (如果無/不適用就淡化)
+          liveMatHtml += '<div style="flex:1;"><div style="font-size:10px; color:#888; margin-bottom:4px;">生存/滿期金 (照顧自己)</div><div style="font-size:13px; color:'+(lStr.includes('無')?'#ccc':'#333')+'; font-weight:500;">' + lStr + '</div></div>';
+      }
+      
+      // 卡片組合
+      html += '<div style="background:#fff; border:1px solid #e8e8e8; border-radius:10px; margin-bottom:12px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.02)">' +
+        '<div style="padding:10px 12px; border-bottom:1px solid #f0f0f0; display:flex; align-items:center;">' +
+          '<span style="font-size:10px; padding:2px 8px; border-radius:99px; background:'+cc+'15; color:'+cc+'; margin-right:8px; font-weight:500;">' + (p.category||'—') + '</span>' +
+          '<span style="font-size:14px; font-weight:600; color:#333; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1;">' + (p.itemName||p.policyNo) + '</span>' +
+        '</div>' +
+        '<div style="background:#F5FAFF; padding:8px 12px; border-bottom:1px solid #E6F1FB; display:flex; align-items:center;">' +
+          '<span style="font-size:11px; color:#555;">🎯 當年度保額：</span>' +
+          '<span style="font-size:15px; font-weight:600; color:#0C447C; margin-left:6px; font-family:monospace;">' + amtText + '</span>' +
+        '</div>' +
+        '<div style="display:flex; gap:12px; padding:12px;">' +
+          '<div style="flex:1.2;">' +
+            '<div style="font-size:10px; color:#888; margin-bottom:4px;">身故受益人 (留愛)</div>' +
+            '<div style="font-size:13px; color:'+(dStr==='未設定'?'#ccc':'#333')+'; font-weight:500; white-space:pre-wrap; line-height:1.5;">' + dStr + '</div>' +
+          '</div>' +
+          liveMatHtml +
+        '</div>' +
+      '</div>';
+    });
+    html += '</div>';
+    return html;
+  }
+
+  // ── 其他原有模塊 ───────────────────────────────────────
   if(key==="summary"){
     var totalTWD=active.reduce(function(s,p){return s+(p.premiumTWD||0);},0);
     var catMap={};
@@ -282,11 +350,10 @@ function renderBlock(key){
       paths+='<path d="M'+cx+','+cy+' L'+x1.toFixed(1)+','+y1.toFixed(1)+' A'+r+','+r+' 0 '+(a>Math.PI?1:0)+' 1 '+x2.toFixed(1)+','+y2.toFixed(1)+' Z" fill="'+d.color+'" stroke="#fff" stroke-width="1.5"/>';
     });
     var legend=pd.map(function(d){return'<div style="display:flex;align-items:center;gap:5px;font-size:11px;margin-bottom:3px"><div style="width:10px;height:10px;border-radius:2px;background:'+d.color+';flex-shrink:0"></div><span style="color:#555;min-width:64px">'+d.label+'</span><span style="color:#aaa">'+Math.round(d.value/pt*100)+'%</span></div>';}).join("");
-    return'<div style="padding:10px 12px"><div style="font-size:11px;color:#888;margin-bottom:8px">'+pName+'　'+pDate+'　年繳 NT$'+(totalTWD/10000).toFixed(1)+'萬</div><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><svg width="160" height="160" style="flex-shrink:0"><g>'+paths+'</g></svg><div>'+legend+'</div></div></div>';
+    return'<div style="padding:10px 12px"><div style="font-size:11px;color:#888;margin-bottom:8px">'+pName+' '+pDate+' 年繳 NT$'+(totalTWD/10000).toFixed(1)+'萬</div><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><svg width="160" height="160" style="flex-shrink:0"><g>'+paths+'</g></svg><div>'+legend+'</div></div></div>';
   }
 
   if(key==="timeline"){
-    // 從各保單的 coverage 加總
     function sumKey(k){ var t=0; policies.forEach(function(p){ var v=p.coverage&&p.coverage[k]; if(v&&typeof v==="number") t+=v; }); return t||null; }
     function hasCat(cats){ return policies.some(function(p){ return cats.indexOf(p.category)>=0; }); }
     var phases=[
@@ -386,14 +453,12 @@ function renderBlock(key){
 
   if(key==="policy"){
     var tt=policies.filter(function(p){return p.status==="有效";}).reduce(function(s,p){return s+(p.premiumTWD||0);},0);
-    // 依保單號碼分組
     var groups={};
     policies.forEach(function(p){
       var k=p.policyNo||p.id;
       if(!groups[k]) groups[k]=[];
       groups[k].push(p);
     });
-    // 欄位標題（只出現一次在最上方）
     var colHeader='<div style="display:grid;grid-template-columns:80px 1fr 80px 70px;gap:4px;font-size:9px;color:#aaa;padding:3px 8px;border-bottom:1px solid #e8e8e8;margin-bottom:4px;font-weight:500">'+
       '<span>類別</span><span>保險項目名稱</span><span style="text-align:right">保額</span><span style="text-align:right">年繳保費</span></div>';
 
@@ -420,74 +485,6 @@ function renderBlock(key){
     return'<div style="padding:10px 12px">'+colHeader+groupHtml+'<div style="font-size:11px;font-weight:500;color:#27500A;text-align:right;padding-top:5px;border-top:1px solid #e8e8e8;margin-top:3px">年繳總計 NT$'+tt.toLocaleString()+'</div></div>';
   }
 
-// ── 匯出模塊：受益人與傳承 ─────────────────────────────────────
-  if(key==="beneficiary"){
-    // 1. 篩選出具有傳承與生存金意義的險種
-    var targetCats = ["壽險保障", "儲蓄險", "年金險", "投資型保險", "重大疾病險", "重大傷病險", "特定傷病險"];
-    var bp = policies.filter(function(p){ return targetCats.indexOf(p.category)>=0; });
-    
-    if(bp.length===0) return '<div style="padding:12px;color:#aaa;font-size:12px">尚無具傳承性質之保單</div>';
-
-    // 取得成員名稱的輔助函數
-    function getMemName(id){
-      if(!id) return "—";
-      var m = (familyData&&familyData.members)?familyData.members.find(function(x){return x.personId===id;}):null;
-      return m?m.name:id;
-    }
-
-    var html = '<div style="padding:10px 12px">';
-    html += '<div style="font-size:11px;color:#666;margin-bottom:12px;line-height:1.6">💡 保單檢視的核心精神：釐清每一筆準備好的額度，在未來將代替我們照顧誰。</div>';
-    
-    bp.forEach(function(p){
-      var amtText = p.insuredAmount ? p.insuredAmount + " " + (p.insuredAmountUnit || '萬元') : '—';
-      
-      // 解析身故受益人
-      var dStr = "未設定";
-      if(p.isRider) {
-        dStr = "同主約";
-      } else if(p.beneficiaryDeathTplId) {
-        var t = (person.beneficiaryTemplates||[]).find(function(x){return x.id===p.beneficiaryDeathTplId;});
-        if(t) dStr = '<span style="color:#0C447C;font-weight:600">['+t.name+']</span>';
-      } else if(p.beneficiaryDeathCustom && p.beneficiaryDeathCustom.length>0) {
-        dStr = p.beneficiaryDeathCustom.map(function(c){ return (c.customName || getMemName(c.personId)); }).join("、");
-      }
-      
-      // 解析生存金受益人
-      var lStr = "未設定";
-      if(p.beneficiaryLiveType === "self") lStr = "被保險人本人";
-      else if(p.beneficiaryLiveType === "owner") lStr = "要保人";
-      else if(p.beneficiaryLiveType === "other") lStr = p.beneficiaryLiveOther || "指定其他";
-      if(p.category==="年金險") lStr = "不適用";
-      if(p.category==="投資型保險") lStr = "鎖定本人";
-
-      var cc = CC[p.category] || "#999";
-      
-      // 組合出精美的報表卡片
-      html += '<div style="background:#fff; border:1px solid #e8e8e8; border-radius:8px; margin-bottom:10px; overflow:hidden;">' +
-        '<div style="padding:8px 12px; border-bottom:1px solid #f0f0f0; display:flex; align-items:center;">' +
-          '<span style="font-size:10px; padding:2px 6px; border-radius:99px; background:'+cc+'20; color:'+cc+'; margin-right:8px;">' + (p.category||'—') + '</span>' +
-          '<span style="font-size:13px; font-weight:500; color:#333;">' + (p.itemName||p.policyNo) + '</span>' +
-        '</div>' +
-        '<div style="background:#F5FAFF; padding:8px 12px; border-bottom:1px solid #E6F1FB; display:flex; align-items:center;">' +
-          '<span style="font-size:11px; color:#555;">🎯 當年度保額：</span>' +
-          '<span style="font-size:15px; font-weight:600; color:#0C447C; margin-left:6px; font-family:monospace;">' + amtText + '</span>' +
-        '</div>' +
-        '<div style="display:flex; gap:10px; padding:10px 12px;">' +
-          '<div style="flex:1;">' +
-            '<div style="font-size:10px; color:#888; margin-bottom:4px;">身故受益人 (留愛)</div>' +
-            '<div style="font-size:13px; color:'+(dStr==='未設定'?'#ccc':'#333')+'; font-weight:500;">' + dStr + '</div>' +
-          '</div>' +
-          '<div style="flex:1;">' +
-            '<div style="font-size:10px; color:#888; margin-bottom:4px;">生存/滿期金 (照顧自己)</div>' +
-            '<div style="font-size:13px; color:'+(lStr==='未設定'?'#ccc':'#333')+'; font-weight:500;">' + lStr + '</div>' +
-          '</div>' +
-        '</div>' +
-      '</div>';
-    });
-    html += '</div>';
-    return html;
-  }
-
   return'<div style="padding:12px;color:#aaa;font-size:12px">建置中</div>';
 }
 
@@ -498,7 +495,7 @@ function doExport(){
   goPage("P_DOING");
   document.getElementById("EX_ICON").textContent=isPdf?"📄":"🖼️";
   document.getElementById("EX_MSG").textContent=isPdf?"正在產生 PDF…":fmt==="png_single"?"正在合併圖片…":"正在產生圖片…";
-  document.getElementById("EX_SUB").textContent="共 "+selBlks.length+" 個區塊　"+(fmt==="png_single"?"一張 PNG":fmt==="png_multiple"?selBlks.length+"張 PNG":fmt==="pdf_merge"?"單一 PDF":selBlks.length+" 頁 PDF");
+  document.getElementById("EX_SUB").textContent="共 "+selBlks.length+" 個區塊 "+(fmt==="png_single"?"一張 PNG":fmt==="png_multiple"?selBlks.length+"張 PNG":fmt==="pdf_merge"?"單一 PDF":selBlks.length+" 頁 PDF");
   document.getElementById("PROG").style.background=isPdf?"#E74C3C":"#378ADD";
   document.getElementById("PROG_PCT").style.color=isPdf?"#E74C3C":"#378ADD";
 
@@ -524,7 +521,7 @@ function setP(v){
 function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
 
 async function doExportPNG(blks,div){
-  var wm='<div style="padding:8px;background:#f7f7f5;text-align:center;font-size:11px;color:#aaa">NBS 保單體檢　'+pName+'　'+pDate+'</div>';
+  var wm='<div style="padding:8px;background:#f7f7f5;text-align:center;font-size:11px;color:#aaa">NBS 保單體檢 '+pName+' '+pDate+'</div>';
   if(fmt==="png_single"){
     div.innerHTML=blks.map(function(b){return'<div style="border-bottom:1px solid #f0f0f0">'+renderBlock(b.key)+'</div>';}).join("")+wm;
     setP(30);await sleep(200);
@@ -551,7 +548,7 @@ async function doExportPNG(blks,div){
 async function doExportPDF(blks,div){
   var J=window.jspdf.jsPDF;
   var pdf=new J("p","mm","a4");
-  var wm='<div style="padding:8px;background:#f7f7f5;text-align:center;font-size:11px;color:#aaa">NBS 保單體檢　'+pName+'　'+pDate+'</div>';
+  var wm='<div style="padding:8px;background:#f7f7f5;text-align:center;font-size:11px;color:#aaa">NBS 保單體檢 '+pName+' '+pDate+'</div>';
   for(var i=0;i<blks.length;i++){
     div.innerHTML=renderBlock(blks[i].key)+wm;
     setP(Math.round(i/blks.length*90));await sleep(100);
@@ -595,7 +592,7 @@ function gas(action,params){
   return fetch(url.toString()).then(function(r){return r.json();});
 }
 
-// ── 頁面載入後建立清單（空狀態，等 async 資料回來後再更新）
+// ── 頁面載入後 ─────────────────────────────────────────
 window.addEventListener("nbs_nav_ready", async function(e) {
   var currentUser   = e.detail.user;
   familyData        = e.detail.familyData;
@@ -607,8 +604,6 @@ window.addEventListener("nbs_nav_ready", async function(e) {
   var btn=document.getElementById("B_PREV");
   if(btn){btn.disabled=true;btn.textContent="資料載入中…";btn.style.background="#ccc";}
 
-  // 載入個人資料
-  // 載入個人資料 (效能優化：導入本地快取 SessionStorage + 併發請求)
   try {
     var pdm = {};
     var fmem = (familyData && familyData.members) || [];
@@ -619,11 +614,9 @@ window.addEventListener("nbs_nav_ready", async function(e) {
       var cachedData = sessionStorage.getItem(cacheKey);
 
       if (cachedData) {
-        // ⚡ 命中快取：瞬間載入
         pdm[mem.personId] = JSON.parse(cachedData);
         return Promise.resolve();
       } else {
-        // ☁️ 無快取：向雲端併發抓取，拿完後立刻存入快取
         return gas("readFile", {
           email: currentUser.email,
           fileType: "person",
@@ -655,15 +648,21 @@ window.addEventListener("nbs_nav_ready", async function(e) {
   updatePrevBtn();
 });
 
-
 // ── NBS 導覽 ──────────────────────────────────────────────
-NBS_NAV.onMemberChange = function(pid) {
-  currentPersonId = pid;
-  if (typeof renderContent  === "function") renderContent();
-  if (typeof showListView   === "function") showListView();
-  if (typeof renderContent  === "function") renderContent();
-};
-NBS_NAV.init({ page: "export" });
+if (typeof NBS_NAV !== "undefined") { 
+    NBS_NAV.onMemberChange = function(pid) {
+      currentPersonId = pid;
+      // 匯出頁面不需要即時更新內容，但可在這裡補上重新抓人名邏輯
+      var pdm_p = JSON.parse(sessionStorage.getItem("nbs_person_" + pid));
+      if(pdm_p) {
+        person = pdm_p;
+        policies = person.policies || [];
+        pName = (person.profile && person.profile.name) || "—";
+        updatePrevBtn();
+      }
+    };
+    NBS_NAV.init({ page: "export" }); 
+}
 </script>
 </body>
 </html>
