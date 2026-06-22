@@ -412,7 +412,6 @@ const policies = allPolicies.filter(p => targetCategories.includes(p.category));
 
   let html = `<div style="font-size:11px;color:#999;margin-bottom:10px">為每筆保單設定受益人，灰色鎖定項目依法令規定無法更改。</div>`;
 
- let html = "";
 policies.forEach(p => {
   // ▼ 1. 新增這行：組合保額與單位（如果沒填則顯示 '—'）
   const amountText = p.insuredAmount ? `${p.insuredAmount} ${p.insuredAmountUnit || '萬元'}` : '—';
