@@ -497,16 +497,20 @@ function renderContent() {
         let unitText = "";
 
         // 【核心邏輯：精準跨險種加總】
-        // 基礎住院 = 實支病房 + 日額病房
-        const baseHosp = sumCov(["hosp_room", "daily_room_1_30", "hosp_ext_daily", "hosp_ext_room"], policies, coverage);
+        // 疾病住院(基礎) = 實支病房費 + 日額病房費(1~30日) + 日額出院療養金
+        const baseHosp = sumCov(["hosp_room", "hosp_ext_room", "daily_room_1_30", "hosp_ext_daily", "daily_discharge"], policies, coverage);
 
         if(rk==="hosp") {
           unitText = "元/日";
+          
+          // 1. 疾病住院
           if(ck==="disease")  auto = baseHosp;
-          // 意外住院 = 基礎住院 + 意外專屬病房費
-          if(ck==="accident") auto = baseHosp + sumCov(["acc_hosp", "acc_icu"], policies, coverage);
-          // 癌症住院 = 基礎住院 + 癌症專屬病房費
-          if(ck==="cancer")   auto = baseHosp + sumCov(["can_hosp"], policies, coverage);
+          
+          // 2. 意外住院 = 疾病住院(基礎) + 意外險專屬住院日額
+          if(ck==="accident") auto = baseHosp + sumCov(["acc_hosp"], policies, coverage);
+          
+          // 3. 癌症住院 = 疾病住院(基礎) + 癌症醫療專屬住院 + 癌症專屬出院療養
+          if(ck==="cancer")   auto = baseHosp + sumCov(["can_hosp", "can_discharge"], policies, coverage);
         }
         
         if(rk==="opd") {
@@ -532,7 +536,8 @@ function renderContent() {
   });
   html+=`</tbody></table></div>
   <div style="font-size:11px;color:#bbb;margin-bottom:16px;padding-left:4px">
-    💡 意外住院 ＝ 一般住院日額 ＋ 意外專屬日額，癌症以此類推（可手動覆蓋修改）
+    💡 疾病住院＝實支病房＋日額病房＋日額出院療養<br>
+    💡 意外住院＝疾病住院＋意外日額，癌症以此類推（可手動修改）
   </div>`;
 
   // 將組合好的 HTML 內容正式印出到畫面上
