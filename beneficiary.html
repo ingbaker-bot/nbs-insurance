@@ -24,22 +24,36 @@
     .cat-意外險 { background:#FFF3E0; color:#E67E22; }
     .cat-醫療險 { background:#EAF3DE; color:#27500A; }
     .cat-癌症醫療 { background:#FCEBEB; color:#791F1F; }
-    .cat-重大疾病險 { background:#FCEBEB; color:#791F1F; }
+    .cat-重大疾病險 { background:#EEEDFE; color:#3C3489; }
     .cat-失能長照 { background:#F3E5F5; color:#4A148C; }
     .cat-儲蓄險 { background:#FBEAF0; color:#72243E; }
     .cat-投資型保險 { background:#f0f0f0; color:#555; }
 
+    .policy-benef-card { background:#fff; border:1px solid #e8e8e8; border-radius:10px; padding:12px 14px; margin-bottom:8px; overflow:hidden;}
+    .policy-benef-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; flex-wrap:wrap; gap:6px; }
+    .policy-no { font-size:11px; font-family:monospace; background:#E6F1FB; color:#0C447C; padding:1px 7px; border-radius:99px; }
+    .policy-name { font-size:13px; font-weight:500; }
+    .cat-badge { font-size:10px; padding:1px 6px; border-radius:99px; }
+    .set-btn { font-size:12px; padding:4px 12px; border:1px solid #ddd; border-radius:6px; background:#fff; cursor:pointer; color:#666; font-family:inherit; }
+
     /* Modal 視窗置中對齊 */
-    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:200; align-items:center; justify-content:center; }
+    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:200; align-items:center; justify-content:center; padding:16px;}
     .modal { background:#fff; border-radius:16px; padding:20px; width:100%; max-width:560px; max-height:90vh; overflow-y:auto; }
+    .modal-title { font-size:16px; font-weight:600; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; color:#333;}
+    .modal-close { background:none; border:none; font-size:24px; color:#999; cursor:pointer; line-height:1; }
     
     /* 選項按鈕 2x2 網格 */
     .live-opts, .mat-opts { display:grid; grid-template-columns:repeat(2,1fr); gap:6px; margin-bottom:8px; }
     .live-opt, .mat-opt { padding:8px; font-size:12px; border:1px solid #e0e0e0; border-radius:6px; background:#fff; color:#666; cursor:pointer; font-family:inherit; text-align:center;}
     .live-opt.active, .mat-opt.active { background:#E6F1FB; color:#0C447C; border-color:#378ADD; font-weight:500; }
 
+    .btn-row { display:flex; gap:10px; margin-top:20px; }
+    .btn-primary { flex:1; padding:10px; background:#378ADD; color:#fff; border:none; border-radius:8px; font-size:14px; font-weight:500; cursor:pointer; font-family:inherit; }
+    .btn-secondary { flex:1; padding:10px; background:#f5f5f3; color:#666; border:none; border-radius:8px; font-size:14px; cursor:pointer; font-family:inherit; }
+
     #saved-hint { display:none; position:fixed; top:60px; left:50%; transform:translateX(-50%); background:#27AE8F; color:#fff; padding:8px 16px; border-radius:8px; font-size:13px; z-index:999; box-shadow:0 2px 8px rgba(0,0,0,0.2); }
   </style>
+  <script src="nav.js"></script>
 </head>
 <body>
   <div class="header">
@@ -51,19 +65,22 @@
   <div id="saved-hint">✓ 已儲存</div>
 
   <div class="content-area">
-    <div id="policy-list"><div style="text-align:center;padding:40px;color:#bbb;font-size:13px">載入資料中，請稍候...</div></div>
+    <div id="policy-view" style="display:block;">
+      <div id="policy-list"><div style="text-align:center;padding:40px;color:#bbb;font-size:13px">載入資料中，請稍候...</div></div>
+    </div>
   </div>
 
-  <div class="modal-overlay" id="edit-modal" onclick="if(event.target===this) closeModal()">
+  <!-- 保單設定 Modal -->
+  <div class="modal-overlay" id="policy-modal" onclick="if(event.target===this) closePolicyModal()">
     <div class="modal">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-        <h3 style="font-size:16px;color:#333" id="modal-policy-name">保單設定</h3>
-        <button onclick="closeModal()" style="background:none;border:none;font-size:20px;color:#999;cursor:pointer">×</button>
+      <div class="modal-title">
+        <span id="modal-policy-name">保單設定</span>
+        <button class="modal-close" onclick="closePolicyModal()">×</button>
       </div>
-      <div id="modal-body"></div>
-      <div style="display:flex;gap:10px;margin-top:20px">
-        <button onclick="closeModal()" style="flex:1;padding:10px;background:#f5f5f3;border:none;border-radius:8px;color:#666;font-size:14px;cursor:pointer">取消</button>
-        <button onclick="savePolicyBenef()" style="flex:1;padding:10px;background:#378ADD;border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:500;cursor:pointer">確認儲存</button>
+      <div id="policy-modal-body"></div>
+      <div class="btn-row">
+        <button class="btn-secondary" onclick="closePolicyModal()">取消</button>
+        <button class="btn-primary" onclick="savePolicyBenef()">確認儲存</button>
       </div>
     </div>
   </div>
@@ -71,13 +88,14 @@
   <script>
     const GAS_URL = "https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec";
     
-    // 實務規則：哪些險種可以設定身故或生存金
     const BENEF_RULES = {
       "壽險保障":   { death:"可設定", live:"不適用" },
       "意外險":     { death:"可設定", live:"不適用" },
       "醫療險":     { death:"鎖定本人", live:"不適用" },
       "癌症醫療":   { death:"鎖定本人", live:"不適用" },
       "重大疾病險": { death:"可設定", live:"可設定" },
+      "重大傷病險": { death:"鎖定本人", live:"鎖定本人" },
+      "特定傷病險": { death:"鎖定本人", live:"鎖定本人" },
       "失能長照":   { death:"可設定", live:"鎖定本人" },
       "儲蓄險":     { death:"可設定", live:"可設定" },
       "年金險":     { death:"可設定", live:"鎖定本人" },
@@ -85,62 +103,55 @@
     };
 
     let currentUser = null, familyData = null, personDataMap = {};
-    let currentPersonId = null, currentPolicyId = null;
+    let currentPersonId = null, editPolicyId = null;
 
-    // 初始化與資料載入
-    window.onload = async () => {
-      const u = localStorage.getItem("nbs_user");
-      if(!u) return window.location.href="login.html";
-      currentUser = JSON.parse(u);
-      await loadData();
-    };
+    // ── 初始化：完美對接 NBS 導覽列 ──
+    window.addEventListener("nbs_nav_ready", async function(e) {
+      currentUser       = e.detail.user;
+      familyData        = e.detail.familyData;
+      currentPersonId   = e.detail.currentPersonId;
 
-    async function loadData() {
+      if (!currentUser || !familyData) {
+        document.getElementById("policy-list").innerHTML = "載入失敗：請重新登入";
+        return;
+      }
+
       try {
-        const cachedFam = sessionStorage.getItem("nbs_family");
-        if(cachedFam) familyData = JSON.parse(cachedFam);
-        else {
-          const r = await callGAS("getFamily", { email: currentUser.email });
-          if(r && r.status === "ok") { 
-              familyData = r.data; 
-              sessionStorage.setItem("nbs_family", JSON.stringify(familyData)); 
-          }
-        }
-        
-        if(!familyData || !familyData.members || familyData.members.length === 0) return;
-        currentPersonId = familyData.members[0].personId;
-        renderTabs();
+        const activeMembers = familyData.members.filter(m => m.role !== "beneficiary_only");
+        const fetchPromises = activeMembers.map(m => {
+          const cacheKey = "nbs_person_" + m.personId;
+          const cachedData = sessionStorage.getItem(cacheKey);
 
-        // 穩定抓取每個成員的保單資料
-        const promises = familyData.members.map(async m => {
-          try {
-            const cached = sessionStorage.getItem("nbs_person_"+m.personId);
-            if(cached) { personDataMap[m.personId] = JSON.parse(cached); return; }
-            
-            const pr = await callGAS("readFile", { email:currentUser.email, fileType:"person", fileName:m.name+"_"+m.personId+".json" });
-            if(pr && pr.status === "ok") { 
-                personDataMap[m.personId] = pr.content; 
-                sessionStorage.setItem("nbs_person_"+m.personId, JSON.stringify(pr.content)); 
-            } else {
+          if (cachedData) {
+            personDataMap[m.personId] = JSON.parse(cachedData);
+            return Promise.resolve();
+          } else {
+            return callGAS("readFile", {
+              email: currentUser.email,
+              fileType: "person",
+              fileName: m.name + "_" + m.personId + ".json"
+            }).then(pr => {
+              if (pr && pr.status === "ok") {
+                personDataMap[m.personId] = pr.content;
+                sessionStorage.setItem(cacheKey, JSON.stringify(pr.content));
+              } else {
                 personDataMap[m.personId] = { policies: [] };
-            }
-          } catch(err) {
-            console.error("載入成員失敗", m.name, err);
-            personDataMap[m.personId] = { policies: [] };
+              }
+            }).catch(err => console.error(err));
           }
         });
-        
-        await Promise.all(promises);
+
+        await Promise.all(fetchPromises);
+        renderTabs();
         renderPolicyView();
-      } catch(e) { 
-        console.error("整體載入失敗", e); 
-        document.getElementById("policy-list").innerHTML = '<div style="text-align:center;padding:40px;color:#e74c3c;">資料載入異常，請重新整理網頁。</div>';
+      } catch(err) {
+        document.getElementById("policy-list").innerHTML = "載入異常：" + err.message;
       }
-    }
+    });
 
     function renderTabs() {
       if(!familyData || !familyData.members) return;
-      const html = familyData.members.map(m => 
+      const html = familyData.members.filter(m=>m.role!=="beneficiary_only").map(m => 
         `<div class="member-tab ${m.personId===currentPersonId?'active':''}" onclick="switchMember('${m.personId}')">${m.name}</div>`
       ).join('');
       document.getElementById("member-tabs").innerHTML = html;
@@ -158,7 +169,6 @@
       if(!person) return;
       
       const allPolicies = person.policies || [];
-      // 過濾出需要檢視受益人的險種
       const targetCategories = ["壽險保障", "儲蓄險", "年金險", "投資型保險", "重大疾病險", "重大傷病險", "特定傷病險"];
       const policies = allPolicies.filter(p => targetCategories.includes(p.category));
 
@@ -170,7 +180,7 @@
       let html = `<div style="font-size:11px;color:#999;margin-bottom:10px">為每筆保單設定受益人，灰色鎖定項目依法令規定無法更改。</div>`;
 
       policies.forEach(p => {
-        const amountText = p.insuredAmount ? `${p.insuredAmount} ${p.insuredAmountUnit || '萬元'}` : '—';
+        const amountText = (p.insuredAmount !== undefined && p.insuredAmount !== null && p.insuredAmount !== "") ? `${p.insuredAmount} ${p.insuredAmountUnit || '萬元'}` : '—';
         const catClass = "cat-" + (p.category || "");
         const rule = BENEF_RULES[p.category] || { death:"可設定", live:"可設定" };
 
@@ -182,9 +192,8 @@
           dStr = '<span class="locked-tag">被保險人本人</span>';
         } else if (p.beneficiaryDeathText) {
           dStr = p.beneficiaryDeathText; 
-        } else if (p.beneficiaryDeathCustom && p.beneficiaryDeathCustom.length > 0) {
-          // 兼容舊資料
-          dStr = p.beneficiaryDeathCustom.map(c => c.customName || "指定家人").join("、");
+        } else if (Array.isArray(p.beneficiaryDeathCustom) && p.beneficiaryDeathCustom.length > 0) {
+          dStr = p.beneficiaryDeathCustom.map(c => c.customName || "指定家人").join("、"); // 兼容舊資料
         }
 
         // 2. 解析生存與滿期金
@@ -223,18 +232,18 @@
         }
 
         // 產出卡片 HTML
-        html += `<div class="policy-card" style="background:#fff; border:1px solid #e8e8e8; border-radius:10px; margin-bottom:12px; overflow:hidden;">
-          <div class="card-header" style="display:flex; align-items:center; padding:12px 14px; border-bottom:1px solid #f0f0f0;">
-            <span style="font-family:monospace; font-size:11px; background:#E6F1FB; color:#0C447C; padding:1px 7px; border-radius:99px; margin-right:8px;">${p.policyNo || p.id}</span>
-            <span style="font-size:14px; font-weight:500; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.itemName || '—'}</span>
-            <span class="cat-badge ${catClass}" style="font-size:11px; padding:2px 6px; border-radius:99px; margin-right:8px; white-space:nowrap;">${p.category || '—'}</span>
-            <button onclick="openPolicyModal('${p.id}')" style="padding:4px 12px; font-size:12px; border:1px solid #ddd; border-radius:6px; background:#fff; cursor:pointer;">設定</button>
+        html += `<div class="policy-benef-card">
+          <div class="policy-benef-header">
+            <span class="policy-no">${p.policyNo || p.id}</span>
+            <span class="policy-name" style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.itemName || '—'}</span>
+            <span class="cat-badge ${catClass}" style="margin-right:6px;">${p.category || '—'}</span>
+            <button class="set-btn" onclick="openPolicyModal('${p.id}')">設定</button>
           </div>
-          <div style="background:#F5FAFF; padding:8px 14px; border-bottom:1px solid #E6F1FB; display:flex; align-items:center;">
+          <div style="background:#F5FAFF; padding:8px 14px; border-bottom:1px solid #E6F1FB; display:flex; align-items:center; margin:-4px -14px 12px -14px;">
             <span style="font-size:12px; color:#555;">🎯 當年度保額：</span>
             <span style="font-size:15px; font-weight:600; color:#0C447C; margin-left:6px; font-family:monospace;">${amountText}</span>
           </div>
-          <div class="card-body" style="display:flex; gap:16px; padding:12px 14px;">
+          <div style="display:flex; gap:16px;">
             <div style="flex:1;">
               <div style="font-size:11px; color:#888; margin-bottom:4px;">受益人 (身故)</div>
               <div style="font-size:13px; color:${dStr==='未設定'?'#ccc':'#333'}; line-height:1.5; white-space:pre-wrap;">${dStr}</div>
@@ -249,13 +258,13 @@
 
     // ── Modal 設定彈窗與選項切換 ─────────────────────────────
     function openPolicyModal(policyId) {
-      currentPolicyId = policyId;
+      editPolicyId = policyId;
       const person = personDataMap[currentPersonId];
       if(!person) return;
       const policy = (person.policies || []).find(p => p.id === policyId);
       if(!policy) return;
 
-      document.getElementById("modal-policy-name").textContent = policy.itemName || "保單設定";
+      document.getElementById("modal-policy-name").textContent = policy.itemName || "設定受益人";
       const rule = BENEF_RULES[policy.category] || { death:"可設定", live:"可設定" };
 
       let html = "";
@@ -271,17 +280,17 @@
       } else {
         // 自由文字輸入框與快速家人按鈕
         html += `<div style="font-size:12px;color:#666;margin-bottom:6px">請自由輸入受益人分配 (支援多順位與比例)：</div>
-        <textarea id="death-custom-text" placeholder="例如：\\n順位一：配偶\\n順位二：子女均分" style="width:100%;height:80px;padding:10px;font-size:13px;border:1px solid #ddd;border-radius:6px;outline:none;font-family:inherit;resize:vertical;line-height:1.5">${policy.beneficiaryDeathText || ''}</textarea>
+        <textarea id="death-custom-text" placeholder="例如：\n順位一：配偶\n順位二：子女均分" style="width:100%;height:80px;padding:10px;font-size:13px;border:1px solid #ddd;border-radius:6px;outline:none;font-family:inherit;resize:vertical;line-height:1.5">${policy.beneficiaryDeathText || ''}</textarea>
         
         <div style="font-size:11px;color:#888;margin-top:8px;margin-bottom:6px">💡 點擊下方家人快速加入文字框：</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">`;
         
         const members = familyData?.members || [];
         members.forEach(m => {
-           html += `<button onclick="document.getElementById('death-custom-text').value += '${m.name} '" style="font-size:12px;padding:4px 10px;border:1px solid #ddd;border-radius:99px;background:#fff;cursor:pointer">${m.name}</button>`;
+           html += `<button type="button" onclick="document.getElementById('death-custom-text').value += '${m.name} '" style="font-size:12px;padding:4px 10px;border:1px solid #ddd;border-radius:99px;background:#fff;cursor:pointer">${m.name}</button>`;
         });
         
-        html += `<button onclick="document.getElementById('death-custom-text').value = ''" style="font-size:12px;padding:4px 10px;border:1px solid #fcc;border-radius:99px;background:#fff;cursor:pointer;color:#e74c3c">清空</button></div>`;
+        html += `<button type="button" onclick="document.getElementById('death-custom-text').value = ''" style="font-size:12px;padding:4px 10px;border:1px solid #fcc;border-radius:99px;background:#fff;cursor:pointer;color:#e74c3c">清空</button></div>`;
       }
       html += `</div>`; 
 
@@ -320,8 +329,8 @@
       }
       html += `</div>`;
 
-      document.getElementById("modal-body").innerHTML = html;
-      document.getElementById("edit-modal").style.display = "flex";
+      document.getElementById("policy-modal-body").innerHTML = html;
+      document.getElementById("policy-modal").style.display = "flex";
     }
 
     function setLiveType(t) {
@@ -340,13 +349,13 @@
       document.getElementById("mat-other-input").style.display = t==="other"?"block":"none";
     }
 
-    function closeModal() { document.getElementById("edit-modal").style.display = "none"; }
+    function closePolicyModal() { document.getElementById("policy-modal").style.display = "none"; }
 
     // ── 儲存與寫入雲端 ─────────────────────────────
     function savePolicyBenef() {
       const person = personDataMap[currentPersonId];
       if(!person) return;
-      const policy = (person.policies || []).find(p => p.id === currentPolicyId);
+      const policy = (person.policies || []).find(p => p.id === editPolicyId);
       if(!policy) return;
 
       const rule = BENEF_RULES[policy.category] || { death:"可設定", live:"可設定" };
@@ -354,7 +363,12 @@
       // 儲存身故文字框
       if (!policy.isRider && rule.death !== "鎖定本人") {
          const dText = document.getElementById("death-custom-text");
-         if (dText) policy.beneficiaryDeathText = dText.value.trim();
+         if (dText) {
+             policy.beneficiaryDeathText = dText.value.trim();
+             // 清除舊版的設定，避免渲染衝突
+             policy.beneficiaryDeathCustom = []; 
+             policy.beneficiaryDeathTplId = "";
+         }
       }
 
       // 儲存生存與滿期金
@@ -374,7 +388,7 @@
         policy.beneficiaryMaturityOther = (mType === "other" && mOther) ? mOther.value.trim() : "";
       }
 
-      closeModal();
+      closePolicyModal();
       renderPolicyView();
       saveData();
     }
@@ -418,6 +432,5 @@
         NBS_NAV.init({ page: "beneficiary" }); 
     }
   </script>
-  <script src="nav.js"></script>
 </body>
 </html>
