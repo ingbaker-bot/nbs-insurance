@@ -14,6 +14,7 @@
     { key:"summary",     label:"保單彙總", icon:"📊", href:"summary.html" },
     { key:"beneficiary", label:"受益人",   icon:"👥", href:"beneficiary.html" },
     { key:"export",      label:"匯出圖片", icon:"🖼️", href:"export.html" },
+    { key:"hospital",    label:"醫院病房", icon:"🏥", href:"hospital.html" }
   ];
 
   var _page = "";
