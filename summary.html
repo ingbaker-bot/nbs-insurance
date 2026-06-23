@@ -585,6 +585,19 @@ const GAP_KEY_MAP = {
   waiver:          { cats:[],                   keys:["ltc_waiver"] },
 };
 
+// ── 輔助加總計算機 ─────────────────────────────────────────
+function sumCov(keys, policies, coverage) {
+  let total = 0;
+  policies.forEach(p => {
+    keys.forEach(k => {
+      if (p.coverage && typeof p.coverage[k] === "number") {
+        total += p.coverage[k];
+      }
+    });
+  });
+  return total;
+}
+
 // 核心運算引擎：精準抓取資料庫數字
 function getItemCurrent(key, policies, coverage, covOverrides) {
   const map = GAP_KEY_MAP[key];
