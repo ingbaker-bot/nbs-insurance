@@ -398,15 +398,30 @@
       if(!person) return;
       person.updatedAt = new Date().toISOString();
       
+      const hint = document.getElementById("saved-hint");
+      
       try {
         const member = familyData.members.find(m => m.personId === currentPersonId);
+        
+        // 1. 在傳送資料前，立刻顯示橘色的「儲存中...」與旋轉動畫
+        hint.innerHTML = '<span class="spinner" style="width:12px;height:12px;border-width:2px;margin-right:6px;border-top-color:#fff;"></span>儲存中...';
+        hint.style.background = "#F5A623"; // 橘色
+        hint.style.display = "block";
+
+        // 開始呼叫 Google 雲端寫入資料 (這裡會耗時約 2~3 秒)
         await callGAS("saveFile", { email: currentUser.email, fileType: "person", fileId: currentPersonId, fileName: member.name+"_"+currentPersonId+".json", content: person });
+        
         sessionStorage.setItem("nbs_person_" + currentPersonId, JSON.stringify(person));
         
-        const hint = document.getElementById("saved-hint");
-        hint.style.display="block";
+        // 2. 雲端回報成功後，切換成綠色的「✓ 已儲存」
+        hint.innerHTML = "✓ 已儲存";
+        hint.style.background = "#27AE8F"; // 綠色
+        
+        // 停留 2 秒後自動隱藏
         setTimeout(()=>hint.style.display="none", 2000);
+        
       } catch(e) { 
+        hint.style.display = "none";
         alert("儲存失敗：" + e.message); 
       }
     }
