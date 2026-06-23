@@ -375,7 +375,7 @@ function renderContent() {
   const active  = policies.filter(p=>p.status==="有效");
   const totalTWD= active.reduce((s,p)=>s+(p.premiumTWD||0),0);
 
-  // 從所有保單彙整 coverage（相容舊格式 person.coverage + 新格式 policy.coverage）
+  // 從所有保單彙整 coverage
   const coverage = {};
   Object.entries(person?.coverage||{}).forEach(([k,v])=>{
     if(typeof v==="number") coverage[k]=(coverage[k]||0)+v;
@@ -388,7 +388,6 @@ function renderContent() {
     });
   });
 
-  // 計算 covTypes
   const covTypes = COVERAGE_TYPES.map(t=>{
     const auto = t.detect(active,coverage);
     const manual = overrides[currentPersonId+"_"+t.key];
@@ -397,7 +396,7 @@ function renderContent() {
 
   let html = "";
 
-  // 頂部摘要
+  // 1. 頂部摘要
   html += `<div class="stat-row">
     <div class="stat-card" style="background:#E6F1FB">
       <div class="stat-label" style="color:#0C447C">年繳總保費</div>
@@ -409,7 +408,7 @@ function renderContent() {
     </div>
   </div>`;
 
-  // 保單號碼一覽
+  // 2. 保單號碼一覽
   html += `<div class="section-label">保單號碼一覽</div>`;
   html += `<div class="policy-group-block">`;
   const groups={};
@@ -435,7 +434,7 @@ function renderContent() {
   });
   html+=`</div>`;
 
-  // 保障覆蓋率環形圖
+  // 3. 保障覆蓋率環形圖
   html += `<div class="section-label">保障覆蓋率<button class="small-btn" onclick="openModal()">✏️ 手動調整</button><button class="small-btn" style="margin-left:6px;border-color:#378ADD;color:#378ADD" onclick="openTargetModal()">🎯 設定目標</button></div>`;
   html += `<div class="section-hint" style="display:flex;gap:10px;font-size:11px;color:#888;margin-bottom:8px;flex-wrap:wrap">
     <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#27AE8F;margin-right:3px"></span>已規劃</span>
@@ -444,9 +443,9 @@ function renderContent() {
   </div>`;
   html += `<div class="pie-wrap">${buildDonutChart(active, coverage, targets, overrides)}</div>`;
 
- // 就醫情況
+  // 4. 就醫情況 (移到這裡)
   html+=`<div class="section-label">就醫情況</div>`;
-  html+=`<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;overflow:hidden;margin-bottom:4px">
+  html+=`<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;overflow:hidden;margin-bottom:16px">
     <table class="medical-table">
       <thead><tr>
         <th></th>
@@ -468,20 +467,12 @@ function renderContent() {
         let auto=0;
         let unitText = "";
 
-        // 【核心邏輯：精準跨險種加總】
-        // 疾病住院(基礎) = 實支病房費 + 日額病房費(1~30日) + 日額出院療養金
         const baseHosp = sumCov(["hosp_room", "hosp_ext_room", "daily_room_1_30", "hosp_ext_daily", "daily_discharge"], policies, coverage);
 
         if(rk==="hosp") {
           unitText = "元/日";
-          
-          // 1. 疾病住院
           if(ck==="disease")  auto = baseHosp;
-          
-          // 2. 意外住院 = 疾病住院(基礎) + 意外險專屬住院日額
           if(ck==="accident") auto = baseHosp + sumCov(["acc_hosp"], policies, coverage);
-          
-          // 3. 癌症住院 = 疾病住院(基礎) + 癌症醫療專屬住院 + 癌症專屬出院療養
           if(ck==="cancer")   auto = baseHosp + sumCov(["can_hosp", "can_discharge"], policies, coverage);
         }
         
@@ -506,25 +497,18 @@ function renderContent() {
     });
     html+=`</tr>`;
   });
-  html+=`</tbody></table></div>
-  <div style="font-size:11px;color:#bbb;margin-bottom:16px;padding-left:4px">
+  html+=`</tbody></table>
+  <div style="font-size:11px;color:#bbb;margin-top:8px;margin-bottom:8px;padding-left:14px">
     💡 疾病住院＝實支病房＋日額病房＋日額出院療養<br>
     💡 意外住院＝疾病住院＋意外日額，癌症以此類推（可手動修改）
-  </div>`;
+  </div></div>`;
 
-  // 將組合好的 HTML 內容正式印出到畫面上
-  document.getElementById("content").innerHTML = html;
-}
-  
-  // ── 替換成功：各項保障加總 (網格卡片版) ──
+  // 5. 各項保障加總
   html += `<div class="section-label">各項保障加總</div>`;
   html += `<div class="coverage-grid">`;
 
   COVERAGE_GROUPS.forEach((g) => {
-    // 產生專屬 Class，移除名稱中的空白與括號（例如：card-癌症醫療）
     const safeClass = "card-" + g.label.replace(/[\s\(\)（）]/g, '');
-    
-    // ▼ 將 safeClass 加入到 coverage-card 旁邊
     html += `<div class="coverage-card ${safeClass}" style="border-top: 3px solid ${g.color};">
       <div class="cov-group-header" style="background:${g.color}0D">
         <span class="cov-group-label" style="color:${g.color}">${g.label}</span>
@@ -552,11 +536,13 @@ function renderContent() {
   });
   html += `</div>`;
 
- // 缺口／不足分析
+  // 6. 缺口／不足分析 (移到這裡)
   html += `<div class="section-label" style="margin-top:16px">缺口 / 不足分析</div>`;
   html += `<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:12px 14px;margin-bottom:16px">${buildGapAnalysis(active, coverage, targets, overrides)}</div>`;
 
-
+  // 將組合好的 HTML 內容正式印出到畫面上 (放在函數最尾端)
+  document.getElementById("content").innerHTML = html;
+}
 // ── 圓餅圖 SVG ───────────────────────────────────────────
 // ── 保障群組定義 ─────────────────────────────────────────
 const GAP_GROUPS = [
