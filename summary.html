@@ -651,14 +651,33 @@ function buildDonutChart(policies, coverage, targets, covOverrides) {
   // 1. 建立獨立提取單一區塊圖例的工具函式
   function renderLegend(g) {
     let legendHtml = `<div style="font-size:12px;font-weight:500;color:${g.color};margin-bottom:8px;border-bottom:1px solid ${g.color}30;padding-bottom:4px">${g.label}</div>`;
+    
     g.items.forEach(item => {
-      const {status,pct} = getItemStatus(item.key, policies, targets, covOverrides);
+      // ▼ 1. 從運算引擎中多抓出 'current' (目前額度) 這個變數
+      const {status, pct, current} = getItemStatus(item.key, policies, targets, covOverrides);
       const icon = status==="gap"?"❌":status==="insufficient"?"⚠️":"✅";
       const dotColor = status==="gap"?"#e0e0e0":item.color;
+
+      // ▼ 2. 判斷並組合右側的「額度文字」
+      let amtHtml = "";
+      if (item.isBool) {
+        // 如果是豁免、投資型這種只有「有/無」的險種
+        amtHtml = current > 0 ? `<span style="color:#555;font-size:11px">有</span>` : `<span style="color:#bbb;font-size:11px">無</span>`;
+      } else {
+        // 如果是有具體金額的險種
+        if (current > 0) {
+          amtHtml = `<span style="color:#0C447C;font-family:monospace;font-weight:600;font-size:12px">${current.toLocaleString()}<span style="font-size:9px;color:#888;margin-left:3px;font-family:sans-serif">${item.unit}</span></span>`;
+        } else {
+          amtHtml = `<span style="color:#bbb;font-size:11px">0</span>`;
+        }
+      }
+
+      // ▼ 3. 將排版組合起來 (利用 flex:1 把金額推到最右邊對齊)
       legendHtml += `<div style="display:flex;align-items:center;gap:6px;font-size:11px;margin-bottom:5px">
         <div style="width:10px;height:10px;border-radius:2px;background:${dotColor};flex-shrink:0"></div>
         <span style="color:${status==="gap"?"#bbb":"#444"};flex:1;white-space:nowrap">${item.label}</span>
-        <span>${icon}</span>
+        ${amtHtml}
+        <span style="margin-left:4px">${icon}</span>
       </div>`;
     });
     return legendHtml;
