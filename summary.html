@@ -444,47 +444,7 @@ function renderContent() {
   </div>`;
   html += `<div class="pie-wrap">${buildDonutChart(active, coverage, targets, overrides)}</div>`;
 
-  // 缺口／不足分析
-  html += `<div class="section-label" style="margin-top:16px">缺口 / 不足分析</div>`;
-  html += `<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:12px 14px;margin-bottom:16px">${buildGapAnalysis(active, coverage, targets, overrides)}</div>`;
-
-  // ── 替換成功：各項保障加總 (網格卡片版) ──
-  html += `<div class="section-label">各項保障加總</div>`;
-  html += `<div class="coverage-grid">`;
-
-  COVERAGE_GROUPS.forEach((g) => {
-    // 產生專屬 Class，移除名稱中的空白與括號（例如：card-癌症醫療）
-    const safeClass = "card-" + g.label.replace(/[\s\(\)（）]/g, '');
-    
-    // ▼ 將 safeClass 加入到 coverage-card 旁邊
-    html += `<div class="coverage-card ${safeClass}" style="border-top: 3px solid ${g.color};">
-      <div class="cov-group-header" style="background:${g.color}0D">
-        <span class="cov-group-label" style="color:${g.color}">${g.label}</span>
-      </div>
-      <div style="padding: 4px 0;">`;
-
-    g.items.forEach(item => {
-      const total = sumCov(item.keys, policies, coverage);
-      const breakdown = policies.map(p => {
-        const v = item.keys.reduce((s, k) => s + (coverage[p.id + "_" + k] || 0), 0);
-        return v > 0 ? { name: (p.company || "保險").substring(0,2), val: v } : null; 
-      }).filter(Boolean);
-
-      html += `<div class="cov-item" style="background:${total > 0 ? '#fff' : '#fafafa'};opacity:${total > 0 ? 1 : 0.6}">
-        <div class="cov-item-label ${total > 0 ? '' : 'zero'}">${item.label}</div>
-        <div class="cov-value-wrap">
-          <div class="cov-item-value" style="color:${total > 0 ? g.color : '#ccc'}">
-            ${total > 0 ? total.toLocaleString() + `<span class="cov-unit">${item.unit}</span>` : '—'}
-          </div>
-          ${breakdown.length > 1 ? `<div class="cov-breakdown">${breakdown.map(b => `${b.name}:${b.val.toLocaleString()}`).join(' ')}</div>` : ''}
-        </div>
-      </div>`;
-    });
-    html += `</div></div>`;
-  });
-  html += `</div>`;
-
-// 就醫情況
+ // 就醫情況
   html+=`<div class="section-label">就醫情況</div>`;
   html+=`<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;overflow:hidden;margin-bottom:4px">
     <table class="medical-table">
@@ -555,6 +515,47 @@ function renderContent() {
   // 將組合好的 HTML 內容正式印出到畫面上
   document.getElementById("content").innerHTML = html;
 }
+  
+  // ── 替換成功：各項保障加總 (網格卡片版) ──
+  html += `<div class="section-label">各項保障加總</div>`;
+  html += `<div class="coverage-grid">`;
+
+  COVERAGE_GROUPS.forEach((g) => {
+    // 產生專屬 Class，移除名稱中的空白與括號（例如：card-癌症醫療）
+    const safeClass = "card-" + g.label.replace(/[\s\(\)（）]/g, '');
+    
+    // ▼ 將 safeClass 加入到 coverage-card 旁邊
+    html += `<div class="coverage-card ${safeClass}" style="border-top: 3px solid ${g.color};">
+      <div class="cov-group-header" style="background:${g.color}0D">
+        <span class="cov-group-label" style="color:${g.color}">${g.label}</span>
+      </div>
+      <div style="padding: 4px 0;">`;
+
+    g.items.forEach(item => {
+      const total = sumCov(item.keys, policies, coverage);
+      const breakdown = policies.map(p => {
+        const v = item.keys.reduce((s, k) => s + (coverage[p.id + "_" + k] || 0), 0);
+        return v > 0 ? { name: (p.company || "保險").substring(0,2), val: v } : null; 
+      }).filter(Boolean);
+
+      html += `<div class="cov-item" style="background:${total > 0 ? '#fff' : '#fafafa'};opacity:${total > 0 ? 1 : 0.6}">
+        <div class="cov-item-label ${total > 0 ? '' : 'zero'}">${item.label}</div>
+        <div class="cov-value-wrap">
+          <div class="cov-item-value" style="color:${total > 0 ? g.color : '#ccc'}">
+            ${total > 0 ? total.toLocaleString() + `<span class="cov-unit">${item.unit}</span>` : '—'}
+          </div>
+          ${breakdown.length > 1 ? `<div class="cov-breakdown">${breakdown.map(b => `${b.name}:${b.val.toLocaleString()}`).join(' ')}</div>` : ''}
+        </div>
+      </div>`;
+    });
+    html += `</div></div>`;
+  });
+  html += `</div>`;
+
+ // 缺口／不足分析
+  html += `<div class="section-label" style="margin-top:16px">缺口 / 不足分析</div>`;
+  html += `<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:12px 14px;margin-bottom:16px">${buildGapAnalysis(active, coverage, targets, overrides)}</div>`;
+
 
 // ── 圓餅圖 SVG ───────────────────────────────────────────
 // ── 保障群組定義 ─────────────────────────────────────────
