@@ -186,12 +186,15 @@ async function loadData() {
     const activeMembers = familyData.members.filter(m => m.role !== "beneficiary_only");
     await Promise.all(activeMembers.map(async m => {
       const key = "nbs_person_" + m.personId;
-      const cached = sessionStorage.getItem(key);
-      if (cached) {
-        personDataMap[m.personId] = JSON.parse(cached);
+      // 每次進入儲蓄險頁面都重新讀取，確保 policy.html 新增的保單能即時出現
+      const pr = await callGAS("readFile", { email: currentUser.email, fileType:"person", fileName: m.name+"_"+m.personId+".json" });
+      if (pr.status === "ok") {
+        personDataMap[m.personId] = pr.content;
+        sessionStorage.setItem(key, JSON.stringify(pr.content)); // 更新快取供其他頁面使用
       } else {
-        const pr = await callGAS("readFile", { email: currentUser.email, fileType:"person", fileName: m.name+"_"+m.personId+".json" });
-        if (pr.status === "ok") { personDataMap[m.personId] = pr.content; sessionStorage.setItem(key, JSON.stringify(pr.content)); }
+        // GAS 失敗時 fallback 到快取
+        const cached = sessionStorage.getItem(key);
+        if (cached) personDataMap[m.personId] = JSON.parse(cached);
       }
     }));
     document.getElementById("loading").style.display = "none";
