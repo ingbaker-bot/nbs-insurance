@@ -500,20 +500,17 @@
     _editingPersonId = personId;
     form.style.display = "block";
 
-    // 取得成員資料：優先 personDataMap，其次直接從 family.members 讀
-    var p   = (window.personDataMap && personId && window.personDataMap[personId]) || null;
-    var m   = (_family.members||[]).find(function(x){ return x.personId===personId; });
-    // 若 personDataMap 沒有，從 family member 本身讀取基本資料
-    var name    = (p && p.profile && p.profile.name)      || (m && m.name)      || "";
-    var birth   = (p && p.profile && p.profile.birthDate) || (m && m.birthDate) || "";
-    var address = (p && p.profile && p.profile.address)   || "";
-    var rel     = (m && m.relation) || "本人";
-
     if (personId) {
-      document.getElementById("nbs-ef-name").value     = name;
-      document.getElementById("nbs-ef-relation").value  = rel;
-      document.getElementById("nbs-ef-birth").value    = birth;
-      document.getElementById("nbs-ef-address").value  = address;
+      // 來源1：family.members（永遠可用，存有 name/relation/birthDate）
+      var m = (_family.members||[]).find(function(x){ return x.personId===personId; });
+      // 來源2：personDataMap（已載入才有，存有 profile.address 等進階資料）
+      var pd = (window.personDataMap && window.personDataMap[personId]) || null;
+      var profile = (pd && pd.profile) || {};
+
+      document.getElementById("nbs-ef-name").value    = m ? m.name           : (profile.name    || "");
+      document.getElementById("nbs-ef-relation").value = m ? (m.relation||"本人") : "本人";
+      document.getElementById("nbs-ef-birth").value   = m ? (m.birthDate||"")  : (profile.birthDate || "");
+      document.getElementById("nbs-ef-address").value = profile.address || (m && m.address) || "";
       NBS_NAV._updateEfAge();
     } else {
       document.getElementById("nbs-ef-name").value     = "";
