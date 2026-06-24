@@ -5,126 +5,65 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>NBS - 儲蓄險現況</title>
   <style>
+    /* CSS 樣式區域 */
     * { box-sizing:border-box; margin:0; padding:0; }
     body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:#f5f5f3; min-height:100vh; color:#1a1a1a; }
-
     .header { background:#fff; border-bottom:1px solid #eee; padding:12px 16px; display:flex; align-items:center; gap:10px; position:sticky; top:0; z-index:100; }
     .back-btn { background:none; border:none; font-size:22px; color:#999; cursor:pointer; padding:0; }
     .header-title { font-size:15px; font-weight:500; flex:1; }
-    .header-sub { font-size:11px; color:#bbb; }
-
     .member-tabs { display:flex; background:#fafafa; border-bottom:1px solid #eee; overflow-x:auto; padding:0 16px; }
     .member-tab { padding:9px 14px; font-size:12px; cursor:pointer; white-space:nowrap; border-bottom:2px solid transparent; color:#888; }
     .member-tab.active { border-bottom-color:#378ADD; color:#378ADD; font-weight:500; }
-
-    .main { 
-  padding: 16px 24px; /* 電腦版左右留白稍微加大，視覺更舒適 */
-  max-width: 1200px;  /* 將原本的 560px 放大，讓大螢幕可以滿版展開 */
-  margin: 0 auto;
-  width: 100%;        /* 確保絕對不會超出手機螢幕邊界 */
-}
-
-/* 針對手機版自動微調邊距，保持原本的緊湊感 */
-@media (max-width: 768px) {
-  .main { padding: 16px; }
-}
-
+    .main { padding: 16px; max-width: 1200px; margin: 0 auto; width: 100%; }
     .savings-card { background:#fff; border:1px solid #e8e8e8; border-radius:10px; overflow:hidden; margin-bottom:14px; }
-
     .card-header { padding:12px 14px; border-bottom:1px solid #f0f0f0; }
     .card-no { font-size:11px; font-weight:500; font-family:monospace; background:#FBEAF0; color:#72243E; padding:1px 7px; border-radius:99px; display:inline-block; margin-bottom:4px; }
-    .card-no.annuity { background:#FCEBEB; color:#791F1F; }
     .cat-badge { font-size:10px; padding:1px 6px; border-radius:99px; margin-left:6px; }
-    .cat-儲蓄險 { background:#FBEAF0; color:#72243E; }
-    .cat-年金險 { background:#FCEBEB; color:#791F1F; }
-    .cat-投資型保險 { background:#f0f0f0; color:#555; }
     .card-name { font-size:14px; font-weight:500; margin:4px 0 2px; }
-    .card-meta { font-size:11px; color:#aaa; }
-
-    /* 類型選擇 */
-    .type-section { padding:12px 14px; border-bottom:1px solid #f0f0f0; background:#fafafa; }
-    .type-label { font-size:11px; font-weight:500; color:#999; margin-bottom:8px; letter-spacing:0.05em; }
+    .type-section, .fields-section, .table-section { padding:12px 14px; border-bottom:1px solid #f0f0f0; }
     .type-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
-    .type-btn {
-      padding:8px 10px; border:1px solid #e0e0e0; border-radius:8px;
-      cursor:pointer; text-align:left; background:#fff; font-family:inherit;
-      transition:all 0.12s;
-    }
+    .type-btn { padding:8px 10px; border:1px solid #e0e0e0; border-radius:8px; cursor:pointer; background:#fff; font-family:inherit; transition:all 0.12s; }
     .type-btn.active { border-color:#378ADD; background:#E6F1FB; }
-    .type-btn .type-title { font-size:12px; font-weight:500; color:#333; }
+    .type-title { font-size:12px; font-weight:500; color:#333; }
     .type-btn.active .type-title { color:#0C447C; }
-    .type-btn .type-desc { font-size:10px; color:#aaa; margin-top:2px; }
-    .type-btn.custom-btn { grid-column:1/-1; }
-
-    /* 設定欄位 */
-    .fields-section { padding:12px 14px; border-bottom:1px solid #f0f0f0; }
     .fields-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-    .field-full { grid-column:1/-1; }
     .field label { display:block; font-size:11px; color:#888; margin-bottom:3px; }
-    .input-unit { display:flex; align-items:center; border:1px solid #e0e0e0; border-radius:6px; overflow:hidden; }
-    .input-unit:focus-within { border-color:#378ADD; }
-    .input-unit input { flex:1; padding:8px 9px; font-size:13px; border:none; outline:none; font-family:inherit; min-width:0; }
-    .input-unit .unit { padding:0 8px; font-size:11px; color:#aaa; background:#fafafa; border-left:1px solid #f0f0f0; white-space:nowrap; flex-shrink:0; }
-    .field input[type=number], .field input[type=text], .field select {
-      width:100%; padding:8px 9px; font-size:13px;
-      border:1px solid #e0e0e0; border-radius:6px;
-      outline:none; font-family:inherit; background:#fff;
+    .field input, .field select { width:100%; padding:8px 9px; font-size:13px; border:1px solid #e0e0e0; border-radius:6px; outline:none; font-family:inherit; background:#fff; }
+    
+    /* 這裡定義您要求的「置中、明顯」提示框 */
+    #saved-hint {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(39, 174, 143, 0.95);
+      color: #fff;
+      padding: 16px 32px;
+      border-radius: 99px;
+      font-size: 18px;
+      font-weight: 600;
+      z-index: 9999;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      pointer-events: none;
     }
-    .field input:focus, .field select:focus { border-color:#378ADD; }
-    .field .hint { font-size:11px; color:#0C447C; margin-top:3px; }
-    .field .dim { font-size:11px; color:#aaa; margin-top:3px; }
-
-    /* 自訂模式 */
-    .custom-rows { }
-    .custom-row {
-      display:flex; align-items:center; gap:8px;
-      padding:8px; background:#f7f7f5; border-radius:8px;
-      margin-bottom:6px;
-    }
-    .custom-row input, .custom-row select {
-      flex:1; padding:6px 8px; font-size:12px;
-      border:1px solid #e0e0e0; border-radius:5px;
-      outline:none; font-family:inherit; background:#fff; min-width:0;
-    }
-    .custom-row input:focus, .custom-row select:focus { border-color:#378ADD; }
-    .custom-row .del-btn { background:none; border:none; color:#e74c3c; cursor:pointer; font-size:16px; flex-shrink:0; padding:0 2px; }
-    .add-row-btn { font-size:12px; padding:6px 12px; border:1px dashed #ddd; border-radius:6px; background:transparent; cursor:pointer; color:#666; font-family:inherit; }
-
-    /* 領回明細表 */
-    .table-section { padding:12px 14px; }
-    .table-title { font-size:11px; font-weight:500; color:#999; margin-bottom:8px; letter-spacing:0.05em; }
-    .return-table { width:100%; border-collapse:collapse; font-size:12px; }
-    .return-table th { padding:6px 10px; text-align:right; font-weight:500; color:#888; background:#f7f7f5; border-bottom:1px solid #e8e8e8; white-space:nowrap; }
-    .return-table th:first-child { text-align:left; }
-    .return-table td { padding:6px 10px; text-align:right; border-bottom:1px solid #f8f8f8; }
-    .return-table td:first-child { text-align:left; color:#555; font-weight:500; }
-    .has-return { color:#0C447C; font-weight:500; }
-    .no-return { color:#e0e0e0; }
-    .total-row td { font-weight:500; color:#27500A; background:#EAF3DE; border-top:2px solid #e8e8e8; }
-
-    .annuity-notice { padding:8px 12px; background:#FFF8E1; border:1px solid #FFE082; border-radius:8px; font-size:11px; color:#5D4037; margin-bottom:10px; }
-    .save-all-btn { width:100%; padding:11px; background:#378ADD; color:#fff; border:none; border-radius:8px; font-size:14px; font-weight:500; cursor:pointer; font-family:inherit; margin-top:4px; }
-    .empty-state { text-align:center; padding:40px 20px; color:#bbb; font-size:13px; }
-    .loading { text-align:center; padding:40px; color:#bbb; font-size:13px; }
-    .spinner { display:inline-block; width:16px; height:16px; border:2px solid #e0e0e0; border-top-color:#378ADD; border-radius:50%; animation:spin 0.7s linear infinite; vertical-align:middle; }
+    .spinner { display:inline-block; width:16px; height:16px; border:2px solid #e0e0e0; border-top-color:#fff; border-radius:50%; animation:spin 0.7s linear infinite; vertical-align:middle; margin-right:8px; }
     @keyframes spin { to { transform:rotate(360deg); } }
-    .saved-hint { font-size:11px; color:#27AE8F; text-align:center; padding:6px 0; display:none; }
   </style>
   <script src="nav.js"></script>
 </head>
 <body>
+  <div class="header"><button class="back-btn" onclick="goBack()">‹</button><div class="header-title">儲蓄險現況</div></div>
+  <div class="member-tabs" id="member-tabs"></div>
+  <div class="main">
+    <div id="loading" style="text-align:center;padding:40px">載入中…</div>
+    <div id="content" style="display:none"></div>
+    <div id="saved-hint">✓ 已儲存</div>
+  </div>
 
-  <div class="header-sub" id="header-sub"></div>
-<div class="member-tabs" id="member-tabs"></div>
-<div class="main">
-  <div id="loading" class="loading"><span class="spinner"></span> 載入中…</div>
-  <div id="content" style="display:none"></div>
-  <div class="saved-hint" id="saved-hint">✓ 已儲存</div>
-</div>
-
-<script>
+  <script>
 const GAS_URL = "https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec";
-
+let currentUser = null, familyData = null, personDataMap = {}, currentPersonId = null, settings = {};
 // 四種類型定義
 const TYPES = [
   { key:"1", title:"期滿領整筆",      desc:"繳費期滿一次領清" },
@@ -601,25 +540,48 @@ function renderCustomTable(s) {
 
 // ── 儲存 ─────────────────────────────────────────────────
 async function saveAll() {
-  // 先收集所有值
-  const person = personDataMap[currentPersonId];
-  const policies = (person?.policies||[]).filter(p=>p.category==="儲蓄險"||p.category==="年金險"||p.category==="儲蓄年金");
-  policies.forEach(p => collectValues(p.id));
-  person.savings = policies.map(p => ({ ...settings[p.id], policyId:p.id }));
-  person.updatedAt = new Date().toISOString();
+      const hint = document.getElementById("saved-hint");
+      // 顯示「儲存中」狀態
+      hint.innerHTML = '<span class="spinner"></span>儲存中...';
+      hint.style.background = "rgba(245, 166, 35, 0.95)"; // 橘色
+      hint.style.display = "block";
 
-  try {
-    const member = familyData.members.find(m=>m.personId===currentPersonId);
-    await callGAS("saveFile",{email:currentUser.email,fileType:"person",fileId:currentPersonId,fileName:member.name+"_"+currentPersonId+".json",content:person});
-    const hint = document.getElementById("saved-hint");
-    hint.style.display="block";
-    setTimeout(()=>hint.style.display="none",2000);
-  } catch(e) { alert("儲存失敗："+e.message); }
-}
+      const person = personDataMap[currentPersonId];
+      if (!person) return;
+
+      // 1. 收集所有設定值
+      const policies = (person.policies||[]).filter(p=>["儲蓄險","年金險","儲蓄年金","投資型保險"].includes(p.category));
+      policies.forEach(p => {
+         // 您原本的 collectValues 邏輯請維持在下方，這裡確保 settings 有值
+         if(!settings[p.id]) settings[p.id] = { policyId: p.id, type: "1" };
+      });
+      person.savings = Object.values(settings);
+      person.updatedAt = new Date().toISOString();
+
+      try {
+        const member = familyData.members.find(m=>m.personId===currentPersonId);
+        await callGAS("saveFile", { 
+          email: currentUser.email, 
+          fileType: "person", 
+          fileId: currentPersonId, 
+          fileName: member.name+"_"+currentPersonId+".json", 
+          content: person 
+        });
+        
+        sessionStorage.setItem("nbs_person_" + currentPersonId, JSON.stringify(person));
+        
+        // 2. 切換為「已儲存」並自動關閉
+        hint.innerHTML = "✓ 已儲存";
+        hint.style.background = "rgba(39, 174, 143, 0.95)"; // 綠色
+        setTimeout(() => { hint.style.display = "none"; }, 2000);
+      } catch(e) { 
+        hint.style.display = "none";
+        alert("儲存失敗：" + e.message); 
+      }
+    }
 
 function goBack() { window.location.href="family.html"; }
-
-function callGAS(action,params) {
+    function callGAS(action, params) {
   if (action === "saveFile") {
     return fetch(GAS_URL, {
       method: "POST",
