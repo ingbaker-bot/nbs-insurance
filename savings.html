@@ -313,24 +313,30 @@ function renderSettings() {
   policies.forEach(p => {
     if (!settings[p.id]) {
       const sv = (person.savings || []).find(s => s.policyId === p.id) || {};
+      // 從 policy 本身讀取幣別和匯率
+      const polCurrency = p.currency || "TWD";
+      const polRate     = parseFloat(p.exchangeRate) || 1;
       settings[p.id] = {
         policyId:      p.id,
+        currency:      polCurrency,
+        exchangeRate:  sv.exchangeRate !== undefined ? sv.exchangeRate : polRate,
         type:          sv.type          || "1",
         duringFreqYr:  sv.duringFreqYr  || "2",
-        duringStartYr: sv.duringStartYr || "1",  // 第幾年開始第一次領（預設第1年）
+        duringStartYr: sv.duringStartYr || "1",
         duringAmt:     sv.duringAmt     || "",
         afterFreqYr:   sv.afterFreqYr   || "1",
-        afterStartYr:  sv.afterStartYr  || "0",  // 期滿後第幾年開始（預設第0年=繳費期滿年）
+        afterStartYr:  sv.afterStartYr  || "0",
         afterAmt:      sv.afterAmt      || "",
         yearlyRows:    sv.yearlyRows    || "10",
         yearlyAmts:    sv.yearlyAmts    || [],
         note:          sv.note          || "",
       };
     }
-    const s = settings[p.id];
-    const types = getTypes(p.category);
-    const monthly = isMonthly(s.type);
-    const yearly  = isYearlyDetail(s.type);
+    const s        = settings[p.id];
+    const isFx     = s.currency && s.currency !== "TWD";
+    const types    = getTypes(p.category);
+    const monthly  = isMonthly(s.type);
+    const yearly   = isYearlyDetail(s.type);
     const showDuring = needsDuringBlock(s.type);
 
     const dateStr = [
@@ -346,8 +352,11 @@ function renderSettings() {
         <div style="display:flex;align-items:center;gap:6px;flex:1">
           <span class="card-chevron" id="chevron-${p.id}">${isConfigured?'▾':'▸'}</span>
           <div>
-            <div><span class="card-no">${p.policyNo||"—"}</span>
-              <span class="cat-badge cat-${p.category}">${p.category}</span></div>
+            <div>
+              <span class="card-no">${p.policyNo||"—"}</span>
+              <span class="cat-badge cat-${p.category}">${p.category}</span>
+              ${isFx?`<span style="font-size:10px;background:#FFF3CD;color:#856404;padding:1px 6px;border-radius:3px;margin-left:4px">${s.currency}</span>`:""}
+            </div>
             <div class="card-name">${p.itemName||"—"}</div>
             ${dateStr?`<div class="card-dates">${dateStr}</div>`:""}
           </div>
@@ -376,6 +385,15 @@ function renderSettings() {
         <div id="adv-inner-${p.id}">
           ${renderAdvInner(p.id, s)}
         </div>
+        ${isFx ? `
+        <div class="field" style="margin-top:10px">
+          <label>匯率（1 ${s.currency} = ? 台幣）
+            <span style="font-size:10px;color:#aaa;font-weight:400">保單輸入時的匯率，可修改</span>
+          </label>
+          <input type="number" id="exrate-${p.id}" value="${s.exchangeRate||''}"
+                 step="0.01" placeholder="如美元填 32.0"
+                 oninput="updateSetting('${p.id}','exchangeRate',parseFloat(this.value)||1)" />
+        </div>` : ""}
         <div class="field" style="margin-top:10px">
           <label>備註</label>
           <input type="text" id="note-${p.id}" value="${escHtml(s.note)}"
@@ -642,7 +660,10 @@ function calcPolicyFlows(p, s, memberId, years) {
     });
   }
 
-  // 幣別：保留原幣，不換算
+  // 幣別換算：從 settings 讀取顧問設定的匯率
+  const polCur  = (p && p.currency) || "TWD";
+  const exRate  = (polCur !== "TWD" && parseFloat(s.exchangeRate)) ? parseFloat(s.exchangeRate) : 1;
+
   const flows = {};
   years.forEach(yr => {
     if (yr > covEndWestern) return;
@@ -682,7 +703,7 @@ function calcPolicyFlows(p, s, memberId, years) {
     } else if (monthly) {
       if (inAfter && afterAmt > 0) flow = afterAmt * 12;
     }
-    if (flow > 0) flows[yr] = flow;
+    if (flow > 0) flows[yr] = Math.round(flow * exRate);
   });
   return flows;
 }
@@ -701,7 +722,7 @@ function renderTimeline() {
 
   // 結構：groups = [{ memberName, policies: [{ policyNo, itemName, flows }] }]
   const groups = [];
-  const totalFlows = {}; // { TWD: {yr:amt}, USD: {yr:amt}, ... }
+  const totalFlows = {}; // { yr: twdAmt }（已換算台幣）
 
   familyData.members.filter(m => m.role !== "beneficiary_only").forEach(m => {
     const person = personDataMap[m.personId];
@@ -716,11 +737,9 @@ function renderTimeline() {
                 (person.savings || []).find(sv => sv.policyId === p.id) ||
                 { type:"1" };
       const flows = calcPolicyFlows(p, s, m.personId, years);
-      // 有現金流才累加到合計（依幣別分開）
-      const cur = p.currency || "TWD";
-      if (!totalFlows[cur]) totalFlows[cur] = {};
+      // 累加合計（flows 已換算成台幣）
       Object.entries(flows).forEach(([yr, amt]) => {
-        totalFlows[cur][yr] = (totalFlows[cur][yr] || 0) + amt;
+        totalFlows[yr] = (totalFlows[yr] || 0) + amt;
       });
       policyRows.push({
         policyNo:  p.policyNo || p.id,
@@ -740,18 +759,15 @@ function renderTimeline() {
     return;
   }
 
-  // 自動裁切尾端空白年份（所有幣別合併判斷）
-  const allFlowYears = Object.values(totalFlows).flatMap(byYr => Object.keys(byYr).map(Number));
-  const activeYears  = years.filter(y => allFlowYears.includes(y));
+  // 自動裁切尾端空白年份
+  const activeYears = years.filter(y => totalFlows[y] > 0);
   if (!activeYears.length) {
     document.getElementById("timeline-content").innerHTML =
       `<div class="empty-timeline">所有保單在此時間範圍內均無現金流入</div>`;
     return;
   }
   const trimYears = years.filter(y => y <= Math.max(...activeYears));
-  // maxTotal 只看台幣（用於色塊比例）
-  const twdFlows  = totalFlows["TWD"] || {};
-  const maxTotal  = Math.max(...Object.values(twdFlows), 1);
+  const maxTotal = Math.max(...Object.values(totalFlows), 1);
   const totalPolicies = groups.reduce((s, g) => s + g.policies.length, 0);
 
   // ── 表頭 ──
@@ -805,47 +821,34 @@ function renderTimeline() {
       return `<tr class="cf-policy-row">${firstCell}${cells}</tr>`;
     }).join("");
 
-    // 小計列：依幣別分開
-    const memberByCur = {}; // { TWD: {yr:amt}, USD: {yr:amt} }
+    // 小計列：各保單已換算台幣，直接加總
+    const memberFlows = {};
     g.policies.forEach(pr => {
-      const cur = pr.currency || "TWD";
-      if (!memberByCur[cur]) memberByCur[cur] = {};
       Object.entries(pr.flows).forEach(([yr, amt]) => {
-        memberByCur[cur][yr] = (memberByCur[cur][yr] || 0) + amt;
+        memberFlows[yr] = (memberFlows[yr] || 0) + amt;
       });
     });
-    const subtotalRows = Object.entries(memberByCur).map(([cur, byYr]) => {
-      const isTWD = cur === "TWD";
-      const label = isTWD ? "小計" : `小計（${cur}）`;
-      const labelStyle = isTWD ? "" : "color:#555;font-size:10px";
-      return `<tr class="cf-subtotal-row">
-        <td style="padding-left:18px;${labelStyle}">${label}</td>
-        ${trimYears.map(yr => {
-          const amt = byYr[yr] || 0;
-          if (!amt) return `<td><span style="color:#c0c0c0">—</span></td>`;
-          const disp = isTWD ? fmtAmt(amt) : fmtForeign(amt, cur);
-          return `<td class="cf-amount" style="font-size:11px">${disp}</td>`;
-        }).join("")}
-      </tr>`;
-    }).join("");
+    const subtotalRows = `<tr class="cf-subtotal-row">
+      <td style="padding-left:18px">小計（台幣）</td>
+      ${trimYears.map(yr => {
+        const amt = memberFlows[yr] || 0;
+        if (!amt) return `<td><span style="color:#c0c0c0">—</span></td>`;
+        return `<td class="cf-amount" style="font-size:11px">${fmtAmt(amt)}</td>`;
+      }).join("")}
+    </tr>`;
 
     return nameRow + policyRowsHtml + subtotalRows;
   }).join("");
 
-  // ── 合計列（依幣別各一列）──
-  const totalRow = Object.entries(totalFlows).map(([cur, byYr], idx) => {
-    const isTWD = cur === "TWD";
-    const label = isTWD ? "合計現金流" : `合計（${cur}）`;
-    return `<tr class="cf-total-row">
-      <td>${label}</td>
-      ${trimYears.map(yr => {
-        const amt = byYr[yr] || 0;
-        if (!amt) return `<td>—</td>`;
-        const disp = isTWD ? fmtAmt(amt) : fmtForeign(amt, cur);
-        return `<td class="cf-amount">${disp}</td>`;
-      }).join("")}
-    </tr>`;
-  }).join("");
+  // ── 合計列（統一台幣）──
+  const totalRow = `<tr class="cf-total-row">
+    <td>合計現金流（台幣）</td>
+    ${trimYears.map(yr => {
+      const amt = totalFlows[yr] || 0;
+      if (!amt) return `<td>—</td>`;
+      return `<td class="cf-amount">${fmtAmt(amt)}</td>`;
+    }).join("")}
+  </tr>`;
 
   document.getElementById("timeline-content").innerHTML = `
     <div class="timeline-wrap">
