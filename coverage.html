@@ -214,7 +214,8 @@ function showListView(){
 
   const person=personDataMap[currentPersonId];
   // ▼ 關鍵修改：將「一般保單」與「儲蓄險」合併成一個陣列來顯示
-  const allPolicies = [...(person?.policies || []), ...(person?.savings || [])];
+  // 只取有效保單（排除舊版 person.savings 誤存的垃圾資料）
+  const allPolicies = (person?.policies || []).filter(p => p.id && p.category);
   
   if(!allPolicies.length){
     document.getElementById("content").innerHTML='<div style="text-align:center;padding:40px;color:#bbb;font-size:13px">尚無保單，請先至「保險繳費」或「儲蓄險」頁面輸入保單資料</div>';
@@ -278,7 +279,7 @@ function countFilled(cov){
 function openCoverageEdit(policyId){
   currentPolicyId=policyId;viewMode="edit";openGroups={};
   const person=personDataMap[currentPersonId];
-  const policy = person?.policies?.find(p=>p.id===policyId) || person?.savings?.find(p=>p.id===policyId);
+  const policy = person?.policies?.find(p=>p.id===policyId) ;
   if(!policy) return;
   if(!policy.coverage) policy.coverage={};
   document.querySelector(".header-title").textContent=policy.itemName||"附約保障";
@@ -326,7 +327,7 @@ function toggleGroup(policyId,key){
   collectValues();
   openGroups[key]=!openGroups[key];
   const person=personDataMap[currentPersonId];
-  const policy = person?.policies?.find(p=>p.id===policyId) || person?.savings?.find(p=>p.id===policyId);
+  const policy = person?.policies?.find(p=>p.id===policyId) ;
   if(policy) renderEdit(policy);
 }
 
@@ -541,7 +542,7 @@ function renderDaily(cov,pid){
 function setVal(key,val,policyId){
   const person=personDataMap[currentPersonId];
   if(!person) return;
-  const policy = person?.policies?.find(p=>p.id===policyId) || person?.savings?.find(p=>p.id===policyId);
+  const policy = person?.policies?.find(p=>p.id===policyId) ;
   if(!policy) return;
   if(!policy.coverage) policy.coverage={};
   policy.coverage[key]=isNaN(val)?val:Number(val);
@@ -556,7 +557,7 @@ function markDirty(){ dirty=true; }
 function collectValues(){
   const person=personDataMap[currentPersonId];
   if(!person||!currentPolicyId) return;
-  const policy = person?.policies?.find(p=>p.id===currentPolicyId) || person?.savings?.find(p=>p.id===currentPolicyId);
+  const policy = person?.policies?.find(p=>p.id===currentPolicyId) ;
   if(!policy) return;
   if(!policy.coverage) policy.coverage={};
   const cov=policy.coverage;
@@ -615,7 +616,7 @@ async function saveCoverage(isAutoSave = false) {
 
     if (!isAutoSave) {
       if (viewMode === "edit") {
-        const policy = person?.policies?.find(p=>p.id===currentPolicyId) || person?.savings?.find(p=>p.id===currentPolicyId);
+        const policy = person?.policies?.find(p=>p.id===currentPolicyId) ;
         if (policy) renderEdit(policy);
       }
     }
