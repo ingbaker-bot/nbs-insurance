@@ -61,62 +61,146 @@
     <div id="saved-hint">✓ 已儲存</div>
   </div>
 
-  <script>
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec";
-    
-    // 變數統一宣告
-    let currentUser = null, familyData = null, personDataMap = {}, currentPersonId = null, settings = {};
+<script>
+const GAS_URL = "https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec";
+let currentUser = null, familyData = null, personDataMap = {}, currentPersonId = null, settings = {};
 
-    // 儲存邏輯 (含進度提示)
-    async function saveAll() {
-      const hint = document.getElementById("saved-hint");
-      hint.innerHTML = '<span class="spinner"></span>儲存中...';
-      hint.style.background = "rgba(245, 166, 35, 0.95)"; // 橘色代表儲存中
-      hint.style.display = "block";
+// 1. 初始化導覽
+window.addEventListener("nbs_nav_ready", async function(e) {
+  currentUser = e.detail.user;
+  familyData = e.detail.familyData;
+  currentPersonId = e.detail.currentPersonId;
+  await loadData(); // 開始載入資料
+});
 
-      const person = personDataMap[currentPersonId];
-      if (!person) return;
-
-      // 假設您原本有 collectValues 函數來收集畫面資料存入 settings
-      if (typeof collectAllValues === "function") collectAllValues();
-      
-      person.savings = Object.values(settings);
-      person.updatedAt = new Date().toISOString();
-
-      try {
-        const member = familyData.members.find(m => m.personId === currentPersonId);
-        await callGAS("saveFile", { 
-          email: currentUser.email, 
-          fileType: "person", 
-          fileId: currentPersonId, 
-          fileName: member.name + "_" + currentPersonId + ".json", 
-          content: person 
-        });
-        
-        sessionStorage.setItem("nbs_person_" + currentPersonId, JSON.stringify(person));
-        
-        // 儲存成功切換狀態
-        hint.innerHTML = "✓ 已儲存";
-        hint.style.background = "rgba(39, 174, 143, 0.95)"; // 綠色
-        setTimeout(() => { hint.style.display = "none"; }, 2000);
-      } catch(e) { 
-        hint.style.display = "none";
-        alert("儲存失敗：" + e.message); 
+// 2. 載入資料 (核心：這裡負責把資料填進 personDataMap)
+async function loadData() {
+  try {
+    const activeMembers = familyData.members.filter(m => m.role !== "beneficiary_only");
+    await Promise.all(activeMembers.map(async m => {
+      const cacheKey = "nbs_person_" + m.personId;
+      const cached = sessionStorage.getItem(cacheKey);
+      if(cached) { personDataMap[m.personId] = JSON.parse(cached); }
+      else {
+        const pr = await callGAS("readFile", { email: currentUser.email, fileType:"person", fileName:m.name+"_"+m.personId+".json" });
+        if(pr.status==="ok") { personDataMap[m.personId] = pr.content; sessionStorage.setItem(cacheKey, JSON.stringify(pr.content)); }
       }
-    }
+    }));
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("content").style.display = "block";
+    renderTabs();
+    renderContent(); // 這裡執行您的頁面內容繪製
+  } catch(e) { alert("資料載入異常：" + e.message); }
+}
 
-    // 導覽載入後的處理
-    window.addEventListener("nbs_nav_ready", async function(e) {
-      currentUser = e.detail.user;
-      familyData = e.detail.familyData;
-      currentPersonId = e.detail.currentPersonId;
-      // ... 載入資料並呼叫 renderContent ...
-      document.getElementById("loading").style.display = "none";
-      document.getElementById("content").style.display = "block";
+// 3. 儲存核心 (您要的功能)
+async function saveAll() {
+  const hint = document.getElementById("saved-hint");
+  hint.innerHTML = '<span class="spinner"></span>儲存中...';
+  hint.style.background = "rgba(245, 166, 35, 0.95)";
+  hint.style.display = "block";
+
+  const person = personDataMap[currentPersonId];
+  if (!person) return;
+  
+  // ▼ 這裡請保留您原本收集畫面資料的函數，若無則改為直接對 person.savings 賦值
+  if (typeof collectAllValues === "function") collectAllValues(); 
+  person.savings = Object.values(settings);
+  person.updatedAt = new Date().toISOString();
+
+  try {
+    const member = familyData.members.find(m=>m.personId===currentPersonId);
+    await callGAS("saveFile", { 
+      email: currentUser.email, fileType:"person", fileId:currentPersonId, 
+      fileName: member.name+"_"+currentPersonId+".json", content: person 
+    });
+    sessionStorage.setItem("nbs_person_"+currentPersonId, JSON.stringify(person));
+    
+    hint.innerHTML = "✓ 已儲存";
+    hint.style.background = "rgba(39, 174, 143, 0.95)";
+    setTimeout(() => { hint.style.display = "none"; }, 2000);
+  } catch(e) { hint.style.display="none"; alert("儲存失敗"); }
+}
+
+// ── 輔助函式 ──────────────────────────────
+function goBack() { window.location.href="family.html"; }
+function callGAS(action, params) {
+  if (action === "saveFile") return fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action, ...params }) }).then(r=>r.json());
+  const url = new URL(GAS_URL);
+  url.searchParams.set("action", action);
+  Object.entries(params||{}).forEach(([k,v]) => url.searchParams.set(k, v));
+  return fetch(url.toString()).then(r=>r.json());
+}
+
+// ── 核心渲染與資料收集邏輯 ──────────────────────────────
+
+// 1. 渲染頁面內容
+function renderContent() {
+    const person = personDataMap[currentPersonId];
+    if (!person || !person.policies) return;
+
+    const policies = person.policies.filter(p => ["儲蓄險", "年金險", "儲蓄年金", "投資型保險"].includes(p.category));
+    let html = "";
+    
+    policies.forEach(p => {
+        const saved = (person.savings || []).find(s => s.policyId === p.id) || { type: "1" };
+        settings[p.id] = saved; // 同步到全域 settings 變數
+
+        html += `
+        <div class="savings-card">
+            <div class="card-header">
+                <div class="card-no">${p.policyNo}</div>
+                <span class="cat-badge cat-${p.category}">${p.category}</span>
+                <div class="card-name">${p.itemName}</div>
+            </div>
+            <div class="type-section">
+                <div style="font-size:12px;color:#666;margin-bottom:8px">請選擇領回方式：</div>
+                <div class="type-grid">
+                    ${TYPES.map(t => `
+                        <button class="type-btn ${saved.type === t.key ? 'active' : ''}" onclick="selectType('${p.id}', '${t.key}')">
+                            <div class="type-title">${t.title}</div>
+                            <div style="font-size:9px;color:#aaa;margin-top:2px">${t.desc}</div>
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
+            <div class="fields-section">
+                <div class="fields-grid">
+                    <div class="field">
+                        <label>預計金額 (元)</label>
+                        <input type="number" id="amt_${p.id}" value="${saved.amount || ''}" onchange="settings['${p.id}'].amount=this.value" />
+                    </div>
+                    <div class="field">
+                        <label>領回備註</label>
+                        <input type="text" id="note_${p.id}" value="${saved.note || ''}" onchange="settings['${p.id}'].note=this.value" placeholder="如：每年6月" />
+                    </div>
+                </div>
+            </div>
+        </div>`;
     });
 
-    function goBack() { window.location.href="family.html"; }
-    function callGAS(action, params) { /* 您的 GAS 呼叫邏輯 */ }
-  </script>
+    html += `<button class="save-all-btn" onclick="saveAll()">儲存所有設定</button>`;
+    document.getElementById("content").innerHTML = html;
+}
+
+// 2. 切換領回類型
+function selectType(policyId, typeKey) {
+    if (settings[policyId]) {
+        settings[policyId].type = typeKey;
+        renderContent(); // 重新渲染以更新 active 樣式
+    }
+}
+
+// 3. 收集畫面資料 (saveAll 會用到)
+function collectAllValues() {
+    // 這裡確保 settings 與 input 的值同步
+    Object.keys(settings).forEach(pid => {
+        const amtEl = document.getElementById("amt_" + pid);
+        const noteEl = document.getElementById("note_" + pid);
+        if (amtEl) settings[pid].amount = amtEl.value;
+        if (noteEl) settings[pid].note = noteEl.value;
+    });
+}
+</script>
 </body>
 </html>
