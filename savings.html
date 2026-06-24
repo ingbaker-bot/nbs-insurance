@@ -8,19 +8,16 @@
     * { box-sizing:border-box; margin:0; padding:0; }
     body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:#f5f5f3; min-height:100vh; color:#1a1a1a; }
 
-    /* Header */
     .header { background:#fff; border-bottom:1px solid #eee; padding:12px 16px; display:flex; align-items:center; gap:10px; position:sticky; top:0; z-index:100; }
     .back-btn { background:none; border:none; font-size:22px; color:#999; cursor:pointer; padding:0; }
     .header-title { font-size:15px; font-weight:500; flex:1; }
 
-    /* 成員 Tab */
     .member-tabs { display:flex; background:#fafafa; border-bottom:1px solid #eee; overflow-x:auto; padding:0 16px; }
     .member-tab { padding:9px 14px; font-size:12px; cursor:pointer; white-space:nowrap; border-bottom:2px solid transparent; color:#888; display:flex; align-items:center; gap:5px; }
     .member-tab.active { border-bottom-color:#378ADD; color:#378ADD; font-weight:500; }
     .tab-count { font-size:10px; padding:0 5px; border-radius:99px; background:#f0f0f0; color:#aaa; }
     .member-tab.active .tab-count { background:#E6F1FB; color:#0C447C; }
 
-    /* 頁面 Tab（保單設定 / 現金流時間軸）*/
     .page-tabs { display:flex; background:#fff; border-bottom:1px solid #eee; padding:0 16px; }
     .page-tab { padding:10px 16px; font-size:13px; cursor:pointer; border-bottom:2px solid transparent; color:#888; white-space:nowrap; }
     .page-tab.active { border-bottom-color:#378ADD; color:#378ADD; font-weight:500; }
@@ -29,8 +26,7 @@
 
     /* ── 保單卡片 ── */
     .savings-card { background:#fff; border:1px solid #e8e8e8; border-radius:10px; overflow:hidden; margin-bottom:14px; }
-    .card-header { padding:12px 14px; border-bottom:1px solid #f0f0f0; display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
-    .card-header-left { flex:1; }
+    .card-header { padding:12px 14px; border-bottom:1px solid #f0f0f0; }
     .card-no { font-size:11px; font-weight:500; font-family:monospace; background:#FBEAF0; color:#72243E; padding:1px 7px; border-radius:99px; display:inline-block; margin-bottom:4px; }
     .cat-badge { font-size:10px; padding:1px 6px; border-radius:99px; margin-left:6px; }
     .cat-儲蓄險 { background:#FBEAF0; color:#72243E; }
@@ -39,11 +35,10 @@
     .card-name { font-size:14px; font-weight:500; margin:4px 0 2px; }
     .card-dates { font-size:10px; color:#bbb; margin-top:2px; }
 
-    /* 類型選擇 */
     .type-section { padding:12px 14px; border-bottom:1px solid #f0f0f0; }
     .section-label { font-size:11px; color:#999; margin-bottom:8px; font-weight:500; letter-spacing:.3px; }
     .type-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
-    .type-grid > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+    .type-grid > :last-child:nth-child(odd) { grid-column:1/-1; }
     .type-btn { padding:8px 10px; border:1px solid #e0e0e0; border-radius:8px; cursor:pointer; background:#fff; font-family:inherit; transition:all 0.12s; text-align:left; }
     .type-btn.active { border-color:#378ADD; background:#E6F1FB; }
     .type-title { font-size:12px; font-weight:500; color:#333; }
@@ -54,24 +49,34 @@
     /* 進階設定 */
     .advanced-section { padding:12px 14px; border-bottom:1px solid #f0f0f0; background:#fafafa; display:none; }
     .advanced-section.visible { display:block; }
-    .advanced-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-    .advanced-grid.single { grid-template-columns:1fr; }
+    .adv-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .adv-grid-1 { display:grid; grid-template-columns:1fr; gap:10px; }
     .adv-block { background:#fff; border:1px solid #ebebeb; border-radius:8px; padding:10px 12px; }
     .adv-block-title { font-size:11px; font-weight:600; color:#378ADD; margin-bottom:8px; }
     .adv-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .adv-row.single { grid-template-columns:1fr; }
     .field label { display:block; font-size:11px; color:#888; margin-bottom:3px; }
     .field input, .field select { width:100%; padding:7px 9px; font-size:13px; border:1px solid #e0e0e0; border-radius:6px; outline:none; font-family:inherit; background:#fff; }
     .field input:focus, .field select:focus { border-color:#378ADD; }
 
-    /* 基本欄位 */
-    .fields-section { padding:12px 14px; border-bottom:1px solid #f0f0f0; }
-    .fields-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    /* 逐年明細表格 */
+    .yearly-table { width:100%; border-collapse:collapse; margin-top:8px; font-size:12px; }
+    .yearly-table th { background:#f0f6fc; padding:5px 8px; text-align:left; color:#0C447C; font-weight:500; border-bottom:1px solid #dde8f5; }
+    .yearly-table th:last-child { text-align:right; }
+    .yearly-table td { padding:4px 8px; border-bottom:1px solid #f5f5f5; color:#555; }
+    .yearly-table td:last-child { text-align:right; }
+    .yearly-table input { width:100%; padding:4px 6px; font-size:12px; border:1px solid #e0e0e0; border-radius:4px; outline:none; font-family:inherit; text-align:right; }
+    .yearly-table input:focus { border-color:#378ADD; }
+    .yr-count-row { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+    .yr-count-row label { font-size:11px; color:#888; }
+    .yr-count-row input { width:56px; padding:5px 7px; font-size:12px; border:1px solid #e0e0e0; border-radius:5px; outline:none; font-family:inherit; }
+    .yr-count-row input:focus { border-color:#378ADD; }
 
-    /* 儲存按鈕 */
+    .fields-section { padding:12px 14px; border-bottom:1px solid #f0f0f0; }
+
     .save-all-btn { width:100%; padding:14px; background:#378ADD; color:#fff; border:none; border-radius:8px; font-size:15px; font-weight:600; cursor:pointer; margin-top:4px; font-family:inherit; }
     .save-all-btn:hover { background:#2970c0; }
 
-    /* 儲存提示 */
     #saved-hint { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(39,174,143,0.95); color:#fff; padding:16px 32px; border-radius:99px; font-size:18px; font-weight:600; z-index:9999; box-shadow:0 4px 15px rgba(0,0,0,0.2); pointer-events:none; }
     .spinner { display:inline-block; width:16px; height:16px; border:2px solid rgba(255,255,255,0.4); border-top-color:#fff; border-radius:50%; animation:spin 0.7s linear infinite; vertical-align:middle; margin-right:8px; }
     @keyframes spin { to { transform:rotate(360deg); } }
@@ -82,7 +87,7 @@
     .timeline-controls label { font-size:12px; color:#666; }
     .timeline-controls input[type=number] { width:72px; padding:6px 8px; font-size:13px; border:1px solid #e0e0e0; border-radius:6px; outline:none; font-family:inherit; }
     .timeline-controls input[type=number]:focus { border-color:#378ADD; }
-    .tc-sep { color:#ccc; font-size:13px; }
+    .tc-sep { color:#ccc; }
     .render-btn { padding:7px 16px; background:#378ADD; color:#fff; border:none; border-radius:7px; font-size:13px; font-weight:500; cursor:pointer; font-family:inherit; margin-left:auto; }
 
     .timeline-wrap { background:#fff; border:1px solid #e8e8e8; border-radius:10px; overflow:hidden; margin-bottom:14px; }
@@ -90,27 +95,19 @@
     .timeline-title { font-size:14px; font-weight:600; }
     .timeline-subtitle { font-size:11px; color:#999; }
 
-    /* 表格式時間軸 */
-    .cf-table { width:100%; border-collapse:collapse; font-size:12px; }
-    .cf-table th { background:#f7f7f5; padding:7px 10px; text-align:center; font-weight:500; color:#666; border-bottom:1px solid #ebebeb; white-space:nowrap; position:sticky; top:0; }
-    .cf-table th:first-child { text-align:left; min-width:90px; }
-    .cf-table td { padding:6px 10px; text-align:center; border-bottom:1px solid #f5f5f5; color:#555; }
-    .cf-table td:first-child { text-align:left; font-weight:500; color:#1a1a1a; white-space:nowrap; }
-    .cf-table tr:last-child td { border-bottom:none; }
-
-    /* 現金流格子 */
-    .cf-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#378ADD; margin:0 1px; vertical-align:middle; }
-    .cf-amount { font-size:11px; color:#0C447C; font-weight:500; white-space:nowrap; }
-    .cf-bar { height:20px; border-radius:4px; background:#E6F1FB; display:flex; align-items:center; justify-content:center; min-width:4px; }
-
-    /* 合計列 */
+    /* 時間軸表格：凍結第一欄（成員名稱） */
+    .cf-scroll-wrap { overflow-x:auto; position:relative; }
+    .cf-table { border-collapse:separate; border-spacing:0; font-size:12px; }
+    .cf-table th { background:#f7f7f5; padding:7px 10px; text-align:center; font-weight:500; color:#666; border-bottom:1px solid #ebebeb; white-space:nowrap; border-right:1px solid #ebebeb; }
+    .cf-table th:first-child { text-align:left; min-width:88px; width:88px; position:sticky; left:0; z-index:3; background:#f7f7f5; border-right:2px solid #dde8f5; box-shadow:2px 0 4px rgba(0,0,0,0.04); }
+    .cf-table td { padding:6px 10px; text-align:center; border-bottom:1px solid #f5f5f5; border-right:1px solid #f5f5f5; }
+    .cf-table td:first-child { text-align:left; font-weight:500; color:#1a1a1a; white-space:nowrap; position:sticky; left:0; z-index:2; background:#fff; border-right:2px solid #dde8f5; box-shadow:2px 0 4px rgba(0,0,0,0.04); }
     .cf-total-row td { background:#f0f6fc; font-weight:600; color:#0C447C; border-top:2px solid #c5ddf5; }
-    .cf-total-row td:first-child { color:#0C447C; }
-
-    /* 空狀態 */
-    .empty-timeline { text-align:center; padding:40px 20px; color:#bbb; font-size:13px; }
-
-    /* 無保單 */
+    .cf-total-row td:first-child { background:#f0f6fc; }
+    .cf-bar { height:20px; border-radius:4px; background:#E6F1FB; display:inline-flex; align-items:center; justify-content:center; min-width:28px; padding:0 4px; }
+    .cf-bar span { font-size:10px; color:#0C447C; white-space:nowrap; }
+    .cf-amount { font-size:11px; color:#0C447C; font-weight:500; white-space:nowrap; }
+    .empty-timeline { text-align:center; padding:40px 20px; color:#bbb; font-size:13px; line-height:1.8; }
     .empty-state { text-align:center; padding:40px 20px; color:#bbb; font-size:13px; }
   </style>
   <script src="nav.js"></script>
@@ -126,52 +123,67 @@
     <div class="page-tab" id="tab-timeline" onclick="switchPageTab('timeline')">現金流時間軸</div>
   </div>
   <div class="main">
-    <div id="loading" style="text-align:center;padding:40px;color:#bbb;font-size:13px"><span class="spinner" style="border-top-color:#378ADD;border-color:#e0e0e0"></span> 載入中…</div>
-
-    <!-- 保單設定 -->
+    <div id="loading" style="text-align:center;padding:40px;color:#bbb;font-size:13px">
+      <span class="spinner" style="border-top-color:#378ADD;border-color:#e0e0e0"></span> 載入中…
+    </div>
     <div id="settings-view" style="display:none"></div>
-
-    <!-- 現金流時間軸 -->
     <div id="timeline-view">
       <div class="timeline-controls">
         <label>起始年</label>
-        <input type="number" id="tl-start" value="" min="2000" max="2099" />
+        <input type="number" id="tl-start" min="2000" max="2099" />
         <span class="tc-sep">—</span>
         <label>結束年</label>
-        <input type="number" id="tl-end" value="" min="2000" max="2099" />
+        <input type="number" id="tl-end" min="2000" max="2099" />
         <button class="render-btn" onclick="renderTimeline()">繪製</button>
       </div>
       <div id="timeline-content"></div>
     </div>
-
     <div id="saved-hint">✓ 已儲存</div>
   </div>
 
 <script>
 const GAS_URL = "https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec";
-let currentUser = null, familyData = null, personDataMap = {}, currentPersonId = null, settings = {};
+let currentUser = null, familyData = null, personDataMap = {}, currentPersonId = null;
+let settings = {}; // { [policyId]: settingObj }
 let currentPageTab = "settings";
 
-// ── 領回類型定義 ──────────────────────────────────────────
+// ── 領回類型 ──────────────────────────────────────────────
 const TYPES_BASE = [
   { key:"1", title:"期滿領整筆",           desc:"保單期滿一次全額領回" },
   { key:"2", title:"繳費期間領＋期滿整筆", desc:"繳費中定期領回，期滿再領整筆" },
   { key:"3", title:"期間不領＋期滿領",     desc:"繳費期間不動，期滿統一領回" },
   { key:"4", title:"期間領＋期滿領",       desc:"期間定期領回，期滿再領" },
 ];
-const TYPE_SAVINGS_EXTRA = { key:"5", title:"月領生存金", desc:"每月固定領取生存保險金" };
-const TYPE_INVEST_EXTRA  = { key:"5", title:"月月配息",   desc:"每月依帳戶價值配息" };
+const TYPE_SAVINGS_EXTRA = { key:"5", title:"月領生存金",  desc:"每月固定領取生存保險金" };
+const TYPE_INVEST_EXTRA  = { key:"5", title:"月月配息",    desc:"每月依帳戶價值配息" };
+// 類型 6：逐年遞增生存金
+const TYPE_YEARLY_DETAIL = { key:"6", title:"逐年生存金明細", desc:"每年金額不同，逐年手動輸入" };
 
 function getTypes(category) {
-  return [...TYPES_BASE, category === "投資型保險" ? TYPE_INVEST_EXTRA : TYPE_SAVINGS_EXTRA];
+  const extra = category === "投資型保險" ? TYPE_INVEST_EXTRA : TYPE_SAVINGS_EXTRA;
+  return [...TYPES_BASE, extra, TYPE_YEARLY_DETAIL];
 }
+function needsDuringBlock(k) { return ["2","4"].includes(k); }
+function isMonthly(k)        { return k === "5"; }
+function isYearlyDetail(k)   { return k === "6"; }
 
-// 哪些類型需要展開「繳費期間」欄位
-function needsDuringBlock(typeKey) { return ["2","4"].includes(typeKey); }
-// 哪些類型需要展開「期滿後 / 月領」欄位
-function needsAfterBlock(typeKey)  { return ["1","2","3","4","5"].includes(typeKey); }
-// 月領類型（頻率固定為每月）
-function isMonthly(typeKey) { return typeKey === "5"; }
+// ── 取得被保人 100 歲的西元年 ─────────────────────────────
+function getEndYearAt100(memberId, policy) {
+  // 優先從 person.profile.birthDate 算
+  const person = personDataMap[memberId];
+  const bd = person?.profile?.birthDate ||
+             familyData?.members?.find(m => m.personId === memberId)?.birthDate;
+  if (bd) {
+    const birthYear = parseInt(bd.slice(0, 4));
+    if (!isNaN(birthYear)) return birthYear + 100;
+  }
+  // fallback：保單起始日 + 80 年（無生日資料時的保守估算）
+  if (policy?.startDate) {
+    const startYear = parseInt(policy.startDate.slice(0, 4));
+    if (!isNaN(startYear)) return startYear + 80;
+  }
+  return new Date().getFullYear() + 50;
+}
 
 // ── 初始化 ────────────────────────────────────────────────
 window.addEventListener("nbs_nav_ready", async function(e) {
@@ -185,15 +197,17 @@ async function loadData() {
   try {
     const activeMembers = familyData.members.filter(m => m.role !== "beneficiary_only");
     await Promise.all(activeMembers.map(async m => {
-      const key = "nbs_person_" + m.personId;
-      // 每次進入儲蓄險頁面都重新讀取，確保 policy.html 新增的保單能即時出現
-      const pr = await callGAS("readFile", { email: currentUser.email, fileType:"person", fileName: m.name+"_"+m.personId+".json" });
+      const cacheKey = "nbs_person_" + m.personId;
+      // 每次重新讀取，確保保單異動即時反映
+      const pr = await callGAS("readFile", {
+        email: currentUser.email, fileType:"person",
+        fileName: m.name + "_" + m.personId + ".json"
+      });
       if (pr.status === "ok") {
         personDataMap[m.personId] = pr.content;
-        sessionStorage.setItem(key, JSON.stringify(pr.content)); // 更新快取供其他頁面使用
+        sessionStorage.setItem(cacheKey, JSON.stringify(pr.content));
       } else {
-        // GAS 失敗時 fallback 到快取
-        const cached = sessionStorage.getItem(key);
+        const cached = sessionStorage.getItem(cacheKey);
         if (cached) personDataMap[m.personId] = JSON.parse(cached);
       }
     }));
@@ -201,38 +215,37 @@ async function loadData() {
     document.getElementById("settings-view").style.display = "block";
     renderTabs();
     renderSettings();
-    // 預設時間軸年份
     const now = new Date().getFullYear();
     document.getElementById("tl-start").value = now;
     document.getElementById("tl-end").value   = now + 29;
   } catch(e) { alert("資料載入異常：" + e.message); }
 }
 
-// ── 頁面 Tab 切換 ─────────────────────────────────────────
+// ── 頁面 Tab ──────────────────────────────────────────────
 function switchPageTab(tab) {
   currentPageTab = tab;
-  document.getElementById("tab-settings").classList.toggle("active", tab === "settings");
-  document.getElementById("tab-timeline").classList.toggle("active", tab === "timeline");
-  document.getElementById("settings-view").style.display = tab === "settings" ? "block" : "none";
-  document.getElementById("timeline-view").style.display = tab === "timeline" ? "block" : "none";
+  ["settings","timeline"].forEach(t => {
+    document.getElementById("tab-" + t).classList.toggle("active", t === tab);
+    document.getElementById(t === "settings" ? "settings-view" : "timeline-view")
+            .style.display = t === tab ? "block" : "none";
+  });
   if (tab === "timeline") renderTimeline();
 }
 
-// ── 成員 Tab ─────────────────────────────────────────────
+// ── 成員 Tab ──────────────────────────────────────────────
 function renderTabs() {
   const members = familyData.members.filter(m => m.role !== "beneficiary_only");
-  let html = "";
-  members.forEach(m => {
-    const count = (personDataMap[m.personId]?.policies || []).filter(p =>
-      ["儲蓄險","年金險","儲蓄年金","投資型保險"].includes(p.category)).length;
-    html += `<div class="member-tab ${currentPersonId===m.personId?'active':''}" onclick="switchMember('${m.personId}')">
+  document.getElementById("member-tabs").innerHTML = members.map(m => {
+    const count = (personDataMap[m.personId]?.policies || [])
+      .filter(p => ["儲蓄險","年金險","儲蓄年金","投資型保險"].includes(p.category)).length;
+    return `<div class="member-tab ${currentPersonId===m.personId?'active':''}"
+      onclick="switchMember('${m.personId}')">
       ${m.name}<span class="tab-count">${count}</span></div>`;
-  });
-  document.getElementById("member-tabs").innerHTML = html;
+  }).join("");
 }
 
-function switchMember(personId) {
-  currentPersonId = personId;
+function switchMember(pid) {
+  currentPersonId = pid;
   settings = {};
   renderTabs();
   renderSettings();
@@ -246,36 +259,34 @@ function renderSettings() {
   const policies = (person.policies || []).filter(p =>
     ["儲蓄險","年金險","儲蓄年金","投資型保險"].includes(p.category));
 
-  if (policies.length === 0) {
+  if (!policies.length) {
     document.getElementById("settings-view").innerHTML =
-      `<div class="empty-state">此成員尚無儲蓄 / 年金 / 投資型保單</div>
-       <button class="save-all-btn" style="display:none"></button>`;
+      `<div class="empty-state">此成員尚無儲蓄／年金／投資型保單</div>`;
     return;
   }
 
   let html = "";
   policies.forEach(p => {
-    // 初次載入從 person.savings 讀取，之後以 settings 為主
     if (!settings[p.id]) {
-      const saved = (person.savings || []).find(s => s.policyId === p.id) || {};
+      const sv = (person.savings || []).find(s => s.policyId === p.id) || {};
       settings[p.id] = {
-        policyId: p.id,
-        type:           saved.type           || "1",
-        // 繳費期間
-        duringFreqYr:   saved.duringFreqYr   || "2",
-        duringAmt:      saved.duringAmt      || "",
-        // 期滿後 / 月領
-        afterFreqYr:    saved.afterFreqYr    || "1",
-        afterAmt:       saved.afterAmt       || "",
-        // 備註
-        note:           saved.note           || "",
+        policyId:     p.id,
+        type:         sv.type         || "1",
+        duringFreqYr: sv.duringFreqYr || "2",
+        duringAmt:    sv.duringAmt    || "",
+        afterFreqYr:  sv.afterFreqYr  || "1",
+        afterAmt:     sv.afterAmt     || "",
+        yearlyRows:   sv.yearlyRows   || "10",
+        yearlyAmts:   sv.yearlyAmts   || [],  // array of { year, amt }
+        note:         sv.note         || "",
       };
     }
     const s = settings[p.id];
     const types = getTypes(p.category);
     const monthly = isMonthly(s.type);
+    const yearly  = isYearlyDetail(s.type);
+    const showDuring = needsDuringBlock(s.type);
 
-    // 日期顯示
     const dateStr = [
       p.startDateRaw ? "起：" + p.startDateRaw : "",
       p.payEndRaw    ? "繳滿：" + p.payEndRaw  : "",
@@ -283,18 +294,17 @@ function renderSettings() {
 
     html += `<div class="savings-card" data-pid="${p.id}">
       <div class="card-header">
-        <div class="card-header-left">
-          <div><span class="card-no">${p.policyNo || "—"}</span><span class="cat-badge cat-${p.category}">${p.category}</span></div>
-          <div class="card-name">${p.itemName || "—"}</div>
-          ${dateStr ? `<div class="card-dates">${dateStr}</div>` : ""}
-        </div>
+        <div><span class="card-no">${p.policyNo||"—"}</span>
+          <span class="cat-badge cat-${p.category}">${p.category}</span></div>
+        <div class="card-name">${p.itemName||"—"}</div>
+        ${dateStr?`<div class="card-dates">${dateStr}</div>`:""}
       </div>
 
       <!-- 類型選擇 -->
       <div class="type-section">
         <div class="section-label">領回方式</div>
         <div class="type-grid">
-          ${types.map(t => `
+          ${types.map(t=>`
             <button class="type-btn ${s.type===t.key?'active':''}" data-type-key="${t.key}"
                     onclick="selectType('${p.id}','${t.key}')">
               <div class="type-title">${t.title}</div>
@@ -304,59 +314,15 @@ function renderSettings() {
       </div>
 
       <!-- 進階設定 -->
-      <div class="advanced-section ${needsDuringBlock(s.type)||needsAfterBlock(s.type)?'visible':''}" id="adv-${p.id}">
+      <div class="advanced-section visible" id="adv-${p.id}">
         <div class="section-label">進階設定</div>
-        <div class="advanced-grid ${needsDuringBlock(s.type)?'':'single'}" id="adv-grid-${p.id}">
-
-          <!-- 繳費期間欄（類型 2、4 才顯示）-->
-          <div class="adv-block" id="adv-during-${p.id}" style="display:${needsDuringBlock(s.type)?'block':'none'}">
-            <div class="adv-block-title">繳費期間</div>
-            <div class="adv-row">
-              <div class="field">
-                <label>每 N 年領一次</label>
-                <input type="number" id="duringFreqYr-${p.id}" value="${s.duringFreqYr}" min="1" max="20"
-                       oninput="updateSetting('${p.id}','duringFreqYr',this.value)" />
-              </div>
-              <div class="field">
-                <label>每次金額（元）</label>
-                <input type="number" id="duringAmt-${p.id}" value="${s.duringAmt}"
-                       placeholder="估算值"
-                       oninput="updateSetting('${p.id}','duringAmt',this.value)" />
-              </div>
-            </div>
-          </div>
-
-          <!-- 期滿後 / 月領欄 -->
-          <div class="adv-block" id="adv-after-${p.id}">
-            <div class="adv-block-title">${monthly?"月領":"期滿後"}</div>
-            <div class="adv-row">
-              ${monthly ? `
-              <div class="field" style="grid-column:1/-1">
-                <label>每月金額（元）</label>
-                <input type="number" id="afterAmt-${p.id}" value="${s.afterAmt}"
-                       placeholder="估算值"
-                       oninput="updateSetting('${p.id}','afterAmt',this.value)" />
-              </div>` : `
-              <div class="field">
-                <label>每 N 年領一次</label>
-                <input type="number" id="afterFreqYr-${p.id}" value="${s.afterFreqYr}" min="1" max="5"
-                       oninput="updateSetting('${p.id}','afterFreqYr',this.value)" />
-              </div>
-              <div class="field">
-                <label>每次金額（元）</label>
-                <input type="number" id="afterAmt-${p.id}" value="${s.afterAmt}"
-                       placeholder="估算值"
-                       oninput="updateSetting('${p.id}','afterAmt',this.value)" />
-              </div>`}
-            </div>
-          </div>
+        <div id="adv-inner-${p.id}">
+          ${renderAdvInner(p.id, s)}
         </div>
-
-        <!-- 備註 -->
         <div class="field" style="margin-top:10px">
           <label>備註</label>
-          <input type="text" id="note-${p.id}" value="${s.note}"
-                 placeholder="如：每年6月入帳、幣別USD"
+          <input type="text" id="note-${p.id}" value="${escHtml(s.note)}"
+                 placeholder="如：每年8月入帳"
                  oninput="updateSetting('${p.id}','note',this.value)" />
         </div>
       </div>
@@ -367,14 +333,145 @@ function renderSettings() {
   document.getElementById("settings-view").innerHTML = html;
 }
 
-// ── 類型切換（DOM 操作，不重渲染）─────────────────────────
-function selectType(policyId, typeKey) {
-  if (!settings[policyId]) return;
-  settings[policyId].type = typeKey;
-  const card = document.querySelector(`[data-pid="${policyId}"]`);
-  if (!card) return;
+// ── 進階設定內容（依類型） ────────────────────────────────
+function renderAdvInner(pid, s) {
+  const monthly = isMonthly(s.type);
+  const yearly  = isYearlyDetail(s.type);
+  const showDuring = needsDuringBlock(s.type);
 
-  // 更新按鈕 active
+  if (yearly) {
+    return renderYearlyTable(pid, s);
+  }
+
+  if (s.type === "1") {
+    // 期滿領整筆：只需一個金額
+    return `<div class="adv-grid-1">
+      <div class="adv-block">
+        <div class="adv-block-title">期滿領回</div>
+        <div class="adv-row single">
+          <div class="field">
+            <label>期滿金額（元）</label>
+            <input type="number" id="afterAmt-${pid}" value="${s.afterAmt}"
+                   placeholder="估算值" oninput="updateSetting('${pid}','afterAmt',this.value)" />
+          </div>
+        </div>
+      </div></div>`;
+  }
+
+  const duringBlock = showDuring ? `
+    <div class="adv-block" id="adv-during-${pid}">
+      <div class="adv-block-title">繳費期間</div>
+      <div class="adv-row">
+        <div class="field">
+          <label>每 N 年領一次</label>
+          <input type="number" id="duringFreqYr-${pid}" value="${s.duringFreqYr}" min="1" max="20"
+                 oninput="updateSetting('${pid}','duringFreqYr',this.value)" />
+        </div>
+        <div class="field">
+          <label>每次金額（元）</label>
+          <input type="number" id="duringAmt-${pid}" value="${s.duringAmt}"
+                 placeholder="估算值" oninput="updateSetting('${pid}','duringAmt',this.value)" />
+        </div>
+      </div>
+    </div>` : "";
+
+  const afterBlock = `
+    <div class="adv-block" id="adv-after-${pid}">
+      <div class="adv-block-title">${monthly?"月領":"期滿後"}</div>
+      ${monthly ? `
+        <div class="adv-row single">
+          <div class="field">
+            <label>每月金額（元）</label>
+            <input type="number" id="afterAmt-${pid}" value="${s.afterAmt}"
+                   placeholder="估算值" oninput="updateSetting('${pid}','afterAmt',this.value)" />
+          </div>
+        </div>` : `
+        <div class="adv-row">
+          <div class="field">
+            <label>每 N 年領一次</label>
+            <input type="number" id="afterFreqYr-${pid}" value="${s.afterFreqYr}" min="1" max="5"
+                   oninput="updateSetting('${pid}','afterFreqYr',this.value)" />
+          </div>
+          <div class="field">
+            <label>每次金額（元）</label>
+            <input type="number" id="afterAmt-${pid}" value="${s.afterAmt}"
+                   placeholder="估算值" oninput="updateSetting('${pid}','afterAmt',this.value)" />
+          </div>
+        </div>`}
+    </div>`;
+
+  return `<div class="${showDuring?'adv-grid-2':'adv-grid-1'}">${duringBlock}${afterBlock}</div>`;
+}
+
+// ── 逐年明細表格 ──────────────────────────────────────────
+function renderYearlyTable(pid, s) {
+  const rows = parseInt(s.yearlyRows) || 10;
+  // 補齊 yearlyAmts 到 rows 筆
+  while (s.yearlyAmts.length < rows) s.yearlyAmts.push({ yr: "", amt: "" });
+
+  let tableRows = "";
+  for (let i = 0; i < rows; i++) {
+    const row = s.yearlyAmts[i] || { yr:"", amt:"" };
+    tableRows += `<tr>
+      <td><input type="text" value="${escHtml(row.yr)}" placeholder="如 2027"
+           oninput="updateYearly('${pid}',${i},'yr',this.value)"
+           style="width:80px" /></td>
+      <td><input type="number" value="${escHtml(String(row.amt))}" placeholder="0"
+           oninput="updateYearly('${pid}',${i},'amt',this.value)" /></td>
+    </tr>`;
+  }
+
+  return `<div class="adv-block">
+    <div class="adv-block-title">逐年領回明細（最多 20 年）</div>
+    <div class="yr-count-row">
+      <label>顯示年數</label>
+      <input type="number" id="yr-rows-${pid}" value="${rows}" min="1" max="20"
+             onchange="updateYearlyRows('${pid}',this.value)" />
+      <span style="font-size:11px;color:#aaa">年（可填 1–20）</span>
+    </div>
+    <table class="yearly-table">
+      <thead><tr><th>西元年</th><th style="text-align:right">金額（元）</th></tr></thead>
+      <tbody id="yr-tbody-${pid}">${tableRows}</tbody>
+    </table>
+  </div>`;
+}
+
+function updateYearly(pid, idx, field, val) {
+  if (!settings[pid]) return;
+  while (settings[pid].yearlyAmts.length <= idx) settings[pid].yearlyAmts.push({ yr:"", amt:"" });
+  settings[pid].yearlyAmts[idx][field] = val;
+}
+
+function updateYearlyRows(pid, val) {
+  if (!settings[pid]) return;
+  const rows = Math.min(20, Math.max(1, parseInt(val) || 10));
+  settings[pid].yearlyRows = String(rows);
+  // 重繪 tbody
+  const s = settings[pid];
+  while (s.yearlyAmts.length < rows) s.yearlyAmts.push({ yr:"", amt:"" });
+  let html = "";
+  for (let i = 0; i < rows; i++) {
+    const row = s.yearlyAmts[i] || { yr:"", amt:"" };
+    html += `<tr>
+      <td><input type="text" value="${escHtml(row.yr)}" placeholder="如 2027"
+           oninput="updateYearly('${pid}',${i},'yr',this.value)"
+           style="width:80px" /></td>
+      <td><input type="number" value="${escHtml(String(row.amt))}" placeholder="0"
+           oninput="updateYearly('${pid}',${i},'amt',this.value)" /></td>
+    </tr>`;
+  }
+  const tbody = document.getElementById("yr-tbody-" + pid);
+  if (tbody) tbody.innerHTML = html;
+}
+
+// ── 類型切換（DOM 操作，不重渲染）────────────────────────
+function selectType(pid, typeKey) {
+  if (!settings[pid]) return;
+  settings[pid].type = typeKey;
+
+  // 更新按鈕 active 樣式
+  const card = document.querySelector(`[data-pid="${pid}"]`);
+  if (!card) return;
   card.querySelectorAll(".type-btn").forEach(btn => {
     const on = btn.dataset.typeKey === typeKey;
     btn.classList.toggle("active", on);
@@ -382,44 +479,13 @@ function selectType(policyId, typeKey) {
     btn.querySelector(".type-desc").style.color  = on ? "#378ADD" : "#bbb";
   });
 
-  const monthly = isMonthly(typeKey);
-  const showDuring = needsDuringBlock(typeKey);
-
-  // 顯示 / 隱藏進階區
-  const advSection = document.getElementById("adv-" + policyId);
-  const advGrid    = document.getElementById("adv-grid-" + policyId);
-  const duringBlk  = document.getElementById("adv-during-" + policyId);
-  const afterBlk   = document.getElementById("adv-after-" + policyId);
-  if (advSection) advSection.classList.add("visible");
-
-  if (duringBlk) duringBlk.style.display = showDuring ? "block" : "none";
-  if (advGrid)   advGrid.className = "advanced-grid " + (showDuring ? "" : "single");
-
-  // 更新期滿後區塊標題與欄位
-  if (afterBlk) {
-    afterBlk.querySelector(".adv-block-title").textContent = monthly ? "月領" : "期滿後";
-    const s = settings[policyId];
-    afterBlk.querySelector(`#afterAmt-${policyId}`).closest(".adv-row").innerHTML = monthly ? `
-      <div class="field" style="grid-column:1/-1">
-        <label>每月金額（元）</label>
-        <input type="number" id="afterAmt-${policyId}" value="${s.afterAmt}"
-               placeholder="估算值" oninput="updateSetting('${policyId}','afterAmt',this.value)" />
-      </div>` : `
-      <div class="field">
-        <label>每 N 年領一次</label>
-        <input type="number" id="afterFreqYr-${policyId}" value="${s.afterFreqYr}" min="1" max="5"
-               oninput="updateSetting('${policyId}','afterFreqYr',this.value)" />
-      </div>
-      <div class="field">
-        <label>每次金額（元）</label>
-        <input type="number" id="afterAmt-${policyId}" value="${s.afterAmt}"
-               placeholder="估算值" oninput="updateSetting('${policyId}','afterAmt',this.value)" />
-      </div>`;
-  }
+  // 重繪進階設定內容
+  const inner = document.getElementById("adv-inner-" + pid);
+  if (inner) inner.innerHTML = renderAdvInner(pid, settings[pid]);
 }
 
-function updateSetting(policyId, field, value) {
-  if (settings[policyId]) settings[policyId][field] = value;
+function updateSetting(pid, field, val) {
+  if (settings[pid]) settings[pid][field] = val;
 }
 
 // ── 儲存 ─────────────────────────────────────────────────
@@ -438,13 +504,13 @@ async function saveAll() {
     const member = familyData.members.find(m => m.personId === currentPersonId);
     await callGAS("saveFile", {
       email: currentUser.email, fileType:"person", fileId: currentPersonId,
-      fileName: member.name+"_"+currentPersonId+".json", content: person,
+      fileName: member.name + "_" + currentPersonId + ".json", content: person,
     });
-    sessionStorage.setItem("nbs_person_"+currentPersonId, JSON.stringify(person));
+    sessionStorage.setItem("nbs_person_" + currentPersonId, JSON.stringify(person));
     hint.innerHTML = "✓ 已儲存";
     hint.style.background = "rgba(39,174,143,0.95)";
     setTimeout(() => { hint.style.display = "none"; }, 2000);
-  } catch(e) { hint.style.display="none"; alert("儲存失敗：" + e.message); }
+  } catch(e) { hint.style.display = "none"; alert("儲存失敗：" + e.message); }
 }
 
 // ── 現金流時間軸 ──────────────────────────────────────────
@@ -460,73 +526,82 @@ function renderTimeline() {
   const years = [];
   for (let y = startYr; y <= endYr; y++) years.push(y);
 
-  // 蒐集所有成員的儲蓄保單 + 設定
   const members = familyData.members.filter(m => m.role !== "beneficiary_only");
-  const rows = []; // { name, flows: { year: amount } }
+  const rows = [];
 
   members.forEach(m => {
     const person = personDataMap[m.personId];
     if (!person) return;
     const savingPolicies = (person.policies || []).filter(p =>
       ["儲蓄險","年金險","儲蓄年金","投資型保險"].includes(p.category));
-    if (savingPolicies.length === 0) return;
+    if (!savingPolicies.length) return;
 
     const memberFlows = {};
     savingPolicies.forEach(p => {
-      // 優先用目前 settings（已修改但未存），其次用 person.savings
+      // 優先用 settings（本次已修改），其次用 person.savings
       const s = settings[p.id] ||
                 (person.savings || []).find(sv => sv.policyId === p.id) ||
                 { type:"1" };
 
-      const startWestern = p.startDate ? parseInt(p.startDate.slice(0,4)) : null;
+      const startWestern  = p.startDate  ? parseInt(p.startDate.slice(0,4))  : null;
       const payEndWestern = p.payEndDate ? parseInt(p.payEndDate.slice(0,4)) : null;
-      const covEndWestern = p.covEndDate ? parseInt(p.covEndDate.slice(0,4)) : startWestern ? startWestern + 30 : null;
+      // 終身保單上限：被保人 100 歲
+      const covEndWestern = p.covEndDate
+        ? parseInt(p.covEndDate.slice(0,4))
+        : getEndYearAt100(m.personId, p);
 
-      if (!startWestern) return; // 沒有起始日無法計算
+      if (!startWestern) return;
 
-      const typeKey       = s.type || "1";
-      const duringFreqYr  = parseInt(s.duringFreqYr) || 2;
-      const duringAmt     = parseFloat(s.duringAmt)  || 0;
-      const afterFreqYr   = parseInt(s.afterFreqYr)  || 1;
-      const afterAmt      = parseFloat(s.afterAmt)   || 0;
-      const monthly       = isMonthly(typeKey);
+      const typeKey      = s.type || "1";
+      const duringFreqYr = parseInt(s.duringFreqYr) || 2;
+      const duringAmt    = parseFloat(s.duringAmt)  || 0;
+      const afterFreqYr  = parseInt(s.afterFreqYr)  || 1;
+      const afterAmt     = parseFloat(s.afterAmt)   || 0;
+      const monthly      = isMonthly(typeKey);
+      const yearly       = isYearlyDetail(typeKey);
+
+      // 逐年明細：建立 { year: amount } 對照表
+      let yearlyMap = {};
+      if (yearly && s.yearlyAmts) {
+        s.yearlyAmts.forEach(row => {
+          const y = parseInt(row.yr);
+          const a = parseFloat(row.amt);
+          if (!isNaN(y) && !isNaN(a) && a > 0) yearlyMap[y] = (yearlyMap[y]||0) + a;
+        });
+      }
 
       years.forEach(yr => {
+        if (yr > covEndWestern) return; // 超過終身 100 歲上限
+
         let flow = 0;
         const inDuring = payEndWestern ? (yr >= startWestern && yr < payEndWestern) : false;
         const inAfter  = payEndWestern ? yr >= payEndWestern : yr >= startWestern;
-        const inCov    = !covEndWestern || yr <= covEndWestern;
 
-        if (!inCov) return;
-
-        if (typeKey === "1") {
-          // 期滿領整筆：只在繳費期滿年有一次
+        if (yearly) {
+          flow = yearlyMap[yr] || 0;
+        } else if (typeKey === "1") {
           if (payEndWestern && yr === payEndWestern) flow = afterAmt;
         } else if (typeKey === "2") {
-          // 繳費期間領 + 期滿整筆
           if (inDuring && duringAmt > 0) {
-            const elapsed = yr - startWestern;
-            if (elapsed > 0 && elapsed % duringFreqYr === 0) flow += duringAmt;
+            const e = yr - startWestern;
+            if (e > 0 && e % duringFreqYr === 0) flow += duringAmt;
           }
           if (payEndWestern && yr === payEndWestern) flow += afterAmt;
         } else if (typeKey === "3") {
-          // 期間不領 + 期滿後每N年
           if (inAfter && afterAmt > 0) {
-            const elapsed = yr - (payEndWestern || startWestern);
-            if (elapsed >= 0 && elapsed % afterFreqYr === 0) flow = afterAmt;
+            const e = yr - (payEndWestern || startWestern);
+            if (e >= 0 && e % afterFreqYr === 0) flow = afterAmt;
           }
         } else if (typeKey === "4") {
-          // 期間領 + 期滿後也領
           if (inDuring && duringAmt > 0) {
-            const elapsed = yr - startWestern;
-            if (elapsed > 0 && elapsed % duringFreqYr === 0) flow += duringAmt;
+            const e = yr - startWestern;
+            if (e > 0 && e % duringFreqYr === 0) flow += duringAmt;
           }
           if (inAfter && afterAmt > 0) {
-            const elapsed = yr - (payEndWestern || startWestern);
-            if (elapsed >= 0 && elapsed % afterFreqYr === 0) flow += afterAmt;
+            const e = yr - (payEndWestern || startWestern);
+            if (e >= 0 && e % afterFreqYr === 0) flow += afterAmt;
           }
-        } else if (typeKey === "5") {
-          // 月領：全年 × 12
+        } else if (monthly) {
           if (inAfter && afterAmt > 0) flow = afterAmt * 12;
         }
 
@@ -534,60 +609,61 @@ function renderTimeline() {
       });
     });
 
-    if (Object.keys(memberFlows).length > 0) {
+    if (Object.keys(memberFlows).length > 0)
       rows.push({ name: m.name, flows: memberFlows });
-    }
   });
 
-  if (rows.length === 0) {
+  if (!rows.length) {
     document.getElementById("timeline-content").innerHTML =
-      `<div class="empty-timeline">尚無儲蓄保單資料或未設定領回金額，<br>請先在「保單設定」填入每次領回金額後再查看時間軸</div>`;
+      `<div class="empty-timeline">尚無儲蓄保單資料或未設定領回金額<br>
+       請先在「保單設定」填入各保單的每次領回金額後再查看時間軸</div>`;
     return;
   }
 
-  // 計算合計
+  // 合計 & 只保留有現金流的年份
   const totalFlows = {};
-  rows.forEach(r => {
-    Object.entries(r.flows).forEach(([yr, amt]) => {
-      totalFlows[yr] = (totalFlows[yr] || 0) + amt;
-    });
-  });
-  const maxTotal = Math.max(...Object.values(totalFlows), 1);
+  rows.forEach(r => Object.entries(r.flows).forEach(([y, a]) => {
+    totalFlows[y] = (totalFlows[y] || 0) + a;
+  }));
 
-  // 建立表格
-  const yearHeaders = years.map(y =>
+  // 自動裁切：移除尾端全為 0 的年份
+  const activeYears = years.filter(y => totalFlows[y] > 0);
+  if (!activeYears.length) {
+    document.getElementById("timeline-content").innerHTML =
+      `<div class="empty-timeline">所有保單在此時間範圍內均無現金流入</div>`;
+    return;
+  }
+  const trimYears = years.filter(y => y <= Math.max(...activeYears));
+  const maxTotal  = Math.max(...Object.values(totalFlows), 1);
+
+  const yearHeaders = trimYears.map(y =>
     `<th>${y}<br><span style="font-size:9px;color:#bbb;font-weight:400">${y-1911}年</span></th>`
   ).join("");
 
   const memberRows = rows.map(r => {
-    const cells = years.map(yr => {
+    const cells = trimYears.map(yr => {
       const amt = r.flows[yr] || 0;
-      if (!amt) return `<td><span style="color:#eee">—</span></td>`;
-      const w = Math.max(6, Math.round((amt / maxTotal) * 60));
-      return `<td>
-        <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
-          <div class="cf-bar" style="width:${w}px">
-            <span style="font-size:9px;color:#0C447C;white-space:nowrap;padding:0 3px">${amt>=10000?(amt/10000).toFixed(0)+'萬':amt.toLocaleString()}</span>
-          </div>
-        </div>
-      </td>`;
+      if (!amt) return `<td><span style="color:#e0e0e0">—</span></td>`;
+      const w = Math.max(28, Math.round((amt / maxTotal) * 80));
+      const label = fmtAmt(amt);
+      return `<td><div class="cf-bar" style="width:${w}px"><span>${label}</span></div></td>`;
     }).join("");
     return `<tr><td>${r.name}</td>${cells}</tr>`;
   }).join("");
 
-  const totalRow = `<tr class="cf-total-row"><td>合計現金流</td>${years.map(yr => {
+  const totalRow = `<tr class="cf-total-row"><td>合計現金流</td>${trimYears.map(yr => {
     const amt = totalFlows[yr] || 0;
     if (!amt) return `<td>—</td>`;
-    return `<td class="cf-amount">NT$${amt>=10000?(amt/10000).toFixed(1)+'萬':amt.toLocaleString()}</td>`;
+    return `<td class="cf-amount">NT$${fmtAmt(amt)}</td>`;
   }).join("")}</tr>`;
 
   document.getElementById("timeline-content").innerHTML = `
     <div class="timeline-wrap">
       <div class="timeline-header">
         <span class="timeline-title">未來現金流時間軸</span>
-        <span class="timeline-subtitle">${startYr}－${endYr}年　${rows.length} 位成員</span>
+        <span class="timeline-subtitle">${startYr}－${trimYears[trimYears.length-1]}年　${rows.length} 位成員</span>
       </div>
-      <div style="overflow-x:auto">
+      <div class="cf-scroll-wrap">
         <table class="cf-table">
           <thead><tr><th>成員</th>${yearHeaders}</tr></thead>
           <tbody>${memberRows}${totalRow}</tbody>
@@ -597,11 +673,19 @@ function renderTimeline() {
 }
 
 // ── 工具函式 ──────────────────────────────────────────────
-function goBack() { window.location.href = "family.html"; }
+// 金額格式：萬以上顯示到小數第一位，不足萬顯示整數
+function fmtAmt(amt) {
+  if (amt >= 10000) return (amt / 10000).toFixed(1) + "萬";
+  return amt.toLocaleString();
+}
 
+function escHtml(s) {
+  return String(s||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
+}
+function goBack() { window.location.href = "family.html"; }
 function callGAS(action, params) {
   if (action === "saveFile") return fetch(GAS_URL, {
-    method: "POST", body: JSON.stringify({ action, ...params })
+    method:"POST", body: JSON.stringify({ action, ...params })
   }).then(r => r.json());
   const url = new URL(GAS_URL);
   url.searchParams.set("action", action);
@@ -617,7 +701,7 @@ NBS_NAV.onMemberChange = function(pid) {
   renderSettings();
   if (currentPageTab === "timeline") renderTimeline();
 };
-NBS_NAV.init({ page: "savings" });
+NBS_NAV.init({ page:"savings" });
 </script>
 </body>
 </html>
