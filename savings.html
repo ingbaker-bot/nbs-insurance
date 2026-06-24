@@ -117,20 +117,6 @@
     .empty-timeline { text-align:center; padding:40px 20px; color:#bbb; font-size:13px; line-height:1.8; }
     .empty-state { text-align:center; padding:40px 20px; color:#bbb; font-size:13px; }
 
-    /* 匯率設定區塊 */
-    .fx-block { background:#fff; border:1px solid #e8e8e8; border-radius:10px; padding:12px 16px; margin-bottom:12px; }
-    .fx-title { font-size:12px; font-weight:600; color:#378ADD; margin-bottom:10px; display:flex; align-items:center; gap:6px; }
-    .fx-title span { font-size:10px; color:#bbb; font-weight:400; }
-    .fx-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
-    @media(max-width:600px){ .fx-grid { grid-template-columns:1fr 1fr; } }
-    .fx-field label { display:block; font-size:11px; color:#888; margin-bottom:3px; }
-    .fx-field { position:relative; }
-    .fx-field input { width:100%; padding:7px 9px; font-size:13px; border:1px solid #e0e0e0; border-radius:6px; outline:none; font-family:inherit; }
-    .fx-field input:focus { border-color:#378ADD; }
-    .fx-field .fx-badge { position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:10px; color:#aaa; pointer-events:none; }
-    .fx-status { font-size:10px; color:#bbb; margin-top:6px; }
-    .fx-status.ok { color:#27ae60; }
-    .fx-status.err { color:#e74c3c; }
 
     /* 保單卡片收合 */
     .card-toggle { cursor:pointer; user-select:none; }
@@ -183,38 +169,6 @@
     <div id="loading" style="text-align:center;padding:40px;color:#bbb;font-size:13px">
       <span class="spinner" style="border-top-color:#378ADD;border-color:#e0e0e0"></span> 載入中…
     </div>
-    <!-- 匯率設定區塊（保單設定 Tab 時顯示） -->
-    <div id="fx-block-wrap" style="display:none">
-      <div class="fx-block">
-        <div class="fx-title">🌐 外幣匯率（1 外幣 = ? 台幣）<span id="fx-status" class="fx-status">載入中…</span></div>
-        <div class="fx-grid">
-          <div class="fx-field">
-            <label>美元 USD</label>
-            <input type="number" id="fx-USD" placeholder="如 32.0" step="0.1"
-                   oninput="fxRates['USD']=parseFloat(this.value)||0; renderTimeline();" />
-            <span class="fx-badge">TWD</span>
-          </div>
-          <div class="fx-field">
-            <label>歐元 EUR</label>
-            <input type="number" id="fx-EUR" placeholder="如 35.0" step="0.1"
-                   oninput="fxRates['EUR']=parseFloat(this.value)||0; renderTimeline();" />
-            <span class="fx-badge">TWD</span>
-          </div>
-          <div class="fx-field">
-            <label>日圓 JPY</label>
-            <input type="number" id="fx-JPY" placeholder="如 0.22" step="0.01"
-                   oninput="fxRates['JPY']=parseFloat(this.value)||0; renderTimeline();" />
-            <span class="fx-badge">TWD</span>
-          </div>
-          <div class="fx-field">
-            <label>人民幣 CNY <span style="color:#e0a030;font-size:9px">手動</span></label>
-            <input type="number" id="fx-CNY" placeholder="如 4.4" step="0.01"
-                   oninput="fxRates['CNY']=parseFloat(this.value)||0; renderTimeline();" />
-            <span class="fx-badge">TWD</span>
-          </div>
-        </div>
-      </div>
-    </div>
     <div id="settings-view" style="display:none"></div>
     <div id="timeline-view">
       <div class="timeline-controls">
@@ -236,39 +190,6 @@ let currentUser = null, familyData = null, personDataMap = {}, currentPersonId =
 let settings = {}; // { [policyId]: settingObj }
 let currentPageTab = "settings";
 
-// ── 外幣匯率（1 外幣 = N 台幣） ───────────────────────────
-const fxRates = { USD: 0, EUR: 0, JPY: 0, CNY: 0 };
-
-async function fetchFxRates() {
-  const status = document.getElementById("fx-status");
-  try {
-    // frankfurter.app：免 CORS，提供 ECB 匯率
-    // 查詢 TWD 對各外幣，再取倒數得「1外幣=?台幣」
-    const r = await fetch("https://api.frankfurter.app/latest?base=TWD&symbols=USD,EUR,JPY");
-    const d = await r.json();
-    if (d && d.rates) {
-      // d.rates.USD = 1 TWD 能換多少 USD → 倒數 = 1 USD = ? TWD
-      ["USD","EUR","JPY"].forEach(cur => {
-        if (d.rates[cur]) {
-          const rate = Math.round((1 / d.rates[cur]) * 100) / 100;
-          fxRates[cur] = rate;
-          const el = document.getElementById("fx-" + cur);
-          if (el) el.value = rate;
-        }
-      });
-      const dateStr = d.date || "今日";
-      if (status) {
-        status.textContent = "✓ " + dateStr + " ECB 匯率（人民幣請手動輸入）";
-        status.className = "fx-status ok";
-      }
-    }
-  } catch(e) {
-    if (status) {
-      status.textContent = "⚠ 匯率載入失敗，請手動輸入";
-      status.className = "fx-status err";
-    }
-  }
-}
 
 // ── 領回類型 ──────────────────────────────────────────────
 const TYPES_BASE = [
@@ -336,10 +257,8 @@ async function loadData() {
     }));
     document.getElementById("loading").style.display = "none";
     document.getElementById("settings-view").style.display = "block";
-    document.getElementById("fx-block-wrap").style.display = "block";
     renderTabs();
     renderSettings();
-    fetchFxRates(); // 非同步，不阻塞渲染
     const now = new Date().getFullYear();
     document.getElementById("tl-start").value = now;
     document.getElementById("tl-end").value   = now + 29;
@@ -723,10 +642,7 @@ function calcPolicyFlows(p, s, memberId, years) {
     });
   }
 
-  // 幣別換算：取保單幣別，若非 TWD 則乘以匯率
-  const currency = (p && p.currency) || "TWD";
-  const fxRate   = (currency !== "TWD" && fxRates[currency]) ? fxRates[currency] : 1;
-
+  // 幣別：保留原幣，不換算
   const flows = {};
   years.forEach(yr => {
     if (yr > covEndWestern) return;
@@ -766,7 +682,7 @@ function calcPolicyFlows(p, s, memberId, years) {
     } else if (monthly) {
       if (inAfter && afterAmt > 0) flow = afterAmt * 12;
     }
-    if (flow > 0) flows[yr] = Math.round(flow * fxRate);
+    if (flow > 0) flows[yr] = flow;
   });
   return flows;
 }
@@ -785,7 +701,7 @@ function renderTimeline() {
 
   // 結構：groups = [{ memberName, policies: [{ policyNo, itemName, flows }] }]
   const groups = [];
-  const totalFlows = {};
+  const totalFlows = {}; // { TWD: {yr:amt}, USD: {yr:amt}, ... }
 
   familyData.members.filter(m => m.role !== "beneficiary_only").forEach(m => {
     const person = personDataMap[m.personId];
@@ -800,14 +716,17 @@ function renderTimeline() {
                 (person.savings || []).find(sv => sv.policyId === p.id) ||
                 { type:"1" };
       const flows = calcPolicyFlows(p, s, m.personId, years);
-      // 有現金流才累加到合計（無現金流的繳費中保單仍顯示，但不影響合計）
+      // 有現金流才累加到合計（依幣別分開）
+      const cur = p.currency || "TWD";
+      if (!totalFlows[cur]) totalFlows[cur] = {};
       Object.entries(flows).forEach(([yr, amt]) => {
-        totalFlows[yr] = (totalFlows[yr] || 0) + amt;
+        totalFlows[cur][yr] = (totalFlows[cur][yr] || 0) + amt;
       });
       policyRows.push({
         policyNo:  p.policyNo || p.id,
         itemName:  p.itemName || "",
         category:  p.category || "",
+        currency:  p.currency || "TWD",
         flows,
       });
     });
@@ -821,15 +740,18 @@ function renderTimeline() {
     return;
   }
 
-  // 自動裁切尾端空白年份
-  const activeYears = years.filter(y => totalFlows[y] > 0);
+  // 自動裁切尾端空白年份（所有幣別合併判斷）
+  const allFlowYears = Object.values(totalFlows).flatMap(byYr => Object.keys(byYr).map(Number));
+  const activeYears  = years.filter(y => allFlowYears.includes(y));
   if (!activeYears.length) {
     document.getElementById("timeline-content").innerHTML =
       `<div class="empty-timeline">所有保單在此時間範圍內均無現金流入</div>`;
     return;
   }
   const trimYears = years.filter(y => y <= Math.max(...activeYears));
-  const maxTotal  = Math.max(...Object.values(totalFlows), 1);
+  // maxTotal 只看台幣（用於色塊比例）
+  const twdFlows  = totalFlows["TWD"] || {};
+  const maxTotal  = Math.max(...Object.values(twdFlows), 1);
   const totalPolicies = groups.reduce((s, g) => s + g.policies.length, 0);
 
   // ── 表頭 ──
@@ -883,34 +805,47 @@ function renderTimeline() {
       return `<tr class="cf-policy-row">${firstCell}${cells}</tr>`;
     }).join("");
 
-    // 小計列：此被保險人各年現金流加總
-    const memberFlows = {};
+    // 小計列：依幣別分開
+    const memberByCur = {}; // { TWD: {yr:amt}, USD: {yr:amt} }
     g.policies.forEach(pr => {
+      const cur = pr.currency || "TWD";
+      if (!memberByCur[cur]) memberByCur[cur] = {};
       Object.entries(pr.flows).forEach(([yr, amt]) => {
-        memberFlows[yr] = (memberFlows[yr] || 0) + amt;
+        memberByCur[cur][yr] = (memberByCur[cur][yr] || 0) + amt;
       });
     });
-    const subtotalRow = `<tr class="cf-subtotal-row">
-      <td style="padding-left:18px">小計</td>
-      ${trimYears.map(yr => {
-        const amt = memberFlows[yr] || 0;
-        if (!amt) return `<td><span style="color:#c0c0c0">—</span></td>`;
-        return `<td class="cf-amount" style="font-size:11px">${fmtAmt(amt)}</td>`;
-      }).join("")}
-    </tr>`;
+    const subtotalRows = Object.entries(memberByCur).map(([cur, byYr]) => {
+      const isTWD = cur === "TWD";
+      const label = isTWD ? "小計" : `小計（${cur}）`;
+      const labelStyle = isTWD ? "" : "color:#555;font-size:10px";
+      return `<tr class="cf-subtotal-row">
+        <td style="padding-left:18px;${labelStyle}">${label}</td>
+        ${trimYears.map(yr => {
+          const amt = byYr[yr] || 0;
+          if (!amt) return `<td><span style="color:#c0c0c0">—</span></td>`;
+          const disp = isTWD ? fmtAmt(amt) : fmtForeign(amt, cur);
+          return `<td class="cf-amount" style="font-size:11px">${disp}</td>`;
+        }).join("")}
+      </tr>`;
+    }).join("");
 
-    return nameRow + policyRowsHtml + subtotalRow;
+    return nameRow + policyRowsHtml + subtotalRows;
   }).join("");
 
-  // ── 合計列 ──
-  const totalRow = `<tr class="cf-total-row">
-    <td>合計現金流</td>
-    ${trimYears.map(yr => {
-      const amt = totalFlows[yr] || 0;
-      if (!amt) return `<td>—</td>`;
-      return `<td class="cf-amount">${fmtAmt(amt)}</td>`;
-    }).join("")}
-  </tr>`;
+  // ── 合計列（依幣別各一列）──
+  const totalRow = Object.entries(totalFlows).map(([cur, byYr], idx) => {
+    const isTWD = cur === "TWD";
+    const label = isTWD ? "合計現金流" : `合計（${cur}）`;
+    return `<tr class="cf-total-row">
+      <td>${label}</td>
+      ${trimYears.map(yr => {
+        const amt = byYr[yr] || 0;
+        if (!amt) return `<td>—</td>`;
+        const disp = isTWD ? fmtAmt(amt) : fmtForeign(amt, cur);
+        return `<td class="cf-amount">${disp}</td>`;
+      }).join("")}
+    </tr>`;
+  }).join("");
 
   document.getElementById("timeline-content").innerHTML = `
     <div class="timeline-wrap">
@@ -928,10 +863,18 @@ function renderTimeline() {
 }
 
 // ── 工具函式 ──────────────────────────────────────────────
-// 金額格式：萬以上顯示到小數第一位，不足萬顯示整數
+// 金額格式（台幣）：萬以上顯示到小數第一位，不足萬顯示整數
 function fmtAmt(amt) {
   if (amt >= 10000) return (amt / 10000).toFixed(1) + "萬";
   return amt.toLocaleString();
+}
+
+// 外幣格式：顯示原幣符號
+const CUR_SYMBOL = { USD:"$", EUR:"€", JPY:"¥", CNY:"¥", TWD:"" };
+function fmtForeign(amt, cur) {
+  const sym = CUR_SYMBOL[cur] || cur + " ";
+  if (cur === "JPY") return sym + Math.round(amt).toLocaleString();
+  return sym + (amt >= 10000 ? (amt/10000).toFixed(1)+"萬" : amt.toLocaleString());
 }
 
 function escHtml(s) {
