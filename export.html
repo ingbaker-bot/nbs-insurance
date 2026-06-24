@@ -82,6 +82,24 @@
     .ex-gap-wrap{background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:12px 14px;margin-bottom:14px}
     /* A4 分頁 */
     .ex-page-break{page-break-before:always;padding-top:8px}
+
+    /* 現金流時間軸（匯出版，固定寬度不捲動） */
+    .ex-tl-wrap{background:#fff;border:1px solid #e8e8e8;border-radius:10px;overflow:hidden;margin-bottom:12px}
+    .ex-tl-hdr{padding:10px 14px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:8px}
+    .ex-tl-title{font-size:14px;font-weight:600}
+    .ex-tl-sub{font-size:11px;color:#999}
+    .ex-cf-table{width:100%;border-collapse:separate;border-spacing:0;font-size:11px}
+    .ex-cf-table th{background:#f7f7f5;padding:6px 8px;text-align:center;font-weight:500;color:#666;border-bottom:1px solid #ebebeb;border-right:1px solid #ebebeb;white-space:nowrap}
+    .ex-cf-table th:first-child{text-align:left;min-width:120px;border-right:2px solid #dde8f5}
+    .ex-cf-table td{padding:5px 8px;text-align:center;border-bottom:1px solid #f5f5f5;border-right:1px solid #f5f5f5}
+    .ex-cf-table td:first-child{text-align:left;font-weight:500;color:#1a1a1a;white-space:nowrap;border-right:2px solid #dde8f5}
+    .ex-cf-member-row td{background:#f4f8fd;padding:7px 10px;border-top:2px solid #dde8f5;border-bottom:1px solid #dde8f5}
+    .ex-cf-policy-row td{background:#fff}
+    .ex-cf-subtotal-row td{background:#f0f6fc;font-weight:600;color:#0C447C;border-top:1px solid #dde8f5;border-bottom:2px solid #c5ddf5}
+    .ex-cf-total-row td{background:#e8f3fd;font-weight:600;color:#0C447C;border-top:2px solid #c5ddf5}
+    .ex-cf-bar{height:18px;border-radius:3px;background:#E6F1FB;display:inline-flex;align-items:center;justify-content:center;min-width:24px;padding:0 3px}
+    .ex-cf-bar span{font-size:9px;color:#0C447C;white-space:nowrap}
+    .ex-cf-amount{font-size:10px;color:#0C447C;font-weight:500;white-space:nowrap}
   </style>
   <script src="nav.js"></script>
 </head>
@@ -150,6 +168,7 @@ const BLOCKS=[
   {key:"timeline",label:"醫療前中後保障",icon:"🏥",desc:"前期一次性、中期療程、後期生活幫助"},
   {key:"coverage",label:"附約保障清單",  icon:"🛡️",desc:"各保單附約保障金額明細"},
   {key:"savings", label:"儲蓄險領回明細",icon:"🐷",desc:"各保單領回時間表與總領回金額"},
+  {key:"savings_timeline", label:"儲蓄險現金流時間軸",icon:"📈",desc:"未來15年各被保險人現金流匯整"},
   {key:"monthly", label:"每月應繳保費",  icon:"📅",desc:"月曆式繳費分配"},
   {key:"policy",  label:"保險繳費一覽",  icon:"📋",desc:"所有保單號碼、繳費方式、保費明細"},
   {key:"beneficiary", label:"受益人與傳承", icon:"👥",desc:"傳承規劃與保額對應關係"},
@@ -163,7 +182,7 @@ const FMTS=[
 const CC={"壽險保障":"#4A90D9","醫療保障":"#27AE8F","意外險":"#F5A623","重大疾病險":"#9B59B6","重大傷病險":"#8E44AD","特定傷病險":"#7D3C98","儲蓄險":"#E8638A","年金險":"#C0392B","投資型保險":"#95A5A6"};
 
 // ── 狀態 ─────────────────────────────────────────────────
-var sel={summary:false,timeline:false,coverage:false,savings:false,monthly:false,policy:false,beneficiary:false};
+var sel={summary:false,timeline:false,coverage:false,savings:false,savings_timeline:false,monthly:false,policy:false,beneficiary:false};
 var fmt="png_single";
 var person={},policies=[],coverage={},savings=[];
 var pName="",pDate="";
@@ -279,6 +298,208 @@ function doShowPreview(){
     c.appendChild(div);
   });
   goPage("P_PREV");
+}
+
+// ══════════════════════════════════════════════════════════
+// 儲蓄險現金流時間軸輔助函式（移植自 savings.html）
+// ══════════════════════════════════════════════════════════
+
+function isMonthlyEx(k)      { return k === "5"; }
+function isYearlyDetailEx(k) { return k === "6"; }
+
+function getEndYearAt100Ex(memberId, policy) {
+  var person = (typeof personDataMap !== "undefined") ? personDataMap[memberId] : null;
+  var bd = (person && person.profile && person.profile.birthDate) ||
+           (familyData && familyData.members &&
+            (familyData.members.find(function(m){return m.personId===memberId;})||{}).birthDate);
+  if (bd) {
+    var by = parseInt(bd.slice(0,4));
+    if (!isNaN(by)) return by + 100;
+  }
+  if (policy && policy.startDate) {
+    var sy = parseInt(policy.startDate.slice(0,4));
+    if (!isNaN(sy)) return sy + 80;
+  }
+  return new Date().getFullYear() + 50;
+}
+
+function calcPolicyFlowsEx(p, s, memberId, years) {
+  var startWestern  = p.startDate  ? parseInt(p.startDate.slice(0,4))  : null;
+  var payEndWestern = p.payEndDate ? parseInt(p.payEndDate.slice(0,4)) : null;
+  var covEndWestern = p.covEndDate
+    ? parseInt(p.covEndDate.slice(0,4))
+    : getEndYearAt100Ex(memberId, p);
+  if (!startWestern) return {};
+
+  var typeKey       = s.type || "1";
+  var duringFreqYr  = parseInt(s.duringFreqYr)  || 2;
+  var duringStartYr = parseInt(s.duringStartYr) || 1;
+  var duringAmt     = parseFloat(s.duringAmt)   || 0;
+  var afterFreqYr   = parseInt(s.afterFreqYr)   || 1;
+  var afterStartYr  = parseInt(s.afterStartYr !== undefined ? s.afterStartYr : 0);
+  var afterAmt      = parseFloat(s.afterAmt)    || 0;
+  var monthly       = isMonthlyEx(typeKey);
+  var yearly        = isYearlyDetailEx(typeKey);
+
+  var yearlyMap = {};
+  if (yearly && s.yearlyAmts) {
+    s.yearlyAmts.forEach(function(row) {
+      var y = parseInt(row.yr), a = parseFloat(row.amt);
+      if (!isNaN(y) && !isNaN(a) && a > 0) yearlyMap[y] = (yearlyMap[y]||0) + a;
+    });
+  }
+
+  var polCur = (p && p.currency) || "TWD";
+  var exRate = (polCur !== "TWD" && parseFloat(s.exchangeRate)) ? parseFloat(s.exchangeRate) : 1;
+
+  var flows = {};
+  years.forEach(function(yr) {
+    if (yr > covEndWestern) return;
+    var flow = 0;
+    var inDuring = payEndWestern ? (yr >= startWestern && yr < payEndWestern) : false;
+    var inAfter  = payEndWestern ? yr >= payEndWestern : yr >= startWestern;
+
+    if (yearly) {
+      flow = yearlyMap[yr] || 0;
+    } else if (typeKey === "1") {
+      if (payEndWestern && yr === payEndWestern) flow = afterAmt;
+    } else if (typeKey === "2") {
+      if (inDuring && duringAmt > 0) {
+        var ft = startWestern + duringStartYr - 1;
+        var e = yr - ft;
+        if (yr >= ft && e % duringFreqYr === 0) flow += duringAmt;
+      }
+      if (payEndWestern && yr === payEndWestern) flow += afterAmt;
+    } else if (typeKey === "3") {
+      if (inAfter && afterAmt > 0) {
+        var base = (payEndWestern || startWestern) + afterStartYr;
+        var e2 = yr - base;
+        if (yr >= base && e2 % afterFreqYr === 0) flow = afterAmt;
+      }
+    } else if (typeKey === "4") {
+      if (inDuring && duringAmt > 0) {
+        var ft2 = startWestern + duringStartYr - 1;
+        var e3 = yr - ft2;
+        if (yr >= ft2 && e3 % duringFreqYr === 0) flow += duringAmt;
+      }
+      if (inAfter && afterAmt > 0) {
+        var base2 = (payEndWestern || startWestern) + afterStartYr;
+        var e4 = yr - base2;
+        if (yr >= base2 && e4 % afterFreqYr === 0) flow += afterAmt;
+      }
+    } else if (monthly) {
+      if (inAfter && afterAmt > 0) flow = afterAmt * 12;
+    }
+    if (flow > 0) flows[yr] = Math.round(flow * exRate);
+  });
+  return flows;
+}
+
+function fmtAmtEx(amt) {
+  if (amt >= 10000) return (amt / 10000).toFixed(1) + "萬";
+  return amt.toLocaleString();
+}
+
+function renderSavingsTimeline(pdm, fData, startYr, endYr) {
+  var years = [];
+  for (var y = startYr; y <= endYr; y++) years.push(y);
+
+  var groups = [];
+  var totalFlows = {};
+
+  fData.members.filter(function(m){ return m.role !== "beneficiary_only"; }).forEach(function(m) {
+    var person = pdm[m.personId];
+    if (!person) return;
+    var savingPolicies = (person.policies || []).filter(function(p) {
+      return ["儲蓄險","年金險","儲蓄年金","投資型保險"].indexOf(p.category) >= 0;
+    });
+    if (!savingPolicies.length) return;
+
+    var policyRows = [];
+    savingPolicies.forEach(function(p) {
+      var s = (person.savings || []).find(function(sv){ return sv.policyId === p.id; }) || {type:"1"};
+      var flows = calcPolicyFlowsEx(p, s, m.personId, years);
+      Object.keys(flows).forEach(function(yr) {
+        totalFlows[yr] = (totalFlows[yr] || 0) + flows[yr];
+      });
+      policyRows.push({
+        policyNo: p.policyNo || p.id,
+        itemName: p.itemName || "",
+        category: p.category || "",
+        flows: flows,
+      });
+    });
+    if (policyRows.length) groups.push({ memberName: m.name, policies: policyRows });
+  });
+
+  if (!groups.length) {
+    return '<div style="padding:20px;text-align:center;color:#bbb;font-size:12px">尚無儲蓄保單設定領回資料</div>';
+  }
+
+  // 固定顯示全部 16 年（不自動裁切，確保 A4 橫向完整）
+  var dispYears = years;
+  var maxTotal = Math.max.apply(null, Object.values(totalFlows).concat([1]));
+
+  var catBg    = {"儲蓄險":"#FBEAF0","年金險":"#FCEBEB","儲蓄年金":"#FBEAF0","投資型保險":"#f0f0f0"};
+  var catColor = {"儲蓄險":"#72243E","年金險":"#791F1F","儲蓄年金":"#72243E","投資型保險":"#555"};
+
+  var yearHeaders = dispYears.map(function(y) {
+    return '<th>' + y + '<br><span style="font-size:8px;color:#bbb;font-weight:400">' + (y-1911) + '年</span></th>';
+  }).join("");
+
+  var groupRows = groups.map(function(g) {
+    var paying = g.policies.filter(function(pr){ return Object.keys(pr.flows).length === 0; }).length;
+    var nameRow = '<tr class="ex-cf-member-row"><td colspan="' + (dispYears.length+1) + '">' +
+      '<span style="font-size:11px;font-weight:600;color:#1a1a1a">' + g.memberName + '</span>' +
+      '<span style="font-size:10px;color:#bbb;margin-left:6px">' + g.policies.length + ' 張保單</span>' +
+      (paying > 0 ? '<span style="font-size:10px;color:#e0a030;margin-left:4px">（含 ' + paying + ' 張繳費中）</span>' : '') +
+      '</td></tr>';
+
+    var pRowsHtml = g.policies.map(function(pr) {
+      var cells = dispYears.map(function(yr) {
+        var amt = pr.flows[yr] || 0;
+        if (!amt) return '<td><span style="color:#ebebeb;font-size:9px">—</span></td>';
+        var w = Math.max(20, Math.round((amt / maxTotal) * 60));
+        return '<td><div class="ex-cf-bar" style="width:' + w + 'px"><span>' + fmtAmtEx(amt) + '</span></div></td>';
+      }).join("");
+      var bg = catBg[pr.category] || "#f0f0f0";
+      var co = catColor[pr.category] || "#555";
+      var hasFlow = Object.keys(pr.flows).length > 0;
+      var firstCell = '<td style="padding-left:14px;min-width:120px">' +
+        '<div style="margin-bottom:2px"><span style="font-size:9px;padding:1px 4px;border-radius:3px;background:' + bg + ';color:' + co + '">' + pr.category + '</span>' +
+        (!hasFlow ? '<span style="font-size:9px;color:#bbb;margin-left:3px">繳費中</span>' : '') + '</div>' +
+        '<div style="font-size:10px;font-weight:600;font-family:monospace;color:#333">' + pr.policyNo + '</div>' +
+        (pr.itemName ? '<div style="font-size:9px;color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:110px">' + pr.itemName + '</div>' : '') +
+        '</td>';
+      return '<tr class="ex-cf-policy-row">' + firstCell + cells + '</tr>';
+    }).join("");
+
+    // 小計
+    var mFlows = {};
+    g.policies.forEach(function(pr){ Object.keys(pr.flows).forEach(function(yr){ mFlows[yr]=(mFlows[yr]||0)+pr.flows[yr]; }); });
+    var subRow = '<tr class="ex-cf-subtotal-row"><td style="padding-left:14px">小計</td>' +
+      dispYears.map(function(yr){ var a=mFlows[yr]||0; return a?('<td class="ex-cf-amount">'+fmtAmtEx(a)+'</td>'):'<td><span style="color:#c0c0c0">—</span></td>'; }).join("") +
+      '</tr>';
+
+    return nameRow + pRowsHtml + subRow;
+  }).join("");
+
+  var totalRow = '<tr class="ex-cf-total-row"><td>合計現金流</td>' +
+    dispYears.map(function(yr){ var a=totalFlows[yr]||0; return a?('<td class="ex-cf-amount">'+fmtAmtEx(a)+'</td>'):'<td>—</td>'; }).join("") +
+    '</tr>';
+
+  return '<div class="ex-tl-wrap">' +
+    '<div class="ex-tl-hdr">' +
+      '<span class="ex-tl-title">未來現金流時間軸</span>' +
+      '<span class="ex-tl-sub">' + startYr + '－' + endYr + '年・' + groups.length + ' 位被保險人</span>' +
+    '</div>' +
+    '<div style="overflow:visible">' +
+      '<table class="ex-cf-table">' +
+        '<thead><tr><th>被保險人 / 保單號碼</th>' + yearHeaders + '</tr></thead>' +
+        '<tbody>' + groupRows + totalRow + '</tbody>' +
+      '</table>' +
+    '</div>' +
+  '</div>';
 }
 
 // ══════════════════════════════════════════════════════════
@@ -963,6 +1184,23 @@ function renderBlock(key){
     html+='</div>';
     return html;
   }
+  if(key==="savings_timeline"){
+    // 起始年：當年，結束年：當年+15（共16年，橫式A4一頁）
+    var now = new Date().getFullYear();
+    var tlStart = now;
+    var tlEnd   = now + 15;
+
+    // 使用 export.html 已載入的 pdm（所有成員的 person 資料）
+    var pdm = {};
+    var fmem = (familyData && familyData.members) || [];
+    fmem.filter(function(m){ return m.role !== "beneficiary_only"; }).forEach(function(m) {
+      var cached = sessionStorage.getItem("nbs_person_" + m.personId);
+      if (cached) pdm[m.personId] = JSON.parse(cached);
+    });
+
+    return renderSavingsTimeline(pdm, familyData, tlStart, tlEnd);
+  }
+
   if(key==="monthly"){
     var now=new Date().getMonth();
     var active2=policies.filter(function(p){return p.status==="有效";});
@@ -1080,11 +1318,22 @@ async function doExportPDF(blks,div){
   var wm='<div style="padding:8px;background:#f7f7f5;text-align:center;font-size:11px;color:#aaa">NBS 保單體檢 '+pName+' '+pDate+'</div>';
   for(var i=0;i<blks.length;i++){
     div.innerHTML=renderBlock(blks[i].key)+wm;
-    setP(Math.round(i/blks.length*90));await sleep(100);
+    // savings_timeline 用橫式 A4（landscape）以容納 16 年的欄位
+    var isLandscape = blks[i].key === "savings_timeline";
+    if(isLandscape) {
+      div.style.width = "1040px"; // A4 橫向約 297mm @ 96dpi ≈ 1122px，留邊後 1040
+    } else {
+      div.style.width = "560px";
+    }
+    setP(Math.round(i/blks.length*90));await sleep(200);
     var c=await html2canvas(div,{scale:2,useCORS:true,backgroundColor:"#ffffff"});
-    var iw=190,ih=(c.height/c.width)*iw;
-    if(i>0)pdf.addPage();
-    pdf.addImage(c.toDataURL("image/png"),"PNG",10,10,iw,Math.min(ih,277));
+    var isTlPage = blks[i].key === "savings_timeline";
+    if(i>0) pdf.addPage(isTlPage?"a4":"a4", isTlPage?"landscape":"portrait");
+    else if(isTlPage) { pdf = new J("l","mm","a4"); } // 第一頁就是時間軸則直接橫式
+    var iw = isTlPage ? 277 : 190;
+    var ih = (c.height/c.width)*iw;
+    pdf.addImage(c.toDataURL("image/png"),"PNG",10,10,iw,Math.min(ih,isTlPage?190:277));
+    div.style.width = "560px"; // 還原
   }
   setP(95);
   pdf.save(pName+"_保單體檢_"+pDate+".pdf");
@@ -1133,7 +1382,7 @@ window.addEventListener("nbs_nav_ready", async function(e) {
   var PAGE_TO_BLOCK = {
     "summary":     ["summary"],
     "coverage":    ["coverage"],
-    "savings":     ["savings"],
+    "savings":     ["savings","savings_timeline"],
     "policy":      ["policy","summary"],
     "beneficiary": ["beneficiary"],
     "family":      ["summary"],
