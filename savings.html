@@ -65,6 +65,14 @@
 const GAS_URL = "https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec";
 let currentUser = null, familyData = null, personDataMap = {}, currentPersonId = null, settings = {};
 
+// ── 領回方式定義 ──────────────────────────────
+const TYPES = [
+  { key: "1", title: "期滿領回",     desc: "保單到期一次領回" },
+  { key: "2", title: "定期給付",     desc: "每年／每期固定領回" },
+  { key: "3", title: "增值回饋金",   desc: "定期撥付增值回饋" },
+  { key: "4", title: "年金給付",     desc: "轉換年金後定期領" },
+];
+
 // 1. 初始化導覽
 window.addEventListener("nbs_nav_ready", async function(e) {
   currentUser = e.detail.user;
@@ -130,6 +138,30 @@ function callGAS(action, params) {
   url.searchParams.set("action", action);
   Object.entries(params||{}).forEach(([k,v]) => url.searchParams.set(k, v));
   return fetch(url.toString()).then(r=>r.json());
+}
+
+// ── 成員 Tab ──────────────────────────────────
+function renderTabs() {
+  const members = familyData.members.filter(m => m.role !== "beneficiary_only");
+  let html = "";
+  members.forEach(m => {
+    const person = personDataMap[m.personId];
+    const count = (person?.policies || []).filter(p =>
+      ["儲蓄險","年金險","儲蓄年金","投資型保險"].includes(p.category)
+    ).length;
+    html += `<div class="member-tab ${currentPersonId === m.personId ? 'active' : ''}"
+      onclick="switchTab('${m.personId}')">${m.name}
+      <span style="font-size:10px;padding:0 5px;background:${currentPersonId===m.personId?'#E6F1FB':'#f0f0f0'};color:${currentPersonId===m.personId?'#0C447C':'#aaa'};border-radius:99px;margin-left:3px">${count}</span>
+    </div>`;
+  });
+  document.getElementById("member-tabs").innerHTML = html;
+}
+
+function switchTab(personId) {
+  currentPersonId = personId;
+  settings = {};
+  renderTabs();
+  renderContent();
 }
 
 // ── 核心渲染與資料收集邏輯 ──────────────────────────────
@@ -201,6 +233,15 @@ function collectAllValues() {
         if (noteEl) settings[pid].note = noteEl.value;
     });
 }
+
+// ── NBS 導覽 ──────────────────────────────────
+NBS_NAV.onMemberChange = function(pid) {
+  currentPersonId = pid;
+  settings = {};
+  renderTabs();
+  renderContent();
+};
+NBS_NAV.init({ page: "savings" });
 </script>
 </body>
 </html>
