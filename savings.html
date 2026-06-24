@@ -450,10 +450,15 @@ function renderAdvInner(pid, s) {
                    placeholder="估算值" oninput="updateSetting('${pid}','afterAmt',this.value)" />
           </div>
         </div>` : `
-        <div class="adv-row">
+        <div class="adv-row" style="grid-template-columns:1fr 1fr 1fr;gap:8px">
           <div class="field">
-            <label>每 N 年領一次</label>
-            <input type="number" id="afterFreqYr-${pid}" value="${s.afterFreqYr}" min="1" max="5"
+            <label>第幾年開始第一次領</label>
+            <input type="number" id="afterStartYr-${pid}" value="${s.afterStartYr||'0'}" min="0" max="30"
+                   oninput="updateSetting('${pid}','afterStartYr',this.value)" />
+          </div>
+          <div class="field">
+            <label>之後每 N 年領一次</label>
+            <input type="number" id="afterFreqYr-${pid}" value="${s.afterFreqYr}" min="1" max="10"
                    oninput="updateSetting('${pid}','afterFreqYr',this.value)" />
           </div>
           <div class="field">
@@ -461,6 +466,9 @@ function renderAdvInner(pid, s) {
             <input type="number" id="afterAmt-${pid}" value="${s.afterAmt}"
                    placeholder="估算值" oninput="updateSetting('${pid}','afterAmt',this.value)" />
           </div>
+        </div>
+        <div style="font-size:10px;color:#aaa;margin-top:4px">
+          第幾年開始：0=繳費期滿當年，1=繳費期滿後第1年，以此類推
         </div>`}
     </div>`;
 
@@ -619,6 +627,7 @@ function calcPolicyFlows(p, s, memberId, years) {
   const duringStartYr = parseInt(s.duringStartYr) || 1;  // 第幾年開始第一次領（1=第一年）
   const duringAmt     = parseFloat(s.duringAmt)   || 0;
   const afterFreqYr   = parseInt(s.afterFreqYr)   || 1;
+  const afterStartYr  = parseInt(s.afterStartYr !== undefined ? s.afterStartYr : 0); // 期滿後第幾年開始（0=期滿當年）
   const afterAmt      = parseFloat(s.afterAmt)    || 0;
   const monthly      = isMonthly(typeKey);
   const yearly       = isYearlyDetail(typeKey);
@@ -652,8 +661,9 @@ function calcPolicyFlows(p, s, memberId, years) {
       if (payEndWestern && yr === payEndWestern) flow += afterAmt;
     } else if (typeKey === "3") {
       if (inAfter && afterAmt > 0) {
-        const e = yr - (payEndWestern || startWestern);
-        if (e >= 0 && e % afterFreqYr === 0) flow = afterAmt;
+        const base = (payEndWestern || startWestern) + afterStartYr;
+        const e = yr - base;
+        if (yr >= base && e % afterFreqYr === 0) flow = afterAmt;
       }
     } else if (typeKey === "4") {
       if (inDuring && duringAmt > 0) {
@@ -662,8 +672,9 @@ function calcPolicyFlows(p, s, memberId, years) {
         if (yr >= firstTrigger && e % duringFreqYr === 0) flow += duringAmt;
       }
       if (inAfter && afterAmt > 0) {
-        const e = yr - (payEndWestern || startWestern);
-        if (e >= 0 && e % afterFreqYr === 0) flow += afterAmt;
+        const base = (payEndWestern || startWestern) + afterStartYr;
+        const e = yr - base;
+        if (yr >= base && e % afterFreqYr === 0) flow += afterAmt;
       }
     } else if (monthly) {
       if (inAfter && afterAmt > 0) flow = afterAmt * 12;
