@@ -337,7 +337,8 @@ function renderSettings() {
     ].filter(Boolean).join("　");
 
     // 已設定過的保單預設展開，新保單預設收合
-    const isConfigured = !!(sv.type && sv.type !== "1") || !!(sv.afterAmt) || !!(sv.duringAmt) || !!(sv.yearlyAmts && sv.yearlyAmts.length);
+    // 用 s（settings[p.id]）判斷，sv 可能不在 scope 內
+    const isConfigured = !!(s.type && s.type !== "1") || !!(s.afterAmt) || !!(s.duringAmt) || !!(s.yearlyAmts && s.yearlyAmts.length);
     html += `<div class="savings-card ${isConfigured?'card-open':''}" data-pid="${p.id}">
       <div class="card-header card-toggle" onclick="toggleCard('${p.id}')">
         <div style="display:flex;align-items:center;gap:6px;flex:1">
