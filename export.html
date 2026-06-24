@@ -1128,6 +1128,20 @@ window.addEventListener("nbs_nav_ready", async function(e) {
   currentPersonId   = e.detail.currentPersonId;
   familyFileName    = e.detail.familyFileName;
 
+  // 從 URL 參數 ?from= 判斷來自哪個頁面，預選對應匯出區塊
+  var fromPage = new URLSearchParams(window.location.search).get("from") || "";
+  var PAGE_TO_BLOCK = {
+    "summary":     ["summary"],
+    "coverage":    ["coverage"],
+    "savings":     ["savings"],
+    "policy":      ["policy","summary"],
+    "beneficiary": ["beneficiary"],
+    "family":      ["summary"],
+  };
+  if (fromPage && PAGE_TO_BLOCK[fromPage]) {
+    PAGE_TO_BLOCK[fromPage].forEach(function(k){ sel[k] = true; });
+  }
+
   buildBlocks();
   buildFmts();
   var btn=document.getElementById("B_PREV");
