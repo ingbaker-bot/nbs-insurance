@@ -107,8 +107,41 @@
     .cf-bar { height:20px; border-radius:4px; background:#E6F1FB; display:inline-flex; align-items:center; justify-content:center; min-width:28px; padding:0 4px; }
     .cf-bar span { font-size:10px; color:#0C447C; white-space:nowrap; }
     .cf-amount { font-size:11px; color:#0C447C; font-weight:500; white-space:nowrap; }
+    /* 被保險人分組標題列 */
+    .cf-member-row td { background:#f4f8fd; padding:7px 10px; border-top:2px solid #dde8f5; border-bottom:1px solid #dde8f5; }
+    /* 保單子列縮排 */
+    .cf-policy-row td { background:#fff; }
+    .cf-policy-row:hover td { background:#fafcff; }
     .empty-timeline { text-align:center; padding:40px 20px; color:#bbb; font-size:13px; line-height:1.8; }
     .empty-state { text-align:center; padding:40px 20px; color:#bbb; font-size:13px; }
+
+    /* ── 列印樣式 ── */
+    @media print {
+      /* 隱藏非時間軸的 UI */
+      .header, .member-tabs, .page-tabs, .timeline-controls,
+      .settings-view, #settings-view, #loading,
+      .back-btn, #saved-hint { display:none !important; }
+      /* 確保時間軸可見 */
+      #timeline-view { display:block !important; }
+      body { background:#fff; }
+      .main { padding:0; }
+      .timeline-wrap { border:none; box-shadow:none; }
+      .timeline-header { padding:8px 0; }
+      /* 列印時完整展開：取消 overflow，讓所有欄位自然排列 */
+      .cf-scroll-wrap { overflow:visible !important; }
+      /* 隱藏捲軸視覺（Chrome 不印捲軸，但保險起見） */
+      ::-webkit-scrollbar { display:none; }
+      /* 表格樣式微調 */
+      .cf-table { font-size:9px; }
+      .cf-table th, .cf-table td { padding:4px 5px; }
+      .cf-bar { height:16px; }
+      .cf-bar span { font-size:8px; }
+      /* sticky 在列印時取消（避免重複渲染） */
+      .cf-table th:first-child,
+      .cf-table td:first-child { position:static !important; box-shadow:none !important; }
+      /* 強制所有欄位在同一頁（橫向） */
+      @page { size: landscape; margin: 10mm; }
+    }
   </style>
   <script src="nav.js"></script>
 </head>
@@ -513,6 +546,70 @@ async function saveAll() {
   } catch(e) { hint.style.display = "none"; alert("儲存失敗：" + e.message); }
 }
 
+// ── 計算單張保單各年現金流 ───────────────────────────────
+function calcPolicyFlows(p, s, memberId, years) {
+  const startWestern  = p.startDate  ? parseInt(p.startDate.slice(0,4))  : null;
+  const payEndWestern = p.payEndDate ? parseInt(p.payEndDate.slice(0,4)) : null;
+  const covEndWestern = p.covEndDate
+    ? parseInt(p.covEndDate.slice(0,4))
+    : getEndYearAt100(memberId, p);
+  if (!startWestern) return {};
+
+  const typeKey      = s.type || "1";
+  const duringFreqYr = parseInt(s.duringFreqYr) || 2;
+  const duringAmt    = parseFloat(s.duringAmt)  || 0;
+  const afterFreqYr  = parseInt(s.afterFreqYr)  || 1;
+  const afterAmt     = parseFloat(s.afterAmt)   || 0;
+  const monthly      = isMonthly(typeKey);
+  const yearly       = isYearlyDetail(typeKey);
+
+  let yearlyMap = {};
+  if (yearly && s.yearlyAmts) {
+    s.yearlyAmts.forEach(row => {
+      const y = parseInt(row.yr), a = parseFloat(row.amt);
+      if (!isNaN(y) && !isNaN(a) && a > 0) yearlyMap[y] = (yearlyMap[y]||0) + a;
+    });
+  }
+
+  const flows = {};
+  years.forEach(yr => {
+    if (yr > covEndWestern) return;
+    let flow = 0;
+    const inDuring = payEndWestern ? (yr >= startWestern && yr < payEndWestern) : false;
+    const inAfter  = payEndWestern ? yr >= payEndWestern : yr >= startWestern;
+
+    if (yearly) {
+      flow = yearlyMap[yr] || 0;
+    } else if (typeKey === "1") {
+      if (payEndWestern && yr === payEndWestern) flow = afterAmt;
+    } else if (typeKey === "2") {
+      if (inDuring && duringAmt > 0) {
+        const e = yr - startWestern;
+        if (e > 0 && e % duringFreqYr === 0) flow += duringAmt;
+      }
+      if (payEndWestern && yr === payEndWestern) flow += afterAmt;
+    } else if (typeKey === "3") {
+      if (inAfter && afterAmt > 0) {
+        const e = yr - (payEndWestern || startWestern);
+        if (e >= 0 && e % afterFreqYr === 0) flow = afterAmt;
+      }
+    } else if (typeKey === "4") {
+      if (inDuring && duringAmt > 0) {
+        const e = yr - startWestern;
+        if (e > 0 && e % duringFreqYr === 0) flow += duringAmt;
+      }
+      if (inAfter && afterAmt > 0) {
+        const e = yr - (payEndWestern || startWestern);
+        if (e >= 0 && e % afterFreqYr === 0) flow += afterAmt;
+      }
+    } else if (monthly) {
+      if (inAfter && afterAmt > 0) flow = afterAmt * 12;
+    }
+    if (flow > 0) flows[yr] = flow;
+  });
+  return flows;
+}
+
 // ── 現金流時間軸 ──────────────────────────────────────────
 function renderTimeline() {
   const startYr = parseInt(document.getElementById("tl-start").value) || new Date().getFullYear();
@@ -522,111 +619,49 @@ function renderTimeline() {
       `<div class="empty-timeline">起訖年份設定有誤（最多 60 年）</div>`;
     return;
   }
-
   const years = [];
   for (let y = startYr; y <= endYr; y++) years.push(y);
 
-  const members = familyData.members.filter(m => m.role !== "beneficiary_only");
-  const rows = [];
+  // 結構：groups = [{ memberName, policies: [{ policyNo, itemName, flows }] }]
+  const groups = [];
+  const totalFlows = {};
 
-  members.forEach(m => {
+  familyData.members.filter(m => m.role !== "beneficiary_only").forEach(m => {
     const person = personDataMap[m.personId];
     if (!person) return;
     const savingPolicies = (person.policies || []).filter(p =>
       ["儲蓄險","年金險","儲蓄年金","投資型保險"].includes(p.category));
     if (!savingPolicies.length) return;
 
-    const memberFlows = {};
+    const policyRows = [];
     savingPolicies.forEach(p => {
-      // 優先用 settings（本次已修改），其次用 person.savings
       const s = settings[p.id] ||
                 (person.savings || []).find(sv => sv.policyId === p.id) ||
                 { type:"1" };
-
-      const startWestern  = p.startDate  ? parseInt(p.startDate.slice(0,4))  : null;
-      const payEndWestern = p.payEndDate ? parseInt(p.payEndDate.slice(0,4)) : null;
-      // 終身保單上限：被保人 100 歲
-      const covEndWestern = p.covEndDate
-        ? parseInt(p.covEndDate.slice(0,4))
-        : getEndYearAt100(m.personId, p);
-
-      if (!startWestern) return;
-
-      const typeKey      = s.type || "1";
-      const duringFreqYr = parseInt(s.duringFreqYr) || 2;
-      const duringAmt    = parseFloat(s.duringAmt)  || 0;
-      const afterFreqYr  = parseInt(s.afterFreqYr)  || 1;
-      const afterAmt     = parseFloat(s.afterAmt)   || 0;
-      const monthly      = isMonthly(typeKey);
-      const yearly       = isYearlyDetail(typeKey);
-
-      // 逐年明細：建立 { year: amount } 對照表
-      let yearlyMap = {};
-      if (yearly && s.yearlyAmts) {
-        s.yearlyAmts.forEach(row => {
-          const y = parseInt(row.yr);
-          const a = parseFloat(row.amt);
-          if (!isNaN(y) && !isNaN(a) && a > 0) yearlyMap[y] = (yearlyMap[y]||0) + a;
-        });
-      }
-
-      years.forEach(yr => {
-        if (yr > covEndWestern) return; // 超過終身 100 歲上限
-
-        let flow = 0;
-        const inDuring = payEndWestern ? (yr >= startWestern && yr < payEndWestern) : false;
-        const inAfter  = payEndWestern ? yr >= payEndWestern : yr >= startWestern;
-
-        if (yearly) {
-          flow = yearlyMap[yr] || 0;
-        } else if (typeKey === "1") {
-          if (payEndWestern && yr === payEndWestern) flow = afterAmt;
-        } else if (typeKey === "2") {
-          if (inDuring && duringAmt > 0) {
-            const e = yr - startWestern;
-            if (e > 0 && e % duringFreqYr === 0) flow += duringAmt;
-          }
-          if (payEndWestern && yr === payEndWestern) flow += afterAmt;
-        } else if (typeKey === "3") {
-          if (inAfter && afterAmt > 0) {
-            const e = yr - (payEndWestern || startWestern);
-            if (e >= 0 && e % afterFreqYr === 0) flow = afterAmt;
-          }
-        } else if (typeKey === "4") {
-          if (inDuring && duringAmt > 0) {
-            const e = yr - startWestern;
-            if (e > 0 && e % duringFreqYr === 0) flow += duringAmt;
-          }
-          if (inAfter && afterAmt > 0) {
-            const e = yr - (payEndWestern || startWestern);
-            if (e >= 0 && e % afterFreqYr === 0) flow += afterAmt;
-          }
-        } else if (monthly) {
-          if (inAfter && afterAmt > 0) flow = afterAmt * 12;
-        }
-
-        if (flow > 0) memberFlows[yr] = (memberFlows[yr] || 0) + flow;
+      const flows = calcPolicyFlows(p, s, m.personId, years);
+      if (Object.keys(flows).length === 0) return;
+      // 累加合計
+      Object.entries(flows).forEach(([yr, amt]) => {
+        totalFlows[yr] = (totalFlows[yr] || 0) + amt;
+      });
+      policyRows.push({
+        policyNo:  p.policyNo || p.id,
+        itemName:  p.itemName || "",
+        category:  p.category || "",
+        flows,
       });
     });
-
-    if (Object.keys(memberFlows).length > 0)
-      rows.push({ name: m.name, flows: memberFlows });
+    if (policyRows.length > 0) groups.push({ memberName: m.name, policies: policyRows });
   });
 
-  if (!rows.length) {
+  if (!groups.length) {
     document.getElementById("timeline-content").innerHTML =
       `<div class="empty-timeline">尚無儲蓄保單資料或未設定領回金額<br>
        請先在「保單設定」填入各保單的每次領回金額後再查看時間軸</div>`;
     return;
   }
 
-  // 合計 & 只保留有現金流的年份
-  const totalFlows = {};
-  rows.forEach(r => Object.entries(r.flows).forEach(([y, a]) => {
-    totalFlows[y] = (totalFlows[y] || 0) + a;
-  }));
-
-  // 自動裁切：移除尾端全為 0 的年份
+  // 自動裁切尾端空白年份
   const activeYears = years.filter(y => totalFlows[y] > 0);
   if (!activeYears.length) {
     document.getElementById("timeline-content").innerHTML =
@@ -635,38 +670,71 @@ function renderTimeline() {
   }
   const trimYears = years.filter(y => y <= Math.max(...activeYears));
   const maxTotal  = Math.max(...Object.values(totalFlows), 1);
+  const totalPolicies = groups.reduce((s, g) => s + g.policies.length, 0);
 
+  // ── 表頭 ──
   const yearHeaders = trimYears.map(y =>
     `<th>${y}<br><span style="font-size:9px;color:#bbb;font-weight:400">${y-1911}年</span></th>`
   ).join("");
 
-  const memberRows = rows.map(r => {
-    const cells = trimYears.map(yr => {
-      const amt = r.flows[yr] || 0;
-      if (!amt) return `<td><span style="color:#e0e0e0">—</span></td>`;
-      const w = Math.max(28, Math.round((amt / maxTotal) * 80));
-      const label = fmtAmt(amt);
-      return `<td><div class="cf-bar" style="width:${w}px"><span>${label}</span></div></td>`;
+  // ── 分組列 ──
+  const groupRows = groups.map(g => {
+    // 被保險人名稱列（分組標題）
+    const nameRow = `<tr class="cf-member-row">
+      <td colspan="${trimYears.length + 1}">
+        <span style="font-size:12px;font-weight:600;color:#1a1a1a">${g.memberName}</span>
+        <span style="font-size:10px;color:#bbb;margin-left:6px">${g.policies.length} 張保單</span>
+      </td>
+    </tr>`;
+
+    // 各保單列
+    const policyRowsHtml = g.policies.map(pr => {
+      const cells = trimYears.map(yr => {
+        const amt = pr.flows[yr] || 0;
+        if (!amt) return `<td><span style="color:#e8e8e8;font-size:10px">—</span></td>`;
+        const w = Math.max(28, Math.round((amt / maxTotal) * 80));
+        return `<td><div class="cf-bar" style="width:${w}px"><span>${fmtAmt(amt)}</span></div></td>`;
+      }).join("");
+
+      // 第一欄：保單號碼 + 險種
+      const catColors = {
+        "儲蓄險":"#72243E","年金險":"#791F1F","儲蓄年金":"#72243E","投資型保險":"#555"
+      };
+      const catBg = {
+        "儲蓄險":"#FBEAF0","年金險":"#FCEBEB","儲蓄年金":"#FBEAF0","投資型保險":"#f0f0f0"
+      };
+      const badgeStyle = `font-size:9px;padding:1px 5px;border-radius:3px;margin-bottom:2px;display:inline-block;background:${catBg[pr.category]||"#f0f0f0"};color:${catColors[pr.category]||"#555"}`;
+      const firstCell = `<td style="padding-left:18px">
+        <div><span style="${badgeStyle}">${pr.category}</span></div>
+        <div style="font-size:11px;font-weight:500;color:#333;font-family:monospace;white-space:nowrap">${pr.policyNo}</div>
+      </td>`;
+
+      return `<tr class="cf-policy-row">${firstCell}${cells}</tr>`;
     }).join("");
-    return `<tr><td>${r.name}</td>${cells}</tr>`;
+
+    return nameRow + policyRowsHtml;
   }).join("");
 
-  const totalRow = `<tr class="cf-total-row"><td>合計現金流</td>${trimYears.map(yr => {
-    const amt = totalFlows[yr] || 0;
-    if (!amt) return `<td>—</td>`;
-    return `<td class="cf-amount">NT$${fmtAmt(amt)}</td>`;
-  }).join("")}</tr>`;
+  // ── 合計列 ──
+  const totalRow = `<tr class="cf-total-row">
+    <td>合計現金流</td>
+    ${trimYears.map(yr => {
+      const amt = totalFlows[yr] || 0;
+      if (!amt) return `<td>—</td>`;
+      return `<td class="cf-amount">NT$${fmtAmt(amt)}</td>`;
+    }).join("")}
+  </tr>`;
 
   document.getElementById("timeline-content").innerHTML = `
     <div class="timeline-wrap">
       <div class="timeline-header">
         <span class="timeline-title">未來現金流時間軸</span>
-        <span class="timeline-subtitle">${startYr}－${trimYears[trimYears.length-1]}年　${rows.length} 位成員</span>
+        <span class="timeline-subtitle">${startYr}－${trimYears[trimYears.length-1]}年　${groups.length} 位被保險人・${totalPolicies} 張保單</span>
       </div>
       <div class="cf-scroll-wrap">
         <table class="cf-table">
-          <thead><tr><th>成員</th>${yearHeaders}</tr></thead>
-          <tbody>${memberRows}${totalRow}</tbody>
+          <thead><tr><th>被保險人 / 保單號碼</th>${yearHeaders}</tr></thead>
+          <tbody>${groupRows}${totalRow}</tbody>
         </table>
       </div>
     </div>`;
