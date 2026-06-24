@@ -18,16 +18,15 @@
     .member-tab.active { border-bottom-color:#378ADD; color:#378ADD; font-weight:500; }
 
     .main { 
-  padding: 16px 24px; /* 電腦版左右留白稍微加大，視覺更舒適 */
-  max-width: 1200px;  /* 將原本的 560px 放大，讓大螢幕可以滿版展開 */
-  margin: 0 auto;
-  width: 100%;        /* 確保絕對不會超出手機螢幕邊界 */
-}
+      padding: 16px 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+    }
 
-/* 針對手機版自動微調邊距，保持原本的緊湊感 */
-@media (max-width: 768px) {
-  .main { padding: 16px; }
-}
+    @media (max-width: 768px) {
+      .main { padding: 16px; }
+    }
 
     .stat-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px; }
     .stat-card { padding:10px 12px; border-radius:10px; }
@@ -58,60 +57,24 @@
     .pie-legend-item { display:flex; align-items:center; gap:8px; font-size:12px; }
     .pie-dot { width:12px; height:12px; border-radius:3px; flex-shrink:0; }
 
-    /* 保障加總 */
-    /* 保障加總 (全新網格排版) */
-    .coverage-grid {
-      display: grid;
-      grid-template-columns: 1fr; /* 手機預設 1 欄 */
-      gap: 16px;
-      margin-bottom: 24px;
-    }
-    /* 平板螢幕 (大於 768px) 變 2 欄 */
-    @media (min-width: 768px) {
-      .coverage-grid { grid-template-columns: repeat(2, 1fr); }
-    }
-    /* 電腦螢幕 (大於 1024px) 變 3 欄，並讓卡片各自獨立高度 */
-    /* 電腦螢幕 (大於 1024px) 變 3 欄，並啟用跨列排版魔法 */
+    /* 保障加總網格排版 */
+    .coverage-grid { display: grid; grid-template-columns: 1fr; gap: 16px; margin-bottom: 24px; }
+    @media (min-width: 768px) { .coverage-grid { grid-template-columns: repeat(2, 1fr); } }
     @media (min-width: 1024px) {
       .coverage-grid { grid-template-columns: repeat(3, 1fr); align-items: start; }
-      
-      /* 讓左右兩側較長的卡片跨越兩列，迫使中間空出完美的專屬空位 */
       .card-日額型住院 { grid-row: span 2; }
       .card-癌症醫療   { grid-row: span 2; }
-      
-      /* 強制將「失能長照」擠入第 2 欄（剛好無縫接軌在定額手術正下方） */
       .card-失能長照   { grid-column: 2; }
     }
 
     /* 獨立保障卡片 */
-    .coverage-card {
-      background: #fff;
-      border: 1px solid #e8e8e8;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.02);
-    }
-    .cov-group-header {
-      display: flex;
-      align-items: center;
-      padding: 8px 14px;
-      border-bottom: 1px solid #f0f0f0;
-    }
+    .coverage-card { background: #fff; border: 1px solid #e8e8e8; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+    .cov-group-header { display: flex; align-items: center; padding: 8px 14px; border-bottom: 1px solid #f0f0f0; }
     .cov-group-label { font-size: 13px; font-weight: 600; letter-spacing: 0.05em; }
-    
-    /* 細項列 (仿 Excel 虛線分隔) */
-    .cov-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 7px 14px;
-      border-bottom: 1px dashed #f5f5f5;
-    }
+    .cov-item { display: flex; align-items: center; justify-content: space-between; padding: 7px 14px; border-bottom: 1px dashed #f5f5f5; }
     .cov-item:last-child { border-bottom: none; }
     .cov-item-label { font-size: 12px; color: #444; }
     .cov-item-label.zero { color: #bbb; }
-    
-    /* 數值與明細 */
     .cov-value-wrap { text-align: right; }
     .cov-item-value { font-size: 14px; font-weight: 600; font-family: monospace; }
     .cov-unit { font-size: 10px; color: #999; font-weight: normal; font-family: sans-serif; margin-left: 2px; }
@@ -143,7 +106,6 @@
     .manual-badge { font-size:8px; color:#F5A623; font-weight:600; margin-left:2px; }
 
     .loading { text-align:center; padding:40px; color:#bbb; font-size:13px; }
-    
     .spinner { display:inline-block; width:16px; height:16px; border:2px solid #e0e0e0; border-top-color:#378ADD; border-radius:50%; animation:spin 0.7s linear infinite; vertical-align:middle; }
     @keyframes spin { to { transform:rotate(360deg); } }
   </style>
@@ -151,7 +113,7 @@
 </head>
 <body>
 
-  <div class="header-sub" id="header-sub"></div>
+<div class="header-sub" id="header-sub"></div>
 <div class="member-tabs" id="member-tabs"></div>
 <div class="main">
   <div id="loading" class="loading"><span class="spinner"></span> 載入中…</div>
@@ -177,6 +139,7 @@
 <script>
 const GAS_URL = "https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec";
 
+// 用於 Modal 手動勾選覆蓋狀態的傳統設定
 const COVERAGE_TYPES = [
   { key:"life",       label:"壽險保障", group:"壽險", color:"#4A90D9", detect:(p,c)=>p.some(x=>x.category==="壽險保障") },
   { key:"acc_death",  label:"意外身故", group:"意外", color:"#F5A623", detect:(p,c)=>p.some(x=>x.category==="意外險") },
@@ -288,12 +251,12 @@ let familyData     = null;
 let familyFileName = null;
 let personDataMap  = {};
 let currentPersonId = null;
-let overrides      = {}; // pid_key → true/false
-let medicalOverrides = {}; // rowkey_colkey → value
-let targets        = {}; // itemKey → 目標值
+let overrides      = {};
+let medicalOverrides = {};
+let targets        = {};
 
 window.addEventListener("nbs_nav_ready", async function(e) {
-  currentUser       = e.detail.user;  // 賦值給全域變數
+  currentUser       = e.detail.user;
   familyData        = e.detail.familyData;
   currentPersonId   = e.detail.currentPersonId;
   familyFileName    = e.detail.familyFileName;
@@ -304,8 +267,6 @@ window.addEventListener("nbs_nav_ready", async function(e) {
   }
 
   try {
-    // 載入所有成員個人資料
-    // 載入所有成員個人資料 (效能優化：導入本地快取 SessionStorage + 併發請求)
     const activeMembers = familyData.members.filter(m => m.role !== "beneficiary_only");
     
     const fetchPromises = activeMembers.map(m => {
@@ -313,11 +274,9 @@ window.addEventListener("nbs_nav_ready", async function(e) {
       const cachedData = sessionStorage.getItem(cacheKey);
 
       if (cachedData) {
-        // ⚡ 命中快取：0.01 秒瞬間載入，免等待雲端
         personDataMap[m.personId] = JSON.parse(cachedData);
         return Promise.resolve();
       } else {
-        // ☁️ 無快取：向 GAS 抓取，拿完後立刻存入快取供下次使用
         return callGAS("readFile", {
           email: currentUser.email,
           fileType: "person",
@@ -331,7 +290,6 @@ window.addEventListener("nbs_nav_ready", async function(e) {
       }
     });
 
-    // 讓系統同時發出所有尚未快取的請求
     await Promise.all(fetchPromises);
     document.getElementById("loading").style.display = "none";
     document.getElementById("content").style.display = "block";
@@ -375,7 +333,6 @@ function renderContent() {
   const active  = policies.filter(p=>p.status==="有效");
   const totalTWD= active.reduce((s,p)=>s+(p.premiumTWD||0),0);
 
-  // 從所有保單彙整 coverage
   const coverage = {};
   Object.entries(person?.coverage||{}).forEach(([k,v])=>{
     if(typeof v==="number") coverage[k]=(coverage[k]||0)+v;
@@ -443,7 +400,7 @@ function renderContent() {
   </div>`;
   html += `<div class="pie-wrap">${buildDonutChart(active, coverage, targets, overrides)}</div>`;
 
-  // 4. 就醫情況 (移到這裡)
+  // 4. 就醫情況
   html+=`<div class="section-label">就醫情況</div>`;
   html+=`<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;overflow:hidden;margin-bottom:16px">
     <table class="medical-table">
@@ -536,66 +493,32 @@ function renderContent() {
   });
   html += `</div>`;
 
-  // 6. 缺口／不足分析 (移到這裡)
+  // 6. 缺口／不足分析
   html += `<div class="section-label" style="margin-top:16px">缺口 / 不足分析</div>`;
   html += `<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:12px 14px;margin-bottom:16px">${buildGapAnalysis(active, coverage, targets, overrides)}</div>`;
 
-  // 將組合好的 HTML 內容正式印出到畫面上 (放在函數最尾端)
   document.getElementById("content").innerHTML = html;
 }
-// ── 保障群組定義 ─────────────────────────────────────────
-const GAP_GROUPS = [
-  { key:"family", label:"家庭責任", color:"#1565C0", items:[
-    { key:"life_permanent", label:"終身壽險",    unit:"萬元",   color:"#1565C0" },
-    { key:"life_term",      label:"定期壽險",    unit:"萬元",   color:"#1E88E5" },
-    { key:"investment",     label:"投資型保險",  unit:"",       color:"#7B1FA2", isBool:true },
-    { key:"savings",        label:"儲蓄險",      unit:"",       color:"#E91E8C", isBool:true },
-  ]},
-  { key:"before", label:"醫療前", color:"#E53935", items:[
-    { key:"ci_special", label:"重大/特傷/重疾", unit:"萬元",   color:"#E53935" },
-    { key:"cancer",     label:"癌症險",          unit:"萬元",   color:"#C62828" },
-  ]},
-  { key:"during", label:"醫療中", color:"#FF8F00", items:[
-    { key:"hosp_medical",    label:"住院醫療",       unit:"元/日",  color:"#EF6C00" },
-    { key:"medical_surgery", label:"終身醫療/手術",  unit:"元/次",  color:"#FF8F00" },
-    { key:"accident",        label:"意外險",         unit:"萬元",   color:"#FFC107" },
-  ]},
-  { key:"after", label:"醫療後", color:"#2E7D32", items:[
-    { key:"ltc_disable", label:"失能",         unit:"萬元",    color:"#1B5E20" },
-    { key:"ltc_support", label:"失能扶助",     unit:"萬元/月", color:"#2E7D32" },
-    { key:"ltc_care",    label:"長照",         unit:"萬元/月", color:"#43A047" },
-    { key:"waiver",      label:"保費豁免",     unit:"",        color:"#A5D6A7", isBool:true },
-  ]},
-];
-
-// 精準對應 coverage.html 的資料庫欄位
-const GAP_KEY_MAP = {
-  life_permanent:  { cats:["壽險保障"],          keys:["life_basic"] },
-  life_term:       { cats:[],                   keys:["life_term"] },
-  investment:      { cats:["投資型保險"],        keys:[] },
-  savings:         { cats:["儲蓄險","年金險"],   keys:[] },
-  ci_special:      { cats:["重大疾病險","重大傷病險","特定傷病險"], keys:["can_first"] },
-  cancer:          { cats:["癌症醫療"],          keys:["can_first", "can_total"] },
-  hosp_medical:    { cats:["醫療保障"],          keys:["hosp_room", "hosp_ext_room", "daily_room_1_30", "hosp_ext_daily"] },
-  medical_surgery: { cats:["醫療保障"],          keys:["hosp_surgery", "hosp_ext_surgery", "surg_hosp_max", "surg_hosp", "surg_opd_max"] },
-  accident:        { cats:["意外險"],            keys:["acc_disable_max", "acc_special_max", "acc_burn_max", "acc_death"] },
-  ltc_disable:     { cats:["失能長照"],          keys:["ltc_dis_amt"] },
-  ltc_support:     { cats:["失能長照"],          keys:["ltc_dis_life", "acc_support", "ltc_life"] },
-  ltc_care:        { cats:["失能長照"],          keys:["ltc_monthly", "ltc_care", "ltc_yr", "ltc_mo"] },
-  waiver:          { cats:[],                   keys:["ltc_waiver"] },
-};
 
 // ── 輔助加總計算機 ─────────────────────────────────────────
 function sumCov(keys, policies, coverage) {
-  let total = 0;
+  let t = 0;
   policies.forEach(p => {
     keys.forEach(k => {
-      if (p.coverage && typeof p.coverage[k] === "number") {
-        total += p.coverage[k];
-      }
+      const v = p.coverage?.[k];
+      if (v && typeof v === "number") t += v;
     });
   });
-  return total;
+  // 相容舊格式 coverage 資料
+  if(t === 0 && coverage) {
+    policies.forEach(p => { 
+      keys.forEach(k => { 
+        const v = coverage[p.id+"_"+k]; 
+        if(v) t += v; 
+      }); 
+    });
+  }
+  return t;
 }
 
 // ── 保障群組定義 ─────────────────────────────────────────
@@ -725,7 +648,6 @@ function buildDonutChart(active, coverage, targets, covOverrides) {
       if (item.isBool) {
         amtHtml = current > 0 ? `<span style="color:#555;font-size:11px">有</span>` : `<span style="color:#bbb;font-size:11px">無</span>`;
       } else {
-        // ▼ 如果有設定目標，顯示「實際 / 目標」；沒設定則只顯示「實際」
         if (current > 0 || target > 0) {
           let displayVal = current > 0 ? current.toLocaleString() : "0";
           if (target > 0) displayVal += ` / ${target.toLocaleString()}`;
@@ -926,113 +848,3 @@ function openTargetModal() {
   overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
   document.body.appendChild(overlay);
 }
-
-function saveTargets() {
-  GAP_GROUPS.flatMap(g=>g.items.filter(i=>!i.isBool)).forEach(item => {
-    const el = document.getElementById("target_"+item.key);
-    if(el) {
-      const v = parseFloat(el.value);
-      if(!isNaN(v) && v > 0) targets[item.key] = v;
-      else delete targets[item.key];
-    }
-  });
-  document.getElementById("target-modal-overlay")?.remove();
-  renderContent(); // 重新渲染
-}
-
-function openModal() {
-  const person  = personDataMap[currentPersonId];
-  const policies= person?.policies||[];
-  const coverage= person?.coverage||{};
-  const active  = policies.filter(p=>p.status==="有效");
-  const covTypes= COVERAGE_TYPES.map(t=>{
-    const auto=t.detect(active,coverage);
-    const manual=overrides[currentPersonId+"_"+t.key];
-    return {...t,covered:manual!==undefined?manual:auto,autoDetected:auto,isManual:manual!==undefined};
-  });
-
-  const groups=["壽險","意外","醫療","重大","癌症","長照","財務"];
-  let html="";
-  groups.forEach(g=>{
-    const gTypes=covTypes.filter(t=>t.group===g);
-    const gc=GROUP_COLORS[g];
-    html+=`<div class="type-group-label" style="color:${gc}">${g}</div><div class="type-tags">`;
-    gTypes.forEach(t=>{
-      html+=`<div class="type-tag" id="tag_${t.key}" onclick="toggleOverride('${t.key}')"
-        style="background:${t.covered?t.color+'18':'#f5f5f5'};border:1.5px ${t.covered?'solid':'dashed'} ${t.covered?t.color:'#ddd'}">
-        <div class="type-tag-dot" style="background:${t.covered?t.color:'transparent'};border:${t.covered?'none':'1.5px solid #ccc'}"></div>
-        <span class="type-tag-label" style="color:${t.covered?'#333':'#bbb'};font-weight:${t.covered?500:400}">${t.label}</span>
-        ${t.isManual?'<span class="manual-badge">手動</span>':''}
-      </div>`;
-    });
-    html+=`</div>`;
-  });
-  document.getElementById("modal-types").innerHTML=html;
-  document.getElementById("edit-modal").classList.add("active");
-}
-
-function toggleOverride(key) {
-  const fk=currentPersonId+"_"+key;
-  const person=personDataMap[currentPersonId];
-  const active=(person?.policies||[]).filter(p=>p.status==="有效");
-  const coverage=person?.coverage||{};
-  const t=COVERAGE_TYPES.find(x=>x.key===key);
-  const auto=t.detect(active,coverage);
-  const cur=overrides[fk];
-  if(cur===undefined) overrides[fk]=!auto;
-  else delete overrides[fk];
-  // 重新渲染 modal tags
-  openModal();
-}
-
-function closeModal() { document.getElementById("edit-modal").classList.remove("active"); renderContent(); }
-// 手動調整 toggleOverride 後自動重新渲染圓餅圖
-const _origToggle = toggleOverride;
-function toggleOverride(key) {
-  const fk=currentPersonId+"_"+key;
-  const person=personDataMap[currentPersonId];
-  const active=(person?.policies||[]).filter(p=>p.status==="有效");
-  const cov=person?.coverage||{};
-  const t=COVERAGE_TYPES.find(x=>x.key===key);
-  const auto=t?t.detect(active,cov):false;
-  const cur=overrides[fk];
-  if(cur===undefined) overrides[fk]=!auto;
-  else delete overrides[fk];
-  openModal(); // 重新渲染 modal
-}
-function handleModalOverlay(e) { if(e.target===document.getElementById("edit-modal")) closeModal(); }
-
-function goBack() { window.location.href="family.html"; }
-
-function callGAS(action,params) {
-  if (action === "saveFile") {
-    return fetch(GAS_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({ action, ...params }),
-    }).then(r => r.json());
-  }
-  
-  const url=new URL(GAS_URL);
-  url.searchParams.set("action",action);
-  Object.entries(params||{}).forEach(([k,v])=>{
-    if(typeof v==="object") url.searchParams.set(k,encodeURIComponent(JSON.stringify(v)));
-    else if(v!==null&&v!==undefined) url.searchParams.set(k,v);
-  });
-  return fetch(url.toString()).then(r=>r.json());
-}
-
-
-// ── NBS 導覽 ──────────────────────────────────────────────
-NBS_NAV.onMemberChange = function(pid) {
-  currentPersonId = pid;
-  if (typeof renderContent  === "function") renderContent();
-  if (typeof showListView   === "function") showListView();
-  if (typeof renderContent  === "function") renderContent();
-};
-NBS_NAV.init({ page: "summary" });
-
-
-</script>
-</body>
-</html>
