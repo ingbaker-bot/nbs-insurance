@@ -117,6 +117,13 @@
     .empty-timeline { text-align:center; padding:40px 20px; color:#bbb; font-size:13px; line-height:1.8; }
     .empty-state { text-align:center; padding:40px 20px; color:#bbb; font-size:13px; }
 
+    /* 保單卡片收合 */
+    .card-toggle { cursor:pointer; user-select:none; }
+    .card-toggle:hover { background:#fafafa; }
+    .card-chevron { font-size:12px; color:#aaa; width:14px; flex-shrink:0; transition:transform 0.15s; }
+    .card-summary { font-size:11px; color:#888; white-space:nowrap; flex-shrink:0; margin-left:8px; }
+    .card-body { border-top:1px solid #f0f0f0; }
+
     /* ── 列印樣式 ── */
     @media print {
       /* 隱藏非時間軸的 UI */
@@ -305,15 +312,17 @@ function renderSettings() {
     if (!settings[p.id]) {
       const sv = (person.savings || []).find(s => s.policyId === p.id) || {};
       settings[p.id] = {
-        policyId:     p.id,
-        type:         sv.type         || "1",
-        duringFreqYr: sv.duringFreqYr || "2",
-        duringAmt:    sv.duringAmt    || "",
-        afterFreqYr:  sv.afterFreqYr  || "1",
-        afterAmt:     sv.afterAmt     || "",
-        yearlyRows:   sv.yearlyRows   || "10",
-        yearlyAmts:   sv.yearlyAmts   || [],  // array of { year, amt }
-        note:         sv.note         || "",
+        policyId:      p.id,
+        type:          sv.type          || "1",
+        duringFreqYr:  sv.duringFreqYr  || "2",
+        duringStartYr: sv.duringStartYr || "1",  // 第幾年開始第一次領（預設第1年）
+        duringAmt:     sv.duringAmt     || "",
+        afterFreqYr:   sv.afterFreqYr   || "1",
+        afterStartYr:  sv.afterStartYr  || "0",  // 期滿後第幾年開始（預設第0年=繳費期滿年）
+        afterAmt:      sv.afterAmt      || "",
+        yearlyRows:    sv.yearlyRows    || "10",
+        yearlyAmts:    sv.yearlyAmts    || [],
+        note:          sv.note          || "",
       };
     }
     const s = settings[p.id];
@@ -327,14 +336,24 @@ function renderSettings() {
       p.payEndRaw    ? "繳滿：" + p.payEndRaw  : "",
     ].filter(Boolean).join("　");
 
-    html += `<div class="savings-card" data-pid="${p.id}">
-      <div class="card-header">
-        <div><span class="card-no">${p.policyNo||"—"}</span>
-          <span class="cat-badge cat-${p.category}">${p.category}</span></div>
-        <div class="card-name">${p.itemName||"—"}</div>
-        ${dateStr?`<div class="card-dates">${dateStr}</div>`:""}
+    // 已設定過的保單預設展開，新保單預設收合
+    const isConfigured = !!(sv.type && sv.type !== "1") || !!(sv.afterAmt) || !!(sv.duringAmt) || !!(sv.yearlyAmts && sv.yearlyAmts.length);
+    html += `<div class="savings-card ${isConfigured?'card-open':''}" data-pid="${p.id}">
+      <div class="card-header card-toggle" onclick="toggleCard('${p.id}')">
+        <div style="display:flex;align-items:center;gap:6px;flex:1">
+          <span class="card-chevron" id="chevron-${p.id}">${isConfigured?'▾':'▸'}</span>
+          <div>
+            <div><span class="card-no">${p.policyNo||"—"}</span>
+              <span class="cat-badge cat-${p.category}">${p.category}</span></div>
+            <div class="card-name">${p.itemName||"—"}</div>
+            ${dateStr?`<div class="card-dates">${dateStr}</div>`:""}
+          </div>
+        </div>
+        <div class="card-summary" id="summary-${p.id}">${buildCardSummary(s)}</div>
       </div>
 
+      <!-- 展開內容 -->
+      <div class="card-body" id="body-${p.id}" style="display:${isConfigured?'block':'none'}">
       <!-- 類型選擇 -->
       <div class="type-section">
         <div class="section-label">領回方式</div>
@@ -361,6 +380,7 @@ function renderSettings() {
                  oninput="updateSetting('${p.id}','note',this.value)" />
         </div>
       </div>
+      </div><!-- /.card-body -->
     </div>`;
   });
 
@@ -396,9 +416,14 @@ function renderAdvInner(pid, s) {
   const duringBlock = showDuring ? `
     <div class="adv-block" id="adv-during-${pid}">
       <div class="adv-block-title">繳費期間</div>
-      <div class="adv-row">
+      <div class="adv-row" style="grid-template-columns:1fr 1fr 1fr;gap:8px">
         <div class="field">
-          <label>每 N 年領一次</label>
+          <label>第幾年開始第一次領</label>
+          <input type="number" id="duringStartYr-${pid}" value="${s.duringStartYr||'1'}" min="1" max="30"
+                 oninput="updateSetting('${pid}','duringStartYr',this.value)" />
+        </div>
+        <div class="field">
+          <label>之後每 N 年領一次</label>
           <input type="number" id="duringFreqYr-${pid}" value="${s.duringFreqYr}" min="1" max="20"
                  oninput="updateSetting('${pid}','duringFreqYr',this.value)" />
         </div>
@@ -407,6 +432,9 @@ function renderAdvInner(pid, s) {
           <input type="number" id="duringAmt-${pid}" value="${s.duringAmt}"
                  placeholder="估算值" oninput="updateSetting('${pid}','duringAmt',this.value)" />
         </div>
+      </div>
+      <div style="font-size:10px;color:#aaa;margin-top:4px">
+        例：第3年開始、每2年領 → 第3、5、7、9…年觸發
       </div>
     </div>` : "";
 
@@ -499,6 +527,31 @@ function updateYearlyRows(pid, val) {
   if (tbody) tbody.innerHTML = html;
 }
 
+// ── 保單卡片收合 ─────────────────────────────────────────
+function toggleCard(pid) {
+  const body    = document.getElementById("body-" + pid);
+  const chevron = document.getElementById("chevron-" + pid);
+  const card    = document.querySelector(`[data-pid="${pid}"]`);
+  if (!body) return;
+  const open = body.style.display === "none";
+  body.style.display    = open ? "block" : "none";
+  chevron.textContent   = open ? "▾" : "▸";
+  card.classList.toggle("card-open", open);
+}
+
+// 已設定的摘要文字（收合時顯示在標題右側）
+function buildCardSummary(s) {
+  if (!s || !s.type || s.type === "1") return "";
+  const typeNames = { "1":"期滿領","2":"期間+期滿","3":"期滿後領","4":"期間+期滿","5":"月領","6":"逐年明細" };
+  const typeName = typeNames[s.type] || "";
+  const amt = s.afterAmt || s.duringAmt || "";
+  if (!amt) return `<span style="color:#c0c0c0">${typeName}・未填金額</span>`;
+  const fmtd = parseFloat(amt) >= 10000
+    ? (parseFloat(amt)/10000).toFixed(1) + "萬"
+    : parseFloat(amt).toLocaleString();
+  return `${typeName}・${fmtd}`;
+}
+
 // ── 類型切換（DOM 操作，不重渲染）────────────────────────
 function selectType(pid, typeKey) {
   if (!settings[pid]) return;
@@ -517,6 +570,9 @@ function selectType(pid, typeKey) {
   // 重繪進階設定內容
   const inner = document.getElementById("adv-inner-" + pid);
   if (inner) inner.innerHTML = renderAdvInner(pid, settings[pid]);
+  // 更新收合摘要
+  const summary = document.getElementById("summary-" + pid);
+  if (summary) summary.innerHTML = buildCardSummary(settings[pid]);
 }
 
 function updateSetting(pid, field, val) {
@@ -557,11 +613,12 @@ function calcPolicyFlows(p, s, memberId, years) {
     : getEndYearAt100(memberId, p);
   if (!startWestern) return {};
 
-  const typeKey      = s.type || "1";
-  const duringFreqYr = parseInt(s.duringFreqYr) || 2;
-  const duringAmt    = parseFloat(s.duringAmt)  || 0;
-  const afterFreqYr  = parseInt(s.afterFreqYr)  || 1;
-  const afterAmt     = parseFloat(s.afterAmt)   || 0;
+  const typeKey       = s.type || "1";
+  const duringFreqYr  = parseInt(s.duringFreqYr)  || 2;
+  const duringStartYr = parseInt(s.duringStartYr) || 1;  // 第幾年開始第一次領（1=第一年）
+  const duringAmt     = parseFloat(s.duringAmt)   || 0;
+  const afterFreqYr   = parseInt(s.afterFreqYr)   || 1;
+  const afterAmt      = parseFloat(s.afterAmt)    || 0;
   const monthly      = isMonthly(typeKey);
   const yearly       = isYearlyDetail(typeKey);
 
@@ -586,8 +643,10 @@ function calcPolicyFlows(p, s, memberId, years) {
       if (payEndWestern && yr === payEndWestern) flow = afterAmt;
     } else if (typeKey === "2") {
       if (inDuring && duringAmt > 0) {
-        const e = yr - startWestern;
-        if (e > 0 && e % duringFreqYr === 0) flow += duringAmt;
+        // 第一次領回：保單起始年 + (duringStartYr - 1)，之後每 duringFreqYr 年
+        const firstTrigger = startWestern + duringStartYr - 1;
+        const e = yr - firstTrigger;
+        if (yr >= firstTrigger && e % duringFreqYr === 0) flow += duringAmt;
       }
       if (payEndWestern && yr === payEndWestern) flow += afterAmt;
     } else if (typeKey === "3") {
@@ -597,8 +656,9 @@ function calcPolicyFlows(p, s, memberId, years) {
       }
     } else if (typeKey === "4") {
       if (inDuring && duringAmt > 0) {
-        const e = yr - startWestern;
-        if (e > 0 && e % duringFreqYr === 0) flow += duringAmt;
+        const firstTrigger = startWestern + duringStartYr - 1;
+        const e = yr - firstTrigger;
+        if (yr >= firstTrigger && e % duringFreqYr === 0) flow += duringAmt;
       }
       if (inAfter && afterAmt > 0) {
         const e = yr - (payEndWestern || startWestern);
