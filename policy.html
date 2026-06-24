@@ -454,11 +454,7 @@
       <div class="field">
         <label>要保人</label>
         <select id="f-owner">
-          <option>本人</option>
-          <option>配偶</option>
-          <option>父母</option>
-          <option>祖父母</option>
-          <option>子女</option>
+          <!-- 動態填入：由 buildOwnerOptions() 產生 -->
         </select>
       </div>
       <div class="field">
@@ -784,6 +780,26 @@ function renderPolicies() {
 
   document.getElementById("policy-list").innerHTML = html;
 }// ── 表單開啟 ─────────────────────────────────────────────
+// ── 要保人選單：從家庭成員動態建立 ──────────────────────────
+function buildOwnerOptions(selectedName) {
+  const sel = document.getElementById("f-owner");
+  if (!sel) return;
+  // 收集所有成員（含受益人身份的人，要保人不限）
+  const members = familyData ? familyData.members : [];
+  let html = "";
+  members.forEach(m => {
+    const relation = m.relation || m.role || "";
+    const label    = m.name + (relation ? "（" + relation + "）" : "");
+    const selected = (m.name === selectedName) ? " selected" : "";
+    html += `<option value="${m.name}"${selected}>${label}</option>`;
+  });
+  // 若 selectedName 不在成員名單（舊資料），加一個保留選項
+  if (selectedName && !members.find(m => m.name === selectedName)) {
+    html = `<option value="${selectedName}" selected>${selectedName}（舊資料）</option>` + html;
+  }
+  sel.innerHTML = html;
+}
+
 function openForm(mode, memberId, policyIdOrNo) {
   editingPolicy = null;
   editingPersonId = memberId || (currentTab !== "all" ? currentTab : familyData.members.find(m=>m.role==="primary")?.personId);
@@ -798,7 +814,9 @@ function openForm(mode, memberId, policyIdOrNo) {
   document.getElementById("f-cat").value = "";
   document.getElementById("f-company-search").value = "";
   document.getElementById("f-company").value = "";
-  document.getElementById("f-owner").value = "本人";
+  // 要保人：預設為當前被保險人
+  const currentMember = familyData && familyData.members.find(m => m.personId === memberId);
+  buildOwnerOptions(currentMember ? currentMember.name : "");
   document.getElementById("f-status").value = "有效";
   document.getElementById("f-paymode").value = "年繳";
   document.getElementById("f-currency").value = "TWD";
@@ -830,7 +848,7 @@ function openForm(mode, memberId, policyIdOrNo) {
     document.getElementById("f-cat").value       = policy.category || "";
     document.getElementById("f-company-search").value = policy.company || "";
     document.getElementById("f-company").value   = policy.company || "";
-    document.getElementById("f-owner").value     = policy.owner || "本人";
+    buildOwnerOptions(policy.owner || "");
     document.getElementById("f-status").value    = policy.status || "有效";
     document.getElementById("f-item").value      = policy.itemName || "";
     document.getElementById("f-amount").value = policy.insuredAmount || "";
