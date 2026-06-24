@@ -139,7 +139,81 @@
 <script>
 const GAS_URL = "https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec";
 
-// 用於 Modal 手動勾選覆蓋狀態的傳統設定
+// ── 輔助加總計算機 ─────────────────────────────────────────
+function sumCov(keys, policies, coverage) {
+  let total = 0;
+  policies.forEach(p => {
+    keys.forEach(k => {
+      if (p.coverage && typeof p.coverage[k] === "number") {
+        total += p.coverage[k];
+      }
+    });
+  });
+  // 相容舊格式
+  if (total === 0 && coverage) {
+      policies.forEach(p => {
+          keys.forEach(k => {
+              if (coverage[p.id + "_" + k] && typeof coverage[p.id + "_" + k] === "number") {
+                  total += coverage[p.id + "_" + k];
+              }
+          });
+      });
+  }
+  return total;
+}
+
+// ── 保障群組與細項定義 (全新規劃) ─────────────────────────────────────────
+const GAP_GROUPS = [
+  { key:"family", label:"家庭責任", color:"#1565C0", items:[
+    { key:"life_permanent", label:"終身壽險",    unit:"萬元",   color:"#1565C0" },
+    { key:"life_term",      label:"定期壽險",    unit:"萬元",   color:"#1E88E5" },
+    { key:"investment",     label:"投資型保險",  unit:"",       color:"#7B1FA2", isBool:true },
+    { key:"savings",        label:"儲蓄險",      unit:"",       color:"#E91E8C", isBool:true },
+  ]},
+  { key:"before", label:"醫療前", color:"#E53935", items:[
+    { key:"ci_special", label:"重大/特傷/重疾", unit:"萬元",   color:"#E53935" },
+    { key:"cancer",     label:"初次罹患癌症",    unit:"萬元",   color:"#C62828" },
+  ]},
+  { key:"during", label:"醫療中", color:"#FF8F00", items:[
+    { key:"hosp_real_room",  label:"實支病房費",        unit:"元/日",  color:"#E65100" },
+    { key:"hosp_daily",      label:"住院日額+出院",      unit:"元/日",  color:"#F57C00" },
+    { key:"surgery",         label:"手術險(最高)",      unit:"元/次",  color:"#FF9800" },
+    { key:"cancer_hosp",     label:"癌症病房(含出院)",  unit:"元/日",  color:"#FFB300" },
+    { key:"acc_medical",     label:"意外醫療",          unit:"萬/次",  color:"#FFC107" },
+    { key:"acc_hosp",        label:"意外住院",          unit:"元/日",  color:"#FFE082" },
+  ]},
+  { key:"after", label:"醫療後", color:"#2E7D32", items:[
+    { key:"ltc_disable",    label:"失能一次金",      unit:"萬元",    color:"#1B5E20" },
+    { key:"ltc_support",    label:"失能扶助",        unit:"萬元/月", color:"#2E7D32" },
+    { key:"ltc_care",       label:"長照",            unit:"萬元/月", color:"#43A047" },
+    { key:"cancer_hospice", label:"癌症安寧",        unit:"萬元",    color:"#66BB6A" },
+    { key:"cancer_death",   label:"癌症身故",        unit:"萬元",    color:"#81C784" },
+    { key:"waiver",         label:"保費豁免",        unit:"",        color:"#A5D6A7", isBool:true },
+  ]},
+];
+
+// 精準對應 coverage.html 的資料庫欄位
+const GAP_KEY_MAP = {
+  life_permanent:  { cats:["壽險保障"],          keys:["life_basic"] },
+  life_term:       { cats:[],                   keys:["life_term"] },
+  investment:      { cats:["投資型保險"],        keys:[] },
+  savings:         { cats:["儲蓄險","年金險"],   keys:[] },
+  ci_special:      { cats:["重大疾病險","重大傷病險","特定傷病險"], keys:["can_first"] },
+  cancer:          { cats:["癌症醫療"],          keys:["can_first"] },
+  hosp_real_room:  { cats:["醫療保障"],          keys:["hosp_room", "hosp_ext_room"] },
+  hosp_daily:      { cats:["醫療保障"],          keys:["daily_room_1_30", "hosp_ext_daily", "daily_discharge"] },
+  surgery:         { cats:["醫療保障","定額手術"], keys:["hosp_surgery", "hosp_ext_surgery", "surg_hosp_max", "surg_opd_max"] },
+  cancer_hosp:     { cats:["癌症醫療"],          keys:["can_hosp", "can_discharge"] },
+  acc_medical:     { cats:["意外險"],            keys:["acc_opd"] },
+  acc_hosp:        { cats:["意外險"],            keys:["acc_hosp"] },
+  ltc_disable:     { cats:["失能長照"],          keys:["ltc_dis_amt"] },
+  ltc_support:     { cats:["失能長照"],          keys:["ltc_dis_life", "acc_support", "ltc_life"] },
+  ltc_care:        { cats:["失能長照"],          keys:["ltc_monthly", "ltc_care", "ltc_yr", "ltc_mo"] },
+  cancer_hospice:  { cats:["癌症醫療"],          keys:["can_hospice"] },
+  cancer_death:    { cats:["癌症醫療"],          keys:["can_death"] },
+  waiver:          { cats:[],                   keys:["ltc_waiver"] },
+};
+
 const COVERAGE_TYPES = [
   { key:"life",       label:"壽險保障", group:"壽險", color:"#4A90D9", detect:(p,c)=>p.some(x=>x.category==="壽險保障") },
   { key:"acc_death",  label:"意外身故", group:"意外", color:"#F5A623", detect:(p,c)=>p.some(x=>x.category==="意外險") },
@@ -254,6 +328,57 @@ let currentPersonId = null;
 let overrides      = {};
 let medicalOverrides = {};
 let targets        = {};
+
+// 核心運算引擎：精準抓取資料庫數字
+function getItemCurrent(key, policies, coverage, covOverrides) {
+  const map = GAP_KEY_MAP[key];
+  if(!map) return 0;
+
+  const manualKey = currentPersonId+"_"+key;
+  if(covOverrides && covOverrides[manualKey] !== undefined) {
+    return covOverrides[manualKey] ? 1 : 0;
+  }
+
+  if(["investment","savings","waiver"].includes(key)) {
+    if(key==="investment") return policies.some(p=>p.category==="投資型保險")?1:0;
+    if(key==="savings")    return policies.some(p=>["儲蓄險","年金險"].includes(p.category))?1:0;
+    if(key==="waiver")     return sumCov(["ltc_waiver"], policies, coverage) > 0 ? 1 : 0;
+    return 0;
+  }
+
+  if (["life_permanent", "life_term", "ci_special"].includes(key)) {
+      let amt = 0;
+      const matchedPolicies = policies.filter(p => map.cats.includes(p.category));
+      matchedPolicies.forEach(p => {
+         if (p.insuredAmount) amt += parseFloat(p.insuredAmount) || 0;
+      });
+      if (amt === 0 && matchedPolicies.length > 0) return 1; 
+      return amt;
+  }
+
+  let amt = sumCov(map.keys, policies, coverage);
+
+  const matchedPolicies = policies.filter(p => map.cats.includes(p.category));
+  if (amt === 0 && matchedPolicies.length > 0) {
+      matchedPolicies.forEach(p => {
+          if (p.insuredAmount) amt += parseFloat(p.insuredAmount) || 0;
+      });
+      if (amt === 0) return 1; 
+  }
+
+  return amt;
+}
+
+function getItemStatus(key, policies, coverage, targets, covOverrides) {
+  const item = GAP_GROUPS.flatMap(g=>g.items).find(i=>i.key===key);
+  const current = getItemCurrent(key, policies, coverage, covOverrides);
+  const target  = targets[key];
+  const isBool  = item?.isBool;
+  if(!current) return {status:"gap", current:0, target, pct:0};
+  if(!target||isBool) return {status:"ok", current, target:null, pct:1};
+  if(current>=target) return {status:"ok", current, target, pct:1};
+  return {status:"insufficient", current, target, pct:current/target};
+}
 
 window.addEventListener("nbs_nav_ready", async function(e) {
   currentUser       = e.detail.user;
@@ -500,130 +625,6 @@ function renderContent() {
   document.getElementById("content").innerHTML = html;
 }
 
-// ── 輔助加總計算機 ─────────────────────────────────────────
-function sumCov(keys, policies, coverage) {
-  let t = 0;
-  policies.forEach(p => {
-    keys.forEach(k => {
-      const v = p.coverage?.[k];
-      if (v && typeof v === "number") t += v;
-    });
-  });
-  // 相容舊格式 coverage 資料
-  if(t === 0 && coverage) {
-    policies.forEach(p => { 
-      keys.forEach(k => { 
-        const v = coverage[p.id+"_"+k]; 
-        if(v) t += v; 
-      }); 
-    });
-  }
-  return t;
-}
-
-// ── 保障群組定義 ─────────────────────────────────────────
-const GAP_GROUPS = [
-  { key:"family", label:"家庭責任", color:"#1565C0", items:[
-    { key:"life_permanent", label:"終身壽險",    unit:"萬元",   color:"#1565C0" },
-    { key:"life_term",      label:"定期壽險",    unit:"萬元",   color:"#1E88E5" },
-    { key:"investment",     label:"投資型保險",  unit:"",       color:"#7B1FA2", isBool:true },
-    { key:"savings",        label:"儲蓄險",      unit:"",       color:"#E91E8C", isBool:true },
-  ]},
-  { key:"before", label:"醫療前", color:"#E53935", items:[
-    { key:"ci_special", label:"重大/特傷/重疾", unit:"萬元",   color:"#E53935" },
-    { key:"cancer",     label:"初次罹患癌症",    unit:"萬元",   color:"#C62828" },
-  ]},
-  { key:"during", label:"醫療中", color:"#FF8F00", items:[
-    { key:"hosp_real_room",  label:"實支病房費",        unit:"元/日",  color:"#E65100" },
-    { key:"hosp_daily",      label:"住院日額+出院",      unit:"元/日",  color:"#F57C00" },
-    { key:"surgery",         label:"手術險(最高)",      unit:"元/次",  color:"#FF9800" },
-    { key:"cancer_hosp",     label:"癌症病房(含出院)",  unit:"元/日",  color:"#FFB300" },
-    { key:"acc_medical",     label:"意外醫療",          unit:"萬/次",  color:"#FFC107" },
-    { key:"acc_hosp",        label:"意外住院",          unit:"元/日",  color:"#FFE082" },
-  ]},
-  { key:"after", label:"醫療後", color:"#2E7D32", items:[
-    { key:"ltc_disable",    label:"失能一次金",      unit:"萬元",    color:"#1B5E20" },
-    { key:"ltc_support",    label:"失能扶助",        unit:"萬元/月", color:"#2E7D32" },
-    { key:"ltc_care",       label:"長照",            unit:"萬元/月", color:"#43A047" },
-    { key:"cancer_hospice", label:"癌症安寧",        unit:"萬元",    color:"#66BB6A" },
-    { key:"cancer_death",   label:"癌症身故",        unit:"萬元",    color:"#81C784" },
-    { key:"waiver",         label:"保費豁免",        unit:"",        color:"#A5D6A7", isBool:true },
-  ]},
-];
-
-// 精準對應 coverage.html 的資料庫欄位
-const GAP_KEY_MAP = {
-  life_permanent:  { cats:["壽險保障"],          keys:["life_basic"] },
-  life_term:       { cats:[],                   keys:["life_term"] },
-  investment:      { cats:["投資型保險"],        keys:[] },
-  savings:         { cats:["儲蓄險","年金險"],   keys:[] },
-  ci_special:      { cats:["重大疾病險","重大傷病險","特定傷病險"], keys:["can_first"] },
-  cancer:          { cats:["癌症醫療"],          keys:["can_first"] },
-  hosp_real_room:  { cats:["醫療保障"],          keys:["hosp_room", "hosp_ext_room"] },
-  hosp_daily:      { cats:["醫療保障"],          keys:["daily_room_1_30", "hosp_ext_daily", "daily_discharge"] },
-  surgery:         { cats:["醫療保障","定額手術"], keys:["hosp_surgery", "hosp_ext_surgery", "surg_hosp_max", "surg_opd_max"] },
-  cancer_hosp:     { cats:["癌症醫療"],          keys:["can_hosp", "can_discharge"] },
-  acc_medical:     { cats:["意外險"],            keys:["acc_opd"] },
-  acc_hosp:        { cats:["意外險"],            keys:["acc_hosp"] },
-  ltc_disable:     { cats:["失能長照"],          keys:["ltc_dis_amt"] },
-  ltc_support:     { cats:["失能長照"],          keys:["ltc_dis_life", "acc_support", "ltc_life"] },
-  ltc_care:        { cats:["失能長照"],          keys:["ltc_monthly", "ltc_care", "ltc_yr", "ltc_mo"] },
-  cancer_hospice:  { cats:["癌症醫療"],          keys:["can_hospice"] },
-  cancer_death:    { cats:["癌症醫療"],          keys:["can_death"] },
-  waiver:          { cats:[],                   keys:["ltc_waiver"] },
-};
-
-// 核心運算引擎：精準抓取資料庫數字
-function getItemCurrent(key, policies, coverage, covOverrides) {
-  const map = GAP_KEY_MAP[key];
-  if(!map) return 0;
-
-  const manualKey = currentPersonId+"_"+key;
-  if(covOverrides && covOverrides[manualKey] !== undefined) {
-    return covOverrides[manualKey] ? 1 : 0;
-  }
-
-  if(["investment","savings","waiver"].includes(key)) {
-    if(key==="investment") return policies.some(p=>p.category==="投資型保險")?1:0;
-    if(key==="savings")    return policies.some(p=>["儲蓄險","年金險"].includes(p.category))?1:0;
-    if(key==="waiver")     return sumCov(["ltc_waiver"], policies, coverage) > 0 ? 1 : 0;
-    return 0;
-  }
-
-  if (["life_permanent", "life_term", "ci_special"].includes(key)) {
-      let amt = 0;
-      const matchedPolicies = policies.filter(p => map.cats.includes(p.category));
-      matchedPolicies.forEach(p => {
-         if (p.insuredAmount) amt += parseFloat(p.insuredAmount) || 0;
-      });
-      if (amt === 0 && matchedPolicies.length > 0) return 1; 
-      return amt;
-  }
-
-  let amt = sumCov(map.keys, policies, coverage);
-
-  const matchedPolicies = policies.filter(p => map.cats.includes(p.category));
-  if (amt === 0 && matchedPolicies.length > 0) {
-      matchedPolicies.forEach(p => {
-          if (p.insuredAmount) amt += parseFloat(p.insuredAmount) || 0;
-      });
-      if (amt === 0) return 1; 
-  }
-
-  return amt;
-}
-
-function getItemStatus(key, policies, coverage, targets, covOverrides) {
-  const item = GAP_GROUPS.flatMap(g=>g.items).find(i=>i.key===key);
-  const current = getItemCurrent(key, policies, coverage, covOverrides);
-  const target  = targets[key];
-  const isBool  = item?.isBool;
-  if(!current) return {status:"gap", current:0, target, pct:0};
-  if(!target||isBool) return {status:"ok", current, target:null, pct:1};
-  if(current>=target) return {status:"ok", current, target, pct:1};
-  return {status:"insufficient", current, target, pct:current/target};
-}
-
 // ── 環形圓餅圖與圖例 ────────────────────────────────────────────
 function buildDonutChart(active, coverage, targets, covOverrides) {
   const allItems = GAP_GROUPS.flatMap(g=>g.items);
@@ -848,3 +849,92 @@ function openTargetModal() {
   overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
   document.body.appendChild(overlay);
 }
+
+function saveTargets() {
+  GAP_GROUPS.flatMap(g=>g.items.filter(i=>!i.isBool)).forEach(item => {
+    const el = document.getElementById("target_"+item.key);
+    if(el) {
+      const v = parseFloat(el.value);
+      if(!isNaN(v) && v > 0) targets[item.key] = v;
+      else delete targets[item.key];
+    }
+  });
+  document.getElementById("target-modal-overlay")?.remove();
+  renderContent();
+}
+
+function openModal() {
+  const person  = personDataMap[currentPersonId];
+  const policies= person?.policies||[];
+  const coverage= person?.coverage||{};
+  const active  = policies.filter(p=>p.status==="有效");
+  const covTypes= COVERAGE_TYPES.map(t=>{
+    const auto=t.detect(active,coverage);
+    const manual=overrides[currentPersonId+"_"+t.key];
+    return {...t,covered:manual!==undefined?manual:auto,autoDetected:auto,isManual:manual!==undefined};
+  });
+
+  const groups=["壽險","意外","醫療","重大","癌症","長照","財務"];
+  let html="";
+  groups.forEach(g=>{
+    const gTypes=covTypes.filter(t=>t.group===g);
+    const gc=GROUP_COLORS[g];
+    html+=`<div class="type-group-label" style="color:${gc}">${g}</div><div class="type-tags">`;
+    gTypes.forEach(t=>{
+      html+=`<div class="type-tag" id="tag_${t.key}" onclick="toggleOverride('${t.key}')"
+        style="background:${t.covered?t.color+'18':'#f5f5f5'};border:1.5px ${t.covered?'solid':'dashed'} ${t.covered?t.color:'#ddd'}">
+        <div class="type-tag-dot" style="background:${t.covered?t.color:'transparent'};border:${t.covered?'none':'1.5px solid #ccc'}"></div>
+        <span class="type-tag-label" style="color:${t.covered?'#333':'#bbb'};font-weight:${t.covered?500:400}">${t.label}</span>
+        ${t.isManual?'<span class="manual-badge">手動</span>':''}
+      </div>`;
+    });
+    html+=`</div>`;
+  });
+  document.getElementById("modal-types").innerHTML=html;
+  document.getElementById("edit-modal").classList.add("active");
+}
+
+function toggleOverride(key) {
+  const fk=currentPersonId+"_"+key;
+  const person=personDataMap[currentPersonId];
+  const active=(person?.policies||[]).filter(p=>p.status==="有效");
+  const cov=person?.coverage||{};
+  const t=COVERAGE_TYPES.find(x=>x.key===key);
+  const auto=t?t.detect(active,cov):false;
+  const cur=overrides[fk];
+  if(cur===undefined) overrides[fk]=!auto;
+  else delete overrides[fk];
+  openModal();
+}
+function closeModal() { document.getElementById("edit-modal").classList.remove("active"); renderContent(); }
+function handleModalOverlay(e) { if(e.target===document.getElementById("edit-modal")) closeModal(); }
+
+function goBack() { window.location.href="family.html"; }
+
+function callGAS(action,params) {
+  if (action === "saveFile") {
+    return fetch(GAS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({ action, ...params }),
+    }).then(r => r.json());
+  }
+  
+  const url=new URL(GAS_URL);
+  url.searchParams.set("action",action);
+  Object.entries(params||{}).forEach(([k,v])=>{
+    if(typeof v==="object") url.searchParams.set(k,encodeURIComponent(JSON.stringify(v)));
+    else if(v!==null&&v!==undefined) url.searchParams.set(k,v);
+  });
+  return fetch(url.toString()).then(r=>r.json());
+}
+
+NBS_NAV.onMemberChange = function(pid) {
+  currentPersonId = pid;
+  if (typeof renderContent  === "function") renderContent();
+};
+NBS_NAV.init({ page: "summary" });
+
+</script>
+</body>
+</html>
