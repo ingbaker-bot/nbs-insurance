@@ -21,6 +21,7 @@
     .card-name { font-size:14px; font-weight:500; margin:4px 0 2px; }
     .type-section, .fields-section, .table-section { padding:12px 14px; border-bottom:1px solid #f0f0f0; }
     .type-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+    .type-grid > :last-child:nth-child(odd) { grid-column: 1 / -1; }
     .type-btn { padding:8px 10px; border:1px solid #e0e0e0; border-radius:8px; cursor:pointer; background:#fff; font-family:inherit; transition:all 0.12s; }
     .type-btn.active { border-color:#378ADD; background:#E6F1FB; }
     .type-title { font-size:12px; font-weight:500; color:#333; }
@@ -66,12 +67,22 @@ const GAS_URL = "https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_Mgrd
 let currentUser = null, familyData = null, personDataMap = {}, currentPersonId = null, settings = {};
 
 // ── 領回方式定義 ──────────────────────────────
-const TYPES = [
-  { key: "1", title: "期滿領回",     desc: "保單到期一次領回" },
-  { key: "2", title: "定期給付",     desc: "每年／每期固定領回" },
-  { key: "3", title: "增值回饋金",   desc: "定期撥付增值回饋" },
-  { key: "4", title: "年金給付",     desc: "轉換年金後定期領" },
+// 四種基本領回方式（儲蓄險 / 年金險 / 投資型共用）
+const TYPES_BASE = [
+  { key: "1", title: "期滿領整筆",           desc: "保單期滿一次全額領回" },
+  { key: "2", title: "繳費期間領＋期滿整筆", desc: "繳費中定期領回，期滿再領整筆" },
+  { key: "3", title: "期間不領＋期滿領",     desc: "繳費期間不動，期滿統一領回" },
+  { key: "4", title: "期間領＋期滿領",       desc: "期間定期領回，期滿再領" },
 ];
+// 第 5 選項依保單類別不同
+const TYPE_SAVINGS_EXTRA = { key: "5", title: "月領生存金", desc: "每月固定領取生存保險金" };
+const TYPE_INVEST_EXTRA  = { key: "5", title: "月月配息",   desc: "每月依帳戶價值配息" };
+
+// 根據保單類別取得對應選項
+function getTypes(category) {
+  const extra = category === "投資型保險" ? TYPE_INVEST_EXTRA : TYPE_SAVINGS_EXTRA;
+  return [...TYPES_BASE, extra];
+}
 
 // 1. 初始化導覽
 window.addEventListener("nbs_nav_ready", async function(e) {
@@ -188,7 +199,7 @@ function renderContent() {
             <div class="type-section">
                 <div style="font-size:12px;color:#666;margin-bottom:8px">請選擇領回方式：</div>
                 <div class="type-grid">
-                    ${TYPES.map(t => `
+                    ${getTypes(p.category).map(t => `
                         <button class="type-btn ${saved.type === t.key ? 'active' : ''}" onclick="selectType('${p.id}', '${t.key}')">
                             <div class="type-title">${t.title}</div>
                             <div style="font-size:9px;color:#aaa;margin-top:2px">${t.desc}</div>
