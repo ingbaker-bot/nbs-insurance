@@ -186,11 +186,15 @@ function renderContent() {
     let html = "";
     
     policies.forEach(p => {
-        const saved = (person.savings || []).find(s => s.policyId === p.id) || { type: "1" };
-        settings[p.id] = saved; // 同步到全域 settings 變數
+        // 初次載入：從 person.savings 讀取；之後以 settings 為主（避免重渲染蓋掉使用者選擇）
+        if (!settings[p.id]) {
+            const saved = (person.savings || []).find(s => s.policyId === p.id) || {};
+            settings[p.id] = { policyId: p.id, type: saved.type || "1", amount: saved.amount || "", note: saved.note || "" };
+        }
+        const saved = settings[p.id];
 
         html += `
-        <div class="savings-card">
+        <div class="savings-card" data-policy-id="${p.id}">
             <div class="card-header">
                 <div class="card-no">${p.policyNo}</div>
                 <span class="cat-badge cat-${p.category}">${p.category}</span>
@@ -200,7 +204,7 @@ function renderContent() {
                 <div style="font-size:12px;color:#666;margin-bottom:8px">請選擇領回方式：</div>
                 <div class="type-grid">
                     ${getTypes(p.category).map(t => `
-                        <button class="type-btn ${saved.type === t.key ? 'active' : ''}" onclick="selectType('${p.id}', '${t.key}')">
+                        <button class="type-btn ${saved.type === t.key ? 'active' : ''}" data-type-key="${t.key}" onclick="selectType('${p.id}', '${t.key}')">
                             <div class="type-title">${t.title}</div>
                             <div style="font-size:9px;color:#aaa;margin-top:2px">${t.desc}</div>
                         </button>
@@ -226,12 +230,19 @@ function renderContent() {
     document.getElementById("content").innerHTML = html;
 }
 
-// 2. 切換領回類型
+// 2. 切換領回類型（直接更新 DOM，不重新渲染避免 input 值遺失）
 function selectType(policyId, typeKey) {
-    if (settings[policyId]) {
-        settings[policyId].type = typeKey;
-        renderContent(); // 重新渲染以更新 active 樣式
-    }
+    if (!settings[policyId]) return;
+    settings[policyId].type = typeKey;
+    // 更新同一張卡片內所有按鈕的 active 樣式
+    const card = document.querySelector(`[data-policy-id="${policyId}"]`);
+    if (!card) return;
+    card.querySelectorAll(".type-btn").forEach(btn => {
+        const isActive = btn.dataset.typeKey === typeKey;
+        btn.classList.toggle("active", isActive);
+        const title = btn.querySelector(".type-title");
+        if (title) title.style.color = isActive ? "#0C447C" : "#333";
+    });
 }
 
 // 3. 收集畫面資料 (saveAll 會用到)
