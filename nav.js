@@ -446,7 +446,10 @@
     if (typeof NBS_NAV.onMemberChange === "function") NBS_NAV.onMemberChange(id);
   };
   global.NBS_NAV._go      = function(href) { window.location.href = href; };
-  global.NBS_NAV._print   = function() { window.print(); };
+  global.NBS_NAV._print = function() {
+    var url = "export.html?from=" + encodeURIComponent(_page || "");
+    window.location.href = url;
+  };
   global.NBS_NAV._back    = function() { window.location.href = "main.html"; };
   global.NBS_NAV._addMember = function() {
     NBS_NAV._openMemberModal();
