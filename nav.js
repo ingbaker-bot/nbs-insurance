@@ -312,15 +312,18 @@
   }
 
   function _memberEditForm(person, isNew) {
-    var p = (person && person.profile) || {};
-    var relation = (person && person.relation) || "";
-    var role = (person && person.role) || "secondary";
+    // person 是 family.members 裡的成員物件：{ name, relation, birthDate, personId }
+    // 不是 { profile:{...} } 結構
+    var name     = (person && person.name)      || "";
+    var relation = (person && person.relation)  || "";
+    var birthDate= (person && person.birthDate) || "";
+    var address  = (person && person.address)   || "";
 
     return '<div id="nbs-member-form">' +
       // 姓名
       '<div style="margin-bottom:12px">' +
         '<label style="font-size:12px;color:#666;display:block;margin-bottom:4px">姓名 <span style="color:#e74c3c">*</span></label>' +
-        '<input id="nmf-name" type="text" value="' + (p.name||"") + '" placeholder="請輸入姓名" style="width:100%;padding:9px 12px;font-size:14px;border:1px solid #e0e0e0;border-radius:7px;outline:none;font-family:inherit">' +
+        '<input id="nmf-name" type="text" value="' + name + '" placeholder="請輸入姓名" style="width:100%;padding:9px 12px;font-size:14px;border:1px solid #e0e0e0;border-radius:7px;outline:none;font-family:inherit">' +
       '</div>' +
       // 關係
       '<div style="margin-bottom:12px">' +
@@ -337,12 +340,12 @@
       // 出生日期
       '<div style="margin-bottom:12px">' +
         '<label style="font-size:12px;color:#666;display:block;margin-bottom:4px">出生日期</label>' +
-        '<input id="nmf-birth" type="date" value="' + (p.birthDate||"") + '" style="width:100%;padding:9px 12px;font-size:14px;border:1px solid #e0e0e0;border-radius:7px;outline:none;font-family:inherit">' +
+        '<input id="nmf-birth" type="date" value="' + birthDate + '" style="width:100%;padding:9px 12px;font-size:14px;border:1px solid #e0e0e0;border-radius:7px;outline:none;font-family:inherit">' +
       '</div>' +
       // 住家地址
       '<div style="margin-bottom:12px">' +
         '<label style="font-size:12px;color:#666;display:block;margin-bottom:4px">住家地址</label>' +
-        '<input id="nmf-address" type="text" value="' + (p.address||"") + '" placeholder="如：台北市中正區（用於查詢附近醫院）" style="width:100%;padding:9px 12px;font-size:14px;border:1px solid #e0e0e0;border-radius:7px;outline:none;font-family:inherit">' +
+        '<input id="nmf-address" type="text" value="' + address + '" placeholder="如：台北市中正區（用於查詢附近醫院）" style="width:100%;padding:9px 12px;font-size:14px;border:1px solid #e0e0e0;border-radius:7px;outline:none;font-family:inherit">' +
       '</div>' +
       // 按鈕
       '<div style="display:flex;gap:8px;margin-top:16px">' +
@@ -486,23 +489,37 @@
   };
 
   global.NBS_NAV._openEfForm = function(personId) {
-    _editingPersonId = personId;
+    // family.html 有內嵌表單；其他頁面（policy、coverage 等）用 overlay modal
     var form = document.getElementById("nbs-edit-member-form");
+    if (!form) {
+      // fallback：使用第一版 overlay modal（支援任何頁面）
+      NBS_NAV._openMemberModal(personId ? "edit" : "new", personId || null);
+      return;
+    }
+
+    _editingPersonId = personId;
     form.style.display = "block";
-    // 填入現有資料
-    if (personId && window.personDataMap && window.personDataMap[personId]) {
-      var p = window.personDataMap[personId];
-      var m = (_family.members||[]).find(function(x){ return x.personId===personId; });
-      document.getElementById("nbs-ef-name").value    = p.profile.name || "";
-      document.getElementById("nbs-ef-relation").value = m ? (m.relation||"本人") : "本人";
-      document.getElementById("nbs-ef-birth").value   = p.profile.birthDate || "";
-      document.getElementById("nbs-ef-address").value = p.profile.address || "";
+
+    // 取得成員資料：優先 personDataMap，其次直接從 family.members 讀
+    var p   = (window.personDataMap && personId && window.personDataMap[personId]) || null;
+    var m   = (_family.members||[]).find(function(x){ return x.personId===personId; });
+    // 若 personDataMap 沒有，從 family member 本身讀取基本資料
+    var name    = (p && p.profile && p.profile.name)      || (m && m.name)      || "";
+    var birth   = (p && p.profile && p.profile.birthDate) || (m && m.birthDate) || "";
+    var address = (p && p.profile && p.profile.address)   || "";
+    var rel     = (m && m.relation) || "本人";
+
+    if (personId) {
+      document.getElementById("nbs-ef-name").value     = name;
+      document.getElementById("nbs-ef-relation").value  = rel;
+      document.getElementById("nbs-ef-birth").value    = birth;
+      document.getElementById("nbs-ef-address").value  = address;
       NBS_NAV._updateEfAge();
     } else {
-      document.getElementById("nbs-ef-name").value    = "";
-      document.getElementById("nbs-ef-relation").value = "本人";
-      document.getElementById("nbs-ef-birth").value   = "";
-      document.getElementById("nbs-ef-address").value = "";
+      document.getElementById("nbs-ef-name").value     = "";
+      document.getElementById("nbs-ef-relation").value  = "本人";
+      document.getElementById("nbs-ef-birth").value    = "";
+      document.getElementById("nbs-ef-address").value  = "";
       document.getElementById("nbs-ef-age-hint").textContent = "";
     }
     form.scrollIntoView({behavior:"smooth"});
