@@ -1006,83 +1006,108 @@ function renderBlock(key){
     var targetCats = ["壽險保障", "儲蓄險", "年金險", "投資型保險", "重大疾病險", "重大傷病險", "特定傷病險"];
     var bp = policies.filter(function(p){ return targetCats.indexOf(p.category)>=0; });
     
-    if(bp.length===0) return '<div style="padding:12px;color:#aaa;font-size:12px;text-align:center">此成員尚無具傳承或生存金意義之保單</div>';
+    if(bp.length===0) return '<div style="padding:12px;color:#aaa;font-size:13px;text-align:center">此成員尚無具傳承或生存金意義之保單</div>';
 
-    var html = '<div style="padding:10px 12px; background:#fff;">';
-    html += '<div style="font-size:11px;color:#666;margin-bottom:12px;line-height:1.6;padding:8px;background:#f9f9f9;border-radius:6px">💡 釐清每一筆準備好的額度，在未來將代替我們照顧誰。</div>';
-    
+    var BENEF_RULES_EX = {
+      "壽險保障":   { death:"可設定", live:"不適用" },
+      "意外險":     { death:"可設定", live:"不適用" },
+      "醫療險":     { death:"鎖定本人", live:"不適用" },
+      "癌症醫療":   { death:"鎖定本人", live:"不適用" },
+      "重大疾病險": { death:"可設定", live:"可設定" },
+      "重大傷病險": { death:"鎖定本人", live:"鎖定本人" },
+      "特定傷病險": { death:"鎖定本人", live:"鎖定本人" },
+      "失能長照":   { death:"可設定", live:"鎖定本人" },
+      "儲蓄險":     { death:"可設定", live:"可設定" },
+      "年金險":     { death:"可設定", live:"鎖定本人" },
+      "投資型保險": { death:"可設定", live:"鎖定本人" }
+    };
+
+    var tblStyle = 'width:100%;border-collapse:collapse;font-size:13px;';
+    var thStyle  = 'padding:9px 10px;text-align:left;font-size:12px;font-weight:600;color:#888;border-bottom:2px solid #e0e0e0;white-space:nowrap;background:#f7f7f5;';
+    var tdStyle  = 'padding:9px 10px;vertical-align:middle;border-bottom:1px solid #f0f0f0;font-size:13px;';
+
+    var html = '<div style="padding:10px 12px;background:#fff;">';
+    html += '<table style="'+tblStyle+'">';
+    html += '<thead><tr>' +
+      '<th style="'+thStyle+'width:60px">險種類型</th>' +
+      '<th style="'+thStyle+'">要保人</th>' +
+      '<th style="'+thStyle+'">被保險人</th>' +
+      '<th style="'+thStyle+'">保單號碼</th>' +
+      '<th style="'+thStyle+'min-width:130px">商品名稱</th>' +
+      '<th style="'+thStyle+'">當年度保額</th>' +
+      '<th style="'+thStyle+'min-width:120px">身故受益人</th>' +
+      '<th style="'+thStyle+'min-width:120px">生存/滿期金受益人</th>' +
+    '</tr></thead><tbody>';
+
     bp.forEach(function(p){
       var amtText = p.insuredAmount ? p.insuredAmount + " " + (p.insuredAmountUnit || '萬元') : '—';
       var cc = CC[p.category] || "#999";
-      
-      // 解析要保人姓名
-      var ownerName = p.proposer || p.applicant || "要保人";
+      var rule = BENEF_RULES_EX[p.category] || { death:"可設定", live:"可設定" };
+      var ownerName  = p.ownerName  || p.proposer || p.applicant || "—";
+      var insuredName = p.insuredName || "—";
 
-      // 1. 解析身故受益人 (對接最新自由文字框)
+      // 身故受益人
       var dStr = "未設定";
       if(p.isRider) {
         dStr = "同主約";
-      } else if(p.category==="醫療保障" || p.category==="癌症醫療" || p.category==="重大傷病險" || p.category==="特定傷病險") {
-        dStr = "被保險人本人";
+      } else if(rule.death === "鎖定本人") {
+        dStr = "被保險人本人 🔒";
       } else if(p.beneficiaryDeathText) {
         dStr = p.beneficiaryDeathText;
       } else if(p.beneficiaryDeathCustom && p.beneficiaryDeathCustom.length>0) {
         dStr = p.beneficiaryDeathCustom.map(function(c){ return c.customName || "指定家人"; }).join("、");
       }
-      
-      // 2. 解析生存與滿期金
-      var lStr = "未設定", mStr = "未設定";
 
-      if (p.beneficiaryLiveType === "self") lStr = "被保險人本人";
-      else if (p.beneficiaryLiveType === "owner") lStr = ownerName + " (要保人)";
-      else if (p.beneficiaryLiveType === "other") lStr = p.beneficiaryLiveOther || "指定其他";
-      else if (p.beneficiaryLiveType === "none" || !p.beneficiaryLiveType) lStr = "無 / 不適用";
+      // 生存與滿期金（優先讀取新版文字欄位，相容舊版）
+      var lStr = "無 / 不適用", mStr = "無 / 不適用";
+      if(p.beneficiaryLiveText) lStr = p.beneficiaryLiveText;
+      else if(p.beneficiaryLiveType === "self")  lStr = "被保險人本人";
+      else if(p.beneficiaryLiveType === "owner") lStr = ownerName + " (要保人)";
+      else if(p.beneficiaryLiveType === "other") lStr = p.beneficiaryLiveOther || "指定其他";
 
-      if (p.beneficiaryMaturityType === "self") mStr = "被保險人本人";
-      else if (p.beneficiaryMaturityType === "owner") mStr = ownerName + " (要保人)";
-      else if (p.beneficiaryMaturityType === "other") mStr = p.beneficiaryMaturityOther || "指定其他";
-      else if (p.beneficiaryMaturityType === "none" || !p.beneficiaryMaturityType) mStr = "無 / 不適用";
+      if(p.beneficiaryMaturityText) mStr = p.beneficiaryMaturityText;
+      else if(p.beneficiaryMaturityType === "self")  mStr = "被保險人本人";
+      else if(p.beneficiaryMaturityType === "owner") mStr = ownerName + " (要保人)";
+      else if(p.beneficiaryMaturityType === "other") mStr = p.beneficiaryMaturityOther || "指定其他";
 
-      // 壽險與年金險特例保護
-      if (p.category === "壽險保障") {
-          lStr = "無 / 不適用";
-          mStr = "無 / 不適用";
-      } else if (p.category === "年金險" || p.category === "投資型保險") {
-          lStr = "被保險人本人";
-          mStr = "無 / 不適用";
+      if(p.category === "年金險" || p.category === "投資型保險" || rule.live === "鎖定本人") {
+        lStr = "被保險人本人 🔒";
+        mStr = "無 / 不適用";
       }
 
-      // 3. 組合滿期/生存金顯示 HTML
-      var liveMatHtml = "";
-      if (p.category === "儲蓄險") {
-          // 儲蓄險同時顯示生存與滿期金
-          liveMatHtml += '<div style="flex:1;"><div style="font-size:10px; color:#888; margin-bottom:4px;">生存金受益人</div><div style="font-size:13px; color:'+(lStr.includes('無')?'#ccc':'#333')+'; font-weight:500;">' + lStr + '</div></div>';
-          liveMatHtml += '<div style="flex:1;"><div style="font-size:10px; color:#888; margin-bottom:4px;">滿期金受益人</div><div style="font-size:13px; color:'+(mStr.includes('無')?'#ccc':'#333')+'; font-weight:500;">' + mStr + '</div></div>';
+      // 生存/滿期金合併欄位
+      var liveDisplay = "";
+      if(rule.live === "不適用" || p.category === "壽險保障") {
+        liveDisplay = '<span style="color:#ccc">無 / 不適用</span>';
+      } else if(rule.live === "鎖定本人" || p.category === "年金險" || p.category === "投資型保險") {
+        liveDisplay = '<span style="font-size:11px;background:#f0f0f0;color:#888;padding:2px 6px;border-radius:4px">本人 🔒</span>';
       } else {
-          // 其他險種只顯示一欄 (如果無/不適用就淡化)
-          liveMatHtml += '<div style="flex:1;"><div style="font-size:10px; color:#888; margin-bottom:4px;">生存/滿期金 (照顧自己)</div><div style="font-size:13px; color:'+(lStr.includes('無')?'#ccc':'#333')+'; font-weight:500;">' + lStr + '</div></div>';
+        var parts = [];
+        if(lStr && !lStr.includes("無")) parts.push('<div><span style="font-size:11px;color:#aaa">生存金：</span><span style="color:#333">'+lStr+'</span></div>');
+        if(mStr && !mStr.includes("無")) parts.push('<div><span style="font-size:11px;color:#aaa">滿期金：</span><span style="color:#333">'+mStr+'</span></div>');
+        liveDisplay = parts.length ? parts.join("") : '<span style="color:#ccc">無 / 不適用</span>';
       }
-      
-      // 卡片組合
-      html += '<div style="background:#fff; border:1px solid #e8e8e8; border-radius:10px; margin-bottom:12px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,0.02)">' +
-        '<div style="padding:10px 12px; border-bottom:1px solid #f0f0f0; display:flex; align-items:center;">' +
-          '<span style="font-size:10px; padding:2px 8px; border-radius:99px; background:'+cc+'15; color:'+cc+'; margin-right:8px; font-weight:500;">' + (p.category||'—') + '</span>' +
-          '<span style="font-size:14px; font-weight:600; color:#333; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; flex:1;">' + (p.itemName||p.policyNo) + '</span>' +
-        '</div>' +
-        '<div style="background:#F5FAFF; padding:8px 12px; border-bottom:1px solid #E6F1FB; display:flex; align-items:center;">' +
-          '<span style="font-size:11px; color:#555;">🎯 當年度保額：</span>' +
-          '<span style="font-size:15px; font-weight:600; color:#0C447C; margin-left:6px; font-family:monospace;">' + amtText + '</span>' +
-        '</div>' +
-        '<div style="display:flex; gap:12px; padding:12px;">' +
-          '<div style="flex:1.2;">' +
-            '<div style="font-size:10px; color:#888; margin-bottom:4px;">身故受益人 (留愛)</div>' +
-            '<div style="font-size:13px; color:'+(dStr==='未設定'?'#ccc':'#333')+'; font-weight:500; white-space:pre-wrap; line-height:1.5;">' + dStr + '</div>' +
-          '</div>' +
-          liveMatHtml +
-        '</div>' +
-      '</div>';
+
+      var dColor = dStr === "未設定" ? "#ccc" : "#333";
+      var rowBg = '';
+
+      html += '<tr style="'+rowBg+'">' +
+        '<td style="'+tdStyle+'">' +
+          '<span style="font-size:11px;padding:2px 7px;border-radius:99px;background:'+cc+'15;color:'+cc+';white-space:nowrap;font-weight:500">'+( p.category||'—')+'</span>' +
+        '</td>' +
+        '<td style="'+tdStyle+'color:#555">'+ownerName+'</td>' +
+        '<td style="'+tdStyle+'color:#555">'+insuredName+'</td>' +
+        '<td style="'+tdStyle+'">' +
+          '<span style="font-size:11px;font-family:monospace;background:#E6F1FB;color:#0C447C;padding:2px 7px;border-radius:99px;white-space:nowrap">'+(p.policyNo||p.id)+'</span>' +
+        '</td>' +
+        '<td style="'+tdStyle+'font-weight:500">'+(p.itemName||'—')+'</td>' +
+        '<td style="'+tdStyle+'font-weight:600;color:#0C447C;font-family:monospace;white-space:nowrap">'+amtText+'</td>' +
+        '<td style="'+tdStyle+'color:'+dColor+';white-space:pre-wrap;line-height:1.5">'+dStr+'</td>' +
+        '<td style="'+tdStyle+'line-height:1.6">'+liveDisplay+'</td>' +
+      '</tr>';
     });
-    html += '</div>';
+
+    html += '</tbody></table></div>';
     return html;
   }
 
