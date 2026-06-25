@@ -1102,6 +1102,14 @@ function renderBlock(key){
     });
     html+='</div>';
 
+    // ── 保障覆蓋率環形圖（含家庭責任圖例）──
+    html+='<div style="font-size:11px;font-weight:500;color:#999;margin-top:14px;margin-bottom:6px">保障覆蓋率</div>';
+    html+='<div style="display:flex;gap:10px;font-size:11px;color:#888;margin-bottom:8px;flex-wrap:wrap">'+
+      '<span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#27AE8F;margin-right:3px"></span>已規劃</span>'+
+      '<span style="color:#F5A623"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#F5A623;opacity:.5;margin-right:3px;border:1.5px dashed #F5A623"></span>不足</span>'+
+      '<span style="color:#bbb"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#e0e0e0;margin-right:3px"></span>缺口</span>'+
+    '</div>';
+    html+='<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:14px;margin-bottom:8px">'+buildDonutChartEx(active,cov,{},{})+'</div>';
 
     html+='</div>';
 
