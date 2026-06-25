@@ -230,7 +230,10 @@
   function _renderBottomTab() {
     var el = document.getElementById("nbs-bottom-tab");
     if (!el) return;
-    el.innerHTML = NAV_ITEMS.map(function(item) {
+    // 底部 Tab 只顯示核心 6 個，export/hospital 只在側欄顯示
+    var TAB_KEYS = ["policy","coverage","savings","summary","beneficiary","export"];
+    var tabItems = NAV_ITEMS.filter(function(item){ return TAB_KEYS.indexOf(item.key) >= 0; });
+    el.innerHTML = tabItems.map(function(item) {
       var active = _page === item.key;
       return '<div class="nbs-ti'+(active?" nbs-ti-on":"")+'" onclick="NBS_NAV._go(\''+item.href+'\')">' +
         '<span style="font-size:20px">'+item.icon+'</span>' +
@@ -646,6 +649,8 @@
         position:fixed;bottom:0;left:0;right:0;
         background:#fff;border-top:1px solid #e8e8e8;
         display:none;z-index:200;
+        overflow-x:auto;
+        -webkit-overflow-scrolling:touch;
         padding-bottom:env(safe-area-inset-bottom,0);
       }
       .nbs-logo{display:flex;align-items:center;gap:8px;padding:16px 14px 10px;border-bottom:1px solid rgba(255,255,255,.08)}
@@ -679,7 +684,7 @@
       .nbs-pbtn:hover{background:rgba(255,255,255,.14)}
       .nbs-bbtn{width:100%;padding:7px;background:transparent;color:rgba(255,255,255,.35);border:none;border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px}
       .nbs-bbtn:hover{color:rgba(255,255,255,.6)}
-      .nbs-ti{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 2px 5px;cursor:pointer;color:#999}
+      .nbs-ti{flex:0 0 auto;min-width:64px;max-width:80px;display:flex;flex-direction:column;align-items:center;padding:8px 4px 5px;cursor:pointer;color:#999}
       .nbs-ti-on{color:#378ADD}
       .nbs-tl{font-size:9px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
       .nbs-ti-on .nbs-tl{font-weight:500}
