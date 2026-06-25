@@ -1459,9 +1459,16 @@ function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
 async function doExportPNG(blks,div){
   var wm='<div style="padding:8px;background:#f7f7f5;text-align:center;font-size:11px;color:#aaa">NBS 保單體檢 '+pName+' '+pDate+'</div>';
   if(fmt==="png_single"){
+    var hasTlBlock=blks.some(function(b){return b.key==="savings_timeline";});
+    div.style.width=hasTlBlock?"2400px":"560px";
     div.innerHTML=blks.map(function(b){return'<div style="border-bottom:1px solid #f0f0f0">'+renderBlock(b.key)+'</div>';}).join("")+wm;
-    setP(30);await sleep(200);
-    var c=await html2canvas(div,{scale:2,useCORS:true,backgroundColor:"#ffffff"});
+    setP(30);await sleep(400);
+    var singleW=hasTlBlock?Math.max(div.scrollWidth,div.offsetWidth,1400):560;
+    div.style.width=singleW+"px";
+    await sleep(100);
+    var c=await html2canvas(div,{scale:2,useCORS:true,backgroundColor:"#ffffff",
+      width:singleW,windowWidth:singleW});
+    div.style.width="560px";
     setP(80);await sleep(100);
     var a=document.createElement("a");
     a.download=pName+"_保單體檢_"+pDate+".png";
@@ -1470,10 +1477,16 @@ async function doExportPNG(blks,div){
   }else{
     for(var i=0;i<blks.length;i++){
       var isTl2=blks[i].key==="savings_timeline";
-      div.style.width=isTl2?"1100px":"560px";
+      // 先用寬容器 render，再讀實際寬度
+      div.style.width=isTl2?"2400px":"560px";
       div.innerHTML=renderBlock(blks[i].key)+wm;
-      setP(Math.round(i/blks.length*90));await sleep(200);
-      var c2=await html2canvas(div,{scale:2,useCORS:true,backgroundColor:"#ffffff"});
+      setP(Math.round(i/blks.length*90));await sleep(300);
+      // 讀取實際內容寬度（含所有欄位）
+      var actualW=isTl2?Math.max(div.scrollWidth,div.offsetWidth,1400):560;
+      div.style.width=actualW+"px";
+      await sleep(100);
+      var c2=await html2canvas(div,{scale:2,useCORS:true,backgroundColor:"#ffffff",
+        width:actualW,windowWidth:actualW});
       div.style.width="560px";
       var a2=document.createElement("a");
       a2.download=pName+"_"+blks[i].label+"_"+pDate+".png";
@@ -1490,10 +1503,14 @@ async function doExportPDF(blks,div){
   var wm='<div style="padding:8px;background:#f7f7f5;text-align:center;font-size:11px;color:#aaa">NBS 保單體檢 '+pName+' '+pDate+'</div>';
   for(var i=0;i<blks.length;i++){
     var isTl3=blks[i].key==="savings_timeline";
-    div.style.width=isTl3?"1100px":"560px";
+    div.style.width=isTl3?"2400px":"560px";
     div.innerHTML=renderBlock(blks[i].key)+wm;
-    setP(Math.round(i/blks.length*90));await sleep(200);
-    var c=await html2canvas(div,{scale:2,useCORS:true,backgroundColor:"#ffffff"});
+    setP(Math.round(i/blks.length*90));await sleep(300);
+    var actualW3=isTl3?Math.max(div.scrollWidth,div.offsetWidth,1400):560;
+    div.style.width=actualW3+"px";
+    await sleep(100);
+    var c=await html2canvas(div,{scale:2,useCORS:true,backgroundColor:"#ffffff",
+      width:actualW3,windowWidth:actualW3});
     div.style.width="560px";
     if(i>0)pdf.addPage("a4",isTl3?"landscape":"portrait");
     else if(isTl3){pdf=new J("l","mm","a4");}
