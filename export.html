@@ -245,6 +245,108 @@ function doShowPreview(){
   goPage("P_PREV");
 }
 
+// ── 現金流時間軸輔助函式 ─────────────────────────────────
+function fmtAmtEx(amt){if(amt>=10000)return(amt/10000).toFixed(1)+"萬";return amt.toLocaleString();}
+function isMonthlyEx(k){return k==="5";}
+function isYearlyDetailEx(k){return k==="6";}
+function getEndYearAt100Ex(memberId,policy){
+  var bd=(familyData&&familyData.members&&(familyData.members.find(function(m){return m.personId===memberId;})||{}).birthDate);
+  if(bd){var by=parseInt(bd.slice(0,4));if(!isNaN(by))return by+100;}
+  if(policy&&policy.startDate){var sy=parseInt(policy.startDate.slice(0,4));if(!isNaN(sy))return sy+80;}
+  return new Date().getFullYear()+50;
+}
+function calcPolicyFlowsEx(p,s,memberId,years){
+  var sw=p.startDate?parseInt(p.startDate.slice(0,4)):null;
+  var pw=p.payEndDate?parseInt(p.payEndDate.slice(0,4)):null;
+  var cw=p.covEndDate?parseInt(p.covEndDate.slice(0,4)):getEndYearAt100Ex(memberId,p);
+  if(!sw)return{};
+  var tk=s.type||"1",dfr=parseInt(s.duringFreqYr)||2,dsy=parseInt(s.duringStartYr)||1;
+  var da=parseFloat(s.duringAmt)||0,afr=parseInt(s.afterFreqYr)||1;
+  var asy=parseInt(s.afterStartYr!==undefined?s.afterStartYr:0),aa=parseFloat(s.afterAmt)||0;
+  var mo=isMonthlyEx(tk),yrd=isYearlyDetailEx(tk);
+  var ym={};
+  if(yrd&&s.yearlyAmts){s.yearlyAmts.forEach(function(r){var y=parseInt(r.yr),a=parseFloat(r.amt);if(!isNaN(y)&&!isNaN(a)&&a>0)ym[y]=(ym[y]||0)+a;});}
+  var er=(p.currency&&p.currency!=="TWD"&&parseFloat(s.exchangeRate))?parseFloat(s.exchangeRate):1;
+  var flows={};
+  years.forEach(function(yr){
+    if(yr>cw)return;
+    var fl=0,id=pw?(yr>=sw&&yr<pw):false,ia=pw?yr>=pw:yr>=sw;
+    if(yrd){fl=ym[yr]||0;}
+    else if(tk==="1"){if(pw&&yr===pw)fl=aa;}
+    else if(tk==="2"){
+      if(id&&da>0){var ft=sw+dsy-1,e=yr-ft;if(yr>=ft&&e%dfr===0)fl+=da;}
+      if(pw&&yr===pw)fl+=aa;
+    }else if(tk==="3"){if(ia&&aa>0){var b=(pw||sw)+asy,e2=yr-b;if(yr>=b&&e2%afr===0)fl=aa;}}
+    else if(tk==="4"){
+      if(id&&da>0){var ft2=sw+dsy-1,e3=yr-ft2;if(yr>=ft2&&e3%dfr===0)fl+=da;}
+      if(ia&&aa>0){var b2=(pw||sw)+asy,e4=yr-b2;if(yr>=b2&&e4%afr===0)fl+=aa;}
+    }else if(mo){if(ia&&aa>0)fl=aa*12;}
+    if(fl>0)flows[yr]=Math.round(fl*er);
+  });
+  return flows;
+}
+function renderSavingsTimeline(pdm3,fData,startYr,endYr){
+  var years=[];for(var y=startYr;y<=endYr;y++)years.push(y);
+  var groups=[],totalFlows={};
+  (fData.members||[]).filter(function(m){return m.role!=="beneficiary_only";}).forEach(function(m){
+    var p3=pdm3[m.personId];if(!p3)return;
+    var sp=(p3.policies||[]).filter(function(p){return["儲蓄險","年金險","儲蓄年金","投資型保險"].indexOf(p.category)>=0;});
+    if(!sp.length)return;
+    var pRows=[];
+    sp.forEach(function(p){
+      var s2=(p3.savings||[]).find(function(sv){return sv.policyId===p.id;})||{type:"1"};
+      var flows=calcPolicyFlowsEx(p,s2,m.personId,years);
+      Object.keys(flows).forEach(function(y2){totalFlows[y2]=(totalFlows[y2]||0)+flows[y2];});
+      pRows.push({policyNo:p.policyNo||p.id,itemName:p.itemName||"",category:p.category||"",flows:flows});
+    });
+    if(pRows.length)groups.push({memberName:m.name,policies:pRows});
+  });
+  if(!groups.length)return'<div style="padding:20px;text-align:center;color:#bbb;font-size:12px">尚無儲蓄保單設定領回資料</div>';
+  var maxTotal=Math.max.apply(null,Object.values(totalFlows).concat([1]));
+  var catBg={"儲蓄險":"#FBEAF0","年金險":"#FCEBEB","儲蓄年金":"#FBEAF0","投資型保險":"#f0f0f0"};
+  var catCo={"儲蓄險":"#72243E","年金險":"#791F1F","儲蓄年金":"#72243E","投資型保險":"#555"};
+  var yh=years.map(function(y3){return'<th style="background:#f7f7f5;padding:5px 8px;text-align:center;font-weight:500;color:#333;border-bottom:1px solid #ebebeb;border-right:1px solid #ebebeb;white-space:nowrap">'+y3+'<br><span style="font-size:8px;color:#666;font-weight:500">'+(y3-1911)+'年</span></th>';}).join("");
+  var gr=groups.map(function(g){
+    var pay=g.policies.filter(function(pr){return Object.keys(pr.flows).length===0;}).length;
+    var nr='<tr><td colspan="'+(years.length+1)+'" style="background:#f4f8fd;padding:6px 10px;font-size:11px;font-weight:600;border-top:2px solid #dde8f5">'+
+      g.memberName+'<span style="color:#777;font-weight:400;margin-left:6px;font-size:10px">'+g.policies.length+'張保單</span>'+
+      (pay?'<span style="color:#b07000;font-size:10px;margin-left:4px">（含'+pay+'張繳費中）</span>':'')+
+    '</td></tr>';
+    var pr2=g.policies.map(function(pr){
+      var cells=years.map(function(y4){
+        var amt=pr.flows[y4]||0;
+        if(!amt)return'<td style="text-align:center;color:#ccc;font-size:10px;border-right:1px solid #f5f5f5">—</td>';
+        var w=Math.max(20,Math.round((amt/maxTotal)*56));
+        return'<td style="text-align:center;border-right:1px solid #f5f5f5"><div style="height:20px;border-radius:3px;background:#E6F1FB;display:inline-flex;align-items:center;padding:0 4px;min-width:'+w+'px"><span style="font-size:11px;color:#0C447C;white-space:nowrap;font-weight:600">'+fmtAmtEx(amt)+'</span></div></td>';
+      }).join("");
+      var fc='<td style="padding:4px 4px 4px 10px;min-width:120px;border-right:2px solid #dde8f5">'+
+        '<div style="display:flex;align-items:center;gap:4px">'+
+          '<span style="font-size:9px;padding:1px 4px;border-radius:3px;background:'+(catBg[pr.category]||"#f0f0f0")+';color:'+(catCo[pr.category]||"#555")+'">'+(pr.category)+'</span>'+
+          '<span style="font-size:10px;font-weight:700;font-family:monospace;color:#1a1a1a">'+pr.policyNo+'</span>'+
+          (!Object.keys(pr.flows).length?'<span style="font-size:9px;color:#888">繳費中</span>':'')+
+        '</div>'+
+        (pr.itemName?'<div style="font-size:9px;color:#444;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px">'+pr.itemName+'</div>':'')+
+      '</td>';
+      return'<tr>'+fc+cells+'</tr>';
+    }).join("");
+    var mf={};g.policies.forEach(function(pr){Object.keys(pr.flows).forEach(function(y5){mf[y5]=(mf[y5]||0)+pr.flows[y5];});});
+    var sub='<tr style="background:#f0f6fc;font-weight:600;color:#0C447C;border-top:1px solid #dde8f5"><td style="padding-left:10px;border-right:2px solid #dde8f5">小計</td>'+
+      years.map(function(y6){var a=mf[y6]||0;return a?'<td style="text-align:center;font-size:11px">'+fmtAmtEx(a)+'</td>':'<td style="text-align:center;color:#ccc">—</td>';}).join("")+'</tr>';
+    return nr+pr2+sub;
+  }).join("");
+  var tot='<tr style="background:#e8f3fd;font-weight:600;color:#0C447C;border-top:2px solid #c5ddf5"><td style="padding-left:10px;border-right:2px solid #dde8f5">合計現金流</td>'+
+    years.map(function(y7){var a=totalFlows[y7]||0;return a?'<td style="text-align:center;font-size:11px">'+fmtAmtEx(a)+'</td>':'<td style="text-align:center">—</td>';}).join("")+'</tr>';
+  return'<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;overflow:hidden">'+
+    '<div style="padding:10px 14px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:10px">'+
+      '<span style="font-size:14px;font-weight:600">未來現金流時間軸</span>'+
+      '<span style="font-size:11px;color:#555;font-weight:500">'+startYr+'－'+endYr+'年・'+groups.length+'位被保險人</span>'+
+    '</div>'+
+    '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">'+
+    '<table style="width:100%;border-collapse:collapse;font-size:11px">'+
+    '<thead><tr><th style="background:#f7f7f5;padding:6px 10px;text-align:left;min-width:120px;border-bottom:1px solid #ebebeb;border-right:2px solid #dde8f5">被保險人/保單</th>'+yh+'</tr></thead>'+
+    '<tbody>'+gr+tot+'</tbody></table></div></div>';
+}
+
 // ── 渲染各區塊 HTML ───────────────────────────────────────
 function renderBlock(key){
   var active=policies.filter(function(p){return p.status==="有效";});
