@@ -656,6 +656,31 @@ function switchPerson(pid) {
   renderContent();
 }
 
+// ── SVG 箭頭列（html2canvas 相容，不使用 clip-path+calc）────────────────
+function buildSvgArrows(phases) {
+  var W=600, H=40, tip=14;
+  var weights=[1,1.4,1], totalW=3.4;
+  var widths=weights.map(function(w){return w/totalW*W;});
+  var svg='<svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 '+W+' '+H+'" style="display:block;margin-bottom:16px">';
+  var x=0;
+  phases.forEach(function(ph,i){
+    var w=widths[i], x0=x, x1=x+w, pts;
+    if(i===0){
+      pts=x0+',0 '+(x1-tip)+',0 '+x1+','+(H/2)+' '+(x1-tip)+','+H+' '+x0+','+H;
+    } else if(i===2){
+      pts=x0+',0 '+x1+',0 '+x1+','+H+' '+x0+','+H+' '+(x0+tip)+','+(H/2);
+    } else {
+      pts=x0+',0 '+(x1-tip)+',0 '+x1+','+(H/2)+' '+(x1-tip)+','+H+' '+x0+','+H+' '+(x0+tip)+','+(H/2);
+    }
+    svg+='<polygon points="'+pts+'" fill="'+ph.color+'"/>';
+    var tx=i===0?x0+(w-tip)/2:i===2?x0+tip+(w-tip)/2:x0+tip+(w-tip*2)/2;
+    svg+='<text x="'+tx+'" y="'+(H/2+5)+'" text-anchor="middle" fill="#fff" font-size="13" font-weight="700" font-family="-apple-system,BlinkMacSystemFont,sans-serif">'+ph.label+'</text>';
+    x+=w;
+  });
+  svg+='</svg>';
+  return svg;
+}
+
 function buildDonutChartEx(active, coverage, targets, covOverrides) {
   var allItems = GAP_GROUPS_EX.flatMap(g=>g.items);
   var n = allItems.length;
@@ -759,10 +784,17 @@ function buildDonutChartEx(active, coverage, targets, covOverrides) {
       </div>
     </div>
     
-    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:16px;border-top:1px dashed #e8e8e8;padding-top:20px">
-      <div>${legendBefore}</div>
-      <div>${legendDuring}</div>
-      <div>${legendAfter}</div>
+    <div style="border-top:1px dashed #e8e8e8;padding-top:20px">
+      ${buildSvgArrows([
+        {label:GAP_GROUPS_EX[1].arrowLabel, color:"#4CAF86"},
+        {label:GAP_GROUPS_EX[2].arrowLabel, color:"#378ADD"},
+        {label:GAP_GROUPS_EX[3].arrowLabel, color:"#E87BAD"}
+      ])}
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:16px">
+        <div>${legendBefore}</div>
+        <div>${legendDuring}</div>
+        <div>${legendAfter}</div>
+      </div>
     </div>
   </div>`;
 }
@@ -1190,13 +1222,12 @@ function renderBlock(key){
       ]},
     ];
 
-    // 大箭頭列
-    var arrows=phases.map(function(ph,i){
-      var clip=i===0?"polygon(0 0,calc(100% - 14px) 0,100% 50%,calc(100% - 14px) 100%,0 100%)":
-               i===2?"polygon(0 0,100% 0,100% 100%,0 100%,14px 50%)":
-                     "polygon(0 0,calc(100% - 14px) 0,100% 50%,calc(100% - 14px) 100%,0 100%,14px 50%)";
-      return'<div style="flex:'+(i===1?1.6:1)+';padding:10px 6px;background:'+ph.c+';color:#fff;font-weight:700;font-size:14px;text-align:center;clip-path:'+clip+';margin-left:'+(i>0?"-2px":"0")+'">'+ph.l+'</div>';
-    }).join("");
+    // 大箭頭列（SVG，html2canvas 相容）
+    var arrows=buildSvgArrows([
+      {label:phases[0].l, color:phases[0].c},
+      {label:phases[1].l, color:phases[1].c},
+      {label:phases[2].l, color:phases[2].c}
+    ]);
 
     // 資料欄
     var cols=phases.map(function(ph){
@@ -1223,7 +1254,7 @@ function renderBlock(key){
     var gapHtml=buildGapAnalysisEx(active,cov2,{},{});
 
     return'<div style="padding:10px 12px">'+
-      '<div style="display:flex;margin-bottom:12px;border-radius:6px;overflow:hidden">'+arrows+'</div>'+
+      arrows+
       '<div style="display:grid;grid-template-columns:1fr 1.6fr 1fr;gap:8px;margin-bottom:14px">'+cols+'</div>'+
       '<div style="font-size:11px;font-weight:500;color:#999;margin-bottom:8px">缺口 / 不足分析</div>'+
       '<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:12px 14px">'+gapHtml+'</div>'+
