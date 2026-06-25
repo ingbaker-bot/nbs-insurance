@@ -826,12 +826,14 @@ function renderTimeline() {
       const statusTag = !hasFlow
         ? `<span style="font-size:10px;color:#888;font-weight:500;margin-left:4px">（繳費中）</span>`
         : "";
-      const firstCell = `<td style="padding-left:18px;min-width:160px">
-        <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px">
-          <span style="${badgeStyle}">${pr.category}</span>${statusTag}
+      // 第一欄：改為兩行——行1: badge + 號碼，行2: 險種名稱
+      const firstCell = `<td style="padding-left:14px;min-width:160px;padding-top:5px;padding-bottom:5px">
+        <div style="display:flex;align-items:center;gap:5px;white-space:nowrap">
+          <span style="${badgeStyle}">${pr.category}</span>
+          <span style="font-size:12px;font-weight:700;color:#1a1a1a;font-family:monospace">${pr.policyNo}</span>
+          ${statusTag}
         </div>
-        <div style="font-size:13px;font-weight:700;color:#1a1a1a;font-family:monospace;white-space:nowrap">${pr.policyNo}</div>
-        ${pr.itemName ? `<div style="font-size:12px;color:#222;font-weight:500;margin-top:2px;white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis">${pr.itemName}</div>` : ""}
+        ${pr.itemName ? `<div style="font-size:11px;color:#444;font-weight:500;margin-top:2px;white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis">${pr.itemName}</div>` : ""}
       </td>`;
 
       return `<tr class="cf-policy-row">${firstCell}${cells}</tr>`;
