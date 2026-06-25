@@ -125,32 +125,35 @@
     .card-summary { font-size:11px; color:#888; white-space:nowrap; flex-shrink:0; margin-left:8px; }
     .card-body { border-top:1px solid #f0f0f0; }
 
-    /* ── 列印樣式 ── */
+    /* ── 列印樣式（橫式 A4，滿版時間軸）── */
     @media print {
+      /* 強制橫向 A4，邊距最小化 */
+      @page { size: A4 landscape; margin: 6mm 8mm; }
       /* 隱藏非時間軸的 UI */
       .header, .member-tabs, .page-tabs, .timeline-controls,
-      .settings-view, #settings-view, #loading,
-      .back-btn, #saved-hint { display:none !important; }
-      /* 確保時間軸可見 */
+      #settings-view, #loading, .back-btn, #saved-hint { display:none !important; }
+      /* 確保時間軸可見且展開 */
       #timeline-view { display:block !important; }
-      body { background:#fff; }
-      .main { padding:0; }
-      .timeline-wrap { border:none; box-shadow:none; }
-      .timeline-header { padding:8px 0; }
-      /* 列印時完整展開：取消 overflow，讓所有欄位自然排列 */
-      .cf-scroll-wrap { overflow:visible !important; }
-      /* 隱藏捲軸視覺（Chrome 不印捲軸，但保險起見） */
+      body { background:#fff; margin:0; padding:0; }
+      .main { padding:0; margin:0; max-width:100%; }
+      .timeline-wrap { border:1px solid #ddd; box-shadow:none; page-break-inside:avoid; }
+      .timeline-header { padding:6px 10px; }
+      /* 完整展開：取消 overflow */
+      .cf-scroll-wrap { overflow:visible !important; width:100%; }
+      /* 捲軸隱藏 */
       ::-webkit-scrollbar { display:none; }
-      /* 表格樣式微調 */
-      .cf-table { font-size:11px; }
-      .cf-table th, .cf-table td { padding:5px 7px; }
-      .cf-bar { height:24px; }
-      .cf-bar span { font-size:13px; font-weight:600; }
-      /* sticky 在列印時取消（避免重複渲染） */
+      /* 表格字體維持清晰 */
+      .cf-table { font-size:10px; width:100%; table-layout:auto; }
+      .cf-table th, .cf-table td { padding:4px 6px; }
+      .cf-bar { height:22px; min-width:20px; }
+      .cf-bar span { font-size:12px; font-weight:600; }
+      .cf-amount { font-size:11px; }
+      /* sticky 取消 */
       .cf-table th:first-child,
-      .cf-table td:first-child { position:static !important; box-shadow:none !important; }
-      /* 強制所有欄位在同一頁（橫向） */
-      @page { size: landscape; margin: 10mm; }
+      .cf-table td:first-child { position:static !important; box-shadow:none !important; min-width:130px; }
+      /* 時間軸標題 */
+      .timeline-title { font-size:13px; }
+      .timeline-subtitle { font-size:11px; }
     }
   </style>
   <script src="nav.js"></script>
@@ -261,7 +264,7 @@ async function loadData() {
     renderSettings();
     const now = new Date().getFullYear();
     document.getElementById("tl-start").value = now;
-    document.getElementById("tl-end").value   = now + 29;
+    document.getElementById("tl-end").value   = now + 14;  // 15 年（起始+14），橫式 A4 剛好
   } catch(e) { alert("資料載入異常：" + e.message); }
 }
 
@@ -500,8 +503,15 @@ function renderAdvInner(pid, s) {
 // ── 逐年明細表格 ──────────────────────────────────────────
 function renderYearlyTable(pid, s) {
   const rows = parseInt(s.yearlyRows) || 10;
-  // 補齊 yearlyAmts 到 rows 筆
-  while (s.yearlyAmts.length < rows) s.yearlyAmts.push({ yr: "", amt: "" });
+  // 補齊 yearlyAmts 到 rows 筆，空白年份自動帶入當年起算
+  const baseYear = new Date().getFullYear();
+  while (s.yearlyAmts.length < rows) {
+    const idx = s.yearlyAmts.length;
+    // 若前面的年份有填，接續 +1；否則用當年起算
+    const prevYr = idx > 0 ? parseInt(s.yearlyAmts[idx-1].yr) : 0;
+    const autoYr = prevYr > 2000 ? prevYr + 1 : baseYear + idx;
+    s.yearlyAmts.push({ yr: String(autoYr), amt: "" });
+  }
 
   let tableRows = "";
   for (let i = 0; i < rows; i++) {
@@ -549,7 +559,13 @@ function updateYearlyRows(pid, val) {
   settings[pid].yearlyRows = String(rows);
   // 重繪 tbody
   const s = settings[pid];
-  while (s.yearlyAmts.length < rows) s.yearlyAmts.push({ yr:"", amt:"" });
+  const baseYr2 = new Date().getFullYear();
+  while (s.yearlyAmts.length < rows) {
+    const idx2 = s.yearlyAmts.length;
+    const prevYr2 = idx2 > 0 ? parseInt(s.yearlyAmts[idx2-1].yr) : 0;
+    const autoYr2 = prevYr2 > 2000 ? prevYr2 + 1 : baseYr2 + idx2;
+    s.yearlyAmts.push({ yr: String(autoYr2), amt: "" });
+  }
   let html = "";
   for (let i = 0; i < rows; i++) {
     const row = s.yearlyAmts[i] || { yr:"", amt:"" };
