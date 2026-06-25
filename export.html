@@ -305,7 +305,7 @@ function renderSavingsTimeline(pdm3,fData,startYr,endYr){
   var maxTotal=Math.max.apply(null,Object.values(totalFlows).concat([1]));
   var catBg={"儲蓄險":"#FBEAF0","年金險":"#FCEBEB","儲蓄年金":"#FBEAF0","投資型保險":"#f0f0f0"};
   var catCo={"儲蓄險":"#72243E","年金險":"#791F1F","儲蓄年金":"#72243E","投資型保險":"#555"};
-  var yh=years.map(function(y3){return'<th style="background:#f7f7f5;padding:5px 8px;text-align:center;font-weight:500;color:#333;border-bottom:1px solid #ebebeb;border-right:1px solid #ebebeb;white-space:nowrap">'+y3+'<br><span style="font-size:8px;color:#666;font-weight:500">'+(y3-1911)+'年</span></th>';}).join("");
+  var yh=years.map(function(y3){return'<th style="background:#f7f7f5;padding:4px 5px;text-align:center;font-weight:500;color:#333;border-bottom:1px solid #ebebeb;border-right:1px solid #ebebeb;white-space:nowrap">'+y3+'<br><span style="font-size:8px;color:#666;font-weight:500">'+(y3-1911)+'年</span></th>';}).join("");
   var gr=groups.map(function(g){
     var pay=g.policies.filter(function(pr){return Object.keys(pr.flows).length===0;}).length;
     var nr='<tr><td colspan="'+(years.length+1)+'" style="background:#f4f8fd;padding:6px 10px;font-size:11px;font-weight:600;border-top:2px solid #dde8f5">'+
@@ -316,7 +316,7 @@ function renderSavingsTimeline(pdm3,fData,startYr,endYr){
       var cells=years.map(function(y4){
         var amt=pr.flows[y4]||0;
         if(!amt)return'<td style="text-align:center;color:#ccc;font-size:10px;border-right:1px solid #f5f5f5">—</td>';
-        var w=Math.max(20,Math.round((amt/maxTotal)*56));
+        var w=Math.max(18,Math.round((amt/maxTotal)*50));
         return'<td style="text-align:center;border-right:1px solid #f5f5f5"><div style="height:20px;border-radius:3px;background:#E6F1FB;display:inline-flex;align-items:center;padding:0 4px;min-width:'+w+'px"><span style="font-size:11px;color:#0C447C;white-space:nowrap;font-weight:600">'+fmtAmtEx(amt)+'</span></div></td>';
       }).join("");
       var fc='<td style="padding:4px 4px 4px 10px;min-width:120px;border-right:2px solid #dde8f5">'+
@@ -346,6 +346,627 @@ function renderSavingsTimeline(pdm3,fData,startYr,endYr){
     '<thead><tr><th style="background:#f7f7f5;padding:6px 10px;text-align:left;min-width:120px;border-bottom:1px solid #ebebeb;border-right:2px solid #dde8f5">被保險人/保單</th>'+yh+'</tr></thead>'+
     '<tbody>'+gr+tot+'</tbody></table></div></div>';
 }
+
+
+// ── Summary 輔助函式（移植自 summary.html）──────────────
+function sumCovEx(keys, policies, coverage) {
+  var total = 0;
+  policies.forEach(p => {
+    keys.forEach(k => {
+      if (p.coverage && typeof p.coverage[k] === "number") {
+        total += p.coverage[k];
+      }
+    });
+  });
+  // 相容舊格式
+  if (total === 0 && coverage) {
+      policies.forEach(p => {
+          keys.forEach(k => {
+              if (coverage[p.id + "_" + k] && typeof coverage[p.id + "_" + k] === "number") {
+                  total += coverage[p.id + "_" + k];
+              }
+          });
+      });
+  }
+  return total;
+}
+
+// ── 保障群組與細項定義 (全新規劃) ─────────────────────────────────────────
+var GAP_GROUPS_EX = [
+  { key:"family", label:"家庭責任", color:"#1565C0", items:[
+    { key:"life_permanent", label:"終身壽險",    unit:"萬元",   color:"#1565C0" },
+    { key:"life_term",      label:"定期壽險",    unit:"萬元",   color:"#1E88E5" },
+    { key:"investment",     label:"投資型保險",  unit:"",       color:"#7B1FA2", isBool:true },
+    { key:"savings",        label:"儲蓄險",      unit:"",       color:"#E91E8C", isBool:true },
+  ]},
+  { key:"before", label:"醫療前", color:"#E53935", items:[
+    { key:"ci_special", label:"重大/特傷/重疾", unit:"萬元",   color:"#E53935" },
+    { key:"cancer",     label:"初次罹患癌症",    unit:"萬元",   color:"#C62828" },
+  ]},
+  { key:"during", label:"醫療中", color:"#FF8F00", items:[
+    { key:"hosp_real_room",  label:"實支病房費",        unit:"元/日",  color:"#E65100" },
+    { key:"hosp_daily",      label:"住院日額+出院",      unit:"元/日",  color:"#F57C00" },
+    { key:"surgery",         label:"手術險(最高)",      unit:"元/次",  color:"#FF9800" },
+    { key:"cancer_hosp",     label:"癌症病房(含出院)",  unit:"元/日",  color:"#FFB300" },
+    { key:"acc_medical",     label:"意外醫療",          unit:"萬/次",  color:"#FFC107" },
+    { key:"acc_hosp",        label:"意外住院",          unit:"元/日",  color:"#FFE082" },
+  ]},
+  { key:"after", label:"醫療後", color:"#2E7D32", items:[
+    { key:"ltc_disable",    label:"失能一次金",      unit:"萬元",    color:"#1B5E20" },
+    { key:"ltc_support",    label:"失能扶助",        unit:"萬元/月", color:"#2E7D32" },
+    { key:"ltc_care",       label:"長照",            unit:"萬元/月", color:"#43A047" },
+    { key:"cancer_hospice", label:"癌症安寧",        unit:"萬元",    color:"#66BB6A" },
+    { key:"cancer_death",   label:"癌症身故",        unit:"萬元",    color:"#81C784" },
+    { key:"waiver",         label:"保費豁免",        unit:"",        color:"#A5D6A7", isBool:true },
+  ]},
+];
+
+// 精準對應 coverage.html 的資料庫欄位
+var GAP_KEY_MAP_EX = {
+  life_permanent:  { cats:["壽險保障"],          keys:["life_basic"] },
+  life_term:       { cats:[],                   keys:["life_term"] },
+  investment:      { cats:["投資型保險"],        keys:[] },
+  savings:         { cats:["儲蓄險","年金險"],   keys:[] },
+  ci_special:      { cats:["重大疾病險","重大傷病險","特定傷病險"], keys:["can_first"] },
+  cancer:          { cats:["癌症醫療"],          keys:["can_first"] },
+  hosp_real_room:  { cats:["醫療保障"],          keys:["hosp_room", "hosp_ext_room"] },
+  hosp_daily:      { cats:["醫療保障"],          keys:["daily_room_1_30", "hosp_ext_daily", "daily_discharge"] },
+  surgery:         { cats:["醫療保障","定額手術"], keys:["hosp_surgery", "hosp_ext_surgery", "surg_hosp_max", "surg_opd_max"] },
+  cancer_hosp:     { cats:["癌症醫療"],          keys:["can_hosp", "can_discharge"] },
+  acc_medical:     { cats:["意外險"],            keys:["acc_opd"] },
+  acc_hosp:        { cats:["意外險"],            keys:["acc_hosp"] },
+  ltc_disable:     { cats:["失能長照"],          keys:["ltc_dis_amt"] },
+  ltc_support:     { cats:["失能長照"],          keys:["ltc_dis_life", "acc_support", "ltc_life"] },
+  ltc_care:        { cats:["失能長照"],          keys:["ltc_monthly", "ltc_care", "ltc_yr", "ltc_mo"] },
+  cancer_hospice:  { cats:["癌症醫療"],          keys:["can_hospice"] },
+  cancer_death:    { cats:["癌症醫療"],          keys:["can_death"] },
+  waiver:          { cats:[],                   keys:["ltc_waiver"] },
+};
+
+var COVERAGE_TYPES = [
+  { key:"life",       label:"壽險保障", group:"壽險", color:"#4A90D9", detect:(p,c)=>p.some(x=>x.category==="壽險保障") },
+  { key:"acc_death",  label:"意外身故", group:"意外", color:"#F5A623", detect:(p,c)=>p.some(x=>x.category==="意外險") },
+  { key:"acc_medical",label:"意外醫療", group:"意外", color:"#F08C00", detect:(p,c)=>Object.keys(c).some(k=>k.includes("acc_opd")) },
+  { key:"acc_hosp",   label:"意外住院", group:"意外", color:"#D97706", detect:(p,c)=>Object.keys(c).some(k=>k.includes("daily_room"))&&p.some(x=>x.category==="意外險") },
+  { key:"hosp_real",  label:"實支實付", group:"醫療", color:"#27AE8F", detect:(p,c)=>Object.keys(c).some(k=>k.includes("hosp_room")) },
+  { key:"hosp_daily", label:"住院日額", group:"醫療", color:"#1E8A72", detect:(p,c)=>Object.keys(c).some(k=>k.includes("daily_room")) },
+  { key:"hosp_surg",  label:"手術險",   group:"醫療", color:"#166756", detect:(p,c)=>Object.keys(c).some(k=>k.includes("surg_opd")||k.includes("surg_hosp")) },
+  { key:"ci",         label:"重大疾病", group:"重大", color:"#9B59B6", detect:(p,c)=>p.some(x=>["重大疾病險","重大傷病險","特定傷病險"].includes(x.category)) },
+  { key:"cancer",     label:"癌症險",   group:"癌症", color:"#E74C3C", detect:(p,c)=>Object.keys(c).some(k=>k.includes("can_first")||k.includes("can_hosp")) },
+  { key:"ltc",        label:"長照險",   group:"長照", color:"#27500A", detect:(p,c)=>Object.keys(c).some(k=>k.includes("ltc_monthly")||k.includes("ltc_care")) },
+  { key:"disable",    label:"失能險",   group:"長照", color:"#5BAD6F", detect:(p,c)=>Object.keys(c).some(k=>k.includes("ltc_dis_amt")||k.includes("ltc_dis_life")) },
+  { key:"savings",    label:"儲蓄險",   group:"財務", color:"#E8638A", detect:(p,c)=>p.some(x=>x.category==="儲蓄險") },
+  { key:"annuity",    label:"年金險",   group:"財務", color:"#C0392B", detect:(p,c)=>p.some(x=>x.category==="年金險") },
+  { key:"investment", label:"投資型",   group:"財務", color:"#95A5A6", detect:(p,c)=>p.some(x=>x.category==="投資型保險") },
+];
+
+var GROUP_COLORS = { 壽險:"#4A90D9",意外:"#F5A623",醫療:"#27AE8F",重大:"#9B59B6",癌症:"#E74C3C",長照:"#27500A",財務:"#E8638A" };
+
+var CAT_COLORS = {
+  "壽險保障":"#4A90D9","醫療保障":"#27AE8F","意外險":"#F5A623",
+  "重大疾病險":"#9B59B6","重大傷病險":"#8E44AD","特定傷病險":"#7D3C98",
+  "儲蓄險":"#E8638A","年金險":"#C0392B","投資型保險":"#95A5A6",
+};
+
+var COVERAGE_GROUPS_EX = [
+  { label:"壽險保障", color:"#4A90D9", items:[
+    { label:"壽險保障額度", keys:["life_basic", "life_term"], unit:"萬元" },
+  ]},
+  { label:"意外險", color:"#F5A623", items:[
+    { label:"意外門診", keys:["acc_opd"], unit:"萬元/次" },
+    { label:"意外住院日額", keys:["acc_hosp"], unit:"元/日" },
+    { label:"加護病房", keys:["acc_icu"], unit:"元/日" },
+    { label:"骨折療養金", keys:["acc_fracture_max", "acc_fracture"], unit:"元" },
+    { label:"重大/特定燒燙傷", keys:["acc_burn_max", "acc_burn"], unit:"萬元" },
+    { label:"特定事故加倍", keys:["acc_special_max", "acc_special"], unit:"萬元" },
+    { label:"食物中毒", keys:["acc_food"], unit:"元/次" },
+    { label:"意外失能 (2~11級)", keys:["acc_disable_max", "acc_disable"], unit:"萬元" },
+    { label:"喪失工作能力", keys:["acc_work"], unit:"萬元/月" },
+    { label:"失能扶助金", keys:["acc_support"], unit:"萬元/月" },
+  ]},
+  { label:"住院醫療 (實支實付)", color:"#085041", items:[
+    { label:"病房費", keys:["hosp_room", "hosp_ext_room"], unit:"元/日" },
+    { label:"手術費", keys:["hosp_surgery", "hosp_ext_surgery"], unit:"元/次" },
+    { label:"醫療雜費", keys:["hosp_misc", "hosp_ext_misc"], unit:"元/次" },
+    { label:"加護病房費", keys:["hosp_icu"], unit:"元/日" },
+    { label:"重大器官移植", keys:["hosp_organ_max", "hosp_organ"], unit:"萬元" },
+    { label:"自負額", keys:["hosp_deduct"], unit:"元" },
+    { label:"每次住院總限額", keys:["hosp_limit_per"], unit:"元/次" },
+    { label:"醫療給付總限額", keys:["hosp_limit_acct"], unit:"萬元" },
+  ]},
+  { label:"日額型住院", color:"#0C447C", items:[
+    { label:"病房費 (1~30日)", keys:["daily_room_1_30", "hosp_ext_daily"], unit:"元/日" },
+    { label:"病房費 (31日起)", keys:["daily_room_31"], unit:"元/日" },
+    { label:"加護病房", keys:["daily_icu"], unit:"元/日" },
+    { label:"燒燙傷中心", keys:["daily_burn"], unit:"元/日" },
+    { label:"老年住院關懷", keys:["daily_senior"], unit:"元/次" },
+    { label:"出院療養金", keys:["daily_discharge"], unit:"元/日" },
+    { label:"住院看護療養", keys:["daily_nurse"], unit:"元/日" },
+    { label:"住院前後門診", keys:["daily_opd"], unit:"元/次" },
+    { label:"住院前急診", keys:["daily_er"], unit:"元/次" },
+    { label:"緊急醫療轉送", keys:["daily_transport"], unit:"元/次" },
+    { label:"特殊醫材補助", keys:["daily_device"], unit:"元/次" },
+    { label:"罹患重大疾病", keys:["daily_major"], unit:"元" },
+    { label:"抗排斥藥物", keys:["daily_antirej"], unit:"元" },
+    { label:"代替手術放射線", keys:["daily_radiation"], unit:"元" },
+    { label:"帳戶金額", keys:["daily_limit"], unit:"萬元" },
+    { label:"給付倍數", keys:["daily_limit_times"], unit:"倍" },
+  ]},
+  { label:"定額手術", color:"#3C3489", items:[
+    { label:"門診手術醫療", keys:["surg_opd_max", "surg_opd"], unit:"元/次" },
+    { label:"特定處置項目", keys:["surg_special_max", "surg_special"], unit:"元/次" },
+    { label:"住院手術醫療", keys:["surg_hosp_max", "surg_hosp"], unit:"元/次" },
+    { label:"手術看護療養金", keys:["surg_nurse_max", "surg_nurse"], unit:"元" },
+    { label:"保險給付限制", keys:["surg_limit"], unit:"萬元" },
+  ]},
+  { label:"癌症醫療", color:"#E74C3C", items:[
+    { label:"低侵襲/特定癌症", keys:["can_low"], unit:"元" },
+    { label:"初次罹癌 (一次)", keys:["can_first"], unit:"萬元" },
+    { label:"癌症住院醫療", keys:["can_hosp"], unit:"元/日" },
+    { label:"出院療養", keys:["can_discharge"], unit:"元/日" },
+    { label:"癌症門診醫療", keys:["can_opd"], unit:"元/次" },
+    { label:"癌症質子治療", keys:["can_proton"], unit:"萬元/次" },
+    { label:"放射線治療", keys:["can_radiation"], unit:"元/日" },
+    { label:"癌症基因檢測", keys:["can_gene"], unit:"萬元" },
+    { label:"化學治療", keys:["can_chemo"], unit:"元/日" },
+    { label:"標靶藥物治療", keys:["can_target"], unit:"萬元" },
+    { label:"達文西手術", keys:["can_davinci"], unit:"萬元" },
+    { label:"義乳重建手術", keys:["can_breast"], unit:"萬元" },
+    { label:"自體免疫細胞治療", keys:["can_immune"], unit:"萬元" },
+    { label:"骨髓/幹細胞移植", keys:["can_marrow"], unit:"萬元" },
+    { label:"癌症給付總限額", keys:["can_total"], unit:"萬元" },
+    { label:"安寧照護", keys:["can_hospice"], unit:"萬元" },
+    { label:"癌症身故", keys:["can_death"], unit:"萬元" },
+  ]},
+  { label:"失能長照", color:"#27500A", items:[
+    { label:"長照/長看關懷", keys:["ltc_care"], unit:"萬元" },
+    { label:"長期照護療養 (月)", keys:["ltc_monthly"], unit:"萬元/月" },
+    { label:"生活扶助/重大傷病", keys:["ltc_life"], unit:"萬元/月" },
+    { label:"特定傷病 (年)", keys:["ltc_yr"], unit:"萬元/年" },
+    { label:"特定傷病 (月)", keys:["ltc_mo"], unit:"萬元/月" },
+    { label:"失能(殘廢)保險金", keys:["ltc_dis_amt"], unit:"萬元" },
+    { label:"失能生活扶助金", keys:["ltc_dis_life"], unit:"萬元/月" },
+  ]},
+];
+
+var currentUser    = null;
+var familyData     = null;
+var familyFileName = null;
+var personDataMap  = {};
+var currentPersonId = null;
+var overrides      = {};
+var medicalOverrides = {};
+var targets        = {};
+
+// 核心運算引擎：精準抓取資料庫數字
+function getItemCurrentEx(key, policies, coverage, covOverrides) {
+  var map = GAP_KEY_MAP_EX[key];
+  if(!map) return 0;
+
+  var manualKey = currentPersonId+"_"+key;
+  if(covOverrides && covOverrides[manualKey] !== undefined) {
+    return covOverrides[manualKey] ? 1 : 0;
+  }
+
+  if(["investment","savings","waiver"].includes(key)) {
+    if(key==="investment") return policies.some(p=>p.category==="投資型保險")?1:0;
+    if(key==="savings")    return policies.some(p=>["儲蓄險","年金險"].includes(p.category))?1:0;
+    if(key==="waiver")     return sumCovEx(["ltc_waiver"], policies, coverage) > 0 ? 1 : 0;
+    return 0;
+  }
+
+  if (["life_permanent", "life_term", "ci_special"].includes(key)) {
+      let amt = 0;
+      var matchedPolicies = policies.filter(p => map.cats.includes(p.category));
+      matchedPolicies.forEach(p => {
+         if (p.insuredAmount) amt += parseFloat(p.insuredAmount) || 0;
+      });
+      if (amt === 0 && matchedPolicies.length > 0) return 1; 
+      return amt;
+  }
+
+  var amt = sumCovEx(map.keys, policies, coverage);
+
+  var matchedPolicies = policies.filter(p => map.cats.includes(p.category));
+  if (amt === 0 && matchedPolicies.length > 0) {
+      matchedPolicies.forEach(p => {
+          if (p.insuredAmount) amt += parseFloat(p.insuredAmount) || 0;
+      });
+      if (amt === 0) return 1; 
+  }
+
+  return amt;
+}
+
+function getItemStatusEx(key, policies, coverage, targets, covOverrides) {
+  var item = GAP_GROUPS_EX.flatMap(g=>g.items).find(i=>i.key===key);
+  var current = getItemCurrentEx(key, policies, coverage, covOverrides);
+  var target  = targets[key];
+  var isBool  = item?.isBool;
+  if(!current) return {status:"gap", current:0, target, pct:0};
+  if(!target||isBool) return {status:"ok", current, target:null, pct:1};
+  if(current>=target) return {status:"ok", current, target, pct:1};
+  return {status:"insufficient", current, target, pct:current/target};
+}
+
+window.addEventListener("nbs_nav_ready", async function(e) {
+  currentUser       = e.detail.user;
+  familyData        = e.detail.familyData;
+  currentPersonId   = e.detail.currentPersonId;
+  familyFileName    = e.detail.familyFileName;
+
+  if (!currentUser || !familyData) {
+    document.getElementById("loading").innerHTML = "載入失敗：請重新登入";
+    return;
+  }
+
+  try {
+    var activeMembers = familyData.members.filter(m => m.role !== "beneficiary_only");
+    
+    var fetchPromises = activeMembers.map(m => {
+      var cacheKey = "nbs_person_" + m.personId;
+      var cachedData = sessionStorage.getItem(cacheKey);
+
+      if (cachedData) {
+        personDataMap[m.personId] = JSON.parse(cachedData);
+        return Promise.resolve();
+      } else {
+        return callGAS("readFile", {
+          email: currentUser.email,
+          fileType: "person",
+          fileName: m.name + "_" + m.personId + ".json"
+        }).then(pr => {
+          if (pr.status === "ok") {
+            personDataMap[m.personId] = pr.content;
+            sessionStorage.setItem(cacheKey, JSON.stringify(pr.content));
+          }
+        }).catch(err => console.error("讀取 " + m.name + " 失敗", err));
+      }
+    });
+
+    await Promise.all(fetchPromises);
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("content").style.display = "block";
+    renderTabs();
+    renderContent();
+  } catch(err) {
+    console.error("summary.html init error", err);
+    document.getElementById("loading").innerHTML = "載入失敗：" + err.message;
+  }
+});
+
+function renderTabs() {
+  var members = familyData.members.filter(m=>m.role!=="beneficiary_only");
+  document.getElementById("member-tabs").innerHTML = members.map(m=>`
+    <div class="member-tab ${currentPersonId===m.personId?'active':''}" onclick="switchPerson('${m.personId}')">
+      ${m.name}${getInsAge(m.personId)!==null?' '+getInsAge(m.personId)+'歲':''}
+    </div>`).join("");
+}
+
+function getInsAge(pid) {
+  var p=personDataMap[pid];
+  if(!p) return null;
+  var b=new Date(p.profile.birthDate), a=new Date(p.profile.analysisDate||new Date());
+  var y=a.getFullYear()-b.getFullYear();
+  var mo=(a-new Date(b.getFullYear()+y,b.getMonth(),b.getDate()))/(1000*60*60*24*30.4375);
+  if(mo>=6)y++;
+  return y;
+}
+
+function switchPerson(pid) {
+  currentPersonId=pid;
+  renderTabs();
+  renderContent();
+}
+
+function buildDonutChartEx(active, coverage, targets, covOverrides) {
+  var allItems = GAP_GROUPS_EX.flatMap(g=>g.items);
+  var n = allItems.length;
+  
+  var cx=200, cy=140, OR=90, IR=48;
+  var gapA=0.03, sliceA=(Math.PI*2-n*gapA)/n;
+
+  var angle=-Math.PI/2;
+  var paths="";
+  var labels=""; 
+
+  function renderLegend(g) {
+    var legendHtml = `<div style="font-size:12px;font-weight:500;color:${g.color};margin-bottom:8px;border-bottom:1px solid ${g.color}30;padding-bottom:4px">${g.label}</div>`;
+    
+    g.items.forEach(item => {
+      var {status, pct, current, target} = getItemStatusEx(item.key, active, coverage, targets, covOverrides);
+      var icon = status==="gap"?"❌":status==="insufficient"?"⚠️":"✅";
+      var dotColor = status==="gap"?"#e0e0e0":item.color;
+
+      var amtHtml = "";
+      if (item.isBool) {
+        amtHtml = current > 0 ? `<span style="color:#555;font-size:11px">有</span>` : `<span style="color:#bbb;font-size:11px">無</span>`;
+      } else {
+        if (current > 0 || target > 0) {
+          var displayVal = current > 0 ? current.toLocaleString() : "0";
+          if (target > 0) displayVal += ` / ${target.toLocaleString()}`;
+          
+          amtHtml = `<span style="color:${current>0?'#0C447C':'#888'};font-family:monospace;font-weight:600;font-size:12px">${displayVal}<span style="font-size:9px;color:#888;margin-left:3px;font-family:sans-serif">${item.unit}</span></span>`;
+        } else {
+          amtHtml = `<span style="color:#bbb;font-size:11px">0</span>`;
+        }
+      }
+
+      legendHtml += `<div style="display:flex;align-items:center;gap:6px;font-size:11px;margin-bottom:5px">
+        <div style="width:10px;height:10px;border-radius:2px;background:${dotColor};flex-shrink:0"></div>
+        <span style="color:${status==="gap"?"#bbb":"#444"};flex:1;white-space:nowrap">${item.label}</span>
+        ${amtHtml}
+        <span style="margin-left:4px">${icon}</span>
+      </div>`;
+    });
+    return legendHtml;
+  }
+
+  var legendFamily = renderLegend(GAP_GROUPS_EX[0]);
+  var legendBefore = renderLegend(GAP_GROUPS_EX[1]);
+  var legendDuring = renderLegend(GAP_GROUPS_EX[2]);
+  var legendAfter  = renderLegend(GAP_GROUPS_EX[3]);
+
+  allItems.forEach(item => {
+    var {status,pct} = getItemStatusEx(item.key, active, coverage, targets, covOverrides);
+    var start = angle+gapA/2;
+    var end   = angle+gapA/2+sliceA;
+    var filledEnd = start + sliceA*pct;
+    var midA  = start + sliceA/2; 
+    angle += sliceA+gapA;
+
+    var px=(r,a)=>cx+r*Math.cos(a), py=(r,a)=>cy+r*Math.sin(a);
+    var donut=(a1,a2,lg,r1,r2)=>`M${px(r1,a1)},${py(r1,a1)} A${r1},${r1} 0 ${lg} 1 ${px(r1,a2)},${py(r1,a2)} L${px(r2,a2)},${py(r2,a2)} A${r2},${r2} 0 ${lg} 0 ${px(r2,a1)},${py(r2,a1)} Z`;
+
+    paths += `<path d="${donut(start,end,sliceA>Math.PI?1:0,OR,IR)}" fill="#f0f0f0"/>`;
+    if(pct>0.01) paths += `<path d="${donut(start,filledEnd,sliceA*pct>Math.PI?1:0,OR,IR)}" fill="${item.color}"/>`;
+    if(status==="insufficient" && pct<0.99) {
+      var gapSize=sliceA*(1-pct);
+      paths += `<path d="${donut(filledEnd,end,gapSize>Math.PI?1:0,OR,IR)}" fill="none" stroke="${item.color}" stroke-width="2.5" stroke-dasharray="4 3" opacity="0.45"/>`;
+    }
+
+    var isRight = Math.cos(midA) >= 0; 
+    var x0 = px(OR, midA), y0 = py(OR, midA); 
+    var x1 = px(OR + 12, midA), y1 = py(OR + 12, midA); 
+    var x2 = x1 + (isRight ? 15 : -15), y2 = y1; 
+
+    var textAnchor = isRight ? "start" : "end";
+    var textX = x2 + (isRight ? 4 : -4);
+    var textColor = status === "gap" ? "#aaa" : "#555";
+    var fw = status === "ok" ? "500" : "400";
+    var prefix = status === "gap" ? "❌ " : status === "insufficient" ? "⚠️ " : "";
+
+    labels += `
+      <polyline points="${x0},${y0} ${x1},${y1} ${x2},${y2}" fill="none" stroke="${item.color}60" stroke-width="1.2"/>
+      <circle cx="${x0}" cy="${y0}" r="2" fill="${item.color}"/>
+      <text x="${textX}" y="${y2+4}" text-anchor="${textAnchor}" style="font-size:11px;fill:${textColor};font-weight:${fw};letter-spacing:0.03em">${prefix}${item.label}</text>
+    `;
+  });
+
+  var okN = allItems.filter(item=>getItemStatusEx(item.key,active,coverage,targets,covOverrides).status==="ok").length;
+  var gapN = allItems.filter(item=>getItemStatusEx(item.key,active,coverage,targets,covOverrides).status==="gap").length;
+  var insN = allItems.filter(item=>getItemStatusEx(item.key,active,coverage,targets,covOverrides).status==="insufficient").length;
+
+  return `<div style="display:flex;flex-direction:column;width:100%">
+    <div style="display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap;margin-bottom:20px;padding:0">
+      <svg viewBox="0 0 400 280" style="width:100%; max-width:440px; flex-shrink:0;">
+        ${paths}
+        ${labels}
+        <text x="${cx}" y="${cy-14}" text-anchor="middle" style="font-size:11px;fill:#888">✅ 達標</text>
+        <text x="${cx}" y="${cy+4}"  text-anchor="middle" style="font-size:24px;font-weight:bold;fill:#333">${okN}</text>
+        <text x="${cx}" y="${cy+20}" text-anchor="middle" style="font-size:10px;fill:#E74C3C">❌ 缺口 ${gapN}</text>
+        <text x="${cx}" y="${cy+34}" text-anchor="middle" style="font-size:10px;fill:#F5A623">⚠ 不足 ${insN}</text>
+      </svg>
+      <div style="min-width:170px;background:#fafafa;padding:12px 16px;border-radius:10px;border:1px solid #f0f0f0">
+        ${legendFamily}
+      </div>
+    </div>
+    
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:16px;border-top:1px dashed #e8e8e8;padding-top:20px">
+      <div>${legendBefore}</div>
+      <div>${legendDuring}</div>
+      <div>${legendAfter}</div>
+    </div>
+  </div>`;
+}
+
+// ── 缺口／不足分析 ────────────────────────────────────────
+function buildGapAnalysisEx(active, coverage, targets, covOverrides) {
+  var allItems = GAP_GROUPS_EX.flatMap(g=>g.items);
+  var gaps = [], insufficients = [];
+  allItems.forEach(item => {
+    var s = getItemStatusEx(item.key, active, coverage, targets, covOverrides);
+    if(s.status==="gap") gaps.push({item, ...s});
+    if(s.status==="insufficient") insufficients.push({item, ...s});
+  });
+
+  var html = "";
+
+  if(insufficients.length) {
+    html += `<div style="font-size:11px;font-weight:500;color:#F5A623;margin-bottom:8px">⚠ 規劃不足</div>`;
+    insufficients.forEach(({item,current,target,pct}) => {
+      html += `<div style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+          <span style="font-size:12px;color:#555">${item.label}</span>
+          <div style="display:flex;gap:6px;align-items:center">
+            <span style="font-size:11px;color:#555;font-weight:500">${current.toLocaleString()}${item.unit}</span>
+            <span style="font-size:10px;color:#aaa">/ 目標 ${target?.toLocaleString()}${item.unit}</span>
+          </div>
+        </div>
+        <div style="height:7px;background:#f0f0f0;border-radius:99px;overflow:hidden">
+          <div style="height:100%;width:${Math.round(pct*100)}%;background:${item.color};border-radius:99px"></div>
+        </div>
+        <div style="font-size:11px;color:#E74C3C;margin-top:3px">尚不足 ${(target-current).toLocaleString()}${item.unit}（${Math.round(pct*100)}% 達成）</div>
+      </div>`;
+    });
+  }
+
+  if(gaps.length) {
+    html += `<div style="font-size:11px;font-weight:500;color:#E74C3C;margin-bottom:8px;margin-top:${insufficients.length?12:0}px">❌ 尚未規劃</div>`;
+    html += `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">`;
+    gaps.forEach(({item}) => {
+      html += `<span style="padding:3px 10px;background:#FCEBEB;border:1px solid #F0A8BF;border-radius:99px;font-size:12px;color:#791F1F">${item.label}</span>`;
+    });
+    html += `</div><div style="font-size:11px;color:#aaa">💡 可與保戶討論是否有需要規劃</div>`;
+  }
+
+  if(!insufficients.length && !gaps.length) {
+    html += `<div style="font-size:12px;color:#27AE8F;text-align:center;padding:12px 0">🎉 所有已設目標項目均達標！</div>`;
+  }
+
+  html += `<button onclick="openTargetModal()" style="width:100%;margin-top:10px;padding:8px;background:transparent;border:1px dashed #ddd;border-radius:8px;font-size:12px;color:#666;cursor:pointer;font-family:inherit">🎯 設定 / 修改目標保額</button>`;
+  return html;
+}
+
+// ── 目標設定 Modal ────────────────────────────────────────
+function openTargetModal() {
+  var person = personDataMap[currentPersonId];
+  var policies = person?.policies||[];
+  var active = policies.filter(p=>p.status==="有效");
+
+  var coverage = {};
+  Object.entries(person?.coverage||{}).forEach(([k,v])=>{
+    if(typeof v==="number") coverage[k]=(coverage[k]||0)+v;
+    else coverage[k]=v;
+  });
+  policies.forEach(p => {
+    Object.entries(p.coverage||{}).forEach(([k,v]) => {
+      if(typeof v === "number") coverage[k] = (coverage[k]||0)+v;
+      else coverage[k] = v;
+    });
+  });
+
+  var bodyHtml = `<div style="font-size:11px;color:#888;background:#f7f7f5;padding:8px 12px;border-radius:8px;margin-bottom:14px;line-height:1.6">
+    設定後顯示「不足」；未設定的項目只顯示「有/無（缺口）」，不計算差額。
+  </div>`;
+
+  GAP_GROUPS_EX.forEach(g => {
+    bodyHtml += `<div style="font-size:12px;font-weight:500;color:${g.color};padding:4px 10px;background:${g.color}15;border-radius:5px;margin-bottom:8px">${g.label}</div>`;
+    g.items.filter(item=>!item.isBool).forEach(item => {
+      var current = getItemCurrentEx(item.key, active, coverage, overrides);
+      var tval = targets[item.key]||"";
+      bodyHtml += `<div style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+          <label style="font-size:13px;color:#333">${item.label}</label>
+          <span style="font-size:11px;color:#aaa">目前：${current.toLocaleString()||0} ${item.unit}</span>
+        </div>
+        <div style="display:flex;align-items:center;border:1px solid #e0e0e0;border-radius:7px;overflow:hidden">
+          <input type="number" id="target_${item.key}" value="${tval}" placeholder="不設定（只顯示有/無）"
+            style="flex:1;padding:8px 12px;font-size:13px;border:none;outline:none;font-family:inherit"/>
+          ${item.unit?`<span style="padding:0 10px;font-size:11px;color:#aaa;background:#fafafa;border-left:1px solid #f0f0f0">${item.unit}</span>`:""}
+        </div>
+      </div>`;
+    });
+    bodyHtml += `<div style="margin-bottom:14px"></div>`;
+  });
+
+  var existing = document.getElementById("target-modal-overlay");
+  if(existing) existing.remove();
+
+  var overlay = document.createElement("div");
+  overlay.id = "target-modal-overlay";
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:300;display:flex;align-items:flex-end;justify-content:center";
+  overlay.innerHTML = `<div style="background:#fff;border-radius:16px 16px 0 0;padding:20px;width:100%;max-width:560px;max-height:85vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;margin-bottom:14px">
+      <span style="font-weight:500;font-size:15px">🎯 設定目標保額</span>
+      <button onclick="document.getElementById('target-modal-overlay')?.remove()" style="background:none;border:none;font-size:22px;color:#999;cursor:pointer;line-height:1">×</button>
+    </div>
+    ${bodyHtml}
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button onclick="document.getElementById('target-modal-overlay')?.remove()"
+        style="flex:1;padding:10px;background:transparent;color:#666;border:1px solid #ddd;border-radius:8px;cursor:pointer;font-family:inherit">取消</button>
+      <button onclick="saveTargets()"
+        style="flex:2;padding:10px;background:#378ADD;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit">儲存目標</button>
+    </div>
+  </div>`;
+  overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
+  document.body.appendChild(overlay);
+}
+
+function saveTargets() {
+  GAP_GROUPS_EX.flatMap(g=>g.items.filter(i=>!i.isBool)).forEach(item => {
+    var el = document.getElementById("target_"+item.key);
+    if(el) {
+      var v = parseFloat(el.value);
+      if(!isNaN(v) && v > 0) targets[item.key] = v;
+      else delete targets[item.key];
+    }
+  });
+  document.getElementById("target-modal-overlay")?.remove();
+  renderContent();
+}
+
+function openModal() {
+  var person  = personDataMap[currentPersonId];
+  var policies= person?.policies||[];
+  var coverage= person?.coverage||{};
+  var active  = policies.filter(p=>p.status==="有效");
+  var covTypes= COVERAGE_TYPES.map(t=>{
+    var auto=t.detect(active,coverage);
+    var manual=overrides[currentPersonId+"_"+t.key];
+    return {...t,covered:manual!==undefined?manual:auto,autoDetected:auto,isManual:manual!==undefined};
+  });
+
+  var groups=["壽險","意外","醫療","重大","癌症","長照","財務"];
+  var html="";
+  groups.forEach(g=>{
+    var gTypes=covTypes.filter(t=>t.group===g);
+    var gc=GROUP_COLORS[g];
+    html+=`<div class="type-group-label" style="color:${gc}">${g}</div><div class="type-tags">`;
+    gTypes.forEach(t=>{
+      html+=`<div class="type-tag" id="tag_${t.key}" onclick="toggleOverride('${t.key}')"
+        style="background:${t.covered?t.color+'18':'#f5f5f5'};border:1.5px ${t.covered?'solid':'dashed'} ${t.covered?t.color:'#ddd'}">
+        <div class="type-tag-dot" style="background:${t.covered?t.color:'transparent'};border:${t.covered?'none':'1.5px solid #ccc'}"></div>
+        <span class="type-tag-label" style="color:${t.covered?'#333':'#bbb'};font-weight:${t.covered?500:400}">${t.label}</span>
+        ${t.isManual?'<span class="manual-badge">手動</span>':''}
+      </div>`;
+    });
+    html+=`</div>`;
+  });
+  document.getElementById("modal-types").innerHTML=html;
+  document.getElementById("edit-modal").classList.add("active");
+}
+
+function toggleOverride(key) {
+  var fk=currentPersonId+"_"+key;
+  var person=personDataMap[currentPersonId];
+  var active=(person?.policies||[]).filter(p=>p.status==="有效");
+  var cov=person?.coverage||{};
+  var t=COVERAGE_TYPES.find(x=>x.key===key);
+  var auto=t?t.detect(active,cov):false;
+  var cur=overrides[fk];
+  if(cur===undefined) overrides[fk]=!auto;
+  else delete overrides[fk];
+  openModal();
+}
+function closeModal() { document.getElementById("edit-modal").classList.remove("active"); renderContent(); }
+function handleModalOverlay(e) { if(e.target===document.getElementById("edit-modal")) closeModal(); }
+
+function goBack() { window.location.href="family.html"; }
+
+function callGAS(action,params) {
+  if (action === "saveFile") {
+    return fetch(GAS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({ action, ...params }),
+    }).then(r => r.json());
+  }
+  
+  var url=new URL(GAS_URL);
+  url.searchParams.set("action",action);
+  Object.entries(params||{}).forEach(([k,v])=>{
+    if(typeof v==="object") url.searchParams.set(k,encodeURIComponent(JSON.stringify(v)));
+    else if(v!==null&&v!==undefined) url.searchParams.set(k,v);
+  });
+  return fetch(url.toString()).then(r=>r.json());
+}
+
+NBS_NAV.onMemberChange = function(pid) {
+  currentPersonId = pid;
+  if (typeof renderContent  === "function") renderContent();
+};
+NBS_NAV.init({ page: "summary" });
 
 // ── 渲染各區塊 HTML ───────────────────────────────────────
 function renderBlock(key){
@@ -439,20 +1060,108 @@ function renderBlock(key){
   // ── 其他原有模塊 ───────────────────────────────────────
   if(key==="summary"){
     var totalTWD=active.reduce(function(s,p){return s+(p.premiumTWD||0);},0);
-    var catMap={};
-    active.forEach(function(p){catMap[p.category]=(catMap[p.category]||0)+(p.premiumTWD||0);});
-    var pd=Object.entries(catMap).map(function(e){return{label:e[0],value:e[1],color:CC[e[0]]||"#999"};});
-    var pt=pd.reduce(function(s,d){return s+d.value;},0);
-    var cx=80,cy=80,r=70,cum=-Math.PI/2,paths="";
-    pd.forEach(function(d){
-      var a=(d.value/pt)*Math.PI*2;
-      var x1=cx+r*Math.cos(cum),y1=cy+r*Math.sin(cum);cum+=a;
-      var x2=cx+r*Math.cos(cum),y2=cy+r*Math.sin(cum);
-      paths+='<path d="M'+cx+','+cy+' L'+x1.toFixed(1)+','+y1.toFixed(1)+' A'+r+','+r+' 0 '+(a>Math.PI?1:0)+' 1 '+x2.toFixed(1)+','+y2.toFixed(1)+' Z" fill="'+d.color+'" stroke="#fff" stroke-width="1.5"/>';
+    var cov={};
+    policies.forEach(function(p){
+      Object.entries(p.coverage||{}).forEach(function(e){
+        if(typeof e[1]==="number") cov[e[0]]=(cov[e[0]]||0)+e[1]; else cov[e[0]]=e[1];
+      });
     });
-    var legend=pd.map(function(d){return'<div style="display:flex;align-items:center;gap:5px;font-size:11px;margin-bottom:3px"><div style="width:10px;height:10px;border-radius:2px;background:'+d.color+';flex-shrink:0"></div><span style="color:#555;min-width:64px">'+d.label+'</span><span style="color:#aaa">'+Math.round(d.value/pt*100)+'%</span></div>';}).join("");
-    return'<div style="padding:10px 12px"><div style="font-size:11px;color:#888;margin-bottom:8px">'+pName+' '+pDate+' 年繳 NT$'+(totalTWD/10000).toFixed(1)+'萬</div><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><svg width="160" height="160" style="flex-shrink:0"><g>'+paths+'</g></svg><div>'+legend+'</div></div></div>';
+    var html='<div style="padding:0">';
+
+    // ── 頂部統計 + 保單列表 ──
+    html+='<div style="padding:10px 12px">';
+    html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">'+
+      '<div style="padding:10px 12px;border-radius:10px;background:#E6F1FB"><div style="font-size:11px;color:#0C447C;margin-bottom:2px">年繳總保費</div><div style="font-size:18px;font-weight:500;color:#0C447C">NT$ '+(totalTWD/10000).toFixed(1)+'萬</div></div>'+
+      '<div style="padding:10px 12px;border-radius:10px;background:#EAF3DE"><div style="font-size:11px;color:#27500A;margin-bottom:2px">月均保費</div><div style="font-size:18px;font-weight:500;color:#27500A">NT$ '+Math.round(totalTWD/12).toLocaleString()+'</div></div>'+
+    '</div>';
+    html+='<div style="font-size:11px;font-weight:500;color:#999;margin-bottom:8px">保單號碼一覽</div>';
+    var grps={};
+    policies.forEach(function(p){var k=p.policyNo||p.id;if(!grps[k])grps[k]=[];grps[k].push(p);});
+    html+='<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;overflow:hidden">';
+    Object.entries(grps).forEach(function(entry,gi){
+      var no=entry[0],rows=entry[1];
+      var gt=rows.reduce(function(s,p){return s+(p.premiumTWD||0);},0);
+      html+='<div style="border-top:'+(gi>0?"1px solid #f0f0f0":"none")+'">'+
+        '<div style="display:flex;align-items:center;gap:8px;padding:7px 14px;background:#f7f7f5">'+
+          '<span style="font-family:monospace;font-size:12px;font-weight:500;background:#E6F1FB;color:#0C447C;padding:1px 8px;border-radius:99px">'+no+'</span>'+
+          '<span style="font-size:13px;font-weight:500">'+(rows[0].company||"")+'</span>'+
+          '<span style="font-size:12px;color:#999;margin-left:auto">年繳 NT$'+gt.toLocaleString()+'</span>'+
+        '</div>';
+      rows.forEach(function(p){
+        var cc=CC[p.category]||"#999";
+        var isMR=p.isMain!==false;
+        html+='<div style="display:grid;grid-template-columns:88px 1fr 72px 52px;align-items:center;padding:5px 14px;border-top:1px solid #f5f5f5">'+
+          '<span style="font-size:11px;padding:2px 6px;border-radius:99px;text-align:center;display:inline-block;background:'+cc+'20;color:'+cc+'">'+p.category+'</span>'+
+          '<span style="font-size:13px;padding-left:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+
+            (isMR?'<span style="font-size:9px;color:#fff;background:#378ADD;padding:1px 4px;border-radius:2px;margin-right:3px">主</span>':'<span style="font-size:9px;color:#888;background:#ebebeb;padding:1px 4px;border-radius:2px;margin-right:3px">附</span>')+
+            (p.itemName||"—")+
+          '</span>'+
+          '<span style="font-size:12px;font-weight:500;text-align:right">'+(p.premiumTWD||0).toLocaleString()+'</span>'+
+          '<span style="font-size:10px;padding:1px 5px;border-radius:99px;text-align:center;background:'+(p.status==="有效"?"#EAF3DE":"#f0f0f0")+';color:'+(p.status==="有效"?"#27500A":"#888")+'">'+(p.status||"有效")+'</span>'+
+        '</div>';
+      });
+      html+='</div>';
+    });
+    html+='</div>';
+
+    // ── 保障覆蓋率雷達圖 ──
+    html+='<div style="font-size:11px;font-weight:500;color:#999;margin-top:14px;margin-bottom:8px">保障覆蓋率</div>';
+    html+='<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:14px">'+buildDonutChartEx(active,cov,{},{})+'</div>';
+
+    // ── 缺口分析 ──
+    html+='<div style="font-size:11px;font-weight:500;color:#999;margin-top:14px;margin-bottom:8px">缺口 / 不足分析</div>';
+    html+='<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:12px 14px">'+buildGapAnalysisEx(active,cov,{},{})+'</div>';
+
+    html+='</div>';
+
+    // ── 第二頁：就醫情況 + 各項保障加總 ──
+    html+='<div style="page-break-before:always;padding:10px 12px">';
+    html+='<div style="font-size:11px;font-weight:500;color:#999;margin-bottom:8px">就醫情況</div>';
+    var baseHosp=sumCovEx(["hosp_room","hosp_ext_room","daily_room_1_30","hosp_ext_daily","daily_discharge"],policies,cov);
+    html+='<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;overflow:hidden;margin-bottom:14px">'+
+      '<table style="width:100%;border-collapse:collapse;font-size:12px">'+
+      '<thead><tr><th style="padding:7px 10px;text-align:left;font-weight:400;color:#888;font-size:11px"></th>'+
+        '<th style="padding:7px 10px;text-align:center;color:#27AE8F">疾病</th>'+
+        '<th style="padding:7px 10px;text-align:center;color:#F5A623">意外</th>'+
+        '<th style="padding:7px 10px;text-align:center;color:#E74C3C">癌症</th>'+
+      '</tr></thead><tbody>';
+    [["門診","opd"],["住院","hosp"]].forEach(function(rc,ri){
+      html+='<tr style="border-top:'+(ri>0?"1px solid #f0f0f0":"none")+'"><td style="padding:7px 10px;font-weight:500;color:#555;background:#fafafa">'+rc[0]+'</td>';
+      ["disease","accident","cancer"].forEach(function(ck){
+        if(rc[1]==="opd"&&ck==="disease"){html+='<td style="text-align:center;padding:7px 10px"><div style="display:inline-flex;padding:3px 10px;border-radius:6px;background:#EAF3DE"><span style="font-size:12px;font-weight:500;color:#27500A">健保</span></div></td>';}
+        else{
+          var val="—",unit="";
+          if(rc[1]==="hosp"){unit="元/日";if(ck==="disease")val=baseHosp||"—";else if(ck==="accident")val=(baseHosp+sumCovEx(["acc_hosp"],policies,cov))||"—";else val=(baseHosp+sumCovEx(["can_hosp","can_discharge"],policies,cov))||"—";}
+          if(rc[1]==="opd"){if(ck==="accident"){val=sumCovEx(["acc_opd"],policies,cov)||"—";unit="萬/次";}else if(ck==="cancer"){val=sumCovEx(["can_opd"],policies,cov)||"—";unit="元/次";}}
+          html+='<td style="text-align:center;padding:7px 10px"><span style="font-size:13px;font-weight:500;color:#333">'+val+'</span>'+(val!=="—"?'<span style="font-size:10px;color:#aaa;margin-left:2px">'+unit+'</span><div style="font-size:9px;color:#bbb">自動加總</div>':'')+' </td>';
+        }
+      });
+      html+='</tr>';
+    });
+    html+='</tbody></table><div style="font-size:11px;color:#bbb;padding:6px 14px">💡 疾病住院＝實支病房＋日額病房＋日額出院療養　　💡 意外住院＝疾病住院＋意外日額</div></div>';
+
+    // 各項保障加總
+    html+='<div style="font-size:11px;font-weight:500;color:#999;margin-bottom:8px">各項保障加總</div>';
+    html+='<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">';
+    COVERAGE_GROUPS_EX.forEach(function(g){
+      html+='<div style="background:#fff;border:1px solid #e8e8e8;border-radius:8px;overflow:hidden;border-top:3px solid '+g.color+'">'+
+        '<div style="display:flex;align-items:center;padding:7px 12px;background:'+g.color+'0D;border-bottom:1px solid #f0f0f0">'+
+          '<span style="font-size:12px;font-weight:600;letter-spacing:.04em;color:'+g.color+'">'+g.label+'</span>'+
+        '</div>';
+      g.items.forEach(function(item){
+        var total=sumCovEx(item.keys,policies,cov);
+        html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 12px;border-bottom:1px dashed #f5f5f5;opacity:'+(total>0?1:0.45)+'">'+
+          '<span style="font-size:11px;color:'+(total>0?"#444":"#bbb")+'">'+item.label+'</span>'+
+          (total>0?'<span style="font-size:13px;font-weight:600;font-family:monospace;color:'+g.color+'">'+total.toLocaleString()+'<span style="font-size:10px;color:#999;font-weight:normal;font-family:sans-serif;margin-left:2px">'+item.unit+'</span></span>':'<span style="color:#ddd">—</span>')+
+        '</div>';
+      });
+      html+='</div>';
+    });
+    html+='</div></div>';
+    html+='</div>';
+    return html;
   }
+
 
   if(key==="timeline"){
     function sumKey(k){ var t=0; policies.forEach(function(p){ var v=p.coverage&&p.coverage[k]; if(v&&typeof v==="number") t+=v; }); return t||null; }
@@ -635,9 +1344,12 @@ function renderBlock(key){
         else if(p.payMode==="半年繳"&&(mi-sm+12)%6===0)t+=Math.round(pr/2);
         else if(p.payMode==="年繳"&&mi===sm%12)t+=pr;
       });
-      return'<div style="padding:3px;background:'+(mi===now?"#E6F1FB":"#f7f7f5")+';border-radius:4px;text-align:center;border:'+(mi===now?"1px solid #378ADD":"1px solid transparent")+'"><div style="font-size:8px;color:#aaa">'+(mi+1)+'月</div><div style="font-size:9px;font-weight:500;color:'+(mi===now?"#0C447C":t>0?"#333":"#ddd")+'">'+(t>0?(t>=10000?(t/10000).toFixed(1)+"萬":t.toLocaleString()):"—")+'</div></div>';
+      return'<div style="padding:6px 4px;background:'+(mi===now?"#E6F1FB":"#f7f7f5")+';border-radius:6px;text-align:center;border:'+(mi===now?"1.5px solid #378ADD":"1px solid #e0e0e0")+'">'+
+        '<div style="font-size:11px;font-weight:500;color:'+(mi===now?"#0C447C":"#444")+'">'+(mi+1)+'月</div>'+
+        '<div style="font-size:14px;font-weight:600;color:'+(mi===now?"#0C447C":t>0?"#1a1a1a":"#bbb")+'">'+(t>0?(t>=10000?(t/10000).toFixed(1)+"萬":t.toLocaleString()):"—")+'</div>'+
+      '</div>';
     }).join("");
-    return'<div style="padding:10px 12px"><div style="display:grid;grid-template-columns:repeat(6,1fr);gap:3px">'+cells+'</div></div>';
+    return'<div style="padding:12px 14px"><div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px">'+cells+'</div></div>';
   }
 
   if(key==="policy"){
