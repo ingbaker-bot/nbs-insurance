@@ -1102,13 +1102,6 @@ function renderBlock(key){
     });
     html+='</div>';
 
-    // ── 保障覆蓋率雷達圖 ──
-    html+='<div style="font-size:11px;font-weight:500;color:#999;margin-top:14px;margin-bottom:8px">保障覆蓋率</div>';
-    html+='<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:14px">'+buildDonutChartEx(active,cov,{},{})+'</div>';
-
-    // ── 缺口分析 ──
-    html+='<div style="font-size:11px;font-weight:500;color:#999;margin-top:14px;margin-bottom:8px">缺口 / 不足分析</div>';
-    html+='<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:12px 14px">'+buildGapAnalysisEx(active,cov,{},{})+'</div>';
 
     html+='</div>';
 
@@ -1213,9 +1206,20 @@ function renderBlock(key){
       '</div>';
     }).join("");
 
+    // 缺口分析（保障覆蓋率彙整）
+    var cov2={};
+    policies.forEach(function(p){
+      Object.entries(p.coverage||{}).forEach(function(e){
+        if(typeof e[1]==="number") cov2[e[0]]=(cov2[e[0]]||0)+e[1]; else cov2[e[0]]=e[1];
+      });
+    });
+    var gapHtml=buildGapAnalysisEx(active,cov2,{},{});
+
     return'<div style="padding:10px 12px">'+
       '<div style="display:flex;margin-bottom:12px;border-radius:6px;overflow:hidden">'+arrows+'</div>'+
-      '<div style="display:grid;grid-template-columns:1fr 1.6fr 1fr;gap:8px">'+cols+'</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1.6fr 1fr;gap:8px;margin-bottom:14px">'+cols+'</div>'+
+      '<div style="font-size:11px;font-weight:500;color:#999;margin-bottom:8px">缺口 / 不足分析</div>'+
+      '<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:12px 14px">'+gapHtml+'</div>'+
     '</div>';
   }
 
