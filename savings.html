@@ -93,20 +93,20 @@
     .timeline-wrap { background:#fff; border:1px solid #e8e8e8; border-radius:10px; overflow:hidden; margin-bottom:14px; }
     .timeline-header { padding:12px 16px; border-bottom:1px solid #f0f0f0; display:flex; align-items:center; gap:8px; }
     .timeline-title { font-size:14px; font-weight:600; }
-    .timeline-subtitle { font-size:11px; color:#999; }
+    .timeline-subtitle { font-size:12px; color:#333; font-weight:600; }
 
     /* 時間軸表格：凍結第一欄（成員名稱） */
     .cf-scroll-wrap { overflow-x:auto; position:relative; }
     .cf-table { border-collapse:separate; border-spacing:0; font-size:12px; }
-    .cf-table th { background:#f7f7f5; padding:7px 10px; text-align:center; font-weight:500; color:#666; border-bottom:1px solid #ebebeb; white-space:nowrap; border-right:1px solid #ebebeb; }
+    .cf-table th { background:#f7f7f5; padding:7px 10px; text-align:center; font-weight:600; color:#333; border-bottom:1px solid #ebebeb; white-space:nowrap; border-right:1px solid #ebebeb; }
     .cf-table th:first-child { text-align:left; min-width:88px; width:88px; position:sticky; left:0; z-index:3; background:#f7f7f5; border-right:2px solid #dde8f5; box-shadow:2px 0 4px rgba(0,0,0,0.04); }
     .cf-table td { padding:6px 10px; text-align:center; border-bottom:1px solid #f5f5f5; border-right:1px solid #f5f5f5; }
     .cf-table td:first-child { text-align:left; font-weight:500; color:#1a1a1a; white-space:nowrap; position:sticky; left:0; z-index:2; background:#fff; border-right:2px solid #dde8f5; box-shadow:2px 0 4px rgba(0,0,0,0.04); }
     .cf-total-row td { background:#f0f6fc; font-weight:600; color:#0C447C; border-top:2px solid #c5ddf5; }
     .cf-total-row td:first-child { background:#f0f6fc; }
-    .cf-bar { height:20px; border-radius:4px; background:#E6F1FB; display:inline-flex; align-items:center; justify-content:center; min-width:28px; padding:0 4px; }
-    .cf-bar span { font-size:10px; color:#0C447C; white-space:nowrap; }
-    .cf-amount { font-size:11px; color:#0C447C; font-weight:500; white-space:nowrap; }
+    .cf-bar { height:26px; border-radius:4px; background:#E6F1FB; display:inline-flex; align-items:center; justify-content:center; min-width:36px; padding:0 6px; }
+    .cf-bar span { font-size:14px; color:#0C447C; white-space:nowrap; font-weight:600; }
+    .cf-amount { font-size:13px; color:#0C447C; font-weight:600; white-space:nowrap; }
     /* 被保險人分組標題列 */
     .cf-member-row td { background:#f4f8fd; padding:7px 10px; border-top:2px solid #dde8f5; border-bottom:1px solid #dde8f5; }
     /* 保單子列縮排 */
@@ -142,10 +142,10 @@
       /* 隱藏捲軸視覺（Chrome 不印捲軸，但保險起見） */
       ::-webkit-scrollbar { display:none; }
       /* 表格樣式微調 */
-      .cf-table { font-size:9px; }
-      .cf-table th, .cf-table td { padding:4px 5px; }
-      .cf-bar { height:16px; }
-      .cf-bar span { font-size:8px; }
+      .cf-table { font-size:11px; }
+      .cf-table th, .cf-table td { padding:5px 7px; }
+      .cf-bar { height:24px; }
+      .cf-bar span { font-size:13px; font-weight:600; }
       /* sticky 在列印時取消（避免重複渲染） */
       .cf-table th:first-child,
       .cf-table td:first-child { position:static !important; box-shadow:none !important; }
@@ -772,7 +772,7 @@ function renderTimeline() {
 
   // ── 表頭 ──
   const yearHeaders = trimYears.map(y =>
-    `<th>${y}<br><span style="font-size:9px;color:#bbb;font-weight:400">${y-1911}年</span></th>`
+    `<th>${y}<br><span style="font-size:11px;color:#333;font-weight:700">${y-1911}年</span></th>`
   ).join("");
 
   // ── 分組列 ──
@@ -781,9 +781,9 @@ function renderTimeline() {
     const nameRow = `<tr class="cf-member-row">
       <td colspan="${trimYears.length + 1}">
         <span style="font-size:12px;font-weight:600;color:#1a1a1a">${g.memberName}</span>
-        <span style="font-size:10px;color:#bbb;margin-left:6px">${g.policies.length} 張保單</span>
+        <span style="font-size:11px;color:#555;font-weight:500;margin-left:6px">${g.policies.length} 張保單</span>
         ${g.policies.filter(p=>Object.keys(p.flows).length===0).length > 0
-          ? `<span style="font-size:10px;color:#e0a030;margin-left:4px">（含 ${g.policies.filter(p=>Object.keys(p.flows).length===0).length} 張繳費中）</span>`
+          ? `<span style="font-size:11px;color:#b07000;font-weight:500;margin-left:4px">（含 ${g.policies.filter(p=>Object.keys(p.flows).length===0).length} 張繳費中）</span>`
           : ""}
       </td>
     </tr>`;
@@ -792,7 +792,7 @@ function renderTimeline() {
     const policyRowsHtml = g.policies.map(pr => {
       const cells = trimYears.map(yr => {
         const amt = pr.flows[yr] || 0;
-        if (!amt) return `<td><span style="color:#e8e8e8;font-size:10px">—</span></td>`;
+        if (!amt) return `<td><span style="color:#888;font-size:13px;font-weight:500">—</span></td>`;
         const w = Math.max(28, Math.round((amt / maxTotal) * 80));
         return `<td><div class="cf-bar" style="width:${w}px"><span>${fmtAmt(amt)}</span></div></td>`;
       }).join("");
@@ -808,14 +808,14 @@ function renderTimeline() {
       // 繳費中但無現金流：標示狀態
       const hasFlow = Object.keys(pr.flows).length > 0;
       const statusTag = !hasFlow
-        ? `<span style="font-size:9px;color:#bbb;margin-left:4px">（繳費中）</span>`
+        ? `<span style="font-size:10px;color:#888;font-weight:500;margin-left:4px">（繳費中）</span>`
         : "";
       const firstCell = `<td style="padding-left:18px;min-width:160px">
         <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px">
           <span style="${badgeStyle}">${pr.category}</span>${statusTag}
         </div>
-        <div style="font-size:11px;font-weight:600;color:#333;font-family:monospace;white-space:nowrap">${pr.policyNo}</div>
-        ${pr.itemName ? `<div style="font-size:10px;color:#888;margin-top:1px;white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis">${pr.itemName}</div>` : ""}
+        <div style="font-size:13px;font-weight:700;color:#1a1a1a;font-family:monospace;white-space:nowrap">${pr.policyNo}</div>
+        ${pr.itemName ? `<div style="font-size:12px;color:#222;font-weight:500;margin-top:2px;white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis">${pr.itemName}</div>` : ""}
       </td>`;
 
       return `<tr class="cf-policy-row">${firstCell}${cells}</tr>`;
@@ -832,8 +832,8 @@ function renderTimeline() {
       <td style="padding-left:18px">小計（台幣）</td>
       ${trimYears.map(yr => {
         const amt = memberFlows[yr] || 0;
-        if (!amt) return `<td><span style="color:#c0c0c0">—</span></td>`;
-        return `<td class="cf-amount" style="font-size:11px">${fmtAmt(amt)}</td>`;
+        if (!amt) return `<td><span style="color:#999;font-size:13px">—</span></td>`;
+        return `<td class="cf-amount">${fmtAmt(amt)}</td>`;
       }).join("")}
     </tr>`;
 
@@ -845,7 +845,7 @@ function renderTimeline() {
     <td>合計現金流（台幣）</td>
     ${trimYears.map(yr => {
       const amt = totalFlows[yr] || 0;
-      if (!amt) return `<td>—</td>`;
+      if (!amt) return `<td><span style="color:#999;font-size:13px">—</span></td>`;
       return `<td class="cf-amount">${fmtAmt(amt)}</td>`;
     }).join("")}
   </tr>`;
