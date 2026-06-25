@@ -729,10 +729,48 @@ function buildDonutChart(active, coverage, targets, covOverrides) {
       </div>
     </div>
     
-    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:16px;border-top:1px dashed #e8e8e8;padding-top:20px">
-      <div>${legendBefore}</div>
-      <div>${legendDuring}</div>
-      <div>${legendAfter}</div>
+    <div style="border-top:1px dashed #e8e8e8;padding-top:20px">
+      <!-- 箭頭指標列 -->
+      <div style="display:flex;align-items:stretch;margin-bottom:16px;font-size:13px;font-weight:600;letter-spacing:0.05em;height:36px">
+        <!-- 醫療前期 -->
+        <div style="
+          flex:1;
+          display:flex;align-items:center;justify-content:center;
+          background:#4CAF86;
+          color:#fff;
+          position:relative;
+          clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%);
+          padding-right:14px;
+        ">醫療前期</div>
+        <!-- 醫療中期 -->
+        <div style="
+          flex:1.4;
+          display:flex;align-items:center;justify-content:center;
+          background:#378ADD;
+          color:#fff;
+          position:relative;
+          clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%, 14px 50%);
+          margin-left:-1px;
+          padding: 0 14px;
+        ">醫療中期</div>
+        <!-- 醫療後期 -->
+        <div style="
+          flex:1;
+          display:flex;align-items:center;justify-content:center;
+          background:#E87BAD;
+          color:#fff;
+          position:relative;
+          clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 14px 50%);
+          margin-left:-1px;
+          padding-left:14px;
+        ">醫療後期</div>
+      </div>
+      <!-- 圖例內容 -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:16px">
+        <div>${legendBefore}</div>
+        <div>${legendDuring}</div>
+        <div>${legendAfter}</div>
+      </div>
     </div>
   </div>`;
 }
