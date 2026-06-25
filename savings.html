@@ -201,7 +201,7 @@ const TYPES_BASE = [
 const TYPE_SAVINGS_EXTRA = { key:"5", title:"月領生存金",  desc:"每月固定領取生存保險金" };
 const TYPE_INVEST_EXTRA  = { key:"5", title:"月月配息",    desc:"每月依帳戶價值配息" };
 // 類型 6：逐年遞增生存金
-const TYPE_YEARLY_DETAIL = { key:"6", title:"逐年生存金明細", desc:"每年金額不同，逐年手動輸入" };
+const TYPE_YEARLY_DETAIL = { key:"6", title:"逐年領回明細（分紅／還本型）", desc:"含生存金及紅利，依試算表逐年填入" };
 
 function getTypes(category) {
   const extra = category === "投資型保險" ? TYPE_INVEST_EXTRA : TYPE_SAVINGS_EXTRA;
@@ -327,9 +327,11 @@ function renderSettings() {
         afterFreqYr:   sv.afterFreqYr   || "1",
         afterStartYr:  sv.afterStartYr  || "0",
         afterAmt:      sv.afterAmt      || "",
-        yearlyRows:    sv.yearlyRows    || "10",
+        yearlyRows:    sv.yearlyRows    || "20",
         yearlyAmts:    sv.yearlyAmts    || [],
-        note:          sv.note          || "",
+        // 分紅保單（類型6）若備註空白，預填警語
+        note: sv.note !== undefined && sv.note !== "" ? sv.note :
+              (sv.type === "6" ? "領回金額採中分紅預估，實際以保險公司年度公告為準" : ""),
       };
     }
     const s        = settings[p.id];
@@ -510,11 +512,18 @@ function renderYearlyTable(pid, s) {
            style="width:80px" /></td>
       <td><input type="number" value="${escHtml(String(row.amt))}" placeholder="0"
            oninput="updateYearly('${pid}',${i},'amt',this.value)" /></td>
+      <td><input type="text" value="${escHtml(row.note||'')}" placeholder="如：生存金+中分紅"
+           oninput="updateYearly('${pid}',${i},'note',this.value)"
+           style="width:120px;font-size:11px;color:#888" /></td>
     </tr>`;
   }
 
   return `<div class="adv-block">
-    <div class="adv-block-title">逐年領回明細（最多 20 年）</div>
+    <div class="adv-block-title">逐年領回明細（分紅 / 還本型，最多 20 年）</div>
+    <div style="background:#FFF8E1;border:1px solid #FFD54F;border-radius:6px;padding:7px 10px;margin-bottom:10px;font-size:11px;color:#7B4F00;line-height:1.6">
+      📋 <strong>填入方式</strong>：依保險公司試算表，將各年度「生存保險金＋年度保單紅利（建議採中分紅）」加總後逐年填入<br>
+      ⚠️ 領回金額含浮動紅利，時間軸數字僅供參考，實際以保險公司年度公告為準
+    </div>
     <div class="yr-count-row">
       <label>顯示年數</label>
       <input type="number" id="yr-rows-${pid}" value="${rows}" min="1" max="20"
@@ -522,7 +531,7 @@ function renderYearlyTable(pid, s) {
       <span style="font-size:11px;color:#aaa">年（可填 1–20）</span>
     </div>
     <table class="yearly-table">
-      <thead><tr><th>西元年</th><th style="text-align:right">金額（元）</th></tr></thead>
+      <thead><tr><th>西元年</th><th style="text-align:right">金額（元）</th><th style="text-align:left;padding-left:8px;color:#aaa">說明（選填）</th></tr></thead>
       <tbody id="yr-tbody-${pid}">${tableRows}</tbody>
     </table>
   </div>`;
@@ -550,6 +559,9 @@ function updateYearlyRows(pid, val) {
            style="width:80px" /></td>
       <td><input type="number" value="${escHtml(String(row.amt))}" placeholder="0"
            oninput="updateYearly('${pid}',${i},'amt',this.value)" /></td>
+      <td><input type="text" value="${escHtml(row.note||'')}" placeholder="如：生存金+中分紅"
+           oninput="updateYearly('${pid}',${i},'note',this.value)"
+           style="width:120px;font-size:11px;color:#888" /></td>
     </tr>`;
   }
   const tbody = document.getElementById("yr-tbody-" + pid);
@@ -596,6 +608,10 @@ function selectType(pid, typeKey) {
     btn.querySelector(".type-desc").style.color  = on ? "#378ADD" : "#bbb";
   });
 
+  // 切換到類型 6（分紅/還本型）時，若備註空白自動預填警語
+  if (typeKey === "6" && !settings[pid].note) {
+    settings[pid].note = "領回金額採中分紅預估，實際以保險公司年度公告為準";
+  }
   // 重繪進階設定內容
   const inner = document.getElementById("adv-inner-" + pid);
   if (inner) inner.innerHTML = renderAdvInner(pid, settings[pid]);
