@@ -89,6 +89,14 @@ var hospitalsData = null;
 var members = [];
 var currentMemberId = null;
 var activeFilter = "all";
+var manualAddr = ""; // 手動輸入的地址
+
+function searchAddr() {
+  var input = document.getElementById("addr-input");
+  if (!input) return;
+  manualAddr = input.value.trim();
+  renderContent();
+}
 var dataSource = "local"; // "live" or "local"
 
 // ── nav ready ─────────────────────────────────────────────────
@@ -127,9 +135,10 @@ function loadHospitals() {
   renderContent();
 
   // 背景嘗試從同 repo 的 hospitals.json 取得最新版
-  // （需將 hospitals.json 放到 GitHub repo 根目錄才生效）
-  fetch("hospitals.json", { cache: "no-cache" })
-    .then(function(r){ if (!r.ok) throw new Error("not found"); return r.json(); })
+  // 先 HEAD 確認檔案存在，避免 404 紅色錯誤
+  fetch("hospitals.json", { method: "HEAD" })
+    .then(function(r){ if (!r.ok) throw new Error("not found"); return fetch("hospitals.json", { cache: "no-cache" }); })
+    .then(function(r){ return r.json(); })
     .then(function(data){
       if (!data.hospitals) throw new Error("invalid");
       hospitalsData = data;
@@ -176,9 +185,9 @@ function renderContent() {
   var el = document.getElementById("main-content");
   var member = members.find(function(m){ return m.personId === currentMemberId; });
 
-  var addr = member ? (member.address || "").trim() : "";
-  var city = member ? (member.addressCity || extractCity(addr)) : "";
-  var district = member ? (member.addressDistrict || extractDistrict(addr)) : "";
+  var addr = manualAddr || (member ? (member.address || "").trim() : "");
+  var city = extractCity(addr);
+  var district = extractDistrict(addr);
   var memberName = member ? member.name : "查詢者";
 
   var matched = matchHospitals(city, district);
@@ -192,8 +201,16 @@ function renderContent() {
   if (addr) {
     html += '<div class="addr-text">' + addr + '</div>';
     if (city) html += '<div style="font-size:11px;color:#888;margin-top:2px">搜尋：' + city + (district?" · "+district:"") + '</div>';
+    html += '<div style="margin-top:8px;display:flex;gap:6px">';
+    html += '<input id="addr-input" type="text" value="'+addr+'" placeholder="輸入地址查詢" style="flex:1;padding:6px 10px;border:1px solid #ddd;border-radius:7px;font-size:12px;font-family:inherit;outline:none">';
+    html += '<button onclick="searchAddr()" style="padding:6px 14px;background:#378ADD;color:#fff;border:none;border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit">查詢</button>';
+    html += '</div>';
   } else {
-    html += '<div class="addr-text none">尚未設定地址，顯示全台資料</div>';
+    html += '<div style="margin-bottom:6px;font-size:12px;color:#aaa">輸入地址以搜尋附近醫院</div>';
+    html += '<div style="display:flex;gap:6px">';
+    html += '<input id="addr-input" type="text" placeholder="例：台北市信義區…" style="flex:1;padding:6px 10px;border:1px solid #ddd;border-radius:7px;font-size:12px;font-family:inherit;outline:none" onkeydown="if(event.key===\'Enter\')searchAddr()">';
+    html += '<button onclick="searchAddr()" style="padding:6px 14px;background:#378ADD;color:#fff;border:none;border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit">查詢</button>';
+    html += '</div>';
   }
   html += '</div></div>';
 
