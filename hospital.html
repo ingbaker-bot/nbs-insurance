@@ -57,6 +57,40 @@
     .src-tag{font-size:10px;padding:1px 6px;border-radius:4px;margin-left:6px}
     .src-live{background:#E8F5E9;color:#2E7D32}
     .src-local{background:#FFF8E1;color:#856404}
+
+    /* ── 管理員介面 ── */
+    .admin-btn{font-size:11px;padding:3px 10px;border-radius:99px;border:1px solid #ddd;background:#fff;color:#aaa;cursor:pointer;font-family:inherit}
+    .admin-btn:hover{border-color:#378ADD;color:#378ADD}
+    .admin-panel{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;overflow-y:auto;padding:20px}
+    .admin-panel.open{display:flex;align-items:flex-start;justify-content:center}
+    .admin-box{background:#fff;border-radius:14px;width:100%;max-width:640px;padding:20px;margin:auto}
+    .admin-title{font-size:15px;font-weight:600;color:#0C447C;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
+    .admin-close{background:none;border:none;font-size:22px;color:#aaa;cursor:pointer;line-height:1}
+    .admin-section{margin-bottom:20px}
+    .admin-section-title{font-size:12px;font-weight:600;color:#555;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #f0f0f0}
+    .admin-form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+    .admin-form-row.trio{grid-template-columns:1fr 1fr 1fr}
+    .admin-lbl{font-size:11px;color:#888;margin-bottom:3px}
+    .admin-input{width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit;outline:none}
+    .admin-input:focus{border-color:#378ADD}
+    .admin-select{width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit;outline:none;background:#fff}
+    .admin-add-btn{width:100%;padding:9px;background:#378ADD;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;margin-top:4px}
+    .admin-add-btn:hover{background:#2a6fb5}
+    .admin-list{max-height:240px;overflow-y:auto;border:1px solid #f0f0f0;border-radius:8px}
+    .admin-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid #f7f7f7;font-size:12px}
+    .admin-item:last-child{border-bottom:none}
+    .admin-item-name{flex:1;font-weight:500;color:#333}
+    .admin-item-meta{font-size:11px;color:#aaa}
+    .admin-item-del{background:none;border:none;color:#F44336;font-size:16px;cursor:pointer;padding:0 4px;line-height:1}
+    .admin-export-btn{width:100%;padding:11px;background:#27AE8F;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit}
+    .admin-export-btn:hover{background:#1e8a70}
+    .admin-note{font-size:11px;color:#aaa;text-align:center;margin-top:8px;line-height:1.7}
+    .admin-lock{background:#f7f7f5;border-radius:10px;padding:20px;text-align:center}
+    .admin-lock-title{font-size:14px;font-weight:600;color:#333;margin-bottom:12px}
+    .admin-pw-row{display:flex;gap:8px;max-width:300px;margin:0 auto}
+    .admin-pw-input{flex:1;padding:8px 12px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit;outline:none}
+    .admin-pw-btn{padding:8px 16px;background:#378ADD;color:#fff;border:none;border-radius:7px;font-size:13px;cursor:pointer;font-family:inherit}
+    .admin-err{font-size:12px;color:#F44336;margin-top:8px}
   </style>
 </head>
 <body>
@@ -64,8 +98,86 @@
       <div class="page-hdr">
         <button class="page-hdr-back" onclick="history.back()">‹</button>
         <div class="page-hdr-title">🏥 醫院病房費查詢</div>
-        <span class="data-badge" id="data-badge" onclick="reloadFromDrive()" title="點擊重新從雲端更新">⏳ 讀取中</span>
+        <span class="data-badge" id="data-badge">⏳ 讀取中</span>
+        <button class="admin-btn" onclick="openAdmin()">⚙ 管理</button>
       </div>
+
+<!-- ── 管理員面板 ── -->
+<div class="admin-panel" id="admin-panel">
+  <div class="admin-box">
+    <div class="admin-title">⚙ 醫院資料管理
+      <button class="admin-close" onclick="closeAdmin()">×</button>
+    </div>
+    <!-- 密碼鎖 -->
+    <div id="admin-lock">
+      <div class="admin-lock">
+        <div class="admin-lock-title">🔒 管理員專區</div>
+        <div class="admin-pw-row">
+          <input class="admin-pw-input" type="password" id="admin-pw" placeholder="輸入管理密碼" onkeydown="if(event.key==='Enter')checkPw()">
+          <button class="admin-pw-btn" onclick="checkPw()">進入</button>
+        </div>
+        <div id="admin-pw-err" class="admin-err"></div>
+        <div style="font-size:11px;color:#bbb;margin-top:12px">此功能限管理員使用，資料異動需重新上傳 hospitals.json 至 GitHub</div>
+      </div>
+    </div>
+    <!-- 管理內容（解鎖後顯示）-->
+    <div id="admin-content" style="display:none">
+      <!-- 新增醫院 -->
+      <div class="admin-section">
+        <div class="admin-section-title">➕ 新增 / 編輯醫院</div>
+        <div class="admin-form-row">
+          <div><div class="admin-lbl">醫院名稱 *</div><input class="admin-input" id="f-name" placeholder="例：台大醫院"></div>
+          <div><div class="admin-lbl">醫院等級 *</div>
+            <select class="admin-select" id="f-level">
+              <option value="醫學中心">醫學中心</option>
+              <option value="區域醫院">區域醫院</option>
+              <option value="地區醫院">地區醫院</option>
+            </select>
+          </div>
+        </div>
+        <div class="admin-form-row">
+          <div><div class="admin-lbl">縣市 *</div><input class="admin-input" id="f-city" placeholder="例：台北市"></div>
+          <div><div class="admin-lbl">區鄉鎮 *</div><input class="admin-input" id="f-district" placeholder="例：中正區"></div>
+        </div>
+        <div class="admin-form-row">
+          <div><div class="admin-lbl">大區域</div>
+            <select class="admin-select" id="f-region">
+              <option value="大台北地區">大台北地區</option>
+              <option value="北部地區">北部地區</option>
+              <option value="中部地區">中部地區</option>
+              <option value="南部地區">南部地區</option>
+              <option value="宜花東地區">宜花東地區</option>
+            </select>
+          </div>
+        </div>
+        <div class="admin-section-title" style="margin-top:12px">病房差額（元/日，留空表示無資料）</div>
+        <div class="admin-form-row trio">
+          <div><div class="admin-lbl">套房/豪華單人</div><input class="admin-input" id="f-single-hi" type="number" placeholder="例：8000"></div>
+          <div><div class="admin-lbl">一人房</div><input class="admin-input" id="f-single" type="number" placeholder="例：3500"></div>
+          <div><div class="admin-lbl">二人房</div><input class="admin-input" id="f-double" type="number" placeholder="例：2000"></div>
+        </div>
+        <button class="admin-add-btn" onclick="addHospital()">➕ 加入醫院資料</button>
+        <div id="admin-add-msg" style="font-size:12px;color:#27AE8F;margin-top:6px;text-align:center"></div>
+      </div>
+      <!-- 現有資料列表 -->
+      <div class="admin-section">
+        <div class="admin-section-title">📋 目前資料（<span id="admin-count">0</span> 家醫院）
+          <input id="admin-search" type="text" placeholder="搜尋醫院名稱…" style="margin-left:8px;padding:3px 8px;border:1px solid #ddd;border-radius:5px;font-size:11px;outline:none" oninput="renderAdminList()">
+        </div>
+        <div class="admin-list" id="admin-list"></div>
+      </div>
+      <!-- 匯出 -->
+      <div class="admin-section">
+        <div class="admin-section-title">📥 匯出更新後的資料</div>
+        <button class="admin-export-btn" onclick="exportJson()">⬇ 下載 hospitals.json</button>
+        <div class="admin-note">
+          下載後，請上傳至 GitHub repo 根目錄（覆蓋舊檔）<br>
+          所有使用者下次開啟頁面即自動取得最新資料
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
       <div id="member-tabs" class="member-tabs"></div>
       <div id="main-content">
         <div class="loading"><span class="spin"></span>準備資料中…</div>
@@ -410,6 +522,106 @@ function extractDistrict(addr) {
   return "";
 }
 function setFilter(f) { activeFilter = f; renderContent(); }
+
+// ── 管理員功能 ───────────────────────────────────────────────
+var ADMIN_PW = "NBS2024"; // ← 可自行修改
+var adminUnlocked = false;
+var editingId = null;
+
+function openAdmin() {
+  document.getElementById("admin-panel").classList.add("open");
+  if (adminUnlocked) renderAdminList();
+}
+function closeAdmin() {
+  document.getElementById("admin-panel").classList.remove("open");
+  editingId = null;
+}
+function checkPw() {
+  var pw = document.getElementById("admin-pw").value;
+  if (pw === ADMIN_PW) {
+    adminUnlocked = true;
+    document.getElementById("admin-lock").style.display = "none";
+    document.getElementById("admin-content").style.display = "block";
+    renderAdminList();
+  } else {
+    document.getElementById("admin-pw-err").textContent = "密碼錯誤，請再試一次";
+    document.getElementById("admin-pw").value = "";
+  }
+}
+function renderAdminList() {
+  var q = (document.getElementById("admin-search").value || "").trim();
+  var list = hospitalsData.hospitals.filter(function(h){ return !q || h.name.indexOf(q) >= 0; });
+  document.getElementById("admin-count").textContent = hospitalsData.hospitals.length;
+  document.getElementById("admin-list").innerHTML = list.map(function(h){
+    return '<div class="admin-item">' +
+      '<span class="admin-item-name">' + h.name + '</span>' +
+      '<span class="admin-item-meta">' + h.city + ' · ' + h.district + '</span>' +
+      '<span class="admin-item-meta" style="margin-left:4px">' + (h.rooms.single ? h.rooms.single.toLocaleString()+'元' : '—') + '</span>' +
+      '<button class="admin-item-del" onclick="editHospital(\''+h.id+'\')" title="編輯">✏️</button>' +
+      '<button class="admin-item-del" onclick="deleteHospital(\''+h.id+'\')" title="刪除">🗑</button>' +
+    '</div>';
+  }).join("") || '<div style="padding:16px;text-align:center;color:#bbb;font-size:12px">無符合資料</div>';
+}
+function addHospital() {
+  var name = document.getElementById("f-name").value.trim();
+  var level = document.getElementById("f-level").value;
+  var city = document.getElementById("f-city").value.trim();
+  var district = document.getElementById("f-district").value.trim();
+  var region = document.getElementById("f-region").value;
+  var shi = document.getElementById("f-single-hi").value;
+  var si  = document.getElementById("f-single").value;
+  var di  = document.getElementById("f-double").value;
+  var msg = document.getElementById("admin-add-msg");
+  if (!name || !city || !district) {
+    msg.style.color = "#F44336";
+    msg.textContent = "請填寫醫院名稱、縣市、區鄉鎮";
+    return;
+  }
+  var newH = { id: editingId || ("h"+String(Date.now()).slice(-6)), name:name, level:level, region:region, city:city, district:district,
+    rooms:{ single_hi: shi?parseInt(shi):null, single: si?parseInt(si):null, double: di?parseInt(di):null } };
+  if (editingId) {
+    var idx = hospitalsData.hospitals.findIndex(function(h){ return h.id===editingId; });
+    if (idx >= 0) hospitalsData.hospitals[idx] = newH;
+    editingId = null;
+    msg.textContent = "✅ 已更新「" + name + "」";
+  } else {
+    hospitalsData.hospitals.push(newH);
+    msg.textContent = "✅ 已新增「" + name + "」（共 " + hospitalsData.hospitals.length + " 家）";
+  }
+  msg.style.color = "#27AE8F";
+  ["f-name","f-city","f-district","f-single-hi","f-single","f-double"].forEach(function(id){ document.getElementById(id).value=""; });
+  renderAdminList();
+  renderContent();
+}
+function editHospital(id) {
+  var h = hospitalsData.hospitals.find(function(x){ return x.id===id; });
+  if (!h) return;
+  editingId = id;
+  document.getElementById("f-name").value = h.name;
+  document.getElementById("f-level").value = h.level;
+  document.getElementById("f-city").value = h.city;
+  document.getElementById("f-district").value = h.district;
+  document.getElementById("f-region").value = h.region;
+  document.getElementById("f-single-hi").value = h.rooms.single_hi||"";
+  document.getElementById("f-single").value = h.rooms.single||"";
+  document.getElementById("f-double").value = h.rooms.double||"";
+  var msg = document.getElementById("admin-add-msg");
+  msg.style.color = "#F57F17";
+  msg.textContent = "✏️ 編輯模式：「"+h.name+"」，修改後按加入";
+}
+function deleteHospital(id) {
+  var h = hospitalsData.hospitals.find(function(x){ return x.id===id; });
+  if (!h || !confirm("確定刪除「"+h.name+"」？")) return;
+  hospitalsData.hospitals = hospitalsData.hospitals.filter(function(x){ return x.id!==id; });
+  renderAdminList(); renderContent();
+}
+function exportJson() {
+  var today = new Date();
+  hospitalsData.updated = (today.getFullYear()-1911) + "/" + String(today.getMonth()+1).padStart(2,"0");
+  var blob = new Blob([JSON.stringify(hospitalsData, null, 2)], {type:"application/json"});
+  var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "hospitals.json"; a.click();
+  URL.revokeObjectURL(a.href);
+}
 </script>
 <script>
   NBS_NAV.onMemberChange = function(pid) {
