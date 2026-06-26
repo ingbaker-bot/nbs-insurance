@@ -1,0 +1,746 @@
+{
+  "version": "1.0",
+  "updated": "2021/02",
+  "source": "RFC國際認證財務顧問師：李丞敏",
+  "fields": {
+    "single_hi": "套房/豪華單人房差額（元/日）",
+    "single": "一人房差額（元/日）",
+    "double": "二人房差額（元/日）"
+  },
+  "fallback_rules": [
+    "先找同區醫院",
+    "同區無資料 → 找同市醫院",
+    "同市無資料 → 找同大區醫院",
+    "大區無資料 → 使用全台平均值"
+  ],
+  "hospitals": [
+    {
+      "id": "h001",
+      "name": "市立醫院（台北）",
+      "level": "區域醫院",
+      "region": "大台北地區",
+      "city": "台北市",
+      "district": "中山區",
+      "rooms": {
+        "single_hi": null,
+        "single": 3000,
+        "double": 2000
+      }
+    },
+    {
+      "id": "h002",
+      "name": "長庚醫院（台北）",
+      "level": "醫學中心",
+      "region": "大台北地區",
+      "city": "台北市",
+      "district": "內湖區",
+      "rooms": {
+        "single_hi": 4000,
+        "single": 3500,
+        "double": 2300
+      }
+    },
+    {
+      "id": "h003",
+      "name": "台北榮總",
+      "level": "醫學中心",
+      "region": "大台北地區",
+      "city": "台北市",
+      "district": "北投區",
+      "rooms": {
+        "single_hi": 20000,
+        "single": 4000,
+        "double": 2400
+      }
+    },
+    {
+      "id": "h004",
+      "name": "國泰醫院（總院）",
+      "level": "醫學中心",
+      "region": "大台北地區",
+      "city": "台北市",
+      "district": "大安區",
+      "rooms": {
+        "single_hi": 18000,
+        "single": 5390,
+        "double": 2600
+      }
+    },
+    {
+      "id": "h005",
+      "name": "中心診所",
+      "level": "地區醫院",
+      "region": "大台北地區",
+      "city": "台北市",
+      "district": "中正區",
+      "rooms": {
+        "single_hi": 7400,
+        "single": 4100,
+        "double": 2700
+      }
+    },
+    {
+      "id": "h006",
+      "name": "台大醫院",
+      "level": "醫學中心",
+      "region": "大台北地區",
+      "city": "台北市",
+      "district": "中正區",
+      "rooms": {
+        "single_hi": 8000,
+        "single": 3600,
+        "double": 1600
+      }
+    },
+    {
+      "id": "h007",
+      "name": "新光醫院",
+      "level": "醫學中心",
+      "region": "大台北地區",
+      "city": "台北市",
+      "district": "士林區",
+      "rooms": {
+        "single_hi": 20000,
+        "single": 5300,
+        "double": 2650
+      }
+    },
+    {
+      "id": "h008",
+      "name": "台安醫院",
+      "level": "區域醫院",
+      "region": "大台北地區",
+      "city": "台北市",
+      "district": "松山區",
+      "rooms": {
+        "single_hi": 18500,
+        "single": 4800,
+        "double": 3200
+      }
+    },
+    {
+      "id": "h009",
+      "name": "耕莘醫院",
+      "level": "區域醫院",
+      "region": "大台北地區",
+      "city": "新北市",
+      "district": "新店區",
+      "rooms": {
+        "single_hi": 3500,
+        "single": 2700,
+        "double": 2000
+      }
+    },
+    {
+      "id": "h010",
+      "name": "台北醫學大學附設醫院",
+      "level": "醫學中心",
+      "region": "大台北地區",
+      "city": "台北市",
+      "district": "信義區",
+      "rooms": {
+        "single_hi": 22000,
+        "single": 6500,
+        "double": 3200
+      }
+    },
+    {
+      "id": "h011",
+      "name": "馬偕醫院（台北）",
+      "level": "醫學中心",
+      "region": "大台北地區",
+      "city": "台北市",
+      "district": "中山區",
+      "rooms": {
+        "single_hi": 5500,
+        "single": 4500,
+        "double": 2700
+      }
+    },
+    {
+      "id": "h012",
+      "name": "恩主公醫院",
+      "level": "區域醫院",
+      "region": "大台北地區",
+      "city": "新北市",
+      "district": "三峽區",
+      "rooms": {
+        "single_hi": 5300,
+        "single": 4000,
+        "double": 1800
+      }
+    },
+    {
+      "id": "h013",
+      "name": "亞東醫院",
+      "level": "醫學中心",
+      "region": "大台北地區",
+      "city": "新北市",
+      "district": "板橋區",
+      "rooms": {
+        "single_hi": 12500,
+        "single": 3000,
+        "double": 2200
+      }
+    },
+    {
+      "id": "h014",
+      "name": "台北慈濟醫院",
+      "level": "醫學中心",
+      "region": "大台北地區",
+      "city": "新北市",
+      "district": "新店區",
+      "rooms": {
+        "single_hi": 7000,
+        "single": 3600,
+        "double": 2000
+      }
+    },
+    {
+      "id": "h015",
+      "name": "國立陽明大學附設醫院",
+      "level": "區域醫院",
+      "region": "宜花東地區",
+      "city": "宜蘭縣",
+      "district": "宜蘭市",
+      "rooms": {
+        "single_hi": 4600,
+        "single": 3000,
+        "double": 1600
+      }
+    },
+    {
+      "id": "h016",
+      "name": "宜陽仁愛醫院",
+      "level": "地區醫院",
+      "region": "宜花東地區",
+      "city": "宜蘭縣",
+      "district": "宜蘭市",
+      "rooms": {
+        "single_hi": null,
+        "single": 1500,
+        "double": 800
+      }
+    },
+    {
+      "id": "h017",
+      "name": "臺北榮總蘇澳分院",
+      "level": "地區醫院",
+      "region": "宜花東地區",
+      "city": "宜蘭縣",
+      "district": "蘇澳鎮",
+      "rooms": {
+        "single_hi": null,
+        "single": 1200,
+        "double": 600
+      }
+    },
+    {
+      "id": "h018",
+      "name": "羅東聖母醫院",
+      "level": "區域醫院",
+      "region": "宜花東地區",
+      "city": "宜蘭縣",
+      "district": "羅東鎮",
+      "rooms": {
+        "single_hi": 3000,
+        "single": 2000,
+        "double": 1600
+      }
+    },
+    {
+      "id": "h019",
+      "name": "羅東博愛醫院",
+      "level": "區域醫院",
+      "region": "宜花東地區",
+      "city": "宜蘭縣",
+      "district": "羅東鎮",
+      "rooms": {
+        "single_hi": 3000,
+        "single": 2400,
+        "double": 1200
+      }
+    },
+    {
+      "id": "h020",
+      "name": "國軍花蓮總醫院",
+      "level": "區域醫院",
+      "region": "宜花東地區",
+      "city": "花蓮縣",
+      "district": "花蓮市",
+      "rooms": {
+        "single_hi": 3000,
+        "single": 2000,
+        "double": 1000
+      }
+    },
+    {
+      "id": "h021",
+      "name": "慈濟醫學中心（花蓮）",
+      "level": "醫學中心",
+      "region": "宜花東地區",
+      "city": "花蓮縣",
+      "district": "花蓮市",
+      "rooms": {
+        "single_hi": 3000,
+        "single": 2400,
+        "double": 1300
+      }
+    },
+    {
+      "id": "h022",
+      "name": "部立花蓮醫院",
+      "level": "地區醫院",
+      "region": "宜花東地區",
+      "city": "花蓮縣",
+      "district": "花蓮市",
+      "rooms": {
+        "single_hi": 1800,
+        "single": 900,
+        "double": 300
+      }
+    },
+    {
+      "id": "h023",
+      "name": "榮民總醫院玉里分院",
+      "level": "地區醫院",
+      "region": "宜花東地區",
+      "city": "花蓮縣",
+      "district": "玉里鎮",
+      "rooms": {
+        "single_hi": null,
+        "single": 1500,
+        "double": 500
+      }
+    },
+    {
+      "id": "h024",
+      "name": "台東聖母醫院",
+      "level": "地區醫院",
+      "region": "宜花東地區",
+      "city": "台東縣",
+      "district": "台東市",
+      "rooms": {
+        "single_hi": 2000,
+        "single": 1200,
+        "double": 600
+      }
+    },
+    {
+      "id": "h025",
+      "name": "基督教門諾醫院",
+      "level": "區域醫院",
+      "region": "宜花東地區",
+      "city": "花蓮縣",
+      "district": "花蓮市",
+      "rooms": {
+        "single_hi": 3900,
+        "single": 2000,
+        "double": 1000
+      }
+    },
+    {
+      "id": "h026",
+      "name": "台東基督教醫院",
+      "level": "地區醫院",
+      "region": "宜花東地區",
+      "city": "台東縣",
+      "district": "台東市",
+      "rooms": {
+        "single_hi": null,
+        "single": 2500,
+        "double": 1000
+      }
+    },
+    {
+      "id": "h027",
+      "name": "馬偕台東分院",
+      "level": "區域醫院",
+      "region": "宜花東地區",
+      "city": "台東縣",
+      "district": "台東市",
+      "rooms": {
+        "single_hi": 3400,
+        "single": 2000,
+        "double": 1600
+      }
+    },
+    {
+      "id": "h028",
+      "name": "部立台東醫院",
+      "level": "地區醫院",
+      "region": "宜花東地區",
+      "city": "台東縣",
+      "district": "台東市",
+      "rooms": {
+        "single_hi": 3000,
+        "single": 600,
+        "double": 800
+      }
+    },
+    {
+      "id": "h029",
+      "name": "部立苗栗醫院",
+      "level": "地區醫院",
+      "region": "北部地區",
+      "city": "苗栗縣",
+      "district": "苗栗市",
+      "rooms": {
+        "single_hi": 3600,
+        "single": 1500,
+        "double": 1600
+      }
+    },
+    {
+      "id": "h030",
+      "name": "部立南投醫院",
+      "level": "地區醫院",
+      "region": "中部地區",
+      "city": "南投縣",
+      "district": "南投市",
+      "rooms": {
+        "single_hi": 4000,
+        "single": 3000,
+        "double": 1600
+      }
+    },
+    {
+      "id": "h031",
+      "name": "竹山秀傳醫院",
+      "level": "地區醫院",
+      "region": "中部地區",
+      "city": "南投縣",
+      "district": "竹山鎮",
+      "rooms": {
+        "single_hi": null,
+        "single": 3000,
+        "double": 1000
+      }
+    },
+    {
+      "id": "h032",
+      "name": "台中榮總",
+      "level": "醫學中心",
+      "region": "中部地區",
+      "city": "台中市",
+      "district": "西屯區",
+      "rooms": {
+        "single_hi": 8000,
+        "single": 3380,
+        "double": 2200
+      }
+    },
+    {
+      "id": "h033",
+      "name": "中國醫藥大學附設醫院",
+      "level": "醫學中心",
+      "region": "中部地區",
+      "city": "台中市",
+      "district": "北區",
+      "rooms": {
+        "single_hi": 11900,
+        "single": 4500,
+        "double": 2500
+      }
+    },
+    {
+      "id": "h034",
+      "name": "中山醫學大學附設醫院",
+      "level": "醫學中心",
+      "region": "中部地區",
+      "city": "台中市",
+      "district": "南區",
+      "rooms": {
+        "single_hi": 8000,
+        "single": 3000,
+        "double": 2500
+      }
+    },
+    {
+      "id": "h035",
+      "name": "童綜合醫院梧棲院區",
+      "level": "區域醫院",
+      "region": "中部地區",
+      "city": "台中市",
+      "district": "梧棲區",
+      "rooms": {
+        "single_hi": 12000,
+        "single": 3200,
+        "double": 1900
+      }
+    },
+    {
+      "id": "h036",
+      "name": "台中慈濟醫院",
+      "level": "醫學中心",
+      "region": "中部地區",
+      "city": "台中市",
+      "district": "潭子區",
+      "rooms": {
+        "single_hi": 7500,
+        "single": 3500,
+        "double": 2000
+      }
+    },
+    {
+      "id": "h037",
+      "name": "仁愛醫院大里院區",
+      "level": "區域醫院",
+      "region": "中部地區",
+      "city": "台中市",
+      "district": "大里區",
+      "rooms": {
+        "single_hi": 7000,
+        "single": 3100,
+        "double": 2100
+      }
+    },
+    {
+      "id": "h038",
+      "name": "李綜合醫院（苑里大甲）",
+      "level": "地區醫院",
+      "region": "中部地區",
+      "city": "台中市",
+      "district": "大甲區",
+      "rooms": {
+        "single_hi": null,
+        "single": 2200,
+        "double": 1200
+      }
+    },
+    {
+      "id": "h039",
+      "name": "彰化基督教醫院",
+      "level": "醫學中心",
+      "region": "中部地區",
+      "city": "彰化縣",
+      "district": "彰化市",
+      "rooms": {
+        "single_hi": 12000,
+        "single": 1900,
+        "double": 4500
+      }
+    },
+    {
+      "id": "h040",
+      "name": "澄清醫院",
+      "level": "區域醫院",
+      "region": "中部地區",
+      "city": "台中市",
+      "district": "西區",
+      "rooms": {
+        "single_hi": 8000,
+        "single": 3000,
+        "double": 2400
+      }
+    },
+    {
+      "id": "h041",
+      "name": "彰化秀傳醫院",
+      "level": "區域醫院",
+      "region": "中部地區",
+      "city": "彰化縣",
+      "district": "彰化市",
+      "rooms": {
+        "single_hi": 12000,
+        "single": 2000,
+        "double": 2500
+      }
+    },
+    {
+      "id": "h042",
+      "name": "台大雲林分院",
+      "level": "醫學中心",
+      "region": "中部地區",
+      "city": "雲林縣",
+      "district": "斗六市",
+      "rooms": {
+        "single_hi": 3000,
+        "single": 2200,
+        "double": 1500
+      }
+    },
+    {
+      "id": "h043",
+      "name": "部立嘉義醫院",
+      "level": "地區醫院",
+      "region": "南部地區",
+      "city": "嘉義市",
+      "district": "西區",
+      "rooms": {
+        "single_hi": null,
+        "single": 1800,
+        "double": 800
+      }
+    },
+    {
+      "id": "h044",
+      "name": "榮民總醫院嘉義分院",
+      "level": "區域醫院",
+      "region": "南部地區",
+      "city": "嘉義市",
+      "district": "東區",
+      "rooms": {
+        "single_hi": 3000,
+        "single": 2500,
+        "double": 1500
+      }
+    },
+    {
+      "id": "h045",
+      "name": "嘉義基督教醫院",
+      "level": "區域醫院",
+      "region": "南部地區",
+      "city": "嘉義市",
+      "district": "東區",
+      "rooms": {
+        "single_hi": 3500,
+        "single": 2500,
+        "double": 2500
+      }
+    },
+    {
+      "id": "h046",
+      "name": "成大醫院",
+      "level": "醫學中心",
+      "region": "南部地區",
+      "city": "台南市",
+      "district": "北區",
+      "rooms": {
+        "single_hi": 8000,
+        "single": 4500,
+        "double": 2500
+      }
+    },
+    {
+      "id": "h047",
+      "name": "奇美醫療中心",
+      "level": "醫學中心",
+      "region": "南部地區",
+      "city": "台南市",
+      "district": "永康區",
+      "rooms": {
+        "single_hi": 4800,
+        "single": 3000,
+        "double": 1680
+      }
+    },
+    {
+      "id": "h048",
+      "name": "天主教聖馬爾定醫院",
+      "level": "區域醫院",
+      "region": "南部地區",
+      "city": "嘉義市",
+      "district": "東區",
+      "rooms": {
+        "single_hi": null,
+        "single": 3300,
+        "double": 1650
+      }
+    },
+    {
+      "id": "h049",
+      "name": "台南市立醫院",
+      "level": "區域醫院",
+      "region": "南部地區",
+      "city": "台南市",
+      "district": "東區",
+      "rooms": {
+        "single_hi": 8000,
+        "single": 2300,
+        "double": 1600
+      }
+    },
+    {
+      "id": "h050",
+      "name": "高醫附設中和醫院",
+      "level": "醫學中心",
+      "region": "南部地區",
+      "city": "高雄市",
+      "district": "三民區",
+      "rooms": {
+        "single_hi": 6600,
+        "single": 2300,
+        "double": 1400
+      }
+    },
+    {
+      "id": "h051",
+      "name": "高雄長庚醫院",
+      "level": "醫學中心",
+      "region": "南部地區",
+      "city": "高雄市",
+      "district": "鳥松區",
+      "rooms": {
+        "single_hi": 4370,
+        "single": 3900,
+        "double": 1670
+      }
+    },
+    {
+      "id": "h052",
+      "name": "高雄榮總醫院",
+      "level": "醫學中心",
+      "region": "南部地區",
+      "city": "高雄市",
+      "district": "左營區",
+      "rooms": {
+        "single_hi": 11000,
+        "single": 2500,
+        "double": 2200
+      }
+    },
+    {
+      "id": "h053",
+      "name": "阮綜合醫院",
+      "level": "區域醫院",
+      "region": "南部地區",
+      "city": "高雄市",
+      "district": "苓雅區",
+      "rooms": {
+        "single_hi": 3500,
+        "single": 3000,
+        "double": 1800
+      }
+    },
+    {
+      "id": "h054",
+      "name": "省立屏東醫院",
+      "level": "地區醫院",
+      "region": "南部地區",
+      "city": "屏東縣",
+      "district": "屏東市",
+      "rooms": {
+        "single_hi": 2800,
+        "single": 1200,
+        "double": 800
+      }
+    },
+    {
+      "id": "h055",
+      "name": "屏東基督教醫院",
+      "level": "區域醫院",
+      "region": "南部地區",
+      "city": "屏東縣",
+      "district": "屏東市",
+      "rooms": {
+        "single_hi": 4000,
+        "single": 2500,
+        "double": 1500
+      }
+    },
+    {
+      "id": "h056",
+      "name": "安泰醫院（恆春）",
+      "level": "地區醫院",
+      "region": "南部地區",
+      "city": "屏東縣",
+      "district": "恆春鎮",
+      "rooms": {
+        "single_hi": 2200,
+        "single": 2000,
+        "double": 1100
+      }
+    }
+  ]
+}
