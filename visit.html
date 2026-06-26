@@ -259,102 +259,77 @@ setTimeout(function(){
   }
 }, 3000);
 
-// ── Google Drive 操作 ────────────────────────────────────────
-// 取得 access_token（由 nav.js 的 Google OAuth 提供）
-function getToken() {
-  return window.NBS_NAV && NBS_NAV.getGoogleToken ? NBS_NAV.getGoogleToken() : null;
+// ── Google Drive 透過 Anthropic API 代理 ─────────────────────
+// 所有 Drive 操作透過 Claude API + Google Drive MCP 執行
+// 不需要 OAuth token，任何裝置皆可同步
+var ANTHROPIC_API = "https://api.anthropic.com/v1/messages";
+var DRIVE_MCP_URL = "https://drivemcp.googleapis.com/mcp/v1";
+
+async function claudeCallDrive(instruction) {
+  var resp = await fetch(ANTHROPIC_API, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "claude-sonnet-4-6",
+      max_tokens: 1000,
+      system: "You are a Google Drive file manager. Execute the requested Drive operation and return ONLY a JSON object with the result. No explanation.",
+      messages: [{ role: "user", content: instruction }],
+      mcp_servers: [{ type: "url", url: DRIVE_MCP_URL, name: "gdrive" }]
+    })
+  });
+  var data = await resp.json();
+  // 找 mcp_tool_result 或 text block
+  var toolResult = (data.content||[]).find(function(b){ return b.type==="mcp_tool_result"; });
+  var textBlock  = (data.content||[]).find(function(b){ return b.type==="text"; });
+  if (toolResult && toolResult.content && toolResult.content[0]) {
+    try { return JSON.parse(toolResult.content[0].text); } catch(e) { return toolResult.content[0].text; }
+  }
+  if (textBlock) {
+    try { return JSON.parse(textBlock.text.replace(/```json|```/g,"").trim()); } catch(e) { return textBlock.text; }
+  }
+  return null;
 }
 
 // 確保家庭專屬子資料夾存在
 async function ensureFamilyFolder() {
   var folderName = familyName + "家庭";
   try {
-    // 搜尋是否已存在
-    var resp = await gdriveSearch("mimeType='application/vnd.google-apps.folder' and title='"+folderName+"' and '"+VISITS_FOLDER_ID+"' in parents");
-    if (resp.items && resp.items.length > 0) {
-      visitFolderId = resp.items[0].id;
+    var result = await claudeCallDrive(
+      'Search Google Drive for a folder named "'+folderName+'" inside folder ID "'+VISITS_FOLDER_ID+'". '+
+      'If found, return {"folderId":"<id>","found":true}. '+
+      'If not found, create it and return {"folderId":"<new_id>","found":false}.'
+    );
+    if (result && result.folderId) {
+      visitFolderId = result.folderId;
     } else {
-      // 建立新資料夾
-      var r = await gdriveCreate({
-        mimeType: "application/vnd.google-apps.folder",
-        title: folderName,
-        parents: [{ id: VISITS_FOLDER_ID }]
-      });
-      visitFolderId = r.id;
+      visitFolderId = VISITS_FOLDER_ID;
     }
   } catch(e) {
-    // fallback：直接放在 visits 資料夾
     visitFolderId = VISITS_FOLDER_ID;
   }
-}
-
-async function gdriveSearch(q) {
-  var token = getToken();
-  var url = "https://www.googleapis.com/drive/v2/files?q="+encodeURIComponent(q)+"&maxResults=50";
-  var headers = token ? { Authorization: "Bearer " + token } : {};
-  var r = await fetch(url, { headers: headers });
-  return r.json();
-}
-
-async function gdriveCreate(meta, content) {
-  var token = getToken();
-  var headers = { "Content-Type": "application/json" };
-  if (token) headers.Authorization = "Bearer " + token;
-  var r = await fetch("https://www.googleapis.com/drive/v2/files", {
-    method: "POST", headers: headers, body: JSON.stringify(meta)
-  });
-  return r.json();
-}
-
-async function gdriveUpdateContent(fileId, content) {
-  var token = getToken();
-  var headers = { "Content-Type": "application/json" };
-  if (token) headers.Authorization = "Bearer " + token;
-  await fetch("https://www.googleapis.com/upload/drive/v2/files/"+fileId+"?uploadType=media", {
-    method: "PUT", headers: headers, body: content
-  });
-}
-
-async function gdriveDelete(fileId) {
-  var token = getToken();
-  var headers = token ? { Authorization: "Bearer " + token } : {};
-  await fetch("https://www.googleapis.com/drive/v2/files/"+fileId, { method: "DELETE", headers: headers });
-}
-
-async function gdriveGetContent(fileId) {
-  var token = getToken();
-  var headers = { Accept: "application/json" };
-  if (token) headers.Authorization = "Bearer " + token;
-  var r = await fetch("https://drive.google.com/uc?export=download&id="+fileId, { headers: headers });
-  return r.json();
 }
 
 // ── 載入訪談紀錄 ─────────────────────────────────────────────
 async function loadVisits() {
   document.getElementById("visit-list-wrap").innerHTML = '<div class="loading"><span class="spin"></span>讀取訪談紀錄…</div>';
   try {
-    if (!visitFolderId) { renderVisits(); return; }
-    var resp = await gdriveSearch("'"+visitFolderId+"' in parents and mimeType='application/json' and title contains 'visit_'");
-    visits = [];
-    if (resp.items && resp.items.length > 0) {
-      // 讀取每個 JSON 檔案
-      var promises = resp.items.map(async function(f) {
-        try {
-          var content = await gdriveGetContent(f.id);
-          content._fileId = f.id;
-          return content;
-        } catch(e) { return null; }
-      });
-      var results = await Promise.all(promises);
-      visits = results.filter(Boolean).sort(function(a,b){ return b.date.localeCompare(a.date); });
+    var result = await claudeCallDrive(
+      'List all JSON files in Google Drive folder ID "'+VISITS_FOLDER_ID+'" (search recursively for files with name starting with "visit_"). '+
+      'For each file, read its content. Return an array of visit objects: [{"fileId":"...","date":"...","type":"...","attendees":"...","summary":"...","concerns":"...","actions":[...],"nextDate":"...","nextTopics":"...","id":"..."},...]. '+
+      'Return ONLY the JSON array, no markdown.'
+    );
+    if (Array.isArray(result)) {
+      visits = result.sort(function(a,b){ return (b.date||"").localeCompare(a.date||""); });
+    } else {
+      visits = [];
     }
     renderVisits();
   } catch(e) {
-    // Drive 無法存取時，用 localStorage 備援
+    // fallback: localStorage
     var stored = localStorage.getItem("visits_" + familyId);
     visits = stored ? JSON.parse(stored).sort(function(a,b){ return b.date.localeCompare(a.date); }) : [];
     renderVisits();
-    showToast("⚠️ 無法連接 Drive，顯示本機備份資料");
+    if (visits.length > 0) showToast("⚠️ 顯示本機備份（Drive 連線失敗）");
   }
 }
 
@@ -545,65 +520,59 @@ async function saveVisit() {
   var v = buildVisitData();
   if (!v.date) { showToast("⚠️ 請填寫拜訪日期"); return; }
 
-  // 本機備援
+  // 本機備援（立即更新）
   var localVisits = JSON.parse(localStorage.getItem("visits_" + familyId) || "[]");
   var localIdx = localVisits.findIndex(function(x){ return x.id === v.id; });
   if (localIdx >= 0) localVisits[localIdx] = v; else localVisits.push(v);
   localStorage.setItem("visits_" + familyId, JSON.stringify(localVisits));
 
-  // 嘗試存到 Drive
-  try {
-    if (visitFolderId) {
-      var fileName = "visit_" + v.date + "_" + v.id + ".json";
-      var content = JSON.stringify(v, null, 2);
-      if (v._fileId) {
-        await gdriveUpdateContent(v._fileId, content);
-      } else {
-        var resp = await fetch("https://www.googleapis.com/upload/drive/v2/files?uploadType=multipart", {
-          method: "POST",
-          headers: {
-            "Authorization": "Bearer " + (getToken() || ""),
-            "Content-Type": "multipart/related; boundary=bound"
-          },
-          body: [
-            "--bound\r\nContent-Type: application/json\r\n\r\n",
-            JSON.stringify({ title: fileName, parents: [{ id: visitFolderId }], mimeType: "application/json" }),
-            "\r\n--bound\r\nContent-Type: application/json\r\n\r\n",
-            content, "\r\n--bound--"
-          ].join("")
-        });
-        var saved = await resp.json();
-        v._fileId = saved.id;
-      }
-      showToast("✅ 已儲存至 Google Drive");
-    } else {
-      showToast("✅ 已儲存（本機備份）");
-    }
-  } catch(e) {
-    showToast("💾 已儲存本機備份（Drive 連線失敗）");
-  }
-
-  // 更新 visits 陣列
+  // 更新 visits 陣列（立即反映 UI）
   var idx = visits.findIndex(function(x){ return x.id === v.id; });
   if (idx >= 0) visits[idx] = v; else visits.unshift(v);
   visits.sort(function(a,b){ return b.date.localeCompare(a.date); });
-
   closeModal();
   renderVisits();
+  showToast("💾 儲存中…");
+
+  // 非同步存到 Drive
+  try {
+    var fileName = "visit_" + v.date + "_" + v.id + ".json";
+    var fileContent = JSON.stringify(v, null, 2);
+    var instruction = v._fileId
+      ? 'Update the content of Google Drive file with ID "'+v._fileId+'" with this JSON content: '+fileContent+'. Return {"ok":true,"fileId":"'+v._fileId+'"}'
+      : 'Create a new file named "'+fileName+'" in Google Drive folder ID "'+VISITS_FOLDER_ID+'" with this JSON content: '+fileContent+'. Return {"ok":true,"fileId":"<new_file_id>"}';
+    var result = await claudeCallDrive(instruction);
+    if (result && result.ok) {
+      v._fileId = result.fileId;
+      // 更新 localStorage 的 _fileId
+      var lv = JSON.parse(localStorage.getItem("visits_" + familyId) || "[]");
+      var li = lv.findIndex(function(x){ return x.id === v.id; });
+      if (li >= 0) { lv[li]._fileId = result.fileId; localStorage.setItem("visits_" + familyId, JSON.stringify(lv)); }
+      showToast("✅ 已同步到 Google Drive");
+    } else {
+      showToast("💾 已儲存本機（Drive 同步失敗）");
+    }
+  } catch(e) {
+    showToast("💾 已儲存本機（Drive 離線）");
+  }
 }
 
 async function deleteVisit() {
   var v = visits.find(function(x){ return x.id === editingVisitId; });
   if (!v || !confirm("確定刪除這筆訪談紀錄？")) return;
-  if (v._fileId) {
-    try { await gdriveDelete(v._fileId); } catch(e){}
-  }
+
   visits = visits.filter(function(x){ return x.id !== editingVisitId; });
   var local = JSON.parse(localStorage.getItem("visits_" + familyId) || "[]");
   localStorage.setItem("visits_" + familyId, JSON.stringify(local.filter(function(x){ return x.id !== editingVisitId; })));
   closeModal();
   renderVisits();
   showToast("🗑 已刪除");
+
+  if (v._fileId) {
+    try {
+      await claudeCallDrive('Delete the Google Drive file with ID "'+v._fileId+'". Return {"ok":true}');
+    } catch(e) {}
+  }
 }
 
 // ── Google Calendar ──────────────────────────────────────────
