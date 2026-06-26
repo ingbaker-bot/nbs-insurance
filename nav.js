@@ -222,6 +222,9 @@
       '<div class="nbs-foot">'+
         '<button class="nbs-pbtn" onclick="NBS_NAV._print()">🖨️ 快速列印此頁</button>'+
         '<button class="nbs-bbtn" onclick="NBS_NAV._back()">← 返回家庭列表</button>'+
+        '<div class="nbs-disclaimer">'+
+          '本報告為保障檢視參考，實際理賠項目與條件以各保險公司正式契約條款為準。'+
+        '</div>'+
       '</div>';
   }
 
@@ -679,6 +682,7 @@
       .nbs-nlabel{font-size:13px;color:rgba(255,255,255,.6)}
       .nbs-ni-on .nbs-nlabel{color:#fff;font-weight:500}
       .nbs-foot{padding:10px;border-top:1px solid rgba(255,255,255,.08)}
+      .nbs-disclaimer{margin-top:8px;padding:8px 10px;border-radius:6px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);font-size:10px;color:rgba(255,255,255,.25);line-height:1.6;letter-spacing:.01em}
       .nbs-pbtn{width:100%;padding:8px;margin-bottom:5px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.12);border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px}
       .nbs-pbtn:hover{background:rgba(255,255,255,.14)}
       .nbs-bbtn{width:100%;padding:7px;background:transparent;color:rgba(255,255,255,.35);border:none;border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px}
