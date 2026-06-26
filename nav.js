@@ -6,6 +6,7 @@
   "use strict";
 
   var GAS_URL = "https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec";
+  window._NBS_GAS_URL = GAS_URL; // 讓 visit.html / hospital.html 等頁面共用
 
   var NAV_ITEMS = [
     { key:"policy",      label:"保險繳費", icon:"📋", href:"policy.html" },
