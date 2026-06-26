@@ -310,8 +310,26 @@ function calcAverage(hospitals) {
   return { single_hi: avg("single_hi"), single: avg("single"), double: avg("double") };
 }
 
+// ── 城市名稱標準化對照 ──────────────────────────────────────
+var CITY_ALIASES = {
+  "台北":"台北市","臺北":"台北市","新北":"新北市","桃園":"桃園市",
+  "台中":"台中市","臺中":"台中市","台南":"台南市","臺南":"台南市",
+  "高雄":"高雄市","基隆":"基隆市","新竹市":"新竹市","新竹縣":"新竹縣",
+  "新竹":"新竹市","苗栗":"苗栗縣","彰化":"彰化縣","南投":"南投縣",
+  "雲林":"雲林縣","嘉義市":"嘉義市","嘉義縣":"嘉義縣","嘉義":"嘉義市",
+  "屏東":"屏東縣","宜蘭":"宜蘭縣","花蓮":"花蓮縣","台東":"台東縣",
+  "臺東":"台東縣","澎湖":"澎湖縣","金門":"金門縣","連江":"連江縣"
+};
+
+function normalizeCity(raw) {
+  if (!raw) return "";
+  // 已是完整城市名
+  if (raw.match(/^.{2,3}[市縣]$/)) return raw;
+  // 查對照表
+  return CITY_ALIASES[raw] || raw;
+}
+
 // ── 地址解析（支援多種輸入格式）────────────────────────────
-// 建立區→市的對照表（從資料中動態產生）
 function buildDistrictMap() {
   var map = {};
   if (!hospitalsData) return map;
@@ -323,19 +341,24 @@ function buildDistrictMap() {
 
 function extractCity(addr) {
   if (!addr) return "";
+  addr = addr.trim();
   // 完整地址：台北市信義區…
   var m = addr.match(/^(.{2,3}[市縣])/);
   if (m) return m[1];
-  // 只輸入市縣：台北市
-  m = addr.match(/^(.{2,3}[市縣])$/);
-  if (m) return m[1];
+  // 只輸入縣市（含不完整如「高雄」）
+  var normalized = normalizeCity(addr);
+  if (normalized !== addr && normalized.match(/[市縣]$/)) return normalized;
   // 只輸入區：板橋區 → 從醫院資料反查城市
   var districtMap = buildDistrictMap();
   var distOnly = addr.match(/^(.{2,4}[區鄉鎮市])$/);
   if (distOnly && districtMap[distOnly[1]]) return districtMap[distOnly[1]];
-  // 從地址中找市縣
+  // 從地址中間找市縣
   m = addr.match(/([^\s]{2,3}[市縣])/);
   if (m) return m[1];
+  // 最後嘗試對照表（允許輸入「高雄」等不含市縣字的簡稱）
+  for (var alias in CITY_ALIASES) {
+    if (addr.startsWith(alias)) return CITY_ALIASES[alias];
+  }
   return "";
 }
 
