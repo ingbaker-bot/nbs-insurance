@@ -127,15 +127,15 @@ function loadHospitals() {
   renderContent();
 
   // 背景嘗試從 Drive 取得最新版（有更新才換掉）
+  // 注意：drive.google.com 直連必定 CORS 403，直接用 proxy
   var urls = [
-    "https://drive.google.com/uc?export=download&id=" + GDRIVE_FILE_ID,
     "https://corsproxy.io/?" + encodeURIComponent("https://drive.google.com/uc?export=download&id=" + GDRIVE_FILE_ID)
   ];
 
   function tryUrl(i) {
-    if (i >= urls.length) return; // 靜默失敗，已用內嵌資料
+    if (i >= urls.length) return;
     var controller = typeof AbortController !== "undefined" ? new AbortController() : null;
-    var timer = controller ? setTimeout(function(){ controller.abort(); }, 4000) : null;
+    var timer = controller ? setTimeout(function(){ controller.abort(); }, 2000) : null;
     fetch(urls[i], controller ? { signal: controller.signal } : {})
       .then(function(r){
         if (timer) clearTimeout(timer);
