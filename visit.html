@@ -259,319 +259,75 @@ setTimeout(function(){
   }
 }, 3000);
 
-// ── Google Drive 透過 Anthropic API 代理 ─────────────────────
-// 所有 Drive 操作透過 Claude API + Google Drive MCP 執行
-// 不需要 OAuth token，任何裝置皆可同步
-var ANTHROPIC_API = "https://api.anthropic.com/v1/messages";
-var DRIVE_MCP_URL = "https://drivemcp.googleapis.com/mcp/v1";
+// ── Apps Script API（接上現有 NBS 後台）──────────────────────
+var GAS_URL = ""; /https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec/ ← 填入您的 Apps Script 部署 URL
+var AGENT_EMAIL = ""; // ← 由登入狀態帶入
 
-async function claudeCallDrive(instruction) {
-  var resp = await fetch(ANTHROPIC_API, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1000,
-      system: "You are a Google Drive file manager. Execute the requested Drive operation and return ONLY a JSON object with the result. No explanation.",
-      messages: [{ role: "user", content: instruction }],
-      mcp_servers: [{ type: "url", url: DRIVE_MCP_URL, name: "gdrive" }]
-    })
-  });
-  var data = await resp.json();
-  // 找 mcp_tool_result 或 text block
-  var toolResult = (data.content||[]).find(function(b){ return b.type==="mcp_tool_result"; });
-  var textBlock  = (data.content||[]).find(function(b){ return b.type==="text"; });
-  if (toolResult && toolResult.content && toolResult.content[0]) {
-    try { return JSON.parse(toolResult.content[0].text); } catch(e) { return toolResult.content[0].text; }
-  }
-  if (textBlock) {
-    try { return JSON.parse(textBlock.text.replace(/```json|```/g,"").trim()); } catch(e) { return textBlock.text; }
-  }
-  return null;
+async function gasCall(params) {
+  var url = GAS_URL + "?" + Object.keys(params).map(function(k){
+    var v = typeof params[k] === "object"
+      ? encodeURIComponent(JSON.stringify(params[k]))
+      : encodeURIComponent(String(params[k]));
+    return k + "=" + v;
+  }).join("&");
+  var r = await fetch(url, { redirect: "follow" });
+  return r.json();
 }
 
-// 確保家庭專屬子資料夾存在
-async function ensureFamilyFolder() {
-  var folderName = familyName + "家庭";
-  try {
-    var result = await claudeCallDrive(
-      'Search Google Drive for a folder named "'+folderName+'" inside folder ID "'+VISITS_FOLDER_ID+'". '+
-      'If found, return {"folderId":"<id>","found":true}. '+
-      'If not found, create it and return {"folderId":"<new_id>","found":false}.'
-    );
-    if (result && result.folderId) {
-      visitFolderId = result.folderId;
-    } else {
-      visitFolderId = VISITS_FOLDER_ID;
-    }
-  } catch(e) {
-    visitFolderId = VISITS_FOLDER_ID;
-  }
-}
+async function ensureFamilyFolder() { /* GAS 自動建立，前端不需處理 */ }
 
-// ── 載入訪談紀錄 ─────────────────────────────────────────────
 async function loadVisits() {
-  document.getElementById("visit-list-wrap").innerHTML = '<div class="loading"><span class="spin"></span>讀取訪談紀錄…</div>';
-  try {
-    var result = await claudeCallDrive(
-      'List all JSON files in Google Drive folder ID "'+VISITS_FOLDER_ID+'" (search recursively for files with name starting with "visit_"). '+
-      'For each file, read its content. Return an array of visit objects: [{"fileId":"...","date":"...","type":"...","attendees":"...","summary":"...","concerns":"...","actions":[...],"nextDate":"...","nextTopics":"...","id":"..."},...]. '+
-      'Return ONLY the JSON array, no markdown.'
-    );
-    if (Array.isArray(result)) {
-      visits = result.sort(function(a,b){ return (b.date||"").localeCompare(a.date||""); });
-    } else {
-      visits = [];
-    }
-    renderVisits();
-  } catch(e) {
-    // fallback: localStorage
+  document.getElementById("visit-list-wrap").innerHTML =
+    '<div class="loading"><span class="spin"></span>讀取訪談紀錄…</div>';
+
+  if (!GAS_URL || !AGENT_EMAIL) {
     var stored = localStorage.getItem("visits_" + familyId);
     visits = stored ? JSON.parse(stored).sort(function(a,b){ return b.date.localeCompare(a.date); }) : [];
     renderVisits();
-    if (visits.length > 0) showToast("⚠️ 顯示本機備份（Drive 連線失敗）");
-  }
-}
-
-// ── 渲染列表 ─────────────────────────────────────────────────
-function renderVisits() {
-  var wrap = document.getElementById("visit-list-wrap");
-  if (!visits.length) {
-    wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">尚無訪談紀錄</div><div class="empty-sub">點右上角「＋ 新增紀錄」開始記錄</div></div>';
+    if (!GAS_URL) showToast("⚠️ 請設定 GAS_URL 以啟用跨裝置同步");
     return;
   }
-  var today = new Date().toISOString().slice(0,10);
-  var html = '<div class="visit-list">';
-  visits.forEach(function(v) {
-    var pendingActions = (v.actions||[]).filter(function(a){ return !a.done; });
-    var overdueActions = pendingActions.filter(function(a){ return a.deadline && a.deadline < today; });
-    html += '<div class="visit-card" onclick="openEditVisit(\''+v.id+'\')">';
-    html += '<div class="visit-card-hdr">';
-    html += '<span class="visit-date">'+formatDateDisplay(v.date)+'</span>';
-    html += '<span class="visit-type">'+( v.type||"面談")+'</span>';
-    if (v.attendees) html += '<span style="font-size:11px;color:#aaa;margin-left:auto">'+v.attendees+'</span>';
-    html += '</div>';
-    if (v.summary) html += '<div class="visit-preview">'+v.summary+'</div>';
-    if (pendingActions.length > 0) {
-      html += '<div class="visit-actions-row">';
-      pendingActions.slice(0,3).forEach(function(a){
-        var cls = (a.deadline && a.deadline < today) ? "action-chip overdue" : "action-chip pending";
-        html += '<span class="'+cls+'">'+( a.who==="me"?"📋":"👤")+''+a.text+(a.deadline?" · "+formatDateShort(a.deadline):"")+'</span>';
-      });
-      if (pendingActions.length > 3) html += '<span class="action-chip">+' +(pendingActions.length-3)+ ' 項</span>';
-      html += '</div>';
-    }
-    if (v.nextDate) {
-      html += '<div style="margin-top:8px;font-size:11px;color:#378ADD">📆 下次：'+formatDateDisplay(v.nextDate)+(v.nextTopics?" · "+v.nextTopics:"")+'</div>';
-    }
-    html += '</div>';
-  });
-  html += '</div>';
-  wrap.innerHTML = html;
-}
-
-// ── 新增 / 編輯 ──────────────────────────────────────────────
-function renderAttendeeChips() {
-  var el = document.getElementById("attendee-chips");
-  if (!el) return;
-  el.innerHTML = familyMembers.map(function(m){
-    var sel = selectedAttendees[m.id];
-    return '<div class="attendee-chip'+(sel?" selected":"")+'" onclick="toggleAttendee(\''+m.id+'\')">'+
-      m.name+
-      '<span class="chip-role">'+m.role+'</span>'+
-      (sel?'<span style="font-size:10px">✓</span>':'')+
-    '</div>';
-  }).join("");
-}
-
-function toggleAttendee(id) {
-  selectedAttendees[id] = !selectedAttendees[id];
-  renderAttendeeChips();
-}
-
-function getAttendeesText() {
-  var selected = familyMembers.filter(function(m){ return selectedAttendees[m.id]; }).map(function(m){ return m.name; });
-  var extra = (document.getElementById("f-attendees-extra").value || "").trim();
-  if (extra) selected.push(extra);
-  return selected.join("、");
-}
-
-function setAttendeesFromText(text) {
-  selectedAttendees = {};
-  if (!text) return;
-  familyMembers.forEach(function(m){
-    if (text.indexOf(m.name) >= 0) selectedAttendees[m.id] = true;
-  });
-  // 找出不在成員名單中的部分
-  var knownNames = familyMembers.filter(function(m){ return selectedAttendees[m.id]; }).map(function(m){ return m.name; });
-  var extra = text;
-  knownNames.forEach(function(n){ extra = extra.replace(n, "").replace(/^[、,\s]+|[、,\s]+$/g,""); });
-  document.getElementById("f-attendees-extra").value = extra;
-}
-
-function openNewVisit() {
-  editingVisitId = null;
-  currentActions = [];
-  selectedAttendees = {};
-  // 預設全選家庭成員
-  familyMembers.forEach(function(m){ selectedAttendees[m.id] = true; });
-  document.getElementById("modal-title").textContent = "📝 新增訪談紀錄";
-  document.getElementById("btn-delete").style.display = "none";
-  document.getElementById("f-date").value = new Date().toISOString().slice(0,10);
-  document.getElementById("f-type").value = "面談";
-  document.getElementById("f-attendees-extra").value = "";
-  document.getElementById("f-summary").value = "";
-  document.getElementById("f-concerns").value = "";
-  document.getElementById("f-next-date").value = "";
-  document.getElementById("f-next-time").value = "10:00";
-  document.getElementById("f-next-topics").value = "";
-  renderAttendeeChips();
-  renderActionList();
-  document.getElementById("modal").classList.add("open");
-}
-
-function openEditVisit(id) {
-  var v = visits.find(function(x){ return x.id === id; });
-  if (!v) return;
-  editingVisitId = id;
-  currentActions = JSON.parse(JSON.stringify(v.actions || []));
-  selectedAttendees = {};
-  setAttendeesFromText(v.attendees || "");
-  document.getElementById("modal-title").textContent = "✏️ 編輯訪談紀錄";
-  document.getElementById("btn-delete").style.display = "block";
-  document.getElementById("f-date").value = v.date || "";
-  document.getElementById("f-type").value = v.type || "面談";
-  document.getElementById("f-summary").value = v.summary || "";
-  document.getElementById("f-concerns").value = v.concerns || "";
-  document.getElementById("f-next-date").value = v.nextDate || "";
-  document.getElementById("f-next-time").value = v.nextTime || "10:00";
-  document.getElementById("f-next-topics").value = v.nextTopics || "";
-  renderAttendeeChips();
-  renderActionList();
-  document.getElementById("modal").classList.add("open");
-}
-
-function closeModal() {
-  document.getElementById("modal").classList.remove("open");
-}
-
-// ── 承諾事項 ─────────────────────────────────────────────────
-function renderActionList() {
-  var today = new Date().toISOString().slice(0,10);
-  var html = "";
-  currentActions.forEach(function(a, i) {
-    var overdue = !a.done && a.deadline && a.deadline < today;
-    html += '<div class="action-item">';
-    html += '<div class="action-item-done'+(a.done?" checked":"")+'" onclick="toggleAction('+i+')">'+(a.done?"✓":"")+'</div>';
-    html += '<span class="action-item-text'+(a.done?' style="text-decoration:line-through;color:#bbb"':"")+'">' + a.text + '</span>';
-    html += '<span class="action-item-who '+(a.who==="me"?"who-me":"who-client")+'">'+(a.who==="me"?"我提供":"客戶準備")+'</span>';
-    if (a.deadline) html += '<span class="action-item-date'+(overdue?' style="color:#C62828;font-weight:600"':"")+'">'+(overdue?"⚠️ ":"")+formatDateShort(a.deadline)+'</span>';
-    html += '<button class="action-item-del" onclick="removeAction('+i+')">×</button>';
-    html += '</div>';
-  });
-  document.getElementById("action-list").innerHTML = html;
-}
-
-function addAction() {
-  var text = document.getElementById("new-action-text").value.trim();
-  if (!text) return;
-  currentActions.push({
-    id: "a" + Date.now(),
-    text: text,
-    who: document.getElementById("new-action-who").value,
-    deadline: document.getElementById("new-action-date").value || "",
-    done: false
-  });
-  document.getElementById("new-action-text").value = "";
-  document.getElementById("new-action-date").value = "";
-  renderActionList();
-}
-
-function toggleAction(i) {
-  currentActions[i].done = !currentActions[i].done;
-  renderActionList();
-}
-
-function removeAction(i) {
-  currentActions.splice(i, 1);
-  renderActionList();
-}
-
-// ── 儲存 ─────────────────────────────────────────────────────
-function buildVisitData() {
-  return {
-    id: editingVisitId || ("v" + Date.now()),
-    familyId: familyId,
-    familyName: familyName,
-    date: document.getElementById("f-date").value,
-    type: document.getElementById("f-type").value,
-    attendees: getAttendeesText(),
-    summary: document.getElementById("f-summary").value.trim(),
-    concerns: document.getElementById("f-concerns").value.trim(),
-    actions: currentActions,
-    nextDate: document.getElementById("f-next-date").value,
-    nextTime: document.getElementById("f-next-time").value,
-    nextTopics: document.getElementById("f-next-topics").value.trim(),
-    updatedAt: new Date().toISOString()
-  };
+  try {
+    var result = await gasCall({ action:"listVisits", email:AGENT_EMAIL, familyId:familyId||"" });
+    if (result.status === "ok") {
+      visits = result.visits || [];
+      localStorage.setItem("visits_" + familyId, JSON.stringify(visits));
+      renderVisits();
+    } else { throw new Error(result.message); }
+  } catch(e) {
+    var stored = localStorage.getItem("visits_" + familyId);
+    visits = stored ? JSON.parse(stored).sort(function(a,b){ return b.date.localeCompare(a.date); }) : [];
+    renderVisits();
+    showToast("⚠️ 無法連線，顯示本機備份");
+  }
 }
 
 async function saveVisit() {
   var v = buildVisitData();
   if (!v.date) { showToast("⚠️ 請填寫拜訪日期"); return; }
-
-  // 本機備援（立即更新）
-  var localVisits = JSON.parse(localStorage.getItem("visits_" + familyId) || "[]");
-  var localIdx = localVisits.findIndex(function(x){ return x.id === v.id; });
-  if (localIdx >= 0) localVisits[localIdx] = v; else localVisits.push(v);
-  localStorage.setItem("visits_" + familyId, JSON.stringify(localVisits));
-
-  // 更新 visits 陣列（立即反映 UI）
   var idx = visits.findIndex(function(x){ return x.id === v.id; });
   if (idx >= 0) visits[idx] = v; else visits.unshift(v);
   visits.sort(function(a,b){ return b.date.localeCompare(a.date); });
-  closeModal();
-  renderVisits();
-  showToast("💾 儲存中…");
-
-  // 非同步存到 Drive
-  try {
-    var fileName = "visit_" + v.date + "_" + v.id + ".json";
-    var fileContent = JSON.stringify(v, null, 2);
-    var instruction = v._fileId
-      ? 'Update the content of Google Drive file with ID "'+v._fileId+'" with this JSON content: '+fileContent+'. Return {"ok":true,"fileId":"'+v._fileId+'"}'
-      : 'Create a new file named "'+fileName+'" in Google Drive folder ID "'+VISITS_FOLDER_ID+'" with this JSON content: '+fileContent+'. Return {"ok":true,"fileId":"<new_file_id>"}';
-    var result = await claudeCallDrive(instruction);
-    if (result && result.ok) {
-      v._fileId = result.fileId;
-      // 更新 localStorage 的 _fileId
-      var lv = JSON.parse(localStorage.getItem("visits_" + familyId) || "[]");
-      var li = lv.findIndex(function(x){ return x.id === v.id; });
-      if (li >= 0) { lv[li]._fileId = result.fileId; localStorage.setItem("visits_" + familyId, JSON.stringify(lv)); }
-      showToast("✅ 已同步到 Google Drive");
-    } else {
-      showToast("💾 已儲存本機（Drive 同步失敗）");
-    }
-  } catch(e) {
-    showToast("💾 已儲存本機（Drive 離線）");
+  localStorage.setItem("visits_" + familyId, JSON.stringify(visits));
+  closeModal(); renderVisits();
+  if (!GAS_URL || !AGENT_EMAIL) {
+    showToast("💾 已儲存本機（設定 GAS_URL 後可跨裝置同步）"); return;
   }
+  showToast("💾 同步中…");
+  try {
+    var result = await gasCall({ action:"saveVisit", email:AGENT_EMAIL, visit:v });
+    showToast(result.status === "ok" ? "✅ 已同步到 Google Drive" : "⚠️ " + (result.message||"同步失敗"));
+  } catch(e) { showToast("💾 本機已儲存"); }
 }
 
 async function deleteVisit() {
   var v = visits.find(function(x){ return x.id === editingVisitId; });
   if (!v || !confirm("確定刪除這筆訪談紀錄？")) return;
-
   visits = visits.filter(function(x){ return x.id !== editingVisitId; });
-  var local = JSON.parse(localStorage.getItem("visits_" + familyId) || "[]");
-  localStorage.setItem("visits_" + familyId, JSON.stringify(local.filter(function(x){ return x.id !== editingVisitId; })));
-  closeModal();
-  renderVisits();
-  showToast("🗑 已刪除");
-
-  if (v._fileId) {
-    try {
-      await claudeCallDrive('Delete the Google Drive file with ID "'+v._fileId+'". Return {"ok":true}');
-    } catch(e) {}
+  localStorage.setItem("visits_" + familyId, JSON.stringify(visits));
+  closeModal(); renderVisits(); showToast("🗑 已刪除");
+  if (GAS_URL && AGENT_EMAIL) {
+    try { await gasCall({ action:"deleteVisit", email:AGENT_EMAIL, visitId:v.id }); } catch(e){}
   }
 }
 
