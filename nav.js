@@ -233,7 +233,7 @@
     var el = document.getElementById("nbs-bottom-tab");
     if (!el) return;
     // 底部 Tab 只顯示核心 6 個，export/hospital 只在側欄顯示
-    var TAB_KEYS = ["policy","coverage","savings","summary","beneficiary","export"];
+    var TAB_KEYS = ["policy","beneficiary","coverage","summary","savings","export"];
     var tabItems = NAV_ITEMS.filter(function(item){ return TAB_KEYS.indexOf(item.key) >= 0; });
     el.innerHTML = tabItems.map(function(item) {
       var active = _page === item.key;
