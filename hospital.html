@@ -126,33 +126,18 @@ function loadHospitals() {
   updateBadge();
   renderContent();
 
-  // 背景嘗試從 Drive 取得最新版（有更新才換掉）
-  // 注意：drive.google.com 直連必定 CORS 403，直接用 proxy
-  var urls = [
-    "https://corsproxy.io/?" + encodeURIComponent("https://drive.google.com/uc?export=download&id=" + GDRIVE_FILE_ID)
-  ];
-
-  function tryUrl(i) {
-    if (i >= urls.length) return;
-    var controller = typeof AbortController !== "undefined" ? new AbortController() : null;
-    var timer = controller ? setTimeout(function(){ controller.abort(); }, 2000) : null;
-    fetch(urls[i], controller ? { signal: controller.signal } : {})
-      .then(function(r){
-        if (timer) clearTimeout(timer);
-        if (!r.ok) throw new Error("HTTP " + r.status);
-        return r.json();
-      })
-      .then(function(data){
-        if (!data.hospitals) throw new Error("invalid");
-        hospitalsData = data;
-        dataSource = "live";
-        updateBadge();
-        renderContent(); // 靜默刷新
-      })
-      .catch(function(){ tryUrl(i + 1); });
-  }
-
-  tryUrl(0);
+  // 背景嘗試從同 repo 的 hospitals.json 取得最新版
+  // （需將 hospitals.json 放到 GitHub repo 根目錄才生效）
+  fetch("hospitals.json", { cache: "no-cache" })
+    .then(function(r){ if (!r.ok) throw new Error("not found"); return r.json(); })
+    .then(function(data){
+      if (!data.hospitals) throw new Error("invalid");
+      hospitalsData = data;
+      dataSource = "live";
+      updateBadge();
+      renderContent();
+    })
+    .catch(function(){ /* 靜默失敗，繼續用內嵌資料 */ });
 }
 
 function reloadFromDrive() {
