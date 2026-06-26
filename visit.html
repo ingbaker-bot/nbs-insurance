@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>訪談紀錄</title>
+  <script src="nav.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f5f3;min-height:100vh;color:#1a1a1a}
+
+    .page-wrap{padding:16px;max-width:760px;margin:0 auto;padding-bottom:100px}
+    .page-hdr{display:flex;align-items:center;gap:10px;margin-bottom:20px}
+    .back-btn{background:none;border:none;font-size:22px;color:#999;cursor:pointer;padding:0}
+    .page-title{font-size:16px;font-weight:600;flex:1}
+    .new-btn{padding:7px 16px;background:#378ADD;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit}
+
+    /* ── 家庭 tabs ── */
+    .family-bar{background:#fff;border-radius:10px;padding:10px 14px;margin-bottom:16px;display:flex;align-items:center;gap:8px;border:1px solid #e8e8e8}
+    .family-lbl{font-size:11px;color:#aaa;flex-shrink:0}
+    .family-name{font-size:14px;font-weight:600;color:#0C447C}
+
+    /* ── 歷史紀錄列表 ── */
+    .visit-list{display:flex;flex-direction:column;gap:10px}
+    .visit-card{background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:14px 16px;cursor:pointer;transition:box-shadow .15s}
+    .visit-card:hover{box-shadow:0 2px 10px rgba(0,0,0,.08)}
+    .visit-card-hdr{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+    .visit-date{font-size:13px;font-weight:600;color:#0C447C}
+    .visit-type{font-size:10px;padding:2px 8px;border-radius:99px;background:#E6F1FB;color:#0C447C}
+    .visit-preview{font-size:12px;color:#666;line-height:1.6;margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .visit-actions-row{display:flex;gap:6px;flex-wrap:wrap}
+    .action-chip{font-size:10px;padding:2px 8px;border-radius:99px;border:1px solid #e0e0e0;color:#888;display:flex;align-items:center;gap:4px}
+    .action-chip.done{background:#E8F5E9;border-color:#C8E6C9;color:#2E7D32}
+    .action-chip.pending{background:#FFF8E1;border-color:#FFE082;color:#F57F17}
+    .action-chip.overdue{background:#FFEBEE;border-color:#FFCDD2;color:#C62828}
+
+    /* ── 空狀態 ── */
+    .empty-state{text-align:center;padding:48px 20px;color:#bbb}
+    .empty-icon{font-size:40px;margin-bottom:12px}
+    .empty-text{font-size:14px;margin-bottom:6px;color:#999}
+    .empty-sub{font-size:12px}
+
+    /* ── 編輯 Modal ── */
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;overflow-y:auto;padding:16px}
+    .modal-overlay.open{display:flex;align-items:flex-start;justify-content:center}
+    .modal{background:#fff;border-radius:16px;width:100%;max-width:640px;margin:auto;overflow:hidden}
+    .modal-hdr{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid #f0f0f0;background:#F8FBFF}
+    .modal-title{font-size:15px;font-weight:600;color:#0C447C}
+    .modal-close{background:none;border:none;font-size:24px;color:#aaa;cursor:pointer;line-height:1}
+    .modal-body{padding:16px 18px}
+    .modal-footer{padding:12px 18px;border-top:1px solid #f0f0f0;display:flex;gap:8px;justify-content:flex-end;background:#fafafa}
+
+    /* ── 表單元素 ── */
+    .form-section{margin-bottom:20px}
+    .form-section-title{font-size:11px;font-weight:600;color:#888;letter-spacing:.06em;margin-bottom:10px;text-transform:uppercase;display:flex;align-items:center;gap:6px}
+    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+    .form-col{display:flex;flex-direction:column;gap:4px}
+    .form-lbl{font-size:11px;color:#888}
+    .form-input{padding:8px 11px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit;outline:none;transition:border .15s}
+    .form-input:focus{border-color:#378ADD}
+    .form-textarea{padding:8px 11px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit;outline:none;resize:vertical;min-height:80px;transition:border .15s;line-height:1.6}
+    .form-textarea:focus{border-color:#378ADD}
+    .form-select{padding:8px 11px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit;outline:none;background:#fff}
+
+    /* ── 承諾事項 ── */
+    .action-list{display:flex;flex-direction:column;gap:6px;margin-bottom:8px}
+    .action-item{display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f7f7f5;border-radius:8px}
+    .action-item-text{flex:1;font-size:12px;color:#333}
+    .action-item-who{font-size:10px;padding:1px 6px;border-radius:99px;white-space:nowrap}
+    .who-me{background:#E6F1FB;color:#0C447C}
+    .who-client{background:#EAF3DE;color:#27500A}
+    .action-item-date{font-size:10px;color:#aaa;white-space:nowrap}
+    .action-item-del{background:none;border:none;color:#F44336;cursor:pointer;font-size:14px;padding:0 2px;line-height:1}
+    .action-item-done{width:16px;height:16px;border-radius:4px;border:1.5px solid #ddd;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px}
+    .action-item-done.checked{background:#27AE8F;border-color:#27AE8F;color:#fff}
+
+    .add-action-row{display:flex;gap:6px;align-items:flex-start;flex-wrap:wrap}
+    .add-action-input{flex:1;min-width:160px;padding:7px 10px;border:1px solid #ddd;border-radius:7px;font-size:12px;font-family:inherit;outline:none}
+    .add-action-input:focus{border-color:#378ADD}
+    .add-action-select{padding:7px 8px;border:1px solid #ddd;border-radius:7px;font-size:12px;font-family:inherit;outline:none;background:#fff}
+    .add-action-date{padding:7px 8px;border:1px solid #ddd;border-radius:7px;font-size:12px;font-family:inherit;outline:none;width:130px}
+    .add-action-btn{padding:7px 12px;background:#378ADD;color:#fff;border:none;border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap}
+
+    /* ── 按鈕 ── */
+    .btn-primary{padding:9px 20px;background:#378ADD;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit}
+    .btn-primary:hover{background:#2a6fb5}
+    .btn-secondary{padding:9px 16px;background:#f5f5f3;color:#555;border:1px solid #ddd;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit}
+    .btn-danger{padding:9px 16px;background:#FFEBEE;color:#C62828;border:1px solid #FFCDD2;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit}
+    .btn-cal{padding:9px 16px;background:#34A853;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px}
+
+    /* ── 次訪區塊 ── */
+    .next-visit-box{background:#F0F7FF;border:1px solid #C5DFF8;border-radius:10px;padding:12px 14px;margin-top:12px}
+    .next-visit-title{font-size:11px;font-weight:600;color:#0C447C;margin-bottom:8px}
+
+    /* ── toast ── */
+    .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;z-index:999;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap}
+    .toast.show{opacity:1}
+
+    .loading{text-align:center;padding:40px;color:#aaa;font-size:13px}
+    .spin{display:inline-block;width:18px;height:18px;border:2px solid #e0e0e0;border-top-color:#378ADD;border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle;margin-right:8px}
+    @keyframes sp{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+<div class="page-wrap">
+  <div class="page-hdr">
+    <button class="back-btn" onclick="history.back()">‹</button>
+    <div class="page-title">📝 訪談紀錄</div>
+    <button class="new-btn" onclick="openNewVisit()">＋ 新增紀錄</button>
+  </div>
+
+  <div class="family-bar">
+    <span class="family-lbl">目前家庭</span>
+    <span class="family-name" id="family-name">載入中…</span>
+  </div>
+
+  <div id="visit-list-wrap">
+    <div class="loading"><span class="spin"></span>讀取紀錄中…</div>
+  </div>
+</div>
+
+<!-- 編輯 Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div class="modal-title" id="modal-title">📝 新增訪談紀錄</div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- 基本資訊 -->
+      <div class="form-section">
+        <div class="form-section-title">📅 基本資訊</div>
+        <div class="form-row">
+          <div class="form-col">
+            <label class="form-lbl">拜訪日期 *</label>
+            <input class="form-input" type="date" id="f-date">
+          </div>
+          <div class="form-col">
+            <label class="form-lbl">拜訪方式</label>
+            <select class="form-select" id="f-type">
+              <option value="面談">面談（登門拜訪）</option>
+              <option value="視訊">視訊會議</option>
+              <option value="電話">電話訪談</option>
+              <option value="LINE">LINE 訊息</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-col" style="margin-bottom:10px">
+          <label class="form-lbl">出席成員</label>
+          <input class="form-input" id="f-attendees" placeholder="例：李丞敏、陳麗敏">
+        </div>
+      </div>
+
+      <!-- 討論摘要 -->
+      <div class="form-section">
+        <div class="form-section-title">💬 討論摘要</div>
+        <textarea class="form-textarea" id="f-summary" placeholder="本次拜訪討論的主要內容、客戶狀況、保單異動討論等…" style="min-height:100px"></textarea>
+      </div>
+
+      <!-- 客戶需求與疑慮 -->
+      <div class="form-section">
+        <div class="form-section-title">🎯 客戶需求 / 疑慮</div>
+        <textarea class="form-textarea" id="f-concerns" placeholder="客戶提出的問題、需求、疑慮或特殊狀況…"></textarea>
+      </div>
+
+      <!-- 承諾事項 -->
+      <div class="form-section">
+        <div class="form-section-title">✅ 承諾事項 <span style="font-size:10px;color:#aaa;font-weight:400;text-transform:none">（勾選已完成）</span></div>
+        <div class="action-list" id="action-list"></div>
+        <div class="add-action-row">
+          <input class="add-action-input" id="new-action-text" placeholder="輸入承諾事項…" onkeydown="if(event.key==='Enter')addAction()">
+          <select class="add-action-select" id="new-action-who">
+            <option value="me">我提供</option>
+            <option value="client">客戶準備</option>
+          </select>
+          <input class="add-action-date" id="new-action-date" type="date" title="截止日期">
+          <button class="add-action-btn" onclick="addAction()">＋ 加入</button>
+        </div>
+      </div>
+
+      <!-- 下次拜訪 -->
+      <div class="form-section">
+        <div class="form-section-title">📆 下次拜訪</div>
+        <div class="next-visit-box">
+          <div class="next-visit-title">預定下次拜訪</div>
+          <div class="form-row">
+            <div class="form-col">
+              <label class="form-lbl">預定日期</label>
+              <input class="form-input" type="date" id="f-next-date">
+            </div>
+            <div class="form-col">
+              <label class="form-lbl">預定時間</label>
+              <input class="form-input" type="time" id="f-next-time" value="10:00">
+            </div>
+          </div>
+          <div class="form-col">
+            <label class="form-lbl">預計討論議題</label>
+            <input class="form-input" id="f-next-topics" placeholder="例：重新檢視壽險保額、儲蓄險規劃…">
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button class="btn-danger" id="btn-delete" style="display:none;margin-right:auto" onclick="deleteVisit()">刪除</button>
+      <button class="btn-secondary" onclick="closeModal()">取消</button>
+      <button class="btn-primary" onclick="saveVisit()">💾 儲存到 Drive</button>
+      <button class="btn-cal" id="btn-cal" onclick="saveAndAddCal()">📅 儲存 + 加入日曆</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── 設定 ─────────────────────────────────────────────────────
+var VISITS_FOLDER_ID = "11aeE1wuuZDcqlyP6jWMORjLZsm8HbLBj"; // Google Drive visits 資料夾
+var GAPI_KEY = ""; // 使用 OAuth（無需 API Key）
+
+var familyData = null;
+var familyId = "";
+var familyName = "";
+var visits = []; // 目前載入的訪談紀錄
+var currentActions = []; // 編輯中的承諾事項
+var editingVisitId = null;
+var visitFolderId = null; // 家庭專屬資料夾 ID
+
+// ── Nav Ready ────────────────────────────────────────────────
+window.addEventListener("nbs_nav_ready", function(e) {
+  var d = e.detail;
+  if (!d || !d.familyData) return;
+  familyData = d.familyData;
+  familyId = familyData.id || familyData.familyId || "";
+  familyName = familyData.name || familyData.headName || "此家庭";
+  document.getElementById("family-name").textContent = familyName;
+  ensureFamilyFolder().then(loadVisits);
+});
+
+setTimeout(function(){
+  if (!familyData) {
+    document.getElementById("family-name").textContent = "（未載入家庭）";
+    document.getElementById("visit-list-wrap").innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">請從家庭保單頁面進入</div></div>';
+  }
+}, 3000);
+
+// ── Google Drive 操作 ────────────────────────────────────────
+// 取得 access_token（由 nav.js 的 Google OAuth 提供）
+function getToken() {
+  return window.NBS_NAV && NBS_NAV.getGoogleToken ? NBS_NAV.getGoogleToken() : null;
+}
+
+// 確保家庭專屬子資料夾存在
+async function ensureFamilyFolder() {
+  var folderName = familyName + "家庭";
+  try {
+    // 搜尋是否已存在
+    var resp = await gdriveSearch("mimeType='application/vnd.google-apps.folder' and title='"+folderName+"' and '"+VISITS_FOLDER_ID+"' in parents");
+    if (resp.items && resp.items.length > 0) {
+      visitFolderId = resp.items[0].id;
+    } else {
+      // 建立新資料夾
+      var r = await gdriveCreate({
+        mimeType: "application/vnd.google-apps.folder",
+        title: folderName,
+        parents: [{ id: VISITS_FOLDER_ID }]
+      });
+      visitFolderId = r.id;
+    }
+  } catch(e) {
+    // fallback：直接放在 visits 資料夾
+    visitFolderId = VISITS_FOLDER_ID;
+  }
+}
+
+async function gdriveSearch(q) {
+  var token = getToken();
+  var url = "https://www.googleapis.com/drive/v2/files?q="+encodeURIComponent(q)+"&maxResults=50";
+  var headers = token ? { Authorization: "Bearer " + token } : {};
+  var r = await fetch(url, { headers: headers });
+  return r.json();
+}
+
+async function gdriveCreate(meta, content) {
+  var token = getToken();
+  var headers = { "Content-Type": "application/json" };
+  if (token) headers.Authorization = "Bearer " + token;
+  var r = await fetch("https://www.googleapis.com/drive/v2/files", {
+    method: "POST", headers: headers, body: JSON.stringify(meta)
+  });
+  return r.json();
+}
+
+async function gdriveUpdateContent(fileId, content) {
+  var token = getToken();
+  var headers = { "Content-Type": "application/json" };
+  if (token) headers.Authorization = "Bearer " + token;
+  await fetch("https://www.googleapis.com/upload/drive/v2/files/"+fileId+"?uploadType=media", {
+    method: "PUT", headers: headers, body: content
+  });
+}
+
+async function gdriveDelete(fileId) {
+  var token = getToken();
+  var headers = token ? { Authorization: "Bearer " + token } : {};
+  await fetch("https://www.googleapis.com/drive/v2/files/"+fileId, { method: "DELETE", headers: headers });
+}
+
+async function gdriveGetContent(fileId) {
+  var token = getToken();
+  var headers = { Accept: "application/json" };
+  if (token) headers.Authorization = "Bearer " + token;
+  var r = await fetch("https://drive.google.com/uc?export=download&id="+fileId, { headers: headers });
+  return r.json();
+}
+
+// ── 載入訪談紀錄 ─────────────────────────────────────────────
+async function loadVisits() {
+  document.getElementById("visit-list-wrap").innerHTML = '<div class="loading"><span class="spin"></span>讀取訪談紀錄…</div>';
+  try {
+    if (!visitFolderId) { renderVisits(); return; }
+    var resp = await gdriveSearch("'"+visitFolderId+"' in parents and mimeType='application/json' and title contains 'visit_'");
+    visits = [];
+    if (resp.items && resp.items.length > 0) {
+      // 讀取每個 JSON 檔案
+      var promises = resp.items.map(async function(f) {
+        try {
+          var content = await gdriveGetContent(f.id);
+          content._fileId = f.id;
+          return content;
+        } catch(e) { return null; }
+      });
+      var results = await Promise.all(promises);
+      visits = results.filter(Boolean).sort(function(a,b){ return b.date.localeCompare(a.date); });
+    }
+    renderVisits();
+  } catch(e) {
+    // Drive 無法存取時，用 localStorage 備援
+    var stored = localStorage.getItem("visits_" + familyId);
+    visits = stored ? JSON.parse(stored).sort(function(a,b){ return b.date.localeCompare(a.date); }) : [];
+    renderVisits();
+    showToast("⚠️ 無法連接 Drive，顯示本機備份資料");
+  }
+}
+
+// ── 渲染列表 ─────────────────────────────────────────────────
+function renderVisits() {
+  var wrap = document.getElementById("visit-list-wrap");
+  if (!visits.length) {
+    wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">尚無訪談紀錄</div><div class="empty-sub">點右上角「＋ 新增紀錄」開始記錄</div></div>';
+    return;
+  }
+  var today = new Date().toISOString().slice(0,10);
+  var html = '<div class="visit-list">';
+  visits.forEach(function(v) {
+    var pendingActions = (v.actions||[]).filter(function(a){ return !a.done; });
+    var overdueActions = pendingActions.filter(function(a){ return a.deadline && a.deadline < today; });
+    html += '<div class="visit-card" onclick="openEditVisit(\''+v.id+'\')">';
+    html += '<div class="visit-card-hdr">';
+    html += '<span class="visit-date">'+formatDateDisplay(v.date)+'</span>';
+    html += '<span class="visit-type">'+( v.type||"面談")+'</span>';
+    if (v.attendees) html += '<span style="font-size:11px;color:#aaa;margin-left:auto">'+v.attendees+'</span>';
+    html += '</div>';
+    if (v.summary) html += '<div class="visit-preview">'+v.summary+'</div>';
+    if (pendingActions.length > 0) {
+      html += '<div class="visit-actions-row">';
+      pendingActions.slice(0,3).forEach(function(a){
+        var cls = (a.deadline && a.deadline < today) ? "action-chip overdue" : "action-chip pending";
+        html += '<span class="'+cls+'">'+( a.who==="me"?"📋":"👤")+''+a.text+(a.deadline?" · "+formatDateShort(a.deadline):"")+'</span>';
+      });
+      if (pendingActions.length > 3) html += '<span class="action-chip">+' +(pendingActions.length-3)+ ' 項</span>';
+      html += '</div>';
+    }
+    if (v.nextDate) {
+      html += '<div style="margin-top:8px;font-size:11px;color:#378ADD">📆 下次：'+formatDateDisplay(v.nextDate)+(v.nextTopics?" · "+v.nextTopics:"")+'</div>';
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+  wrap.innerHTML = html;
+}
+
+// ── 新增 / 編輯 ──────────────────────────────────────────────
+function openNewVisit() {
+  editingVisitId = null;
+  currentActions = [];
+  document.getElementById("modal-title").textContent = "📝 新增訪談紀錄";
+  document.getElementById("btn-delete").style.display = "none";
+  // 預設今天日期
+  document.getElementById("f-date").value = new Date().toISOString().slice(0,10);
+  document.getElementById("f-type").value = "面談";
+  document.getElementById("f-attendees").value = familyName || "";
+  document.getElementById("f-summary").value = "";
+  document.getElementById("f-concerns").value = "";
+  document.getElementById("f-next-date").value = "";
+  document.getElementById("f-next-time").value = "10:00";
+  document.getElementById("f-next-topics").value = "";
+  renderActionList();
+  document.getElementById("modal").classList.add("open");
+}
+
+function openEditVisit(id) {
+  var v = visits.find(function(x){ return x.id === id; });
+  if (!v) return;
+  editingVisitId = id;
+  currentActions = JSON.parse(JSON.stringify(v.actions || []));
+  document.getElementById("modal-title").textContent = "✏️ 編輯訪談紀錄";
+  document.getElementById("btn-delete").style.display = "block";
+  document.getElementById("f-date").value = v.date || "";
+  document.getElementById("f-type").value = v.type || "面談";
+  document.getElementById("f-attendees").value = v.attendees || "";
+  document.getElementById("f-summary").value = v.summary || "";
+  document.getElementById("f-concerns").value = v.concerns || "";
+  document.getElementById("f-next-date").value = v.nextDate || "";
+  document.getElementById("f-next-time").value = v.nextTime || "10:00";
+  document.getElementById("f-next-topics").value = v.nextTopics || "";
+  renderActionList();
+  document.getElementById("modal").classList.add("open");
+}
+
+function closeModal() {
+  document.getElementById("modal").classList.remove("open");
+}
+
+// ── 承諾事項 ─────────────────────────────────────────────────
+function renderActionList() {
+  var today = new Date().toISOString().slice(0,10);
+  var html = "";
+  currentActions.forEach(function(a, i) {
+    var overdue = !a.done && a.deadline && a.deadline < today;
+    html += '<div class="action-item">';
+    html += '<div class="action-item-done'+(a.done?" checked":"")+'" onclick="toggleAction('+i+')">'+(a.done?"✓":"")+'</div>';
+    html += '<span class="action-item-text'+(a.done?' style="text-decoration:line-through;color:#bbb"':"")+'">' + a.text + '</span>';
+    html += '<span class="action-item-who '+(a.who==="me"?"who-me":"who-client")+'">'+(a.who==="me"?"我提供":"客戶準備")+'</span>';
+    if (a.deadline) html += '<span class="action-item-date'+(overdue?' style="color:#C62828;font-weight:600"':"")+'">'+(overdue?"⚠️ ":"")+formatDateShort(a.deadline)+'</span>';
+    html += '<button class="action-item-del" onclick="removeAction('+i+')">×</button>';
+    html += '</div>';
+  });
+  document.getElementById("action-list").innerHTML = html;
+}
+
+function addAction() {
+  var text = document.getElementById("new-action-text").value.trim();
+  if (!text) return;
+  currentActions.push({
+    id: "a" + Date.now(),
+    text: text,
+    who: document.getElementById("new-action-who").value,
+    deadline: document.getElementById("new-action-date").value || "",
+    done: false
+  });
+  document.getElementById("new-action-text").value = "";
+  document.getElementById("new-action-date").value = "";
+  renderActionList();
+}
+
+function toggleAction(i) {
+  currentActions[i].done = !currentActions[i].done;
+  renderActionList();
+}
+
+function removeAction(i) {
+  currentActions.splice(i, 1);
+  renderActionList();
+}
+
+// ── 儲存 ─────────────────────────────────────────────────────
+function buildVisitData() {
+  return {
+    id: editingVisitId || ("v" + Date.now()),
+    familyId: familyId,
+    familyName: familyName,
+    date: document.getElementById("f-date").value,
+    type: document.getElementById("f-type").value,
+    attendees: document.getElementById("f-attendees").value.trim(),
+    summary: document.getElementById("f-summary").value.trim(),
+    concerns: document.getElementById("f-concerns").value.trim(),
+    actions: currentActions,
+    nextDate: document.getElementById("f-next-date").value,
+    nextTime: document.getElementById("f-next-time").value,
+    nextTopics: document.getElementById("f-next-topics").value.trim(),
+    updatedAt: new Date().toISOString()
+  };
+}
+
+async function saveVisit() {
+  var v = buildVisitData();
+  if (!v.date) { showToast("⚠️ 請填寫拜訪日期"); return; }
+
+  // 本機備援
+  var localVisits = JSON.parse(localStorage.getItem("visits_" + familyId) || "[]");
+  var localIdx = localVisits.findIndex(function(x){ return x.id === v.id; });
+  if (localIdx >= 0) localVisits[localIdx] = v; else localVisits.push(v);
+  localStorage.setItem("visits_" + familyId, JSON.stringify(localVisits));
+
+  // 嘗試存到 Drive
+  try {
+    if (visitFolderId) {
+      var fileName = "visit_" + v.date + "_" + v.id + ".json";
+      var content = JSON.stringify(v, null, 2);
+      if (v._fileId) {
+        await gdriveUpdateContent(v._fileId, content);
+      } else {
+        var resp = await fetch("https://www.googleapis.com/upload/drive/v2/files?uploadType=multipart", {
+          method: "POST",
+          headers: {
+            "Authorization": "Bearer " + (getToken() || ""),
+            "Content-Type": "multipart/related; boundary=bound"
+          },
+          body: [
+            "--bound\r\nContent-Type: application/json\r\n\r\n",
+            JSON.stringify({ title: fileName, parents: [{ id: visitFolderId }], mimeType: "application/json" }),
+            "\r\n--bound\r\nContent-Type: application/json\r\n\r\n",
+            content, "\r\n--bound--"
+          ].join("")
+        });
+        var saved = await resp.json();
+        v._fileId = saved.id;
+      }
+      showToast("✅ 已儲存至 Google Drive");
+    } else {
+      showToast("✅ 已儲存（本機備份）");
+    }
+  } catch(e) {
+    showToast("💾 已儲存本機備份（Drive 連線失敗）");
+  }
+
+  // 更新 visits 陣列
+  var idx = visits.findIndex(function(x){ return x.id === v.id; });
+  if (idx >= 0) visits[idx] = v; else visits.unshift(v);
+  visits.sort(function(a,b){ return b.date.localeCompare(a.date); });
+
+  closeModal();
+  renderVisits();
+}
+
+async function deleteVisit() {
+  var v = visits.find(function(x){ return x.id === editingVisitId; });
+  if (!v || !confirm("確定刪除這筆訪談紀錄？")) return;
+  if (v._fileId) {
+    try { await gdriveDelete(v._fileId); } catch(e){}
+  }
+  visits = visits.filter(function(x){ return x.id !== editingVisitId; });
+  var local = JSON.parse(localStorage.getItem("visits_" + familyId) || "[]");
+  localStorage.setItem("visits_" + familyId, JSON.stringify(local.filter(function(x){ return x.id !== editingVisitId; })));
+  closeModal();
+  renderVisits();
+  showToast("🗑 已刪除");
+}
+
+// ── Google Calendar ──────────────────────────────────────────
+async function saveAndAddCal() {
+  await saveVisit();
+  var v = buildVisitData();
+  // 建立下次拜訪行程
+  if (v.nextDate) {
+    addToCalendar(
+      "📋 拜訪 " + familyName,
+      v.nextDate, v.nextTime,
+      "訪談議題：" + (v.nextTopics || "（待確認）") + "\n\n上次承諾事項：\n" +
+        (v.actions||[]).filter(function(a){return !a.done;}).map(function(a){ return "• " + a.text; }).join("\n")
+    );
+  }
+  // 建立承諾事項提醒
+  (v.actions||[]).filter(function(a){ return !a.done && a.deadline; }).forEach(function(a){
+    addToCalendar(
+      (a.who==="me"?"📋 提供資料：":"📤 催收：") + a.text + "（" + familyName + "）",
+      a.deadline, "09:00",
+      "家庭：" + familyName + "\n承諾事項：" + a.text
+    );
+  });
+}
+
+function addToCalendar(title, date, time, desc) {
+  // 建立 Google Calendar 快速新增連結
+  var start = date.replace(/-/g,"") + "T" + (time||"10:00").replace(":","") + "00";
+  var end = date.replace(/-/g,"") + "T" + addHour(time||"10:00") + "00";
+  var url = "https://calendar.google.com/calendar/render?action=TEMPLATE" +
+    "&text=" + encodeURIComponent(title) +
+    "&dates=" + start + "/" + end +
+    "&details=" + encodeURIComponent(desc || "");
+  window.open(url, "_blank");
+}
+
+function addHour(t) {
+  var p = t.split(":"); var h = parseInt(p[0]) + 1;
+  return String(h<10?"0"+h:h) + p[1];
+}
+
+// ── 工具 ─────────────────────────────────────────────────────
+function formatDateDisplay(d) {
+  if (!d) return "";
+  var p = d.split("-");
+  return (parseInt(p[0])-1911) + "年" + parseInt(p[1]) + "月" + parseInt(p[2]) + "日";
+}
+
+function formatDateShort(d) {
+  if (!d) return "";
+  var p = d.split("-");
+  return parseInt(p[1]) + "/" + parseInt(p[2]);
+}
+
+function showToast(msg) {
+  var t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(function(){ t.classList.remove("show"); }, 2500);
+}
+</script>
+<script>
+  NBS_NAV.onMemberChange = function(pid) { /* 訪談紀錄不需要切換成員 */ };
+  NBS_NAV.init({ page: "visit" });
+</script>
+</body>
+</html>
