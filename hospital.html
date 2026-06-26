@@ -8,47 +8,34 @@
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f5f3;min-height:100vh;color:#1a1a1a}
-
     .page-wrap{padding:16px;max-width:900px;margin:0 auto;padding-bottom:80px}
-
-    /* ── 頂部標題 ── */
     .page-hdr{display:flex;align-items:center;gap:10px;margin-bottom:16px}
     .page-hdr-back{background:none;border:none;font-size:22px;color:#999;cursor:pointer;padding:0;line-height:1}
-    .page-hdr-title{font-size:16px;font-weight:600;color:#1a1a1a;flex:1}
-    .data-badge{font-size:10px;padding:2px 8px;border-radius:99px;background:#E6F1FB;color:#0C447C}
-
-    /* ── 成員切換 Tab ── */
-    .member-tabs{display:flex;gap:0;border-bottom:1px solid #e8e8e8;margin-bottom:16px;overflow-x:auto}
+    .page-hdr-title{font-size:16px;font-weight:600;flex:1}
+    .data-badge{font-size:10px;padding:2px 8px;border-radius:99px;background:#E6F1FB;color:#0C447C;cursor:pointer}
+    .member-tabs{display:flex;border-bottom:1px solid #e8e8e8;margin-bottom:16px;overflow-x:auto}
     .member-tab{padding:8px 16px;font-size:12px;cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;color:#888;background:none;border-top:none;border-left:none;border-right:none;font-family:inherit}
     .member-tab.active{border-bottom-color:#378ADD;color:#378ADD;font-weight:500}
-
-    /* ── 地址卡片 ── */
     .addr-card{background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px}
     .addr-icon{font-size:20px;flex-shrink:0}
     .addr-info{flex:1}
     .addr-label{font-size:11px;color:#aaa;margin-bottom:2px}
     .addr-text{font-size:14px;font-weight:500;color:#333}
     .addr-text.none{color:#bbb;font-weight:400}
-
-    /* ── 搜尋匹配結果 ── */
-    .match-label{font-size:11px;font-weight:600;color:#666;letter-spacing:.05em;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+    .match-label{font-size:11px;font-weight:600;color:#555;letter-spacing:.05em;margin:16px 0 8px;display:flex;align-items:center;gap:6px}
     .match-badge{font-size:10px;padding:1px 7px;border-radius:99px;font-weight:500}
     .match-exact{background:#E8F5E9;color:#2E7D32}
     .match-city{background:#FFF8E1;color:#F57F17}
     .match-region{background:#FBE9E7;color:#BF360C}
     .match-avg{background:#f0f0f0;color:#777}
-
-    /* ── 醫院列表 ── */
-    .hospital-list{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
-    .hospital-card{background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:12px 14px;transition:box-shadow .15s}
-    .hospital-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.06)}
-    .hospital-card.highlighted{border-color:#378ADD;background:#F8FBFF}
-    .h-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+    .hospital-list{display:flex;flex-direction:column;gap:8px;margin-bottom:4px}
+    .hospital-card{background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:12px 14px}
+    .h-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
     .h-level{font-size:10px;padding:2px 7px;border-radius:99px;font-weight:500;white-space:nowrap}
     .level-醫學中心{background:#EEEDFE;color:#3C3489}
     .level-區域醫院{background:#E6F1FB;color:#0C447C}
     .level-地區醫院{background:#EAF3DE;color:#27500A}
-    .h-name{font-size:13px;font-weight:600;color:#1a1a1a;flex:1}
+    .h-name{font-size:13px;font-weight:600;flex:1}
     .h-location{font-size:11px;color:#aaa}
     .h-rooms{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
     .room-item{background:#f7f7f5;border-radius:7px;padding:8px 10px;text-align:center}
@@ -56,26 +43,20 @@
     .room-val{font-size:14px;font-weight:700;color:#0C447C;font-family:monospace}
     .room-val.null-val{color:#ccc;font-size:12px;font-weight:400}
     .room-unit{font-size:10px;color:#aaa;font-weight:400}
-
-    /* ── 全台平均 ── */
-    .avg-section{background:#f7f7f5;border-radius:10px;padding:14px 16px;margin-bottom:16px}
+    .avg-section{background:#f7f7f5;border-radius:10px;padding:14px 16px;margin:16px 0}
     .avg-title{font-size:11px;font-weight:600;color:#888;margin-bottom:10px;letter-spacing:.05em}
     .avg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
     .avg-item{background:#fff;border-radius:7px;padding:8px 10px;text-align:center;border:1px solid #eee}
-
-    /* ── 篩選列 ── */
     .filter-bar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
-    .filter-btn{padding:5px 12px;border-radius:99px;border:1px solid #e0e0e0;background:#fff;font-size:12px;cursor:pointer;color:#666;font-family:inherit;transition:all .15s}
+    .filter-btn{padding:5px 12px;border-radius:99px;border:1px solid #e0e0e0;background:#fff;font-size:12px;cursor:pointer;color:#666;font-family:inherit}
     .filter-btn.active{background:#0C447C;border-color:#0C447C;color:#fff}
-
-    /* ── 資料來源 ── */
     .data-src{font-size:11px;color:#bbb;text-align:center;margin-top:16px;padding-top:12px;border-top:1px solid #f0f0f0;line-height:1.8}
-
-    /* ── 載入狀態 ── */
     .loading{text-align:center;padding:40px;color:#aaa;font-size:13px}
-    .spin{display:inline-block;width:20px;height:20px;border:2px solid #e0e0e0;border-top-color:#378ADD;border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle;margin-right:8px}
+    .spin{display:inline-block;width:18px;height:18px;border:2px solid #e0e0e0;border-top-color:#378ADD;border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle;margin-right:8px}
     @keyframes sp{to{transform:rotate(360deg)}}
-    .error-box{background:#FEF5F8;border:1px solid #F5C6D2;border-radius:8px;padding:14px;color:#791F1F;font-size:13px;line-height:1.7}
+    .src-tag{font-size:10px;padding:1px 6px;border-radius:4px;margin-left:6px}
+    .src-live{background:#E8F5E9;color:#2E7D32}
+    .src-local{background:#FFF8E1;color:#856404}
   </style>
 </head>
 <body>
@@ -84,82 +65,120 @@
   <div id="nbs-sidebar"></div>
   <div style="flex:1;min-width:0">
     <div class="page-wrap">
-
       <div class="page-hdr">
         <button class="page-hdr-back" onclick="history.back()">‹</button>
         <div class="page-hdr-title">🏥 醫院病房費查詢</div>
-        <span class="data-badge" id="data-badge">載入中…</span>
+        <span class="data-badge" id="data-badge" onclick="reloadFromDrive()" title="點擊重新從雲端更新">⏳ 讀取中</span>
       </div>
-
       <div id="member-tabs" class="member-tabs"></div>
       <div id="main-content">
-        <div class="loading"><span class="spin"></span>從雲端讀取醫院資料中…</div>
+        <div class="loading"><span class="spin"></span>準備資料中…</div>
       </div>
-
     </div>
   </div>
 </div>
 <div id="nbs-bottom-tab"></div>
 
 <script>
+// ── 內嵌備援資料（Drive 無法存取時自動使用）───────────────────
+var FALLBACK_DATA = {"version":"1.0","updated":"2021/02","source":"RFC國際認證財務顧問師：李丞敏","fields":{"single_hi":"套房/豪華單人房差額（元/日）","single":"一人房差額（元/日）","double":"二人房差額（元/日）"},"fallback_rules":["先找同區醫院","同區無資料 → 找同市醫院","同市無資料 → 找同大區醫院","大區無資料 → 使用全台平均值"],"hospitals":[{"id":"h001","name":"市立醫院（台北）","level":"區域醫院","region":"大台北地區","city":"台北市","district":"中山區","rooms":{"single_hi":null,"single":3000,"double":2000}},{"id":"h002","name":"長庚醫院（台北）","level":"醫學中心","region":"大台北地區","city":"台北市","district":"內湖區","rooms":{"single_hi":4000,"single":3500,"double":2300}},{"id":"h003","name":"台北榮總","level":"醫學中心","region":"大台北地區","city":"台北市","district":"北投區","rooms":{"single_hi":20000,"single":4000,"double":2400}},{"id":"h004","name":"國泰醫院（總院）","level":"醫學中心","region":"大台北地區","city":"台北市","district":"大安區","rooms":{"single_hi":18000,"single":5390,"double":2600}},{"id":"h005","name":"中心診所","level":"地區醫院","region":"大台北地區","city":"台北市","district":"中正區","rooms":{"single_hi":7400,"single":4100,"double":2700}},{"id":"h006","name":"台大醫院","level":"醫學中心","region":"大台北地區","city":"台北市","district":"中正區","rooms":{"single_hi":8000,"single":3600,"double":1600}},{"id":"h007","name":"新光醫院","level":"醫學中心","region":"大台北地區","city":"台北市","district":"士林區","rooms":{"single_hi":20000,"single":5300,"double":2650}},{"id":"h008","name":"台安醫院","level":"區域醫院","region":"大台北地區","city":"台北市","district":"松山區","rooms":{"single_hi":18500,"single":4800,"double":3200}},{"id":"h009","name":"耕莘醫院","level":"區域醫院","region":"大台北地區","city":"新北市","district":"新店區","rooms":{"single_hi":3500,"single":2700,"double":2000}},{"id":"h010","name":"台北醫學大學附設醫院","level":"醫學中心","region":"大台北地區","city":"台北市","district":"信義區","rooms":{"single_hi":22000,"single":6500,"double":3200}},{"id":"h011","name":"馬偕醫院（台北）","level":"醫學中心","region":"大台北地區","city":"台北市","district":"中山區","rooms":{"single_hi":5500,"single":4500,"double":2700}},{"id":"h012","name":"恩主公醫院","level":"區域醫院","region":"大台北地區","city":"新北市","district":"三峽區","rooms":{"single_hi":5300,"single":4000,"double":1800}},{"id":"h013","name":"亞東醫院","level":"醫學中心","region":"大台北地區","city":"新北市","district":"板橋區","rooms":{"single_hi":12500,"single":3000,"double":2200}},{"id":"h014","name":"台北慈濟醫院","level":"醫學中心","region":"大台北地區","city":"新北市","district":"新店區","rooms":{"single_hi":7000,"single":3600,"double":2000}},{"id":"h015","name":"國立陽明大學附設醫院","level":"區域醫院","region":"宜花東地區","city":"宜蘭縣","district":"宜蘭市","rooms":{"single_hi":4600,"single":3000,"double":1600}},{"id":"h016","name":"宜陽仁愛醫院","level":"地區醫院","region":"宜花東地區","city":"宜蘭縣","district":"宜蘭市","rooms":{"single_hi":null,"single":1500,"double":800}},{"id":"h017","name":"臺北榮總蘇澳分院","level":"地區醫院","region":"宜花東地區","city":"宜蘭縣","district":"蘇澳鎮","rooms":{"single_hi":null,"single":1200,"double":600}},{"id":"h018","name":"羅東聖母醫院","level":"區域醫院","region":"宜花東地區","city":"宜蘭縣","district":"羅東鎮","rooms":{"single_hi":3000,"single":2000,"double":1600}},{"id":"h019","name":"羅東博愛醫院","level":"區域醫院","region":"宜花東地區","city":"宜蘭縣","district":"羅東鎮","rooms":{"single_hi":3000,"single":2400,"double":1200}},{"id":"h020","name":"國軍花蓮總醫院","level":"區域醫院","region":"宜花東地區","city":"花蓮縣","district":"花蓮市","rooms":{"single_hi":3000,"single":2000,"double":1000}},{"id":"h021","name":"慈濟醫學中心（花蓮）","level":"醫學中心","region":"宜花東地區","city":"花蓮縣","district":"花蓮市","rooms":{"single_hi":3000,"single":2400,"double":1300}},{"id":"h022","name":"部立花蓮醫院","level":"地區醫院","region":"宜花東地區","city":"花蓮縣","district":"花蓮市","rooms":{"single_hi":1800,"single":900,"double":300}},{"id":"h023","name":"榮民總醫院玉里分院","level":"地區醫院","region":"宜花東地區","city":"花蓮縣","district":"玉里鎮","rooms":{"single_hi":null,"single":1500,"double":500}},{"id":"h024","name":"台東聖母醫院","level":"地區醫院","region":"宜花東地區","city":"台東縣","district":"台東市","rooms":{"single_hi":2000,"single":1200,"double":600}},{"id":"h025","name":"基督教門諾醫院","level":"區域醫院","region":"宜花東地區","city":"花蓮縣","district":"花蓮市","rooms":{"single_hi":3900,"single":2000,"double":1000}},{"id":"h026","name":"台東基督教醫院","level":"地區醫院","region":"宜花東地區","city":"台東縣","district":"台東市","rooms":{"single_hi":null,"single":2500,"double":1000}},{"id":"h027","name":"馬偕台東分院","level":"區域醫院","region":"宜花東地區","city":"台東縣","district":"台東市","rooms":{"single_hi":3400,"single":2000,"double":1600}},{"id":"h028","name":"部立台東醫院","level":"地區醫院","region":"宜花東地區","city":"台東縣","district":"台東市","rooms":{"single_hi":3000,"single":600,"double":800}},{"id":"h029","name":"部立苗栗醫院","level":"地區醫院","region":"北部地區","city":"苗栗縣","district":"苗栗市","rooms":{"single_hi":3600,"single":1500,"double":1600}},{"id":"h030","name":"部立南投醫院","level":"地區醫院","region":"中部地區","city":"南投縣","district":"南投市","rooms":{"single_hi":4000,"single":3000,"double":1600}},{"id":"h031","name":"竹山秀傳醫院","level":"地區醫院","region":"中部地區","city":"南投縣","district":"竹山鎮","rooms":{"single_hi":null,"single":3000,"double":1000}},{"id":"h032","name":"台中榮總","level":"醫學中心","region":"中部地區","city":"台中市","district":"西屯區","rooms":{"single_hi":8000,"single":3380,"double":2200}},{"id":"h033","name":"中國醫藥大學附設醫院","level":"醫學中心","region":"中部地區","city":"台中市","district":"北區","rooms":{"single_hi":11900,"single":4500,"double":2500}},{"id":"h034","name":"中山醫學大學附設醫院","level":"醫學中心","region":"中部地區","city":"台中市","district":"南區","rooms":{"single_hi":8000,"single":3000,"double":2500}},{"id":"h035","name":"童綜合醫院梧棲院區","level":"區域醫院","region":"中部地區","city":"台中市","district":"梧棲區","rooms":{"single_hi":12000,"single":3200,"double":1900}},{"id":"h036","name":"台中慈濟醫院","level":"醫學中心","region":"中部地區","city":"台中市","district":"潭子區","rooms":{"single_hi":7500,"single":3500,"double":2000}},{"id":"h037","name":"仁愛醫院大里院區","level":"區域醫院","region":"中部地區","city":"台中市","district":"大里區","rooms":{"single_hi":7000,"single":3100,"double":2100}},{"id":"h038","name":"李綜合醫院（苑里大甲）","level":"地區醫院","region":"中部地區","city":"台中市","district":"大甲區","rooms":{"single_hi":null,"single":2200,"double":1200}},{"id":"h039","name":"彰化基督教醫院","level":"醫學中心","region":"中部地區","city":"彰化縣","district":"彰化市","rooms":{"single_hi":12000,"single":1900,"double":4500}},{"id":"h040","name":"澄清醫院","level":"區域醫院","region":"中部地區","city":"台中市","district":"西區","rooms":{"single_hi":8000,"single":3000,"double":2400}},{"id":"h041","name":"彰化秀傳醫院","level":"區域醫院","region":"中部地區","city":"彰化縣","district":"彰化市","rooms":{"single_hi":12000,"single":2000,"double":2500}},{"id":"h042","name":"台大雲林分院","level":"醫學中心","region":"中部地區","city":"雲林縣","district":"斗六市","rooms":{"single_hi":3000,"single":2200,"double":1500}},{"id":"h043","name":"部立嘉義醫院","level":"地區醫院","region":"南部地區","city":"嘉義市","district":"西區","rooms":{"single_hi":null,"single":1800,"double":800}},{"id":"h044","name":"榮民總醫院嘉義分院","level":"區域醫院","region":"南部地區","city":"嘉義市","district":"東區","rooms":{"single_hi":3000,"single":2500,"double":1500}},{"id":"h045","name":"嘉義基督教醫院","level":"區域醫院","region":"南部地區","city":"嘉義市","district":"東區","rooms":{"single_hi":3500,"single":2500,"double":2500}},{"id":"h046","name":"成大醫院","level":"醫學中心","region":"南部地區","city":"台南市","district":"北區","rooms":{"single_hi":8000,"single":4500,"double":2500}},{"id":"h047","name":"奇美醫療中心","level":"醫學中心","region":"南部地區","city":"台南市","district":"永康區","rooms":{"single_hi":4800,"single":3000,"double":1680}},{"id":"h048","name":"天主教聖馬爾定醫院","level":"區域醫院","region":"南部地區","city":"嘉義市","district":"東區","rooms":{"single_hi":null,"single":3300,"double":1650}},{"id":"h049","name":"台南市立醫院","level":"區域醫院","region":"南部地區","city":"台南市","district":"東區","rooms":{"single_hi":8000,"single":2300,"double":1600}},{"id":"h050","name":"高醫附設中和醫院","level":"醫學中心","region":"南部地區","city":"高雄市","district":"三民區","rooms":{"single_hi":6600,"single":2300,"double":1400}},{"id":"h051","name":"高雄長庚醫院","level":"醫學中心","region":"南部地區","city":"高雄市","district":"鳥松區","rooms":{"single_hi":4370,"single":3900,"double":1670}},{"id":"h052","name":"高雄榮總醫院","level":"醫學中心","region":"南部地區","city":"高雄市","district":"左營區","rooms":{"single_hi":11000,"single":2500,"double":2200}},{"id":"h053","name":"阮綜合醫院","level":"區域醫院","region":"南部地區","city":"高雄市","district":"苓雅區","rooms":{"single_hi":3500,"single":3000,"double":1800}},{"id":"h054","name":"省立屏東醫院","level":"地區醫院","region":"南部地區","city":"屏東縣","district":"屏東市","rooms":{"single_hi":2800,"single":1200,"double":800}},{"id":"h055","name":"屏東基督教醫院","level":"區域醫院","region":"南部地區","city":"屏東縣","district":"屏東市","rooms":{"single_hi":4000,"single":2500,"double":1500}},{"id":"h056","name":"安泰醫院（恆春）","level":"地區醫院","region":"南部地區","city":"屏東縣","district":"恆春鎮","rooms":{"single_hi":2200,"single":2000,"double":1100}}]};
+
 // ── 設定 ─────────────────────────────────────────────────────
 var GDRIVE_FILE_ID = "1Jw0Jbo9AOZg7lwdd7Bs-Pd-BXQxuFoag";
-var GDRIVE_URL = "https://www.googleapis.com/drive/v3/files/" + GDRIVE_FILE_ID + "?alt=media&key=AIzaSyD-placeholder";
-// Google Drive 公開檔案可用此格式直接下載（無需 API key）
-var DIRECT_URL = "https://drive.google.com/uc?export=download&id=" + GDRIVE_FILE_ID;
-// CORS proxy 備援
-var PROXY_URL = "https://corsproxy.io/?" + encodeURIComponent(DIRECT_URL);
-
 var hospitalsData = null;
 var members = [];
 var currentMemberId = null;
-var activeFilter = "all"; // all / 醫學中心 / 區域醫院 / 地區醫院
+var activeFilter = "all";
+var dataSource = "local"; // "live" or "local"
 
-// ── 啟動 ─────────────────────────────────────────────────────
-window.addEventListener("nbs_nav_ready", function(e) {
-  var detail = e.detail;
-  if (!detail.familyData) {
-    showError("無法載入家庭資料，請確認已進入家庭保單。");
-    return;
-  }
-  // 只取非 beneficiary_only 成員
-  members = (detail.familyData.members || []).filter(function(m){
-    return m.role !== "beneficiary_only";
-  });
+// ── nav ready ─────────────────────────────────────────────────
+// 同時監聽事件與 DOMContentLoaded，以防事件已在頁面載入前觸發
+var navReady = false;
+function onNavReady(detail) {
+  if (navReady) return;
+  navReady = true;
+  var fd = detail && detail.familyData;
+  members = fd ? (fd.members || []).filter(function(m){ return m.role !== "beneficiary_only"; }) : [];
   currentMemberId = members.length > 0 ? members[0].personId : null;
   renderTabs();
   loadHospitals();
-});
+}
+
+window.addEventListener("nbs_nav_ready", function(e){ onNavReady(e.detail); });
+
+// 保護：若 3 秒後 nav 還沒 ready，用空成員繼續
+setTimeout(function(){
+  if (!navReady) {
+    // 嘗試直接讀取
+    if (window.NBS_NAV && NBS_NAV.getFamilyData) {
+      onNavReady({ familyData: NBS_NAV.getFamilyData() });
+    } else {
+      onNavReady({ familyData: null });
+    }
+  }
+}, 3000);
 
 // ── 讀取醫院資料 ─────────────────────────────────────────────
 function loadHospitals() {
-  // 嘗試直接下載，若 CORS 失敗改走 proxy
-  fetch(DIRECT_URL)
-    .then(function(r){
-      if (!r.ok) throw new Error("direct failed");
-      return r.json();
-    })
-    .catch(function(){
-      return fetch(PROXY_URL).then(function(r){ return r.json(); });
-    })
-    .then(function(data){
-      hospitalsData = data;
-      var badge = document.getElementById("data-badge");
-      if (badge) badge.textContent = "更新：" + (data.updated || "—");
+  document.getElementById("main-content").innerHTML = '<div class="loading"><span class="spin"></span>從雲端讀取最新資料…</div>';
+
+  // 嘗試各種 URL 格式
+  var urls = [
+    "https://drive.google.com/uc?export=download&id=" + GDRIVE_FILE_ID,
+    "https://corsproxy.io/?" + encodeURIComponent("https://drive.google.com/uc?export=download&id=" + GDRIVE_FILE_ID),
+    "https://api.allorigins.win/raw?url=" + encodeURIComponent("https://drive.google.com/uc?export=download&id=" + GDRIVE_FILE_ID)
+  ];
+
+  function tryUrl(i) {
+    if (i >= urls.length) {
+      // 全部失敗，用內嵌備援資料
+      console.warn("Drive fetch failed, using fallback data");
+      hospitalsData = FALLBACK_DATA;
+      dataSource = "local";
+      updateBadge();
       renderContent();
-    })
-    .catch(function(err){
-      showError("無法載入醫院資料。<br>請確認 Google Drive 檔案已設為「知道連結的任何人可檢視」。<br><small style='color:#aaa'>錯誤：" + err.message + "</small>");
-    });
+      return;
+    }
+    fetch(urls[i], { signal: AbortSignal.timeout ? AbortSignal.timeout(6000) : undefined })
+      .then(function(r){
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      })
+      .then(function(data){
+        if (!data.hospitals) throw new Error("invalid format");
+        hospitalsData = data;
+        dataSource = "live";
+        updateBadge();
+        renderContent();
+      })
+      .catch(function(){ tryUrl(i + 1); });
+  }
+
+  tryUrl(0);
 }
 
-// ── 成員 Tab ─────────────────────────────────────────────────
+function reloadFromDrive() {
+  navReady = true; // 防止重複觸發
+  loadHospitals();
+}
+
+function updateBadge() {
+  var b = document.getElementById("data-badge");
+  if (!b) return;
+  if (dataSource === "live") {
+    b.innerHTML = '更新：' + (hospitalsData.updated||"—") + '<span class="src-tag src-live">雲端</span>';
+  } else {
+    b.innerHTML = '內嵌資料 ' + (hospitalsData.updated||"") + '<span class="src-tag src-local">本機</span>';
+  }
+}
+
+// ── Tab ──────────────────────────────────────────────────────
 function renderTabs() {
   var el = document.getElementById("member-tabs");
   if (!el) return;
+  if (!members.length) { el.style.display = "none"; return; }
   el.innerHTML = members.map(function(m){
-    var active = m.personId === currentMemberId;
-    return '<button class="member-tab'+(active?" active":"")+'" onclick="switchMember(\''+m.personId+'\')">'+m.name+'</button>';
+    return '<button class="member-tab'+(m.personId===currentMemberId?" active":"")+'" onclick="switchMember(\''+m.personId+'\')">'+m.name+'</button>';
   }).join("");
 }
 
@@ -169,173 +188,130 @@ function switchMember(pid) {
   renderContent();
 }
 
-// ── 主內容渲染 ───────────────────────────────────────────────
+// ── 主內容 ───────────────────────────────────────────────────
 function renderContent() {
-  if (!hospitalsData) return;
   var el = document.getElementById("main-content");
   var member = members.find(function(m){ return m.personId === currentMemberId; });
-  if (!member) { el.innerHTML = '<div class="loading">無成員資料</div>'; return; }
 
-  // 取得地址
-  var addr = (member.address || "").trim();
-  var city = member.addressCity || extractCity(addr);
-  var district = member.addressDistrict || extractDistrict(addr);
+  var addr = member ? (member.address || "").trim() : "";
+  var city = member ? (member.addressCity || extractCity(addr)) : "";
+  var district = member ? (member.addressDistrict || extractDistrict(addr)) : "";
+  var memberName = member ? member.name : "查詢者";
 
-  // 比對醫院
   var matched = matchHospitals(city, district);
-
-  // 計算全台平均
   var avg = calcAverage(hospitalsData.hospitals);
 
   var html = "";
 
   // 地址卡片
-  html += '<div class="addr-card">';
-  html += '<div class="addr-icon">📍</div>';
-  html += '<div class="addr-info">';
-  html += '<div class="addr-label">'+member.name+'　的地址</div>';
+  html += '<div class="addr-card"><div class="addr-icon">📍</div><div class="addr-info">';
+  html += '<div class="addr-label">' + memberName + ' 的地址</div>';
   if (addr) {
-    html += '<div class="addr-text">'+addr+'</div>';
-    if (city) html += '<div style="font-size:11px;color:#888;margin-top:2px">搜尋範圍：'+city+(district?" · "+district:"")+'</div>';
+    html += '<div class="addr-text">' + addr + '</div>';
+    if (city) html += '<div style="font-size:11px;color:#888;margin-top:2px">搜尋：' + city + (district?" · "+district:"") + '</div>';
   } else {
     html += '<div class="addr-text none">尚未設定地址，顯示全台資料</div>';
-    html += '<div style="font-size:11px;color:#aaa;margin-top:2px">可在「家庭成員管理」中設定地址</div>';
   }
   html += '</div></div>';
 
-  // 篩選列
+  // 篩選
   html += '<div class="filter-bar">';
-  var filters = ["all","醫學中心","區域醫院","地區醫院"];
-  var filterLabels = {"all":"全部","醫學中心":"醫學中心","區域醫院":"區域醫院","地區醫院":"地區醫院"};
-  filters.forEach(function(f){
-    html += '<button class="filter-btn'+(activeFilter===f?" active":"")+'" onclick="setFilter(\''+f+'\')">'+filterLabels[f]+'</button>';
+  [{k:"all",l:"全部"},{k:"醫學中心",l:"醫學中心"},{k:"區域醫院",l:"區域醫院"},{k:"地區醫院",l:"地區醫院"}].forEach(function(f){
+    html += '<button class="filter-btn'+(activeFilter===f.k?" active":"")+'" onclick="setFilter(\''+f.k+'\')">'+f.l+'</button>';
   });
   html += '</div>';
 
-  // 匹配結果區塊
   if (addr && city) {
-    // 同區
-    if (matched.district.length > 0) {
-      html += renderGroup("📍 同區醫院（"+district+"）", matched.district, "match-exact", "精確");
+    var shownIds = [];
+    if (matched.district.length) {
+      html += renderGroup("📍 同區醫院（" + district + "）", matched.district, "match-exact", "精確");
+      matched.district.forEach(function(h){ shownIds.push(h.id); });
     }
-    // 同市（排除已出現）
-    var shownIds = matched.district.map(function(h){return h.id;});
-    var cityOnly = matched.city.filter(function(h){return shownIds.indexOf(h.id)<0;});
-    if (cityOnly.length > 0) {
-      html += renderGroup("🏙 同市其他醫院（"+city+"）", cityOnly, "match-city", "同市");
+    var cityOnly = matched.city.filter(function(h){ return shownIds.indexOf(h.id) < 0; });
+    if (cityOnly.length) {
+      html += renderGroup("🏙 同市其他醫院（" + city + "）", cityOnly, "match-city", "同市");
+      cityOnly.forEach(function(h){ shownIds.push(h.id); });
     }
-    // 同大區
-    var shownIds2 = shownIds.concat(matched.city.map(function(h){return h.id;}));
-    var regionOnly = matched.region.filter(function(h){return shownIds2.indexOf(h.id)<0;});
-    if (regionOnly.length > 0) {
-      html += renderGroup("🗺 同大區醫院（"+matched.regionName+"）", regionOnly, "match-region", "同區域");
+    var regionOnly = matched.region.filter(function(h){ return shownIds.indexOf(h.id) < 0; });
+    if (regionOnly.length) {
+      html += renderGroup("🗺 同大區醫院（" + matched.regionName + "）", regionOnly, "match-region", "同大區");
+    }
+    if (!matched.district.length && !cityOnly.length && !regionOnly.length) {
+      html += '<div style="padding:20px;text-align:center;color:#aaa;font-size:13px">查無鄰近醫院資料，顯示全台列表</div>';
+      html += renderGroup("🏥 全台醫院", hospitalsData.hospitals, "match-avg", "全台");
     }
   } else {
-    // 無地址 → 全部
     html += renderGroup("🏥 全台醫院", hospitalsData.hospitals, "match-avg", "全台");
   }
 
   // 全台平均
-  html += '<div class="avg-section">';
-  html += '<div class="avg-title">📊 全台平均病房差額（' + hospitalsData.hospitals.length + '家醫院）</div>';
-  html += '<div class="avg-grid">';
-  html += avgItem("套房/豪華單人", avg.single_hi);
-  html += avgItem("一人房", avg.single);
-  html += avgItem("二人房", avg.double);
-  html += '</div></div>';
+  html += '<div class="avg-section"><div class="avg-title">📊 全台平均病房差額（' + hospitalsData.hospitals.length + ' 家醫院）</div>';
+  html += '<div class="avg-grid">' + avgItem("套房/豪華單人", avg.single_hi) + avgItem("一人房", avg.single) + avgItem("二人房", avg.double) + '</div></div>';
 
-  // 資料來源
-  html += '<div class="data-src">';
-  html += '資料來源：' + (hospitalsData.source || "—") + '<br>';
-  html += '最後更新：' + (hospitalsData.updated || "—") + '　·　共 ' + hospitalsData.hospitals.length + ' 家醫院';
-  html += '</div>';
+  html += '<div class="data-src">資料來源：' + (hospitalsData.source||"—") + '<br>最後更新：' + (hospitalsData.updated||"—") + '　·　共 ' + hospitalsData.hospitals.length + ' 家醫院<br><span style="color:#bbb">點上方標籤可重新從 Google Drive 取得最新資料</span></div>';
 
   el.innerHTML = html;
 }
 
 function renderGroup(title, hospitals, badgeClass, badgeText) {
-  var filtered = activeFilter === "all" ? hospitals : hospitals.filter(function(h){ return h.level === activeFilter; });
-  if (filtered.length === 0) return "";
-
-  var html = '<div class="match-label">'+title+'<span class="match-badge '+badgeClass+'">'+badgeText+'</span></div>';
+  var list = activeFilter === "all" ? hospitals : hospitals.filter(function(h){ return h.level === activeFilter; });
+  if (!list.length) return "";
+  var html = '<div class="match-label">' + title + '<span class="match-badge ' + badgeClass + '">' + badgeText + '</span></div>';
   html += '<div class="hospital-list">';
-  filtered.forEach(function(h){
-    html += '<div class="hospital-card">';
-    html += '<div class="h-header">';
-    html += '<span class="h-level level-'+h.level+'">'+h.level+'</span>';
-    html += '<span class="h-name">'+h.name+'</span>';
-    html += '<span class="h-location">'+h.city+' · '+h.district+'</span>';
-    html += '</div>';
-    html += '<div class="h-rooms">';
-    html += roomItem("套房/豪華單人", h.rooms.single_hi, "元/日");
-    html += roomItem("一人房差額", h.rooms.single, "元/日");
-    html += roomItem("二人房差額", h.rooms.double, "元/日");
+  list.forEach(function(h){
+    html += '<div class="hospital-card"><div class="h-header">';
+    html += '<span class="h-level level-' + h.level + '">' + h.level + '</span>';
+    html += '<span class="h-name">' + h.name + '</span>';
+    html += '<span class="h-location">' + h.city + ' · ' + h.district + '</span>';
+    html += '</div><div class="h-rooms">';
+    html += roomItem("套房/豪華單人", h.rooms.single_hi);
+    html += roomItem("一人房差額", h.rooms.single);
+    html += roomItem("二人房差額", h.rooms.double);
     html += '</div></div>';
   });
   html += '</div>';
   return html;
 }
 
-function roomItem(label, val, unit) {
-  if (val === null || val === undefined) {
-    return '<div class="room-item"><div class="room-label">'+label+'</div><div class="room-val null-val">無資料</div></div>';
-  }
-  return '<div class="room-item"><div class="room-label">'+label+'</div><div class="room-val">'+val.toLocaleString()+'<span class="room-unit"> '+unit+'</span></div></div>';
+function roomItem(label, val) {
+  if (val === null || val === undefined)
+    return '<div class="room-item"><div class="room-label">' + label + '</div><div class="room-val null-val">無資料</div></div>';
+  return '<div class="room-item"><div class="room-label">' + label + '</div><div class="room-val">' + val.toLocaleString() + '<span class="room-unit"> 元/日</span></div></div>';
 }
 
 function avgItem(label, val) {
-  return '<div class="avg-item"><div class="room-label">'+label+'</div><div class="room-val">'+(val?Math.round(val).toLocaleString():"—")+'<span class="room-unit"> 元/日</span></div></div>';
+  return '<div class="avg-item"><div class="room-label">' + label + '</div><div class="room-val">' + (val ? Math.round(val).toLocaleString() : "—") + '<span class="room-unit"> 元/日</span></div></div>';
 }
 
-// ── 地址比對邏輯 ─────────────────────────────────────────────
 function matchHospitals(city, district) {
-  var hospitals = hospitalsData.hospitals;
+  var h = hospitalsData.hospitals;
   var regionName = "";
-  // 找出該城市所屬大區
-  if (city) {
-    var found = hospitals.find(function(h){ return h.city === city; });
-    if (found) regionName = found.region;
-  }
+  if (city) { var f = h.find(function(x){ return x.city===city; }); if(f) regionName = f.region; }
   return {
-    district: district ? hospitals.filter(function(h){ return h.city===city && h.district===district; }) : [],
-    city:     city     ? hospitals.filter(function(h){ return h.city===city; }) : [],
-    region:   regionName ? hospitals.filter(function(h){ return h.region===regionName; }) : [],
+    district: district ? h.filter(function(x){ return x.city===city && x.district===district; }) : [],
+    city:     city     ? h.filter(function(x){ return x.city===city; }) : [],
+    region:   regionName ? h.filter(function(x){ return x.region===regionName; }) : [],
     regionName: regionName
   };
 }
 
 function calcAverage(hospitals) {
   function avg(key) {
-    var vals = hospitals.map(function(h){ return h.rooms[key]; }).filter(function(v){ return v !== null && v !== undefined; });
-    if (!vals.length) return null;
-    return vals.reduce(function(a,b){return a+b;},0) / vals.length;
+    var vals = hospitals.map(function(h){ return h.rooms[key]; }).filter(function(v){ return v!=null; });
+    return vals.length ? vals.reduce(function(a,b){return a+b;},0)/vals.length : null;
   }
   return { single_hi: avg("single_hi"), single: avg("single"), double: avg("double") };
 }
 
 function extractCity(addr) {
   if (!addr) return "";
-  var m = addr.match(/^(.{2,3}[市縣])/);
-  return m ? m[1] : "";
+  var m = addr.match(/^(.{2,3}[市縣])/); return m ? m[1] : "";
 }
-
 function extractDistrict(addr) {
   if (!addr) return "";
-  var m = addr.match(/[市縣](.{2,3}[區鄉鎮市])/);
-  return m ? m[1] : "";
+  var m = addr.match(/[市縣](.{2,3}[區鄉鎮市])/); return m ? m[1] : "";
 }
-
-// ── 篩選切換 ─────────────────────────────────────────────────
-function setFilter(f) {
-  activeFilter = f;
-  renderContent();
-}
-
-// ── 錯誤顯示 ─────────────────────────────────────────────────
-function showError(msg) {
-  var el = document.getElementById("main-content");
-  if (el) el.innerHTML = '<div class="error-box">⚠️ ' + msg + '</div>';
-}
+function setFilter(f) { activeFilter = f; renderContent(); }
 </script>
 </body>
 </html>
