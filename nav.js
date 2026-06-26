@@ -14,7 +14,8 @@
     { key:"summary",     label:"保單彙總", icon:"📊", href:"summary.html" },
     { key:"savings",     label:"儲蓄險",   icon:"🐷", href:"savings.html" },
     { key:"export",      label:"匯出圖片", icon:"🖼️", href:"export.html" },
-    { key:"hospital",    label:"醫院病房", icon:"🏥", href:"hospital.html" }
+    { key:"hospital",    label:"醫院病房", icon:"🏥", href:"hospital.html" },
+    { key:"visit",       label:"訪談紀錄", icon:"📝", href:"visit.html" }
   ];
 
   var _page = "";
@@ -233,7 +234,7 @@
     var el = document.getElementById("nbs-bottom-tab");
     if (!el) return;
     // 底部 Tab 只顯示核心 6 個，export/hospital 只在側欄顯示
-    var TAB_KEYS = ["policy","beneficiary","coverage","summary","savings","export"];
+    var TAB_KEYS = ["policy","beneficiary","coverage","summary","savings","export","hospital","visit"];
     var tabItems = NAV_ITEMS.filter(function(item){ return TAB_KEYS.indexOf(item.key) >= 0; });
     el.innerHTML = tabItems.map(function(item) {
       var active = _page === item.key;
