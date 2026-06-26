@@ -13,7 +13,9 @@
     .back{background:none;border:none;font-size:22px;color:#999;cursor:pointer;padding:0}
     .hdr-title{font-size:15px;font-weight:500;flex:1}
     .hdr-sub{font-size:11px;color:#bbb}
+    /* 選項頁保持窄版（手機友好），預覽頁用獨立 class */
     .wrap{padding:16px;max-width:560px;margin:0 auto}
+    .wrap-preview{padding:16px;max-width:1200px;margin:0 auto}
     .sec-lbl{font-size:11px;font-weight:500;color:#999;margin-bottom:8px;letter-spacing:.05em;display:flex;align-items:center;justify-content:space-between}
     .blk{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid #e8e8e8;border-radius:10px;cursor:pointer;background:#fff;margin-bottom:8px;-webkit-tap-highlight-color:rgba(0,0,0,0)}
     .blk.on{border:1.5px solid #378ADD;background:#F0F7FF}
@@ -68,13 +70,13 @@
 </div>
 
 <div class="pg" id="P_PREV">
-  <div class="wrap">
+  <div class="wrap-preview">
     <div class="pv-note" id="PV_NOTE"></div>
     <div id="PV_BLOCKS"></div>
     <div style="padding:8px 12px;background:#f7f7f5;border-radius:8px;font-size:11px;color:#aaa;margin-bottom:14px">
       💡 <span id="WM_HINT"></span>
     </div>
-    <div class="brow">
+    <div class="brow" style="max-width:560px;margin:0 auto">
       <button class="sbtn" id="B_BACK2">返回修改</button>
       <button class="pbtn" id="B_EXPORT" style="background:#378ADD;flex:2;margin-top:0">下載圖片</button>
     </div>
@@ -1499,7 +1501,7 @@ function doExport(){
   document.getElementById("PROG_PCT").style.color=isPdf?"#E74C3C":"#378ADD";
 
   var div=document.createElement("div");
-  div.style.cssText="position:fixed;left:-9999px;top:0;width:560px;background:#fff;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;color:#1a1a1a";
+  div.style.cssText="position:fixed;left:-9999px;top:0;width:1200px;background:#fff;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;color:#1a1a1a";
   document.body.appendChild(div);
 
   var p=(isPdf?doExportPDF(selBlks,div):doExportPNG(selBlks,div));
@@ -1522,16 +1524,15 @@ function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
 async function doExportPNG(blks,div){
   var wm='<div style="padding:8px;background:#f7f7f5;text-align:center;font-size:11px;color:#aaa">NBS 保單體檢 '+pName+' '+pDate+'</div>';
   if(fmt==="png_single"){
-    var hasTlBlock=blks.some(function(b){return b.key==="savings_timeline";});
-    div.style.width=hasTlBlock?"2400px":"560px";
+    div.style.width="1200px";
     div.innerHTML=blks.map(function(b){return'<div style="border-bottom:1px solid #f0f0f0">'+renderBlock(b.key)+'</div>';}).join("")+wm;
     setP(30);await sleep(400);
-    var singleW=hasTlBlock?Math.max(div.scrollWidth,div.offsetWidth,1400):560;
+    var singleW=Math.max(div.scrollWidth,div.offsetWidth,800);
     div.style.width=singleW+"px";
     await sleep(100);
     var c=await html2canvas(div,{scale:2,useCORS:true,backgroundColor:"#ffffff",
       width:singleW,windowWidth:singleW});
-    div.style.width="560px";
+    div.style.width="1200px";
     setP(80);await sleep(100);
     var a=document.createElement("a");
     a.download=pName+"_保單體檢_"+pDate+".png";
@@ -1539,18 +1540,15 @@ async function doExportPNG(blks,div){
     setP(100);
   }else{
     for(var i=0;i<blks.length;i++){
-      var isTl2=blks[i].key==="savings_timeline";
-      // 先用寬容器 render，再讀實際寬度
-      div.style.width=isTl2?"2400px":"560px";
+      div.style.width="1200px";
       div.innerHTML=renderBlock(blks[i].key)+wm;
       setP(Math.round(i/blks.length*90));await sleep(300);
-      // 讀取實際內容寬度（含所有欄位）
-      var actualW=isTl2?Math.max(div.scrollWidth,div.offsetWidth,1400):560;
+      var actualW=Math.max(div.scrollWidth,div.offsetWidth,800);
       div.style.width=actualW+"px";
       await sleep(100);
       var c2=await html2canvas(div,{scale:2,useCORS:true,backgroundColor:"#ffffff",
         width:actualW,windowWidth:actualW});
-      div.style.width="560px";
+      div.style.width="1200px";
       var a2=document.createElement("a");
       a2.download=pName+"_"+blks[i].label+"_"+pDate+".png";
       a2.href=c2.toDataURL("image/png");a2.click();
@@ -1562,23 +1560,21 @@ async function doExportPNG(blks,div){
 
 async function doExportPDF(blks,div){
   var J=window.jspdf.jsPDF;
-  var pdf=new J("p","mm","a4");
+  var pdf=new J("l","mm","a4");  // 預設橫向，更適合寬表格
   var wm='<div style="padding:8px;background:#f7f7f5;text-align:center;font-size:11px;color:#aaa">NBS 保單體檢 '+pName+' '+pDate+'</div>';
   for(var i=0;i<blks.length;i++){
-    var isTl3=blks[i].key==="savings_timeline";
-    div.style.width=isTl3?"2400px":"560px";
+    div.style.width="1200px";
     div.innerHTML=renderBlock(blks[i].key)+wm;
     setP(Math.round(i/blks.length*90));await sleep(300);
-    var actualW3=isTl3?Math.max(div.scrollWidth,div.offsetWidth,1400):560;
+    var actualW3=Math.max(div.scrollWidth,div.offsetWidth,800);
     div.style.width=actualW3+"px";
     await sleep(100);
     var c=await html2canvas(div,{scale:2,useCORS:true,backgroundColor:"#ffffff",
       width:actualW3,windowWidth:actualW3});
-    div.style.width="560px";
-    if(i>0)pdf.addPage("a4",isTl3?"landscape":"portrait");
-    else if(isTl3){pdf=new J("l","mm","a4");}
-    var iw=isTl3?277:190,ih=(c.height/c.width)*iw;
-    pdf.addImage(c.toDataURL("image/png"),"PNG",10,10,iw,Math.min(ih,isTl3?190:277));
+    div.style.width="1200px";
+    if(i>0) pdf.addPage("a4","landscape");
+    var iw=277, ih=(c.height/c.width)*iw;
+    pdf.addImage(c.toDataURL("image/png"),"PNG",10,10,iw,Math.min(ih,190));
   }
   setP(95);
   pdf.save(pName+"_保單體檢_"+pDate+".pdf");
