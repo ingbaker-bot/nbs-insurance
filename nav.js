@@ -203,7 +203,7 @@
 
     el.innerHTML =
       '<div class="nbs-logo">'+
-        '<span style="font-size:20px">🛡️</span>'+
+        '<img src="https://i.ibb.co/FkVkNhhd/NBS-4F3.jpg" alt="NBS" style="height:36px;width:36px;object-fit:contain;border-radius:6px;flex-shrink:0">'+
         '<div><div class="nbs-lt">NBS 保單體檢</div><div class="nbs-ls">富邦人壽保險顧問</div></div>'+
       '</div>'+
       '<div class="nbs-fam">'+
@@ -253,7 +253,7 @@
     }).join("") + '<option value="__add__">＋ 新增成員</option>';
 
     el.innerHTML =
-      '<span style="font-size:16px">🛡️</span>'+
+      '<img src="https://i.ibb.co/FkVkNhhd/NBS-4F3.jpg" alt="NBS" style="height:30px;width:30px;object-fit:contain;border-radius:5px;flex-shrink:0">'+
       '<div style="flex:1;min-width:0;font-size:11px;color:rgba(255,255,255,0.5);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+_family.familyName+'</div>'+
       '<select onchange="NBS_NAV._setPerson(this.value)" style="padding:4px 8px;font-size:12px;border:none;border-radius:99px;background:rgba(255,255,255,0.12);color:#fff;outline:none;cursor:pointer;font-family:inherit">'+opts+'</select>'+
       '<button onclick="NBS_NAV._print()" style="padding:5px 8px;background:rgba(255,255,255,0.12);border:none;border-radius:6px;color:rgba(255,255,255,0.8);font-size:13px;cursor:pointer">🖨️</button>';
