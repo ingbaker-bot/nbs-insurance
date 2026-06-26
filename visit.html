@@ -221,30 +221,38 @@
 <div class="toast" id="toast"></div>
 
 <script>
-// ── 設定 ─────────────────────────────────────────────────────
-var VISITS_FOLDER_ID = "11aeE1wuuZDcqlyP6jWMORjLZsm8HbLBj"; // Google Drive visits 資料夾
-var GAPI_KEY = ""; // 使用 OAuth（無需 API Key）
+// ── 設定（GAS URL 由 nav.js 統一管理，不需重複填寫）─────────
+// nav.js 第 8 行已有 GAS_URL，這裡直接取用
+function getGasUrl() {
+  // 優先用 nav.js 內建的 GAS_URL（同一份，不需另外設定）
+  return window._NBS_GAS_URL || "";
+}
 
 var familyData = null;
 var familyId = "";
 var familyName = "";
-var familyMembers = []; // 家庭成員名單
-var selectedAttendees = {}; // { personId: true/false }
+var familyMembers = [];
+var selectedAttendees = {};
 var visits = [];
 var currentActions = [];
 var editingVisitId = null;
 var visitFolderId = null;
+var AGENT_EMAIL = ""; // 由 nav_ready 帶入，不需手動填寫
 
 // ── Nav Ready ────────────────────────────────────────────────
 window.addEventListener("nbs_nav_ready", function(e) {
   var d = e.detail;
   if (!d || !d.familyData) return;
+
+  // 取得業務員 email（nav.js 登入後帶入）
+  if (d.user && d.user.email) {
+    AGENT_EMAIL = d.user.email;
+  }
+
   familyData = d.familyData;
   familyId = familyData.id || familyData.familyId || "";
-  // 讀取家庭名稱（多種欄位名稱相容）
   familyName = familyData.name || familyData.headName ||
     (familyData.members && familyData.members[0] ? familyData.members[0].name + "家庭" : "此家庭");
-  // 建立成員名單（主要成員 + 受益人）
   familyMembers = (familyData.members || []).map(function(m){
     return { id: m.personId || m.id, name: m.name, role: m.role || "成員" };
   });
@@ -255,22 +263,28 @@ window.addEventListener("nbs_nav_ready", function(e) {
 setTimeout(function(){
   if (!familyData) {
     document.getElementById("family-name").textContent = "（未載入家庭）";
-    document.getElementById("visit-list-wrap").innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">請從家庭保單頁面進入</div></div>';
+    document.getElementById("visit-list-wrap").innerHTML =
+      '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">請從家庭保單頁面進入</div></div>';
   }
 }, 3000);
 
-// ── Apps Script API（接上現有 NBS 後台）──────────────────────
-var GAS_URL = "https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec"; // ← 填入您的 Apps Script 部署 URL
-var AGENT_EMAIL = ""; // ← 由登入狀態帶入
+// ── Apps Script API（直接使用 nav.js 的 GAS_URL）────────────
+// GAS URL 已在 nav.js 第 8 行定義，所有頁面共用同一個後台
+// 業務員的 email 由登入狀態帶入，Drive 資料夾自動用 email 區隔
 
 async function gasCall(params) {
-  var url = GAS_URL + "?" + Object.keys(params).map(function(k){
+  var url = getGasUrl();
+  if (!url) {
+    console.warn("GAS_URL 未設定（nav.js 第 8 行）");
+    throw new Error("GAS_URL 未設定");
+  }
+  var qs = Object.keys(params).map(function(k){
     var v = typeof params[k] === "object"
       ? encodeURIComponent(JSON.stringify(params[k]))
       : encodeURIComponent(String(params[k]));
     return k + "=" + v;
   }).join("&");
-  var r = await fetch(url, { redirect: "follow" });
+  var r = await fetch(url + "?" + qs, { redirect: "follow" });
   return r.json();
 }
 
@@ -280,11 +294,10 @@ async function loadVisits() {
   document.getElementById("visit-list-wrap").innerHTML =
     '<div class="loading"><span class="spin"></span>讀取訪談紀錄…</div>';
 
-  if (!GAS_URL || !AGENT_EMAIL) {
+  if (!AGENT_EMAIL) {
     var stored = localStorage.getItem("visits_" + familyId);
     visits = stored ? JSON.parse(stored).sort(function(a,b){ return b.date.localeCompare(a.date); }) : [];
     renderVisits();
-    if (!GAS_URL) showToast("⚠️ 請設定 GAS_URL 以啟用跨裝置同步");
     return;
   }
   try {
@@ -310,8 +323,8 @@ async function saveVisit() {
   visits.sort(function(a,b){ return b.date.localeCompare(a.date); });
   localStorage.setItem("visits_" + familyId, JSON.stringify(visits));
   closeModal(); renderVisits();
-  if (!GAS_URL || !AGENT_EMAIL) {
-    showToast("💾 已儲存本機（設定 GAS_URL 後可跨裝置同步）"); return;
+  if (!AGENT_EMAIL) {
+    showToast("💾 已儲存本機（登入後可跨裝置同步）"); return;
   }
   showToast("💾 同步中…");
   try {
@@ -326,7 +339,7 @@ async function deleteVisit() {
   visits = visits.filter(function(x){ return x.id !== editingVisitId; });
   localStorage.setItem("visits_" + familyId, JSON.stringify(visits));
   closeModal(); renderVisits(); showToast("🗑 已刪除");
-  if (GAS_URL && AGENT_EMAIL) {
+  if (AGENT_EMAIL) {
     try { await gasCall({ action:"deleteVisit", email:AGENT_EMAIL, visitId:v.id }); } catch(e){}
   }
 }
