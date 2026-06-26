@@ -82,13 +82,32 @@ var hospitalsData = null;
 var members = [];
 var currentMemberId = null;
 var activeFilter = "all";
-var manualAddr = ""; // 手動輸入的地址
+var manualAddr = "";
+var searchMode = "addr"; // "addr" or "name"
+var nameQuery = "";
 
 function searchAddr() {
   var input = document.getElementById("addr-input");
   if (!input) return;
-  manualAddr = input.value.trim();
+  var val = input.value.trim();
+  // 判斷是地址還是醫院名稱：包含醫院/診所/醫學/醫療等字樣 → 名稱搜尋
+  if (val && (val.match(/醫院|診所|醫學|醫療|榮總|慈濟|馬偕|長庚|台大|成大|高醫|奇美|秀傳|基督教|天主教|聖母|博愛|仁愛|耕莘|亞東|安泰|澄清|童綜合|阮綜/) || isHospitalName(val))) {
+    searchMode = "name";
+    nameQuery = val;
+  } else {
+    searchMode = "addr";
+    manualAddr = val;
+    nameQuery = "";
+  }
   renderContent();
+}
+
+function isHospitalName(val) {
+  // 檢查是否為醫院名稱片段（非地址格式）
+  if (!hospitalsData) return false;
+  return hospitalsData.hospitals.some(function(h){
+    return h.name.indexOf(val) >= 0;
+  });
 }
 var dataSource = "local"; // "live" or "local"
 
@@ -184,73 +203,93 @@ function switchMember(pid) {
 function renderContent() {
   var el = document.getElementById("main-content");
   var member = members.find(function(m){ return m.personId === currentMemberId; });
-
+  var memberName = member ? member.name : "查詢者";
   var addr = manualAddr || (member ? (member.address || "").trim() : "");
   var city = extractCity(addr);
   var district = extractDistrict(addr);
-  var memberName = member ? member.name : "查詢者";
-
-  var matched = matchHospitals(city, district);
   var avg = calcAverage(hospitalsData.hospitals);
-
   var html = "";
 
-  // 地址卡片
-  html += '<div class="addr-card"><div class="addr-icon">📍</div><div class="addr-info">';
-  html += '<div class="addr-label">' + memberName + ' 的地址</div>';
-  if (addr) {
-    html += '<div class="addr-text">' + addr + '</div>';
-    if (city) html += '<div style="font-size:11px;color:#888;margin-top:2px">搜尋：' + city + (district?" · "+district:"") + '</div>';
-    html += '<div style="margin-top:8px;display:flex;gap:6px">';
-    html += '<input id="addr-input" type="text" value="'+addr+'" placeholder="輸入地址查詢" style="flex:1;padding:6px 10px;border:1px solid #ddd;border-radius:7px;font-size:12px;font-family:inherit;outline:none">';
-    html += '<button onclick="searchAddr()" style="padding:6px 14px;background:#378ADD;color:#fff;border:none;border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit">查詢</button>';
-    html += '</div>';
-  } else {
-    html += '<div style="margin-bottom:6px;font-size:12px;color:#aaa">輸入地址以搜尋附近醫院</div>';
-    html += '<div style="display:flex;gap:6px">';
-    html += '<input id="addr-input" type="text" placeholder="例：台北市信義區…" style="flex:1;padding:6px 10px;border:1px solid #ddd;border-radius:7px;font-size:12px;font-family:inherit;outline:none" onkeydown="if(event.key===\'Enter\')searchAddr()">';
-    html += '<button onclick="searchAddr()" style="padding:6px 14px;background:#378ADD;color:#fff;border:none;border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit">查詢</button>';
-    html += '</div>';
+  // ── 搜尋框（通用：地址 or 醫院名稱）──
+  var inputVal = searchMode === "name" ? nameQuery : addr;
+  html += '<div class="addr-card"><div class="addr-icon">'+(searchMode==="name"?"🔍":"📍")+'</div><div class="addr-info">';
+  html += '<div class="addr-label">' + memberName + ' · 地址或醫院名稱</div>';
+  if (inputVal) {
+    html += '<div class="addr-text">' + inputVal + '</div>';
+    if (searchMode === "addr" && city) html += '<div style="font-size:11px;color:#888;margin-top:2px">搜尋：' + city + (district?" · "+district:"") + '</div>';
+    if (searchMode === "name") html += '<div style="font-size:11px;color:#378ADD;margin-top:2px">醫院名稱搜尋</div>';
   }
-  html += '</div></div>';
+  html += '<div style="margin-top:8px;display:flex;gap:6px">';
+  html += '<input id="addr-input" type="text" value="'+inputVal.replace(/"/g,"&quot;")+'" placeholder="地址（板橋、高雄市…）或醫院名（長庚、榮總…）" style="flex:1;padding:6px 10px;border:1px solid #ddd;border-radius:7px;font-size:12px;font-family:inherit;outline:none" onkeydown="if(event.key===\'Enter\')searchAddr()">';
+  html += '<button onclick="searchAddr()" style="padding:6px 14px;background:#378ADD;color:#fff;border:none;border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap">查詢</button>';
+  html += '</div></div></div>';
 
-  // 篩選
+  // ── 篩選列 ──
   html += '<div class="filter-bar">';
   [{k:"all",l:"全部"},{k:"醫學中心",l:"醫學中心"},{k:"區域醫院",l:"區域醫院"},{k:"地區醫院",l:"地區醫院"}].forEach(function(f){
     html += '<button class="filter-btn'+(activeFilter===f.k?" active":"")+'" onclick="setFilter(\''+f.k+'\')">'+f.l+'</button>';
   });
   html += '</div>';
 
-  if (addr && city) {
-    var shownIds = [];
-    if (matched.district.length) {
-      html += renderGroup("📍 同區醫院（" + district + "）", matched.district, "match-exact", "精確");
-      matched.district.forEach(function(h){ shownIds.push(h.id); });
-    }
-    var cityOnly = matched.city.filter(function(h){ return shownIds.indexOf(h.id) < 0; });
-    if (cityOnly.length) {
-      html += renderGroup("🏙 同市其他醫院（" + city + "）", cityOnly, "match-city", "同市");
-      cityOnly.forEach(function(h){ shownIds.push(h.id); });
-    }
-    var regionOnly = matched.region.filter(function(h){ return shownIds.indexOf(h.id) < 0; });
-    if (regionOnly.length) {
-      html += renderGroup("🗺 同大區醫院（" + matched.regionName + "）", regionOnly, "match-region", "同大區");
-    }
-    if (!matched.district.length && !cityOnly.length && !regionOnly.length) {
-      html += '<div style="padding:20px;text-align:center;color:#aaa;font-size:13px">查無鄰近醫院資料，顯示全台列表</div>';
-      html += renderGroup("🏥 全台醫院", hospitalsData.hospitals, "match-avg", "全台");
+  // ── 名稱搜尋模式 ──
+  if (searchMode === "name" && nameQuery) {
+    var results = hospitalsData.hospitals.filter(function(h){
+      return h.name.indexOf(nameQuery) >= 0;
+    });
+    var filtered = activeFilter === "all" ? results : results.filter(function(h){ return h.level === activeFilter; });
+    if (filtered.length === 0) {
+      html += '<div style="padding:24px;text-align:center;color:#aaa;font-size:13px">查無「' + nameQuery + '」相關醫院</div>';
+    } else {
+      html += '<div class="match-label">🔍 「' + nameQuery + '」搜尋結果<span class="match-badge match-exact">' + filtered.length + ' 家</span></div>';
+      html += '<div class="hospital-list">';
+      filtered.forEach(function(h){ html += renderHospitalCard(h); });
+      html += '</div>';
     }
   } else {
-    html += renderGroup("🏥 全台醫院", hospitalsData.hospitals, "match-avg", "全台");
+    // ── 地址模式 ──
+    var matched = matchHospitals(city, district);
+    if (addr && city) {
+      var shownIds = [];
+      if (matched.district.length) {
+        html += renderGroup("📍 同區醫院（" + district + "）", matched.district, "match-exact", "精確");
+        matched.district.forEach(function(h){ shownIds.push(h.id); });
+      }
+      var cityOnly = matched.city.filter(function(h){ return shownIds.indexOf(h.id) < 0; });
+      if (cityOnly.length) {
+        html += renderGroup("🏙 同市其他醫院（" + city + "）", cityOnly, "match-city", "同市");
+        cityOnly.forEach(function(h){ shownIds.push(h.id); });
+      }
+      var regionOnly = matched.region.filter(function(h){ return shownIds.indexOf(h.id) < 0; });
+      if (regionOnly.length) {
+        html += renderGroup("🗺 同大區醫院（" + matched.regionName + "）", regionOnly, "match-region", "同大區");
+      }
+      if (!matched.district.length && !cityOnly.length && !regionOnly.length) {
+        html += '<div style="padding:20px;text-align:center;color:#aaa;font-size:13px">查無鄰近醫院資料，顯示全台列表</div>';
+        html += renderGroup("🏥 全台醫院", hospitalsData.hospitals, "match-avg", "全台");
+      }
+    } else {
+      html += renderGroup("🏥 全台醫院", hospitalsData.hospitals, "match-avg", "全台");
+    }
   }
 
-  // 全台平均
+  // ── 全台平均 ──
   html += '<div class="avg-section"><div class="avg-title">📊 全台平均病房差額（' + hospitalsData.hospitals.length + ' 家醫院）</div>';
   html += '<div class="avg-grid">' + avgItem("套房/豪華單人", avg.single_hi) + avgItem("一人房", avg.single) + avgItem("二人房", avg.double) + '</div></div>';
-
-  html += '<div class="data-src">資料來源：' + (hospitalsData.source||"—") + '<br>最後更新：' + (hospitalsData.updated||"—") + '　·　共 ' + hospitalsData.hospitals.length + ' 家醫院<br><span style="color:#bbb">點上方標籤可重新從 Google Drive 取得最新資料</span></div>';
-
+  html += '<div class="data-src">資料來源：' + (hospitalsData.source||"—") + '<br>最後更新：' + (hospitalsData.updated||"—") + '　·　共 ' + hospitalsData.hospitals.length + ' 家醫院</div>';
   el.innerHTML = html;
+}
+
+function renderHospitalCard(h) {
+  var html = '<div class="hospital-card"><div class="h-header">';
+  html += '<span class="h-level level-' + h.level + '">' + h.level + '</span>';
+  html += '<span class="h-name">' + h.name + '</span>';
+  html += '<span class="h-location">' + h.city + ' · ' + h.district + '</span>';
+  html += '</div><div class="h-rooms">';
+  html += roomItem("套房/豪華單人", h.rooms.single_hi);
+  html += roomItem("一人房差額", h.rooms.single);
+  html += roomItem("二人房差額", h.rooms.double);
+  html += '</div></div>';
+  return html;
 }
 
 function renderGroup(title, hospitals, badgeClass, badgeText) {
@@ -258,17 +297,7 @@ function renderGroup(title, hospitals, badgeClass, badgeText) {
   if (!list.length) return "";
   var html = '<div class="match-label">' + title + '<span class="match-badge ' + badgeClass + '">' + badgeText + '</span></div>';
   html += '<div class="hospital-list">';
-  list.forEach(function(h){
-    html += '<div class="hospital-card"><div class="h-header">';
-    html += '<span class="h-level level-' + h.level + '">' + h.level + '</span>';
-    html += '<span class="h-name">' + h.name + '</span>';
-    html += '<span class="h-location">' + h.city + ' · ' + h.district + '</span>';
-    html += '</div><div class="h-rooms">';
-    html += roomItem("套房/豪華單人", h.rooms.single_hi);
-    html += roomItem("一人房差額", h.rooms.single);
-    html += roomItem("二人房差額", h.rooms.double);
-    html += '</div></div>';
-  });
+  list.forEach(function(h){ html += renderHospitalCard(h); });
   html += '</div>';
   return html;
 }
