@@ -118,38 +118,36 @@ setTimeout(function(){
   }
 }, 3000);
 
-// ── 讀取醫院資料 ─────────────────────────────────────────────
+// ── 讀取醫院資料：先用內嵌立即顯示，背景嘗試 Drive 更新 ────
 function loadHospitals() {
-  document.getElementById("main-content").innerHTML = '<div class="loading"><span class="spin"></span>從雲端讀取最新資料…</div>';
+  // 立即用內嵌資料顯示，不讓使用者等待
+  hospitalsData = FALLBACK_DATA;
+  dataSource = "local";
+  updateBadge();
+  renderContent();
 
-  // 嘗試各種 URL 格式
+  // 背景嘗試從 Drive 取得最新版（有更新才換掉）
   var urls = [
     "https://drive.google.com/uc?export=download&id=" + GDRIVE_FILE_ID,
-    "https://corsproxy.io/?" + encodeURIComponent("https://drive.google.com/uc?export=download&id=" + GDRIVE_FILE_ID),
-    "https://api.allorigins.win/raw?url=" + encodeURIComponent("https://drive.google.com/uc?export=download&id=" + GDRIVE_FILE_ID)
+    "https://corsproxy.io/?" + encodeURIComponent("https://drive.google.com/uc?export=download&id=" + GDRIVE_FILE_ID)
   ];
 
   function tryUrl(i) {
-    if (i >= urls.length) {
-      // 全部失敗，用內嵌備援資料
-      console.warn("Drive fetch failed, using fallback data");
-      hospitalsData = FALLBACK_DATA;
-      dataSource = "local";
-      updateBadge();
-      renderContent();
-      return;
-    }
-    fetch(urls[i], { signal: AbortSignal.timeout ? AbortSignal.timeout(6000) : undefined })
+    if (i >= urls.length) return; // 靜默失敗，已用內嵌資料
+    var controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+    var timer = controller ? setTimeout(function(){ controller.abort(); }, 4000) : null;
+    fetch(urls[i], controller ? { signal: controller.signal } : {})
       .then(function(r){
+        if (timer) clearTimeout(timer);
         if (!r.ok) throw new Error("HTTP " + r.status);
         return r.json();
       })
       .then(function(data){
-        if (!data.hospitals) throw new Error("invalid format");
+        if (!data.hospitals) throw new Error("invalid");
         hospitalsData = data;
         dataSource = "live";
         updateBadge();
-        renderContent();
+        renderContent(); // 靜默刷新
       })
       .catch(function(){ tryUrl(i + 1); });
   }
