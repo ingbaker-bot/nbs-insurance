@@ -97,6 +97,11 @@
     .toast.show{opacity:1}
 
     .loading{text-align:center;padding:40px;color:#aaa;font-size:13px}
+    /* ── 出席成員 chips ── */
+    .attendee-chip{display:flex;align-items:center;gap:5px;padding:5px 10px;border-radius:99px;border:1.5px solid #ddd;background:#fff;cursor:pointer;font-size:12px;color:#555;transition:all .15s;user-select:none}
+    .attendee-chip.selected{border-color:#378ADD;background:#E6F1FB;color:#0C447C;font-weight:500}
+    .attendee-chip .chip-role{font-size:10px;color:#aaa;margin-left:2px}
+    .attendee-chip.selected .chip-role{color:#378ADD}
     .spin{display:inline-block;width:18px;height:18px;border:2px solid #e0e0e0;border-top-color:#378ADD;border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle;margin-right:8px}
     @keyframes sp{to{transform:rotate(360deg)}}
   </style>
@@ -146,22 +151,24 @@
             </select>
           </div>
         </div>
-        <div class="form-col" style="margin-bottom:10px">
+        <!-- 出席成員：成員勾選 + 額外輸入 -->
+        <div class="form-col">
           <label class="form-lbl">出席成員</label>
-          <input class="form-input" id="f-attendees" placeholder="例：李丞敏、陳麗敏">
+          <div id="attendee-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px"></div>
+          <input class="form-input" id="f-attendees-extra" placeholder="其他出席者（如：業務主管…）" style="font-size:12px">
         </div>
       </div>
 
-      <!-- 討論摘要 -->
-      <div class="form-section">
-        <div class="form-section-title">💬 討論摘要</div>
-        <textarea class="form-textarea" id="f-summary" placeholder="本次拜訪討論的主要內容、客戶狀況、保單異動討論等…" style="min-height:100px"></textarea>
-      </div>
-
-      <!-- 客戶需求與疑慮 -->
-      <div class="form-section">
-        <div class="form-section-title">🎯 客戶需求 / 疑慮</div>
-        <textarea class="form-textarea" id="f-concerns" placeholder="客戶提出的問題、需求、疑慮或特殊狀況…"></textarea>
+      <!-- 討論摘要 + 客戶需求 並排 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+        <div class="form-section" style="margin-bottom:0">
+          <div class="form-section-title">💬 討論摘要</div>
+          <textarea class="form-textarea" id="f-summary" placeholder="本次拜訪討論的主要內容、客戶狀況、保單異動討論等…" style="min-height:140px;width:100%"></textarea>
+        </div>
+        <div class="form-section" style="margin-bottom:0">
+          <div class="form-section-title">🎯 客戶需求 / 疑慮</div>
+          <textarea class="form-textarea" id="f-concerns" placeholder="客戶提出的問題、需求、疑慮或特殊狀況…" style="min-height:140px;width:100%"></textarea>
+        </div>
       </div>
 
       <!-- 承諾事項 -->
@@ -221,10 +228,12 @@ var GAPI_KEY = ""; // 使用 OAuth（無需 API Key）
 var familyData = null;
 var familyId = "";
 var familyName = "";
-var visits = []; // 目前載入的訪談紀錄
-var currentActions = []; // 編輯中的承諾事項
+var familyMembers = []; // 家庭成員名單
+var selectedAttendees = {}; // { personId: true/false }
+var visits = [];
+var currentActions = [];
 var editingVisitId = null;
-var visitFolderId = null; // 家庭專屬資料夾 ID
+var visitFolderId = null;
 
 // ── Nav Ready ────────────────────────────────────────────────
 window.addEventListener("nbs_nav_ready", function(e) {
@@ -232,7 +241,13 @@ window.addEventListener("nbs_nav_ready", function(e) {
   if (!d || !d.familyData) return;
   familyData = d.familyData;
   familyId = familyData.id || familyData.familyId || "";
-  familyName = familyData.name || familyData.headName || "此家庭";
+  // 讀取家庭名稱（多種欄位名稱相容）
+  familyName = familyData.name || familyData.headName ||
+    (familyData.members && familyData.members[0] ? familyData.members[0].name + "家庭" : "此家庭");
+  // 建立成員名單（主要成員 + 受益人）
+  familyMembers = (familyData.members || []).map(function(m){
+    return { id: m.personId || m.id, name: m.name, role: m.role || "成員" };
+  });
   document.getElementById("family-name").textContent = familyName;
   ensureFamilyFolder().then(loadVisits);
 });
@@ -381,20 +396,61 @@ function renderVisits() {
 }
 
 // ── 新增 / 編輯 ──────────────────────────────────────────────
+function renderAttendeeChips() {
+  var el = document.getElementById("attendee-chips");
+  if (!el) return;
+  el.innerHTML = familyMembers.map(function(m){
+    var sel = selectedAttendees[m.id];
+    return '<div class="attendee-chip'+(sel?" selected":"")+'" onclick="toggleAttendee(\''+m.id+'\')">'+
+      m.name+
+      '<span class="chip-role">'+m.role+'</span>'+
+      (sel?'<span style="font-size:10px">✓</span>':'')+
+    '</div>';
+  }).join("");
+}
+
+function toggleAttendee(id) {
+  selectedAttendees[id] = !selectedAttendees[id];
+  renderAttendeeChips();
+}
+
+function getAttendeesText() {
+  var selected = familyMembers.filter(function(m){ return selectedAttendees[m.id]; }).map(function(m){ return m.name; });
+  var extra = (document.getElementById("f-attendees-extra").value || "").trim();
+  if (extra) selected.push(extra);
+  return selected.join("、");
+}
+
+function setAttendeesFromText(text) {
+  selectedAttendees = {};
+  if (!text) return;
+  familyMembers.forEach(function(m){
+    if (text.indexOf(m.name) >= 0) selectedAttendees[m.id] = true;
+  });
+  // 找出不在成員名單中的部分
+  var knownNames = familyMembers.filter(function(m){ return selectedAttendees[m.id]; }).map(function(m){ return m.name; });
+  var extra = text;
+  knownNames.forEach(function(n){ extra = extra.replace(n, "").replace(/^[、,\s]+|[、,\s]+$/g,""); });
+  document.getElementById("f-attendees-extra").value = extra;
+}
+
 function openNewVisit() {
   editingVisitId = null;
   currentActions = [];
+  selectedAttendees = {};
+  // 預設全選家庭成員
+  familyMembers.forEach(function(m){ selectedAttendees[m.id] = true; });
   document.getElementById("modal-title").textContent = "📝 新增訪談紀錄";
   document.getElementById("btn-delete").style.display = "none";
-  // 預設今天日期
   document.getElementById("f-date").value = new Date().toISOString().slice(0,10);
   document.getElementById("f-type").value = "面談";
-  document.getElementById("f-attendees").value = familyName || "";
+  document.getElementById("f-attendees-extra").value = "";
   document.getElementById("f-summary").value = "";
   document.getElementById("f-concerns").value = "";
   document.getElementById("f-next-date").value = "";
   document.getElementById("f-next-time").value = "10:00";
   document.getElementById("f-next-topics").value = "";
+  renderAttendeeChips();
   renderActionList();
   document.getElementById("modal").classList.add("open");
 }
@@ -404,16 +460,18 @@ function openEditVisit(id) {
   if (!v) return;
   editingVisitId = id;
   currentActions = JSON.parse(JSON.stringify(v.actions || []));
+  selectedAttendees = {};
+  setAttendeesFromText(v.attendees || "");
   document.getElementById("modal-title").textContent = "✏️ 編輯訪談紀錄";
   document.getElementById("btn-delete").style.display = "block";
   document.getElementById("f-date").value = v.date || "";
   document.getElementById("f-type").value = v.type || "面談";
-  document.getElementById("f-attendees").value = v.attendees || "";
   document.getElementById("f-summary").value = v.summary || "";
   document.getElementById("f-concerns").value = v.concerns || "";
   document.getElementById("f-next-date").value = v.nextDate || "";
   document.getElementById("f-next-time").value = v.nextTime || "10:00";
   document.getElementById("f-next-topics").value = v.nextTopics || "";
+  renderAttendeeChips();
   renderActionList();
   document.getElementById("modal").classList.add("open");
 }
@@ -472,7 +530,7 @@ function buildVisitData() {
     familyName: familyName,
     date: document.getElementById("f-date").value,
     type: document.getElementById("f-type").value,
-    attendees: document.getElementById("f-attendees").value.trim(),
+    attendees: getAttendeesText(),
     summary: document.getElementById("f-summary").value.trim(),
     concerns: document.getElementById("f-concerns").value.trim(),
     actions: currentActions,
