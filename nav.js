@@ -9,10 +9,10 @@
 
   var NAV_ITEMS = [
     { key:"policy",      label:"保險繳費", icon:"📋", href:"policy.html" },
-    { key:"coverage",    label:"保障清單", icon:"🛡️", href:"coverage.html" },
-    { key:"savings",     label:"儲蓄險",   icon:"🐷", href:"savings.html" },
-    { key:"summary",     label:"保單彙總", icon:"📊", href:"summary.html" },
     { key:"beneficiary", label:"受益人",   icon:"👥", href:"beneficiary.html" },
+    { key:"coverage",    label:"保障清單", icon:"🛡️", href:"coverage.html" },
+    { key:"summary",     label:"保單彙總", icon:"📊", href:"summary.html" },
+    { key:"savings",     label:"儲蓄險",   icon:"🐷", href:"savings.html" },
     { key:"export",      label:"匯出圖片", icon:"🖼️", href:"export.html" },
     { key:"hospital",    label:"醫院病房", icon:"🏥", href:"hospital.html" }
   ];
