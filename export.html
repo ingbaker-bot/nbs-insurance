@@ -113,7 +113,6 @@ const GAS="https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQ
 const BLOCKS=[
   {key:"monthly",          label:"每月應繳保費",      icon:"📅",desc:"月曆式繳費分配"},
   {key:"summary",          label:"保單彙總一覽",      icon:"📊",desc:"保單列表、保費結構、各項保障加總"},
-  {key:"savings",          label:"儲蓄險領回明細",    icon:"🐷",desc:"各保單領回時間表與總領回金額"},
   {key:"savings_timeline", label:"儲蓄險現金流時間軸",icon:"📈",desc:"未來15年各被保險人現金流匯整"},
   {key:"beneficiary",      label:"受益人與傳承",      icon:"👥",desc:"傳承規劃與保額對應關係"},
 ];
@@ -126,7 +125,7 @@ const FMTS=[
 const CC={"壽險保障":"#4A90D9","醫療保障":"#27AE8F","意外險":"#F5A623","重大疾病險":"#9B59B6","重大傷病險":"#8E44AD","特定傷病險":"#7D3C98","儲蓄險":"#E8638A","年金險":"#C0392B","投資型保險":"#95A5A6"};
 
 // ── 狀態 ─────────────────────────────────────────────────
-var sel={monthly:false,summary:false,savings:false,savings_timeline:false,beneficiary:false};
+var sel={monthly:false,summary:false,savings_timeline:false,beneficiary:false};
 var fmt="png_single";
 var person={},policies=[],coverage={},savings=[];
 var pName="",pDate="";
@@ -1344,84 +1343,6 @@ function renderBlock(key){
     });
     return'<div style="padding:10px 12px">'+(html||'<div style="color:#aaa;font-size:12px">尚無附約保障資料（請先至附約保障清單填寫）</div>')+'</div>';
   }
-  if(key==="savings"){
-    var sp=policies.filter(function(p){
-      return ["儲蓄險","年金險","儲蓄年金","投資型保險"].indexOf(p.category)>=0;
-    });
-    if(!sp.length) return'<div style="padding:12px;color:#aaa;font-size:12px">尚無儲蓄險或年金險保單</div>';
-
-    var savArr=savings||person.savings||[];
-    var typeNames={"1":"期滿領整筆","2":"繳費期間領＋期滿整筆","3":"期間不領＋期滿領","4":"期間領＋期滿領","5":"月領生存金/月月配息","6":"逐年生存金明細"};
-
-    // 依保單分組顯示（主約帶附約）
-    var pGroups={};
-    sp.forEach(function(p){
-      var k=p.policyNo||p.id;
-      if(!pGroups[k]) pGroups[k]={no:k,company:p.company||"",rows:[]};
-      pGroups[k].rows.push(p);
-    });
-
-    var html='<div style="padding:10px 12px">';
-    Object.values(pGroups).forEach(function(g){
-      html+='<div style="border:1px solid #e8e8e8;border-radius:7px;overflow:hidden;margin-bottom:10px">'+
-        '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#f7f7f5;border-bottom:1px solid #f0f0f0">'+
-          '<span style="font-family:monospace;font-size:10px;background:#FBEAF0;color:#72243E;padding:1px 7px;border-radius:99px">'+g.no+'</span>'+
-          '<span style="font-size:10px;color:#555">'+g.company+'</span>'+
-        '</div>';
-
-      g.rows.forEach(function(p){
-        var s=savArr.find(function(x){return x.policyId===p.id;})||null;
-        var typeName=s&&s.type?typeNames[s.type]||"":null;
-        var isFx=p.currency&&p.currency!=="TWD";
-        var curLabel=isFx?(' <span style="font-size:9px;background:#FFF3CD;color:#856404;padding:1px 4px;border-radius:3px">'+p.currency+'</span>'):"";
-
-        html+='<div style="padding:8px 10px;border-top:1px solid #f5f5f5">'+
-          '<div style="font-size:11px;font-weight:600;color:#333;margin-bottom:4px">'+
-            (p.isMain?'<span style="font-size:9px;color:#fff;background:#378ADD;padding:1px 4px;border-radius:2px;margin-right:4px">主</span>':
-                      '<span style="font-size:9px;color:#888;background:#ebebeb;padding:1px 4px;border-radius:2px;margin-right:4px;margin-left:8px">附</span>')+
-            (p.itemName||p.policyNo)+curLabel+
-          '</div>';
-
-        if(s&&typeName){
-          html+='<div style="font-size:10px;color:#0C447C;background:#E6F1FB;display:inline-block;padding:1px 8px;border-radius:3px;margin-bottom:3px">'+typeName+'</div>';
-
-          // 繳費期間
-          if(["2","4"].indexOf(s.type)>=0 && s.duringAmt){
-            var firstYr=parseInt(s.duringStartYr)||1;
-            var freqYr=parseInt(s.duringFreqYr)||2;
-            html+='<div style="font-size:10px;color:#555;margin-top:2px">繳費期間：第'+firstYr+'年起，每'+freqYr+'年領 '+(isFx?(p.currency+" "):"NT$")+(parseFloat(s.duringAmt)||0).toLocaleString()+'</div>';
-          }
-          // 期滿後 / 月領
-          if(s.type==="5"){
-            if(s.afterAmt) html+='<div style="font-size:10px;color:#555;margin-top:2px">月領：'+(isFx?(p.currency+" "):"NT$")+(parseFloat(s.afterAmt)||0).toLocaleString()+'/月</div>';
-          } else if(s.afterAmt){
-            var afterStart=parseInt(s.afterStartYr)||0;
-            var afterFreq=parseInt(s.afterFreqYr)||1;
-            var afterDesc=afterStart===0?"期滿當年":"期滿後第"+afterStart+"年";
-            html+='<div style="font-size:10px;color:#555;margin-top:2px">期滿後：'+afterDesc+'起，每'+afterFreq+'年領 '+(isFx?(p.currency+" "):"NT$")+(parseFloat(s.afterAmt)||0).toLocaleString()+'</div>';
-          }
-          // 逐年明細
-          if(s.type==="6" && s.yearlyAmts && s.yearlyAmts.length){
-            var validRows=s.yearlyAmts.filter(function(r){return r.yr&&r.amt;});
-            if(validRows.length){
-              html+='<div style="font-size:10px;color:#555;margin-top:4px;display:grid;grid-template-columns:repeat(4,1fr);gap:2px">';
-              validRows.forEach(function(r){
-                html+='<div style="background:#f7f7f5;border-radius:3px;padding:2px 4px;text-align:center"><span style="font-size:9px;color:#aaa">'+r.yr+'</span><br><span style="font-size:10px;font-weight:500;color:#333">'+(isFx?(p.currency+" "):"")+(parseFloat(r.amt)||0).toLocaleString()+'</span></div>';
-              });
-              html+='</div>';
-            }
-          }
-          if(s.note) html+='<div style="font-size:10px;color:#aaa;margin-top:2px">備註：'+s.note+'</div>';
-        } else {
-          html+='<div style="font-size:10px;color:#bbb;margin-top:2px">尚未設定領回方式</div>';
-        }
-        html+='</div>';
-      });
-      html+='</div>';
-    });
-    html+='</div>';
-    return html;
-  }
   if(key==="savings_timeline"){
     var now2 = new Date().getFullYear();
     var pdm2 = {};
@@ -1622,7 +1543,7 @@ window.addEventListener("nbs_nav_ready", async function(e) {
   var fromPage = new URLSearchParams(window.location.search).get("from") || "";
   var PAGE_TO_BLOCK = {
     "summary":     ["summary"],
-    "savings":     ["savings","savings_timeline"],
+    "savings":     ["savings_timeline"],
     "beneficiary": ["beneficiary"],
     "family":      ["summary"],
     "policy":      ["summary","monthly"],
