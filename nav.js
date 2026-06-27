@@ -1,10 +1,12 @@
 /**
- * NBS 導覽系統 nav.js v2
- * 不移動 DOM，直接在 body 外部插入側欄/底部Tab
+ * NBS 導覽系統 nav.js v3 (GIS 直連 Drive API 架構)
  */
 (function(global) {
   "use strict";
-  // nav (2).js 最上方
+
+  // ==========================================
+  // 1. 系統核心設定 (請填入你的 API 1 網址)
+  // ==========================================
   var AUTH_GAS_URL = "https://script.google.com/macros/s/AKfycbwzDwyZy09189eOJOs-zEwkZOml2_pJOq15nYGtHF2Kyrtv6ag5VY-I2M8sDyrt0iPdZQ/exec"; // 身分驗證用
   var STORAGE_GAS_URL = "https://script.google.com/macros/s/AKfycbyskv8mVyD-DOinIIn_dhNa6SKkZRXjj5287E59tsi2ohpFFuz3p-0VRgWz9VOiVAbouQ/exec"; // 資料存取用
   
@@ -26,9 +28,144 @@
   var _family = null;
   var _personId = null;
   var _user = null;
+  var _tokenClient = null;
+  var _accessToken = null;
 
-  // ── 公開 API ──────────────────────────────────────────
-  // ── 公開 API ──────────────────────────────────────────
+  // ==========================================
+  // 2. Google Drive 直接存取引擎 (DriveDB)
+  // ==========================================
+  var DriveDB = {
+    folderCache: {}, // 快取資料夾 ID 避免重複查詢
+
+    async request(path, options = {}) {
+      if (!_accessToken) throw new Error("尚未取得 Google 授權");
+      const headers = { 'Authorization': `Bearer ${_accessToken}`, ...options.headers };
+      const res = await fetch(`https://www.googleapis.com/${path}`, { ...options, headers });
+      if (res.status === 401) throw new Error("授權過期，請重新整理頁面");
+      return res;
+    },
+
+    async getFolder(name, parentId = 'root') {
+      const q = `name='${name}' and '${parentId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+      const res = await this.request(`drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id)`);
+      const data = await res.json();
+      return data.files && data.files.length > 0 ? data.files[0].id : null;
+    },
+
+    async createFolder(name, parentId = 'root') {
+      const metadata = { name: name, mimeType: 'application/vnd.google-apps.folder', parents: [parentId] };
+      const res = await this.request(`drive/v3/files`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(metadata)
+      });
+      const data = await res.json();
+      return data.id;
+    },
+
+    async ensureAgentFolder(email, subFolder) {
+      const cacheKey = `${email}_${subFolder}`;
+      if (this.folderCache[cacheKey]) return this.folderCache[cacheKey];
+
+      // 找根目錄
+      let rootId = await this.getFolder("NBS雲端保單體檢");
+      if (!rootId) rootId = await this.createFolder("NBS雲端保單體檢");
+
+      // 找業務員目錄
+      const agentName = email.replace(/[^a-zA-Z0-9]/g, "_");
+      let agentId = await this.getFolder(agentName, rootId);
+      if (!agentId) agentId = await this.createFolder(agentName, rootId);
+
+      // 找子目錄
+      let targetId = await this.getFolder(subFolder, agentId);
+      if (!targetId) targetId = await this.createFolder(subFolder, agentId);
+
+      this.folderCache[cacheKey] = targetId;
+      return targetId;
+    },
+
+    async saveFile(email, folderType, fileName, contentObj) {
+      const parentId = await this.ensureAgentFolder(email, folderType);
+      
+      // 搜尋是否已有同名檔案
+      const q = `name='${fileName}' and '${parentId}' in parents and trashed=false`;
+      const searchRes = await this.request(`drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id)`);
+      const searchData = await searchRes.json();
+      
+      const boundary = '-------314159265358979323846';
+      const delimiter = `\r\n--${boundary}\r\n`;
+      const close_delim = `\r\n--${boundary}--`;
+      const metadata = { name: fileName, mimeType: 'application/json' };
+      if (!searchData.files || searchData.files.length === 0) metadata.parents = [parentId];
+
+      const body = delimiter +
+        'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+        JSON.stringify(metadata) + delimiter +
+        'Content-Type: application/json\r\n\r\n' +
+        JSON.stringify(contentObj, null, 2) + close_delim;
+
+      const headers = { 'Content-Type': `multipart/related; boundary=${boundary}` };
+
+      if (searchData.files && searchData.files.length > 0) {
+        // 更新 (PATCH)
+        await this.request(`upload/drive/v3/files/${searchData.files[0].id}?uploadType=multipart`, { method: 'PATCH', headers, body });
+      } else {
+        // 新增 (POST)
+        await this.request(`upload/drive/v3/files?uploadType=multipart`, { method: 'POST', headers, body });
+      }
+      return { status: "ok" };
+    },
+
+    async readFile(email, folderType, fileName) {
+      const parentId = await this.ensureAgentFolder(email, folderType);
+      const q = `name='${fileName}' and '${parentId}' in parents and trashed=false`;
+      const res = await this.request(`drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id)`);
+      const data = await res.json();
+      
+      if (!data.files || data.files.length === 0) throw new Error("檔案不存在");
+      
+      const fileRes = await this.request(`drive/v3/files/${data.files[0].id}?alt=media`);
+      const content = await fileRes.json();
+      return { status: "ok", content: content };
+    },
+
+    async listVisits(email, familyId) {
+      const parentId = await this.ensureAgentFolder(email, "visits");
+      const q = `'${parentId}' in parents and trashed=false and name contains 'visit_'`;
+      const res = await this.request(`drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name)`);
+      const data = await res.json();
+      
+      let visits = [];
+      for (const file of (data.files || [])) {
+        try {
+          const fileRes = await this.request(`drive/v3/files/${file.id}?alt=media`);
+          const v = await fileRes.json();
+          if (!familyId || v.familyId === familyId) visits.push(v);
+        } catch(e) {} // 略過壞檔
+      }
+      return { status: "ok", visits: visits };
+    },
+
+    async deleteVisit(email, visitId) {
+      const parentId = await this.ensureAgentFolder(email, "visits");
+      const q = `name='visit_${visitId}.json' and '${parentId}' in parents and trashed=false`;
+      const res = await this.request(`drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id)`);
+      const data = await res.json();
+      
+      if (data.files && data.files.length > 0) {
+        await this.request(`drive/v3/files/${data.files[0].id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ trashed: true })
+        });
+      }
+      return { status: "ok" };
+    }
+  };
+
+  // ==========================================
+  // 3. 公開 API & 智慧路由
+  // ==========================================
   global.NBS_NAV = {
     init: function(opts) {
       _page = opts.page || "";
@@ -41,23 +178,132 @@
     getCurrentPersonId: function() { return _personId; },
     getFamilyData:      function() { return _family; },
     getUser:            function() { return _user; },
-
-    // 修正：補上逗號並確保函式結構完整
-    callGAS: function(action, params) {
+    
+    // 智慧路由：判斷要打 API 1 還是直連 Drive
+    callGAS: async function(action, params) {
       var authActions = ["apply", "checkAuth", "getAgents", "getHospitals"];
-      var targetUrl = authActions.indexOf(action) !== -1 ? AUTH_GAS_URL : STORAGE_GAS_URL;
-      
-      return fetch(targetUrl, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify(Object.assign({ action: action }, params))
-      }).then(function(r) { return r.json(); });
-    }, // <--- 這裡一定要有逗號
-
-    onMemberChange: null // <--- 這裡也要確保正確
+      if (authActions.indexOf(action) !== -1) {
+        // 呼叫 API 1 (權限驗證與公用資料庫)
+        const res = await fetch(AUTH_GAS_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain" },
+          body: JSON.stringify(Object.assign({ action: action }, params))
+        });
+        return await res.json();
+      } else {
+        // 直連 Drive API
+        if (!_accessToken) throw new Error("無效的授權 Token");
+        try {
+          if (action === "saveFile") return await DriveDB.saveFile(params.email, params.fileType === "family" ? "families" : "persons", params.fileName, params.content);
+          if (action === "readFile") return await DriveDB.readFile(params.email, params.fileType === "family" ? "families" : "persons", params.fileName);
+          if (action === "saveVisit") return await DriveDB.saveFile(params.email, "visits", `visit_${params.visit.id}.json`, params.visit);
+          if (action === "listVisits") return await DriveDB.listVisits(params.email, params.familyId);
+          if (action === "deleteVisit") return await DriveDB.deleteVisit(params.email, params.visitId);
+          throw new Error("未支援的 Drive 動作: " + action);
+        } catch(e) {
+          console.error("Drive API 錯誤:", e);
+          throw e;
+        }
+      }
+    },
+    onMemberChange: null,
   };
 
+  // ==========================================
+  // 4. 初始化與授權綁定
+  // ==========================================
   function _setup(opts) {
+    _injectStyles();
+    _insertNav();          
+
+    var savedUser = localStorage.getItem("nbs_user");
+    if (!savedUser && window.location.href.indexOf("index.html") === -1) { 
+      window.location.href = "index.html"; return; 
+    }
+    if (savedUser) _user = JSON.parse(savedUser);
+
+    // 等待 google gsi 載入完成
+    var checkGsi = setInterval(() => {
+      if (window.google && window.google.accounts) {
+        clearInterval(checkGsi);
+        _tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: CLIENT_ID,
+          scope: SCOPES,
+          callback: (tokenResponse) => {
+            if (tokenResponse && tokenResponse.access_token) {
+              _accessToken = tokenResponse.access_token;
+              _loadData(opts); // 取得授權後才載入家庭資料
+            }
+          },
+        });
+        
+        // 觸發授權
+        _triggerAuth();
+      }
+    }, 100);
+  }
+
+  function _triggerAuth() {
+    // 建立一個滿版的授權提示畫面，要求使用者手動點擊（因為瀏覽器禁止自動彈出視窗）
+    var overlay = document.createElement("div");
+    overlay.id = "nbs-auth-overlay";
+    overlay.style.cssText = "position:fixed;inset:0;background:#1A2B4A;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;padding:20px;text-align:center;";
+    overlay.innerHTML = `
+      <div style="font-size:48px;margin-bottom:20px;">🛡️</div>
+      <h2 style="margin-bottom:10px;">系統安全連線</h2>
+      <p style="color:rgba(255,255,255,0.7);font-size:14px;margin-bottom:30px;max-width:300px;line-height:1.6;">
+        為了保障您的客戶資料安全，本系統將資料加密存放於您個人的 Google 雲端硬碟中。請點擊下方按鈕進行安全授權。
+      </p>
+      <button id="nbs-auth-btn" style="padding:12px 24px;background:#378ADD;color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;box-shadow:0 4px 12px rgba(55,138,221,0.3);">
+        連結 Google 帳號
+      </button>
+    `;
+    document.body.appendChild(overlay);
+
+    document.getElementById("nbs-auth-btn").onclick = function() {
+      _tokenClient.requestAccessToken();
+      overlay.remove(); // 點擊後移除遮罩
+    };
+  }
+
+  // ==========================================
+  // 5. 資料載入 (接續原本的邏輯)
+  // ==========================================
+  function _loadData(opts) {
+    var fn = localStorage.getItem("nbs_current_family");
+    if (!fn) { window.location.href = "main.html"; return; }
+
+    var cacheKey = "nbs_fam_" + fn;
+    var cached = sessionStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        _family = JSON.parse(cached);
+        _personId = localStorage.getItem("nbs_current_person") || _family.members[0].personId;
+        _finishLoad(fn);
+        return;
+      } catch(e) { sessionStorage.removeItem(cacheKey); }
+    }
+
+    NBS_NAV.callGAS("readFile", { email: _user.email, fileType: "family", fileName: fn })
+      .then(function(fr) {
+        _family = fr.content;
+        sessionStorage.setItem(cacheKey, JSON.stringify(_family));
+        _personId = localStorage.getItem("nbs_current_person") || _family.members[0].personId;
+        _finishLoad(fn);
+      })
+      .catch(function(e) {
+        console.error("載入家庭失敗", e);
+        _finishLoad(fn, true);
+      });
+  }
+
+  function _finishLoad(fn, isError = false) {
+    _renderAll();
+    window.dispatchEvent(new CustomEvent("nbs_nav_ready", {
+      detail: { user:_user, familyData: isError ? null : _family, currentPersonId: isError ? null : _personId, familyFileName:fn }
+    }));
+  }
+function _setup(opts) {
     _injectStyles();
     _insertNav();          // 插入側欄 DOM（空的）
     _loadData(opts);       // 非同步載入資料後填充側欄
@@ -748,5 +994,13 @@
     `;
     document.head.appendChild(s);
   }
+
+  
+  // ── 以下為原有的 DOM 插入、版面配置、成員編輯表單與樣式，維持不變，確保介面運作 ──
+  // (由於字數限制，請將這段底下的 _insertNav(), _renderSidebar(), _renderBottomTab(), 
+  // _renderMobileHdr(), 編輯成員邏輯與 _injectStyles() 等原本的 UI 程式碼接續貼上即可，
+  // 他們與 API 層完全獨立，不需要更動！)
+
+  // ... (保留你原版 nav.js 的第 71 行之後的所有 UI 程式碼) ...
 
 })(window);
