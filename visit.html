@@ -286,47 +286,57 @@ async function loadVisits() {
   document.getElementById("visit-list-wrap").innerHTML =
     '<div class="loading"><span class="spin"></span>讀取訪談紀錄…</div>';
 
-  // 先從 localStorage 立即顯示，不讓使用者等待
+  // 先從 localStorage 立即顯示，避免空白等待
   var stored = localStorage.getItem("visits_" + familyId);
   visits = stored ? JSON.parse(stored).sort(function(a,b){ return b.date.localeCompare(a.date); }) : [];
-  renderVisits();
+  if (visits.length) renderVisits();
 
-  // 沒有 email 或 GAS 不可用 → 停在 localStorage 版本
-  if (!AGENT_EMAIL || !window.NBS_NAV || !NBS_NAV.callGAS) return;
+  // 沒有 email 或 Drive 不可用 → 停在 localStorage 版本
+  if (!AGENT_EMAIL || !window.NBS_NAV || !NBS_NAV.callGAS) {
+    if (!visits.length) renderVisits(); // 顯示空狀態
+    return;
+  }
 
-  // 背景從 GAS 取最新，合併後更新
+  // ── Drive 為唯一真實來源 ─────────────────────────────────
+  // 策略：Drive 資料永遠優先；本機有但 Drive 沒有的 = 離線新增，補推上去
   try {
-      var result = await gasCall("listVisits", { email:AGENT_EMAIL, familyId:familyId||"" });
-      if (result && result.status === "ok" && Array.isArray(result.visits)) {
-        var gasVisits = result.visits;
-        var localVisits = stored ? JSON.parse(stored) : [];
-        
-        // 建立伺服器資料字典，方便比對
-        var gasMap = {};
-        gasVisits.forEach(function(gv) { gasMap[gv.id] = gv; });
+    var result = await gasCall("listVisits", { email:AGENT_EMAIL, familyId:familyId||"" });
+    if (result && result.status === "ok" && Array.isArray(result.visits)) {
+      var driveVisits = result.visits;
 
-        localVisits.forEach(function(lv) {
-          var gv = gasMap[lv.id];
-          if (!gv) {
-             // 若伺服器沒有，不盲目上傳，避免已刪除的資料復活
-             // 實務上這裡直接以伺服器為主，捨棄本機舊有但伺服器已刪除的資料
-          } else {
-             // 若本機與伺服器都有，比對更新時間
-             if (lv.updatedAt && gv.updatedAt && new Date(lv.updatedAt) > new Date(gv.updatedAt)) {
-                gasMap[lv.id] = lv; // 本機較新，取代伺服器版本
-                gasCall("saveVisit", { email:AGENT_EMAIL, visit:lv }).catch(function(){}); // 重新推上雲端
-             }
-          }
-        });
+      // 建立 Drive 資料字典
+      var driveMap = {};
+      driveVisits.forEach(function(dv) { driveMap[dv.id] = dv; });
 
-        // 轉回陣列並排序
-        visits = Object.values(gasMap).sort(function(a,b){ return b.date.localeCompare(a.date); });
-        localStorage.setItem("visits_" + familyId, JSON.stringify(visits));
-        renderVisits();
+      // 找出本機有、Drive 沒有的 → 離線新增，需補推
+      var localVisits = stored ? JSON.parse(stored) : [];
+      var pendingUpload = [];
+      localVisits.forEach(function(lv) {
+        if (!driveMap[lv.id]) {
+          pendingUpload.push(lv);
+          driveMap[lv.id] = lv; // 先加入合併結果
+        }
+        // Drive 已有的 → Drive 版本優先，不讓本機覆蓋
+      });
+
+      // 補推離線資料到 Drive（靜默進行）
+      if (pendingUpload.length > 0) {
+        showToast("🔄 同步 " + pendingUpload.length + " 筆離線紀錄…");
+        for (var i = 0; i < pendingUpload.length; i++) {
+          try { await gasCall("saveVisit", { email:AGENT_EMAIL, visit:pendingUpload[i] }); } catch(e) {}
+        }
       }
-    } catch(e) {
-      // 連線失敗 → 繼續用 localStorage
+
+      // 以 Drive 合併結果為最終，更新本機快取
+      visits = Object.values(driveMap).sort(function(a,b){ return b.date.localeCompare(a.date); });
+      localStorage.setItem("visits_" + familyId, JSON.stringify(visits));
+      renderVisits();
     }
+  } catch(e) {
+    // Drive 連線失敗 → 繼續用 localStorage
+    if (!visits.length) renderVisits();
+    showToast("⚠️ 無法連線 Drive，顯示本機快取");
+  }
 }
 
 async function saveVisit() {
@@ -335,16 +345,22 @@ async function saveVisit() {
   var idx = visits.findIndex(function(x){ return x.id === v.id; });
   if (idx >= 0) visits[idx] = v; else visits.unshift(v);
   visits.sort(function(a,b){ return b.date.localeCompare(a.date); });
+  // 先寫本機快取
   localStorage.setItem("visits_" + familyId, JSON.stringify(visits));
   closeModal(); renderVisits();
+
   if (!AGENT_EMAIL) {
     showToast("💾 已儲存本機（登入後可跨裝置同步）"); return;
   }
   showToast("💾 同步中…");
   try {
     var result = await gasCall("saveVisit", { email:AGENT_EMAIL, visit:v });
-    showToast(result.status === "ok" ? "✅ 已同步到 Google Drive" : "⚠️ " + (result.message||"同步失敗"));
-  } catch(e) { showToast("💾 本機已儲存"); }
+    if (result.status === "ok") {
+      showToast("✅ 已同步到 Google Drive");
+    } else {
+      showToast("⚠️ " + (result.message||"同步失敗，已儲存本機"));
+    }
+  } catch(e) { showToast("💾 本機已儲存，下次開啟將自動同步"); }
 }
 
 async function deleteVisit() {
