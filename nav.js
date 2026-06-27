@@ -31,7 +31,7 @@
   var _user = null;
   var _tokenClient = null;
   var _accessToken = null;
-  var SCOPES = "https://www.googleapis.com/auth/drive";
+  var SCOPES = "https://www.googleapis.com/auth/drive.file";
   // ==========================================
   // 2. Google Drive 直接存取引擎 (DriveDB)
   // ==========================================
