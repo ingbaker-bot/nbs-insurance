@@ -4,8 +4,10 @@
  */
 (function(global) {
   "use strict";
-
-  var GAS_URL = "https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec";
+  // nav (2).js 最上方
+  var AUTH_GAS_URL = "https://script.google.com/macros/s/AKfycbwzDwyZy09189eOJOs-zEwkZOml2_pJOq15nYGtHF2Kyrtv6ag5VY-I2M8sDyrt0iPdZQ/exec"; // 身分驗證用
+  var STORAGE_GAS_URL = "https://script.google.com/macros/s/AKfycbyskv8mVyD-DOinIIn_dhNa6SKkZRXjj5287E59tsi2ohpFFuz3p-0VRgWz9VOiVAbouQ/exec"; // 資料存取用
+  
   window._NBS_GAS_URL = GAS_URL; // 讓 visit.html / hospital.html 等頁面共用
 
   var NAV_ITEMS = [
@@ -38,9 +40,18 @@
     getFamilyData:      function() { return _family; },
     getUser:            function() { return _user; },
     // ↓ 暴露給 visit.html / hospital.html 等頁面使用（POST + text/plain，無 CORS 問題）
-    callGAS: function(action, params) {
-      return _callGAS_POST(action, params);
-    },
+    // nav (2).js 中的 callGAS 函式
+  callGAS: function(action, params) {
+  // 定義哪些動作屬於 API 1 (身分驗證類)
+  var authActions = ["apply", "checkAuth", "getAgents", "getHospitals"];
+  var targetUrl = authActions.indexOf(action) !== -1 ? AUTH_GAS_URL : STORAGE_GAS_URL;
+  
+  return fetch(targetUrl, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain" },
+    body: JSON.stringify(Object.assign({ action: action }, params))
+  }).then(function(r) { return r.json(); });
+}
     onMemberChange: null,
   };
 
