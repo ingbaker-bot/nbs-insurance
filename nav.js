@@ -28,7 +28,6 @@
   global.NBS_NAV = {
     init: function(opts) {
       _page = opts.page || "";
-      // DOM ready 後插入側欄
       if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", function() { _setup(opts); });
       } else {
@@ -38,6 +37,10 @@
     getCurrentPersonId: function() { return _personId; },
     getFamilyData:      function() { return _family; },
     getUser:            function() { return _user; },
+    // ↓ 暴露給 visit.html / hospital.html 等頁面使用（POST + text/plain，無 CORS 問題）
+    callGAS: function(action, params) {
+      return _callGAS_POST(action, params);
+    },
     onMemberChange: null,
   };
 
