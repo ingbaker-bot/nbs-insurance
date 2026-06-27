@@ -190,8 +190,10 @@
       })
       .catch(function(e) {
         console.error("NBS_NAV load error", e);
+        // 若發生錯誤，提示使用者確認授權
+        alert("系統偵測到您尚未開通雲端空間，請在跳出的視窗中點擊「允許」，以啟用個人保單體檢功能。");
         window.dispatchEvent(new CustomEvent("nbs_nav_ready", {
-          detail: { user:_user, familyData:null, currentPersonId:null, familyFileName:fn }
+        detail: { user:_user, familyData:null, currentPersonId:null, familyFileName:fn }
         }));
       });
   }
