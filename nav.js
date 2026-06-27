@@ -8,8 +8,8 @@
   // 1. 系統核心設定 (請填入你的 API 1 網址)
   // ==========================================
   var AUTH_GAS_URL = "https://script.google.com/macros/s/AKfycbwzDwyZy09189eOJOs-zEwkZOml2_pJOq15nYGtHF2Kyrtv6ag5VY-I2M8sDyrt0iPdZQ/exec"; // 身分驗證用
+  var CLIENT_ID = "524622074888-iuij6ib2qvr0qddvvrpfqnmfbt85gvti.apps.googleusercontent.com";
   var STORAGE_GAS_URL = "https://script.google.com/macros/s/AKfycbyskv8mVyD-DOinIIn_dhNa6SKkZRXjj5287E59tsi2ohpFFuz3p-0VRgWz9VOiVAbouQ/exec"; // 資料存取用
-  var CLIENT_ID = "524622074888-iuij6ib2qvr0qddvvrpfqnmfbt85gvti.apps.googleusercontent.com"; // Google OAuth Client ID
   
   window._NBS_AUTH_GAS_URL = AUTH_GAS_URL;
   window._NBS_STORAGE_GAS_URL = STORAGE_GAS_URL;
@@ -54,12 +54,7 @@
     },
 
     async createFolder(name, parentId = 'root') {
-      const metadata = {
-        name: name,
-        mimeType: 'application/vnd.google-apps.folder',
-        parents: [parentId],
-        appProperties: { nbs: 'true' }  // 標記為本 app 建立，drive.file scope 可找到
-      };
+      const metadata = { name: name, mimeType: 'application/vnd.google-apps.folder', parents: [parentId] };
       const res = await this.request(`drive/v3/files`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -323,6 +318,7 @@
       detail: { user:_user, familyData: isError ? null : _family, currentPersonId: isError ? null : _personId, familyFileName:fn }
     }));
   }
+
   // ── 插入側欄 DOM（不動頁面內容）────────────────────────
   function _insertNav() {
     // 側欄
@@ -405,7 +401,8 @@
     }
   }
 
-  // ── 渲染所有導覽元件 ─────────────────────────────────────
+
+    // ── 渲染所有導覽元件 ─────────────────────────────────────
   function _renderAll() {
     _renderSidebar();
     _renderBottomTab();
@@ -825,23 +822,12 @@
     return (d.getFullYear()-1911)+"年"+(d.getMonth()+1)+"月"+d.getDate()+"日";
   }
   function _debounce(fn, ms) { var t; return function(){ clearTimeout(t); t=setTimeout(fn,ms); }; }
+  // _callGAS_POST / _callGAS → 統一委派給 NBS_NAV.callGAS（Drive API + token）
   function _callGAS_POST(action, params) {
-    return fetch(GAS_URL, {
-      method:"POST",
-      headers:{"Content-Type":"text/plain"},
-      body:JSON.stringify(Object.assign({action:action},params))
-    }).then(function(r){ return r.json(); });
+    return NBS_NAV.callGAS(action, params);
   }
-
   function _callGAS(action, params) {
-    var url = new URL(GAS_URL);
-    url.searchParams.set("action", action);
-    Object.entries(params||{}).forEach(function(kv){
-      var k=kv[0],v=kv[1];
-      if(typeof v==="object") url.searchParams.set(k,encodeURIComponent(JSON.stringify(v)));
-      else if(v!==null&&v!==undefined) url.searchParams.set(k,v);
-    });
-    return fetch(url.toString()).then(function(r){ return r.json(); });
+    return NBS_NAV.callGAS(action, params);
   }
 
   // ── 樣式 ─────────────────────────────────────────────────
