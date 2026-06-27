@@ -30,7 +30,7 @@
   var _user = null;
   var _tokenClient = null;
   var _accessToken = null;
-
+  var SCOPES = "https://www.googleapis.com/auth/drive";
   // ==========================================
   // 2. Google Drive 直接存取引擎 (DriveDB)
   // ==========================================
@@ -212,6 +212,7 @@
   // ==========================================
   // 4. 初始化與授權綁定
   // ==========================================
+  // 2. 完整替換原本的 _setup 函式
   function _setup(opts) {
     _injectStyles();
     _insertNav();          
@@ -222,25 +223,38 @@
     }
     if (savedUser) _user = JSON.parse(savedUser);
 
-    // 等待 google gsi 載入完成
-    var checkGsi = setInterval(() => {
-      if (window.google && window.google.accounts) {
-        clearInterval(checkGsi);
-        _tokenClient = google.accounts.oauth2.initTokenClient({
-          client_id: CLIENT_ID,
-          scope: SCOPES,
-          callback: (tokenResponse) => {
-            if (tokenResponse && tokenResponse.access_token) {
-              _accessToken = tokenResponse.access_token;
-              _loadData(opts); // 取得授權後才載入家庭資料
-            }
-          },
-        });
-        
-        // 觸發授權
-        _triggerAuth();
-      }
-    }, 100);
+    // 【關鍵修正】檢查是否有未過期的 Token
+    var storedToken = sessionStorage.getItem("nbs_token");
+    var tokenExpiry = sessionStorage.getItem("nbs_token_expiry");
+
+    if (storedToken && tokenExpiry && Date.now() < parseInt(tokenExpiry)) {
+      // 若 Token 仍在有效時間內，直接取用並載入資料，不彈出授權視窗
+      _accessToken = storedToken;
+      _loadData(opts); 
+    } else {
+      // 沒有 Token，等待 Google 套件載入並顯示授權畫面
+      var checkGsi = setInterval(() => {
+        if (window.google && window.google.accounts) {
+          clearInterval(checkGsi);
+          _tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: CLIENT_ID,
+            scope: SCOPES,
+            callback: (tokenResponse) => {
+              if (tokenResponse && tokenResponse.access_token) {
+                _accessToken = tokenResponse.access_token;
+                // 將 Token 存入 sessionStorage 記住 50 分鐘 (3,000,000 毫秒)
+                sessionStorage.setItem("nbs_token", _accessToken);
+                sessionStorage.setItem("nbs_token_expiry", Date.now() + 3000000);
+                _loadData(opts);
+              }
+            },
+          });
+          
+          // 觸發授權
+          _triggerAuth();
+        }
+      }, 100);
+    }
   }
 
   function _triggerAuth() {
