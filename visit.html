@@ -272,22 +272,11 @@ setTimeout(function(){
 // GAS URL 已在 nav.js 第 8 行定義，所有頁面共用同一個後台
 // 業務員的 email 由登入狀態帶入，Drive 資料夾自動用 email 區隔
 
-async function gasCall(params) {
-  var url = getGasUrl();
-  if (!url) throw new Error("GAS_URL 未設定");
-  var qs = Object.keys(params).map(function(k){
-    var v = typeof params[k] === "object"
-      ? encodeURIComponent(JSON.stringify(params[k]))
-      : encodeURIComponent(String(params[k]));
-    return k + "=" + v;
-  }).join("&");
-  // Apps Script GET 需要 redirect:follow，不可帶 credentials
-  var r = await fetch(url + "?" + qs, {
-    method: "GET",
-    redirect: "follow",
-    credentials: "omit"
-  });
-  return r.json();
+// ── Apps Script API（透過 nav.js 的 POST 方式，無 CORS 問題）──
+// nav.js 已有正確的 POST + text/plain 設定，這裡直接借用
+async function gasCall(action, params) {
+  if (!window.NBS_NAV || !NBS_NAV.callGAS) throw new Error("nav.js 未載入");
+  return NBS_NAV.callGAS(action, params);
 }
 
 async function ensureFamilyFolder() { /* GAS 自動建立，前端不需處理 */ }
@@ -303,7 +292,7 @@ async function loadVisits() {
     return;
   }
   try {
-    var result = await gasCall({ action:"listVisits", email:AGENT_EMAIL, familyId:familyId||"" });
+    var result = await gasCall("listVisits", { email:AGENT_EMAIL, familyId:familyId||"" });
     if (result.status === "ok") {
       visits = result.visits || [];
       localStorage.setItem("visits_" + familyId, JSON.stringify(visits));
@@ -330,7 +319,7 @@ async function saveVisit() {
   }
   showToast("💾 同步中…");
   try {
-    var result = await gasCall({ action:"saveVisit", email:AGENT_EMAIL, visit:v });
+    var result = await gasCall("saveVisit", { email:AGENT_EMAIL, visit:v });
     showToast(result.status === "ok" ? "✅ 已同步到 Google Drive" : "⚠️ " + (result.message||"同步失敗"));
   } catch(e) { showToast("💾 本機已儲存"); }
 }
@@ -342,7 +331,7 @@ async function deleteVisit() {
   localStorage.setItem("visits_" + familyId, JSON.stringify(visits));
   closeModal(); renderVisits(); showToast("🗑 已刪除");
   if (AGENT_EMAIL) {
-    try { await gasCall({ action:"deleteVisit", email:AGENT_EMAIL, visitId:v.id }); } catch(e){}
+    try { await gasCall("deleteVisit", { email:AGENT_EMAIL, visitId:v.id }); } catch(e){}
   }
 }
 
