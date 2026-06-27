@@ -54,7 +54,12 @@
     },
 
     async createFolder(name, parentId = 'root') {
-      const metadata = { name: name, mimeType: 'application/vnd.google-apps.folder', parents: [parentId] };
+      const metadata = {
+        name: name,
+        mimeType: 'application/vnd.google-apps.folder',
+        parents: [parentId],
+        appProperties: { nbs: 'true' }  // 標記為本 app 建立，drive.file scope 可找到
+      };
       const res = await this.request(`drive/v3/files`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
