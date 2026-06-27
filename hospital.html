@@ -1,651 +1,1186 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-TW">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>醫院病房費查詢</title>
-  <script src="nav.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NBS - 保險繳費輸入</title>
   <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f5f3;min-height:100vh;color:#1a1a1a}
-    .page-wrap{padding:16px;max-width:900px;margin:0 auto;padding-bottom:80px}
-    .page-hdr{display:flex;align-items:center;gap:10px;margin-bottom:16px}
-    .page-hdr-back{background:none;border:none;font-size:22px;color:#999;cursor:pointer;padding:0;line-height:1}
-    .page-hdr-title{font-size:16px;font-weight:600;flex:1}
-    .data-badge{font-size:10px;padding:2px 8px;border-radius:99px;background:#E6F1FB;color:#0C447C;cursor:pointer}
-    .member-tabs{display:flex;border-bottom:1px solid #e8e8e8;margin-bottom:16px;overflow-x:auto}
-    .member-tab{padding:8px 16px;font-size:12px;cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;color:#888;background:none;border-top:none;border-left:none;border-right:none;font-family:inherit}
-    .member-tab.active{border-bottom-color:#378ADD;color:#378ADD;font-weight:500}
-    .addr-card{background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px}
-    .addr-icon{font-size:20px;flex-shrink:0}
-    .addr-info{flex:1}
-    .addr-label{font-size:11px;color:#aaa;margin-bottom:2px}
-    .addr-text{font-size:14px;font-weight:500;color:#333}
-    .addr-text.none{color:#bbb;font-weight:400}
-    .match-label{font-size:11px;font-weight:600;color:#555;letter-spacing:.05em;margin:16px 0 8px;display:flex;align-items:center;gap:6px}
-    .match-badge{font-size:10px;padding:1px 7px;border-radius:99px;font-weight:500}
-    .match-exact{background:#E8F5E9;color:#2E7D32}
-    .match-city{background:#FFF8E1;color:#F57F17}
-    .match-region{background:#FBE9E7;color:#BF360C}
-    .match-avg{background:#f0f0f0;color:#777}
-    .hospital-list{display:flex;flex-direction:column;gap:8px;margin-bottom:4px}
-    .hospital-card{background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:12px 14px}
-    .h-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
-    .h-level{font-size:10px;padding:2px 7px;border-radius:99px;font-weight:500;white-space:nowrap}
-    .level-醫學中心{background:#EEEDFE;color:#3C3489}
-    .level-區域醫院{background:#E6F1FB;color:#0C447C}
-    .level-地區醫院{background:#EAF3DE;color:#27500A}
-    .h-name{font-size:13px;font-weight:600;flex:1}
-    .h-location{font-size:11px;color:#aaa}
-    .h-rooms{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-    .room-item{background:#f7f7f5;border-radius:7px;padding:8px 10px;text-align:center}
-    .room-label{font-size:10px;color:#aaa;margin-bottom:4px;line-height:1.4}
-    .room-val{font-size:14px;font-weight:700;color:#0C447C;font-family:monospace}
-    .room-val.null-val{color:#ccc;font-size:12px;font-weight:400}
-    .room-unit{font-size:10px;color:#aaa;font-weight:400}
-    .avg-section{background:#f7f7f5;border-radius:10px;padding:14px 16px;margin:16px 0}
-    .avg-title{font-size:11px;font-weight:600;color:#888;margin-bottom:10px;letter-spacing:.05em}
-    .avg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-    .avg-item{background:#fff;border-radius:7px;padding:8px 10px;text-align:center;border:1px solid #eee}
-    .filter-bar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
-    .filter-btn{padding:5px 12px;border-radius:99px;border:1px solid #e0e0e0;background:#fff;font-size:12px;cursor:pointer;color:#666;font-family:inherit}
-    .filter-btn.active{background:#0C447C;border-color:#0C447C;color:#fff}
-    .data-src{font-size:11px;color:#bbb;text-align:center;margin-top:16px;padding-top:12px;border-top:1px solid #f0f0f0;line-height:1.8}
-    .loading{text-align:center;padding:40px;color:#aaa;font-size:13px}
-    .spin{display:inline-block;width:18px;height:18px;border:2px solid #e0e0e0;border-top-color:#378ADD;border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle;margin-right:8px}
-    @keyframes sp{to{transform:rotate(360deg)}}
-    .src-tag{font-size:10px;padding:1px 6px;border-radius:4px;margin-left:6px}
-    .src-live{background:#E8F5E9;color:#2E7D32}
-    .src-local{background:#FFF8E1;color:#856404}
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f3;
+      min-height: 100vh;
+      color: #1a1a1a;
+    }
 
-    /* ── 管理員介面 ── */
-    .admin-btn{font-size:11px;padding:3px 10px;border-radius:99px;border:1px solid #ddd;background:#fff;color:#aaa;cursor:pointer;font-family:inherit}
-    .admin-btn:hover{border-color:#378ADD;color:#378ADD}
-    .admin-panel{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;overflow-y:auto;padding:20px}
-    .admin-panel.open{display:flex;align-items:flex-start;justify-content:center}
-    .admin-box{background:#fff;border-radius:14px;width:100%;max-width:640px;padding:20px;margin:auto}
-    .admin-title{font-size:15px;font-weight:600;color:#0C447C;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
-    .admin-close{background:none;border:none;font-size:22px;color:#aaa;cursor:pointer;line-height:1}
-    .admin-section{margin-bottom:20px}
-    .admin-section-title{font-size:12px;font-weight:600;color:#555;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #f0f0f0}
-    .admin-form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
-    .admin-form-row.trio{grid-template-columns:1fr 1fr 1fr}
-    .admin-lbl{font-size:11px;color:#888;margin-bottom:3px}
-    .admin-input{width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit;outline:none}
-    .admin-input:focus{border-color:#378ADD}
-    .admin-select{width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit;outline:none;background:#fff}
-    .admin-add-btn{width:100%;padding:9px;background:#378ADD;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;margin-top:4px}
-    .admin-add-btn:hover{background:#2a6fb5}
-    .admin-list{max-height:240px;overflow-y:auto;border:1px solid #f0f0f0;border-radius:8px}
-    .admin-item{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid #f7f7f7;font-size:12px}
-    .admin-item:last-child{border-bottom:none}
-    .admin-item-name{flex:1;font-weight:500;color:#333}
-    .admin-item-meta{font-size:11px;color:#aaa}
-    .admin-item-del{background:none;border:none;color:#F44336;font-size:16px;cursor:pointer;padding:0 4px;line-height:1}
-    .admin-export-btn{width:100%;padding:11px;background:#27AE8F;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit}
-    .admin-export-btn:hover{background:#1e8a70}
-    .admin-note{font-size:11px;color:#aaa;text-align:center;margin-top:8px;line-height:1.7}
-    .admin-lock{background:#f7f7f5;border-radius:10px;padding:20px;text-align:center}
-    .admin-lock-title{font-size:14px;font-weight:600;color:#333;margin-bottom:12px}
-    .admin-pw-row{display:flex;gap:8px;max-width:300px;margin:0 auto}
-    .admin-pw-input{flex:1;padding:8px 12px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit;outline:none}
-    .admin-pw-btn{padding:8px 16px;background:#378ADD;color:#fff;border:none;border-radius:7px;font-size:13px;cursor:pointer;font-family:inherit}
-    .admin-err{font-size:12px;color:#F44336;margin-top:8px}
+    /* Header */
+    .header {
+      background: #fff;
+      border-bottom: 1px solid #eee;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .back-btn { background:none; border:none; font-size:22px; color:#999; cursor:pointer; padding:0; line-height:1; }
+    .header-title { font-size:15px; font-weight:500; flex:1; }
+    .header-sub { font-size:11px; color:#bbb; }
+
+    /* 成員 Tab */
+    .member-tabs {
+      display: flex;
+      background: #fafafa;
+      border-bottom: 1px solid #eee;
+      overflow-x: auto;
+      padding: 0 16px;
+    }
+    .member-tab {
+      padding: 9px 14px;
+      font-size: 12px;
+      cursor: pointer;
+      white-space: nowrap;
+      border-bottom: 2px solid transparent;
+      color: #888;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .member-tab.active {
+      border-bottom-color: #378ADD;
+      color: #378ADD;
+      font-weight: 500;
+    }
+    .tab-count {
+      font-size: 10px;
+      padding: 0 5px;
+      border-radius: 99px;
+      background: #f0f0f0;
+      color: #aaa;
+    }
+    .member-tab.active .tab-count {
+      background: #E6F1FB;
+      color: #0C447C;
+    }
+
+    /* 主內容 */
+    .main { 
+  padding: 16px 24px; /* 電腦版左右留白稍微加大，視覺更舒適 */
+  max-width: 1200px;  /* 將原本的 560px 放大，讓大螢幕可以滿版展開 */
+  margin: 0 auto;
+  width: 100%;        /* 確保絕對不會超出手機螢幕邊界 */
+}
+
+/* 針對手機版自動微調邊距，保持原本的緊湊感 */
+@media (max-width: 768px) {
+  .main { padding: 16px; }
+}
+
+    /* 統計卡片 */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .stat-card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+    .stat-label { font-size: 11px; color: #999; margin-bottom: 2px; }
+    .stat-value { font-size: 16px; font-weight: 500; }
+
+    /* 保單群組 */
+    .policy-group {
+      background: #fff;
+      border: 1px solid #e8e8e8;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+    .group-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 14px;
+      background: #f7f7f5;
+      border-bottom: 1px solid #e8e8e8;
+      flex-wrap: wrap;
+    }
+    .policy-no-badge {
+      font-size: 11px;
+      font-weight: 500;
+      background: #E6F1FB;
+      color: #0C447C;
+      padding: 2px 8px;
+      border-radius: 99px;
+      font-family: monospace;
+    }
+    .group-company { font-size: 13px; font-weight: 500; }
+    .group-member-badge {
+      font-size: 11px;
+      padding: 1px 7px;
+      background: #EAF3DE;
+      color: #27500A;
+      border-radius: 99px;
+    }
+    .group-total { font-size: 12px; color: #999; margin-left: auto; }
+
+    /* 保單列 */
+    .policy-row {
+      display: grid;
+      /* ▼ 將原本的 90px 68px 改為 80px 78px，把保費往左推，空間讓給狀態標籤 */
+      grid-template-columns: 90px 1fr 80px 78px 32px; 
+      align-items: center;
+      border-top: 1px solid #f0f0f0;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .policy-row:hover { background: #fafafa; }
+
+    .pr-cell { padding: 9px 10px; font-size: 13px; overflow: hidden; }
+
+    .cat-badge {
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 99px;
+      white-space: nowrap;
+      display: inline-block;
+    }
+    .cat-壽險保障      { background:#E6F1FB; color:#0C447C; }
+    .cat-醫療保障      { background:#E1F5EE; color:#085041; }
+    .cat-意外險        { background:#FAEEDA; color:#633806; }
+    .cat-重大疾病險    { background:#EEEDFE; color:#3C3489; }
+    .cat-重大傷病險    { background:#EEEDFE; color:#3C3489; }
+    .cat-特定傷病險    { background:#EEEDFE; color:#3C3489; }
+    .cat-儲蓄險        { background:#FBEAF0; color:#72243E; }
+    .cat-年金險        { background:#FCEBEB; color:#791F1F; }
+    .cat-投資型保險    { background:#f0f0f0; color:#555; }
+
+    .status-badge {
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 99px;
+      /* ▼ 新增這兩行，確保文字永遠在同一行，且置中對齊 */
+      white-space: nowrap;
+      text-align: center; 
+    }
+    .status-有效    { background:#EAF3DE; color:#27500A; }
+    .status-停效    { background:#FCEBEB; color:#791F1F; }
+    .status-減額繳清 { background:#FAEEDA; color:#633806; }
+    .status-繳費期滿 { background:#E6F1FB; color:#0C447C; } /* 藍色：完成階段任務 */
+    .status-自動墊繳 { background:#FFF4E5; color:#D84315; } /* 橘色：需特別提醒與注意 */
+    .status-展期     { background:#EEEDFE; color:#3C3489; } /* 紫色：契約結構變更 */
+    .status-緩繳     { background:#FFF4E5; color:#D84315; } /* 橘色：需特別提醒與注意 */
+
+    .pr-amount { font-size: 13px; font-weight: 500; text-align: right; }
+    .pr-chevron { color: #ccc; font-size: 16px; text-align: center; }
+
+    /* 新增附約 */
+    .add-rider-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 14px;
+      border-top: 1px solid #f0f0f0;
+      font-size: 12px;
+      color: #999;
+      cursor: pointer;
+      background: transparent;
+      width: 100%;
+      border: none;
+      border-top: 1px solid #f0f0f0;
+      font-family: inherit;
+      text-align: left;
+    }
+    .add-rider-btn:hover { background: #fafafa; }
+
+    /* 新增主約按鈕 */
+    .add-main-btn {
+      width: 100%;
+      padding: 11px;
+      background: #378ADD;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      margin-top: 4px;
+    }
+    .add-main-btn:hover { background: #2970c0; }
+
+    /* 空狀態 */
+    .empty-state {
+      text-align: center;
+      padding: 32px 20px;
+      color: #bbb;
+      font-size: 13px;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 200;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+      background: #fff;
+      border-radius: 16px 16px 0 0;
+      padding: 20px;
+      width: 100%;
+      max-width: 560px;
+      max-height: 92vh;
+      overflow-y: auto;
+    }
+    .modal-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-close { background:none; border:none; font-size:22px; color:#999; cursor:pointer; line-height:1; }
+
+    /* 表單 */
+    .field { margin-bottom: 13px; }
+    .field label { display:block; font-size:12px; color:#666; margin-bottom:3px; }
+    .field input, .field select {
+      width: 100%;
+      padding: 8px 10px;
+      font-size: 14px;
+      border: 1px solid #e0e0e0;
+      border-radius: 7px;
+      outline: none;
+      font-family: inherit;
+      background: #fff;
+    }
+    .field input:focus, .field select:focus { border-color: #378ADD; }
+    .field .hint { font-size: 11px; color: #0C447C; margin-top: 3px; }
+    .field .dim  { font-size: 11px; color: #aaa; margin-top: 3px; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+    /* 被保人選擇 */
+    .member-selector {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .member-sel-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+    .member-sel-item.active {
+      border-color: #378ADD;
+      background: #E6F1FB;
+    }
+    .member-sel-avatar {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #f0f0f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 500;
+      color: #666;
+    }
+    .member-sel-item.active .member-sel-avatar {
+      background: #378ADD;
+      color: #fff;
+    }
+    .member-sel-name { font-size: 13px; font-weight: 500; }
+    .member-sel-rel  { font-size: 10px; color: #aaa; }
+
+    /* 年繳台幣顯示 */
+    .twd-display {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: #E6F1FB;
+      border-radius: 8px;
+      margin-bottom: 13px;
+    }
+    .twd-label { font-size: 12px; color: #378ADD; }
+    .twd-value { font-size: 18px; font-weight: 500; color: #0C447C; flex: 1; }
+    .twd-calc  { font-size: 11px; color: #378ADD; }
+
+    /* 按鈕列 */
+    .btn-row { display: flex; gap: 8px; margin-top: 16px; }
+    .btn-primary {
+      flex: 2; padding: 10px;
+      background: #378ADD; color: #fff;
+      border: none; border-radius: 8px;
+      font-size: 14px; font-weight: 500;
+      cursor: pointer; font-family: inherit;
+    }
+    .btn-primary:disabled { background: #ccc; cursor: default; }
+    .btn-secondary {
+      flex: 1; padding: 10px;
+      background: transparent; color: #666;
+      border: 1px solid #e0e0e0; border-radius: 8px;
+      font-size: 13px; cursor: pointer; font-family: inherit;
+    }
+    .btn-danger {
+      padding: 10px 14px;
+      background: transparent; color: #e74c3c;
+      border: 1px solid #fcc; border-radius: 8px;
+      font-size: 12px; cursor: pointer; font-family: inherit;
+    }
+
+    /* spinner */
+    .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid #e0e0e0;
+      border-top-color: #378ADD;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* 搜尋框 */
+    .search-wrap { position: relative; margin-bottom: 12px; }
+    .search-wrap input {
+      width: 100%;
+      padding: 8px 10px 8px 32px;
+      font-size: 13px;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      outline: none;
+      background: #fff;
+      font-family: inherit;
+    }
+    .search-wrap input:focus { border-color: #378ADD; }
+    .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #bbb; pointer-events: none; }
+
+    /* 附約區塊預設隱藏 */
+    .rider-row { display: none; background: #f9f9f9; padding-left: 30px; border-top: 1px solid #eee; }
+    /* 展開按鈕樣式 */
+    .expand-icon { font-size: 14px; color: #378ADD; cursor: pointer; transition: transform 0.2s; }
+    .expand-icon.open { transform: rotate(90deg); }
   </style>
+  <script src="nav.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
-<div class="page-wrap">
-      <div class="page-hdr">
-        <button class="page-hdr-back" onclick="history.back()">‹</button>
-        <div class="page-hdr-title">🏥 醫院病房費查詢</div>
-        <span class="data-badge" id="data-badge">⏳ 讀取中</span>
-        <button class="admin-btn" onclick="openAdmin()">⚙ 管理</button>
-      </div>
+<div style="display:none" id="header-sub"></div>
 
-<!-- ── 管理員面板 ── -->
-<div class="admin-panel" id="admin-panel">
-  <div class="admin-box">
-    <div class="admin-title">⚙ 醫院資料管理
-      <button class="admin-close" onclick="closeAdmin()">×</button>
+
+<!-- 成員 Tab -->
+<!-- 主內容 -->
+<div class="member-tabs" id="member-tabs"></div>
+<div class="main">
+  <div id="loading" style="text-align:center;padding:40px;color:#bbb;font-size:13px"><span class="spinner"></span> 載入中…</div>
+  <div id="content" style="display:none">
+  <div class="stats-row" id="stats-row"></div>
+  <div id="policy-list"></div>
+  <button class="add-main-btn" onclick="openForm('new', null, null)">＋ 新增主約保單</button>
+</div>
+  </div><!-- /content -->
+</div><!-- /main wrapper -->
+
+<!-- 表單 Modal -->
+<div class="modal-overlay" id="form-modal" onclick="handleOverlayClick(event)">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="form-title">新增保單</span>
+      <button class="modal-close" onclick="closeForm()">×</button>
     </div>
-    <!-- 密碼鎖 -->
-    <div id="admin-lock">
-      <div class="admin-lock">
-        <div class="admin-lock-title">🔒 管理員專區</div>
-        <div class="admin-pw-row">
-          <input class="admin-pw-input" type="password" id="admin-pw" placeholder="輸入管理密碼" onkeydown="if(event.key==='Enter')checkPw()">
-          <button class="admin-pw-btn" onclick="checkPw()">進入</button>
-        </div>
-        <div id="admin-pw-err" class="admin-err"></div>
-        <div style="font-size:11px;color:#bbb;margin-top:12px">此功能限管理員使用，資料異動需重新上傳 hospitals.json 至 GitHub</div>
+
+    <!-- 被保人 -->
+    <div class="field">
+      <label>被保險人</label>
+      <div class="member-selector" id="member-selector"></div>
+    </div>
+
+    <!-- 保單號碼 + 類別 -->
+    <div class="grid-2">
+      <div class="field">
+        <label>保單號碼 <span style="color:#e74c3c">*</span></label>
+        <input type="text" id="f-policyno" placeholder="如 L123456789" />
+      </div>
+      <div class="field">
+        <label>類別 <span style="color:#e74c3c">*</span></label>
+        <select id="f-cat">
+          <option value="">請選擇</option>
+          <option>壽險保障</option>
+          <option>醫療保障</option>
+          <option>意外險</option>
+          <option>重大疾病險</option>
+          <option>重大傷病險</option>
+          <option>特定傷病險</option>
+          <option>儲蓄險</option>
+          <option>年金險</option>
+          <option>投資型保險</option>
+        </select>
       </div>
     </div>
-    <!-- 管理內容（解鎖後顯示）-->
-    <div id="admin-content" style="display:none">
-      <!-- 新增醫院 -->
-      <div class="admin-section">
-        <div class="admin-section-title">➕ 新增 / 編輯醫院</div>
-        <div class="admin-form-row">
-          <div><div class="admin-lbl">醫院名稱 *</div><input class="admin-input" id="f-name" placeholder="例：台大醫院"></div>
-          <div><div class="admin-lbl">醫院等級 *</div>
-            <select class="admin-select" id="f-level">
-              <option value="醫學中心">醫學中心</option>
-              <option value="區域醫院">區域醫院</option>
-              <option value="地區醫院">地區醫院</option>
-            </select>
-          </div>
-        </div>
-        <div class="admin-form-row">
-          <div><div class="admin-lbl">縣市 *</div><input class="admin-input" id="f-city" placeholder="例：台北市"></div>
-          <div><div class="admin-lbl">區鄉鎮 *</div><input class="admin-input" id="f-district" placeholder="例：中正區"></div>
-        </div>
-        <div class="admin-form-row">
-          <div><div class="admin-lbl">大區域</div>
-            <select class="admin-select" id="f-region">
-              <option value="大台北地區">大台北地區</option>
-              <option value="北部地區">北部地區</option>
-              <option value="中部地區">中部地區</option>
-              <option value="南部地區">南部地區</option>
-              <option value="宜花東地區">宜花東地區</option>
-            </select>
-          </div>
-        </div>
-        <div class="admin-section-title" style="margin-top:12px">病房差額（元/日，留空表示無資料）</div>
-        <div class="admin-form-row trio">
-          <div><div class="admin-lbl">套房/豪華單人</div><input class="admin-input" id="f-single-hi" type="number" placeholder="例：8000"></div>
-          <div><div class="admin-lbl">一人房</div><input class="admin-input" id="f-single" type="number" placeholder="例：3500"></div>
-          <div><div class="admin-lbl">二人房</div><input class="admin-input" id="f-double" type="number" placeholder="例：2000"></div>
-        </div>
-        <button class="admin-add-btn" onclick="addHospital()">➕ 加入醫院資料</button>
-        <div id="admin-add-msg" style="font-size:12px;color:#27AE8F;margin-top:6px;text-align:center"></div>
+
+    <!-- 保險公司搜尋 -->
+    <div class="field">
+      <label>保險公司 <span style="color:#e74c3c">*</span></label>
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="f-company-search" placeholder="輸入關鍵字搜尋…"
+               oninput="filterCompany(this.value)" onfocus="showCompanyList()" />
       </div>
-      <!-- 現有資料列表 -->
-      <div class="admin-section">
-        <div class="admin-section-title">📋 目前資料（<span id="admin-count">0</span> 家醫院）
-          <input id="admin-search" type="text" placeholder="搜尋醫院名稱…" style="margin-left:8px;padding:3px 8px;border:1px solid #ddd;border-radius:5px;font-size:11px;outline:none" oninput="renderAdminList()">
-        </div>
-        <div class="admin-list" id="admin-list"></div>
+      <div id="company-list" style="display:none; max-height:140px; overflow-y:auto; border:1px solid #e0e0e0; border-radius:7px; background:#fff; margin-top:-4px;"></div>
+      <input type="hidden" id="f-company" />
+    </div>
+
+    <!-- 要保人 + 保單狀態 -->
+    <div class="grid-3">
+      <div class="field">
+        <label>要保人</label>
+        <select id="f-owner">
+          <!-- 動態填入：由 buildOwnerOptions() 產生 -->
+        </select>
       </div>
-      <!-- 匯出 -->
-      <div class="admin-section">
-        <div class="admin-section-title">📥 匯出更新後的資料</div>
-        <button class="admin-export-btn" onclick="exportJson()">⬇ 下載 hospitals.json</button>
-        <div class="admin-note">
-          下載後，請上傳至 GitHub repo 根目錄（覆蓋舊檔）<br>
-          所有使用者下次開啟頁面即自動取得最新資料
-        </div>
+      <div class="field">
+        <label>保單屬性</label>
+        <select id="f-ismain">
+          <option value="true">主約</option>
+          <option value="false">附約</option>
+        </select>
       </div>
+      <div class="field">
+  	<label>保單狀態</label>
+  	<select id="f-status">
+    	  <option value="有效">有效</option>
+    	  <option value="繳費期滿">繳費期滿</option>
+    	  <option value="自動墊繳">自動墊繳</option>
+    	  <option value="展期">展期</option>
+    	  <option value="緩繳">緩繳</option>
+    	  <option value="停效">停效</option>
+    	  <option value="減額繳清">減額繳清</option>
+  	</select>
+      </div>
+    </div>
+
+    <!-- 保險項目名稱 -->
+    <div class="field">
+      <label>保險項目名稱</label>
+      <input type="text" id="f-item" placeholder="如：AD&D意外身故及殘廢保險附約" />
+    </div>
+
+    <!-- 保險金額 -->
+    <div class="field">
+      <label>保險金額／計畫</label>
+      <div style="display:flex;gap:8px;align-items:flex-start">
+        <input type="text" id="f-amount" placeholder="如 300 / 高額型4 / 計劃3" style="flex:1;padding:8px 10px;font-size:14px;border:1px solid #e0e0e0;border-radius:7px;outline:none;font-family:inherit" />
+        <select id="f-amount-unit" onchange="toggleAmountCustom()" style="width:90px;padding:8px 8px;font-size:13px;border:1px solid #e0e0e0;border-radius:7px;outline:none;font-family:inherit;background:#fff">
+          <option value="萬元">萬元</option>
+          <option value="元">元</option>
+          <option value="計劃">計劃</option>
+          <option value="型">型</option>
+          <option value="份">份</option>
+          <option value="custom">自訂…</option>
+        </select>
+      </div>
+      <input type="text" id="f-amount-unit-custom" placeholder="請輸入單位名稱" style="display:none;margin-top:6px;width:100%;padding:8px 10px;font-size:13px;border:1px solid #378ADD;border-radius:7px;outline:none;font-family:inherit" />
+    </div>
+
+    <!-- 起始日 + 繳費期滿日 + 保障期滿日 -->
+    <div class="grid-3">
+      <div class="field">
+        <label>保單起始日</label>
+        <input type="text" id="f-start" placeholder="如 1100516" oninput="parseDate('f-start','f-start-hint')" />
+        <div class="hint" id="f-start-hint"></div>
+      </div>
+      <div class="field">
+        <label>繳費期滿日</label>
+        <input type="text" id="f-payend" placeholder="如 1300516" oninput="parseDate('f-payend','f-payend-hint')" />
+        <div class="hint" id="f-payend-hint"></div>
+      </div>
+      <div class="field">
+        <label>保障期滿日</label>
+        <input type="text" id="f-covend" placeholder="終身可留空" oninput="parseDate('f-covend','f-covend-hint')" />
+        <div class="hint" id="f-covend-hint"></div>
+      </div>
+    </div>
+
+    <!-- 繳費方式 -->
+    <div class="field">
+      <label>繳費方式</label>
+      <select id="f-paymode">
+        <option>月繳</option>
+        <option>季繳</option>
+        <option>半年繳</option>
+        <option selected>年繳</option>
+        <option>躉繳</option>
+      </select>
+    </div>
+
+    <!-- 幣別 + 保費 + 匯率 -->
+    <div class="grid-3">
+      <div class="field">
+        <label>幣別</label>
+        <select id="f-currency" onchange="toggleFx()">
+          <option>TWD</option>
+          <option>USD</option>
+          <option>AUD</option>
+          <option>JPY</option>
+          <option>EUR</option>
+          <option>GBP</option>
+        </select>
+      </div>
+      <div class="field">
+        <label id="premium-label">年繳保費（TWD）</label>
+        <input type="number" id="f-premium" placeholder="如 32000" oninput="calcTWD()" />
+      </div>
+      <div class="field" id="fx-field">
+        <label>匯率</label>
+        <input type="number" id="f-rate" placeholder="—" oninput="calcTWD()" />
+      </div>
+    </div>
+
+    <!-- 年繳台幣自動換算 -->
+    <div class="twd-display" id="twd-display" style="display:none">
+      <span class="twd-label">年繳台幣</span>
+      <span class="twd-value" id="twd-value">—</span>
+      <span class="twd-calc" id="twd-calc"></span>
+    </div>
+
+    <!-- 驗證提示 -->
+    <div id="form-error" style="font-size:12px; color:#e74c3c; margin-bottom:8px; display:none;"></div>
+
+    <!-- 按鈕 -->
+    <div class="btn-row">
+      <button class="btn-danger" id="delete-btn" style="display:none" onclick="deletePolicy()">刪除</button>
+      <button class="btn-secondary" onclick="closeForm()">取消</button>
+      <button class="btn-primary" id="save-btn" onclick="savePolicy()">儲存</button>
     </div>
   </div>
 </div>
-      <div id="member-tabs" class="member-tabs"></div>
-      <div id="main-content">
-        <div class="loading"><span class="spin"></span>準備資料中…</div>
-      </div>
-    </div>
 
 <script>
-// ── 內嵌備援資料（Drive 無法存取時自動使用）───────────────────
-var FALLBACK_DATA = {"version":"1.0","updated":"2021/02","source":"RFC國際認證財務顧問師：李丞敏","fields":{"single_hi":"套房/豪華單人房差額（元/日）","single":"一人房差額（元/日）","double":"二人房差額（元/日）"},"fallback_rules":["先找同區醫院","同區無資料 → 找同市醫院","同市無資料 → 找同大區醫院","大區無資料 → 使用全台平均值"],"hospitals":[{"id":"h001","name":"市立醫院（台北）","level":"區域醫院","region":"大台北地區","city":"台北市","district":"中山區","rooms":{"single_hi":null,"single":3000,"double":2000}},{"id":"h002","name":"長庚醫院（台北）","level":"醫學中心","region":"大台北地區","city":"台北市","district":"內湖區","rooms":{"single_hi":4000,"single":3500,"double":2300}},{"id":"h003","name":"台北榮總","level":"醫學中心","region":"大台北地區","city":"台北市","district":"北投區","rooms":{"single_hi":20000,"single":4000,"double":2400}},{"id":"h004","name":"國泰醫院（總院）","level":"醫學中心","region":"大台北地區","city":"台北市","district":"大安區","rooms":{"single_hi":18000,"single":5390,"double":2600}},{"id":"h005","name":"中心診所","level":"地區醫院","region":"大台北地區","city":"台北市","district":"中正區","rooms":{"single_hi":7400,"single":4100,"double":2700}},{"id":"h006","name":"台大醫院","level":"醫學中心","region":"大台北地區","city":"台北市","district":"中正區","rooms":{"single_hi":8000,"single":3600,"double":1600}},{"id":"h007","name":"新光醫院","level":"醫學中心","region":"大台北地區","city":"台北市","district":"士林區","rooms":{"single_hi":20000,"single":5300,"double":2650}},{"id":"h008","name":"台安醫院","level":"區域醫院","region":"大台北地區","city":"台北市","district":"松山區","rooms":{"single_hi":18500,"single":4800,"double":3200}},{"id":"h009","name":"耕莘醫院","level":"區域醫院","region":"大台北地區","city":"新北市","district":"新店區","rooms":{"single_hi":3500,"single":2700,"double":2000}},{"id":"h010","name":"台北醫學大學附設醫院","level":"醫學中心","region":"大台北地區","city":"台北市","district":"信義區","rooms":{"single_hi":22000,"single":6500,"double":3200}},{"id":"h011","name":"馬偕醫院（台北）","level":"醫學中心","region":"大台北地區","city":"台北市","district":"中山區","rooms":{"single_hi":5500,"single":4500,"double":2700}},{"id":"h012","name":"恩主公醫院","level":"區域醫院","region":"大台北地區","city":"新北市","district":"三峽區","rooms":{"single_hi":5300,"single":4000,"double":1800}},{"id":"h013","name":"亞東醫院","level":"醫學中心","region":"大台北地區","city":"新北市","district":"板橋區","rooms":{"single_hi":12500,"single":3000,"double":2200}},{"id":"h014","name":"台北慈濟醫院","level":"醫學中心","region":"大台北地區","city":"新北市","district":"新店區","rooms":{"single_hi":7000,"single":3600,"double":2000}},{"id":"h015","name":"國立陽明大學附設醫院","level":"區域醫院","region":"宜花東地區","city":"宜蘭縣","district":"宜蘭市","rooms":{"single_hi":4600,"single":3000,"double":1600}},{"id":"h016","name":"宜陽仁愛醫院","level":"地區醫院","region":"宜花東地區","city":"宜蘭縣","district":"宜蘭市","rooms":{"single_hi":null,"single":1500,"double":800}},{"id":"h017","name":"臺北榮總蘇澳分院","level":"地區醫院","region":"宜花東地區","city":"宜蘭縣","district":"蘇澳鎮","rooms":{"single_hi":null,"single":1200,"double":600}},{"id":"h018","name":"羅東聖母醫院","level":"區域醫院","region":"宜花東地區","city":"宜蘭縣","district":"羅東鎮","rooms":{"single_hi":3000,"single":2000,"double":1600}},{"id":"h019","name":"羅東博愛醫院","level":"區域醫院","region":"宜花東地區","city":"宜蘭縣","district":"羅東鎮","rooms":{"single_hi":3000,"single":2400,"double":1200}},{"id":"h020","name":"國軍花蓮總醫院","level":"區域醫院","region":"宜花東地區","city":"花蓮縣","district":"花蓮市","rooms":{"single_hi":3000,"single":2000,"double":1000}},{"id":"h021","name":"慈濟醫學中心（花蓮）","level":"醫學中心","region":"宜花東地區","city":"花蓮縣","district":"花蓮市","rooms":{"single_hi":3000,"single":2400,"double":1300}},{"id":"h022","name":"部立花蓮醫院","level":"地區醫院","region":"宜花東地區","city":"花蓮縣","district":"花蓮市","rooms":{"single_hi":1800,"single":900,"double":300}},{"id":"h023","name":"榮民總醫院玉里分院","level":"地區醫院","region":"宜花東地區","city":"花蓮縣","district":"玉里鎮","rooms":{"single_hi":null,"single":1500,"double":500}},{"id":"h024","name":"台東聖母醫院","level":"地區醫院","region":"宜花東地區","city":"台東縣","district":"台東市","rooms":{"single_hi":2000,"single":1200,"double":600}},{"id":"h025","name":"基督教門諾醫院","level":"區域醫院","region":"宜花東地區","city":"花蓮縣","district":"花蓮市","rooms":{"single_hi":3900,"single":2000,"double":1000}},{"id":"h026","name":"台東基督教醫院","level":"地區醫院","region":"宜花東地區","city":"台東縣","district":"台東市","rooms":{"single_hi":null,"single":2500,"double":1000}},{"id":"h027","name":"馬偕台東分院","level":"區域醫院","region":"宜花東地區","city":"台東縣","district":"台東市","rooms":{"single_hi":3400,"single":2000,"double":1600}},{"id":"h028","name":"部立台東醫院","level":"地區醫院","region":"宜花東地區","city":"台東縣","district":"台東市","rooms":{"single_hi":3000,"single":600,"double":800}},{"id":"h029","name":"部立苗栗醫院","level":"地區醫院","region":"北部地區","city":"苗栗縣","district":"苗栗市","rooms":{"single_hi":3600,"single":1500,"double":1600}},{"id":"h030","name":"部立南投醫院","level":"地區醫院","region":"中部地區","city":"南投縣","district":"南投市","rooms":{"single_hi":4000,"single":3000,"double":1600}},{"id":"h031","name":"竹山秀傳醫院","level":"地區醫院","region":"中部地區","city":"南投縣","district":"竹山鎮","rooms":{"single_hi":null,"single":3000,"double":1000}},{"id":"h032","name":"台中榮總","level":"醫學中心","region":"中部地區","city":"台中市","district":"西屯區","rooms":{"single_hi":8000,"single":3380,"double":2200}},{"id":"h033","name":"中國醫藥大學附設醫院","level":"醫學中心","region":"中部地區","city":"台中市","district":"北區","rooms":{"single_hi":11900,"single":4500,"double":2500}},{"id":"h034","name":"中山醫學大學附設醫院","level":"醫學中心","region":"中部地區","city":"台中市","district":"南區","rooms":{"single_hi":8000,"single":3000,"double":2500}},{"id":"h035","name":"童綜合醫院梧棲院區","level":"區域醫院","region":"中部地區","city":"台中市","district":"梧棲區","rooms":{"single_hi":12000,"single":3200,"double":1900}},{"id":"h036","name":"台中慈濟醫院","level":"醫學中心","region":"中部地區","city":"台中市","district":"潭子區","rooms":{"single_hi":7500,"single":3500,"double":2000}},{"id":"h037","name":"仁愛醫院大里院區","level":"區域醫院","region":"中部地區","city":"台中市","district":"大里區","rooms":{"single_hi":7000,"single":3100,"double":2100}},{"id":"h038","name":"李綜合醫院（苑里大甲）","level":"地區醫院","region":"中部地區","city":"台中市","district":"大甲區","rooms":{"single_hi":null,"single":2200,"double":1200}},{"id":"h039","name":"彰化基督教醫院","level":"醫學中心","region":"中部地區","city":"彰化縣","district":"彰化市","rooms":{"single_hi":12000,"single":1900,"double":4500}},{"id":"h040","name":"澄清醫院","level":"區域醫院","region":"中部地區","city":"台中市","district":"西區","rooms":{"single_hi":8000,"single":3000,"double":2400}},{"id":"h041","name":"彰化秀傳醫院","level":"區域醫院","region":"中部地區","city":"彰化縣","district":"彰化市","rooms":{"single_hi":12000,"single":2000,"double":2500}},{"id":"h042","name":"台大雲林分院","level":"醫學中心","region":"中部地區","city":"雲林縣","district":"斗六市","rooms":{"single_hi":3000,"single":2200,"double":1500}},{"id":"h043","name":"部立嘉義醫院","level":"地區醫院","region":"南部地區","city":"嘉義市","district":"西區","rooms":{"single_hi":null,"single":1800,"double":800}},{"id":"h044","name":"榮民總醫院嘉義分院","level":"區域醫院","region":"南部地區","city":"嘉義市","district":"東區","rooms":{"single_hi":3000,"single":2500,"double":1500}},{"id":"h045","name":"嘉義基督教醫院","level":"區域醫院","region":"南部地區","city":"嘉義市","district":"東區","rooms":{"single_hi":3500,"single":2500,"double":2500}},{"id":"h046","name":"成大醫院","level":"醫學中心","region":"南部地區","city":"台南市","district":"北區","rooms":{"single_hi":8000,"single":4500,"double":2500}},{"id":"h047","name":"奇美醫療中心","level":"醫學中心","region":"南部地區","city":"台南市","district":"永康區","rooms":{"single_hi":4800,"single":3000,"double":1680}},{"id":"h048","name":"天主教聖馬爾定醫院","level":"區域醫院","region":"南部地區","city":"嘉義市","district":"東區","rooms":{"single_hi":null,"single":3300,"double":1650}},{"id":"h049","name":"台南市立醫院","level":"區域醫院","region":"南部地區","city":"台南市","district":"東區","rooms":{"single_hi":8000,"single":2300,"double":1600}},{"id":"h050","name":"高醫附設中和醫院","level":"醫學中心","region":"南部地區","city":"高雄市","district":"三民區","rooms":{"single_hi":6600,"single":2300,"double":1400}},{"id":"h051","name":"高雄長庚醫院","level":"醫學中心","region":"南部地區","city":"高雄市","district":"鳥松區","rooms":{"single_hi":4370,"single":3900,"double":1670}},{"id":"h052","name":"高雄榮總醫院","level":"醫學中心","region":"南部地區","city":"高雄市","district":"左營區","rooms":{"single_hi":11000,"single":2500,"double":2200}},{"id":"h053","name":"阮綜合醫院","level":"區域醫院","region":"南部地區","city":"高雄市","district":"苓雅區","rooms":{"single_hi":3500,"single":3000,"double":1800}},{"id":"h054","name":"省立屏東醫院","level":"地區醫院","region":"南部地區","city":"屏東縣","district":"屏東市","rooms":{"single_hi":2800,"single":1200,"double":800}},{"id":"h055","name":"屏東基督教醫院","level":"區域醫院","region":"南部地區","city":"屏東縣","district":"屏東市","rooms":{"single_hi":4000,"single":2500,"double":1500}},{"id":"h056","name":"安泰醫院（恆春）","level":"地區醫院","region":"南部地區","city":"屏東縣","district":"恆春鎮","rooms":{"single_hi":2200,"single":2000,"double":1100}}]};
+    // GAS_URL 已移至 nav.js 統一管理
 
-// ── 設定（GAS URL 由 nav.js 統一管理）───────────────────────
-function getGasUrl() { return window._NBS_GAS_URL || ""; }
-var GDRIVE_FILE_ID = "1Jw0Jbo9AOZg7lwdd7Bs-Pd-BXQxuFoag"; // 備援用
-var hospitalsData = null;
-var members = [];
-var currentMemberId = null;
-var activeFilter = "all";
-var manualAddr = "";
-var searchMode = "addr"; // "addr" or "name"
-var nameQuery = "";
+const COMPANIES = [
+  "富邦人壽","國泰人壽","南山人壽","新光人壽","中國人壽","台灣人壽",
+  "三商美邦人壽","遠雄人壽","全球人壽","保誠人壽","宏泰人壽","第一金人壽",
+  "合作金庫人壽","臺銀人壽","元大人壽","康健人壽","安聯人壽","友邦人壽",
+  "法國巴黎人壽","宏利人壽","skyway人壽",
+];
 
-function searchAddr() {
-  var input = document.getElementById("addr-input");
-  if (!input) return;
-  var val = input.value.trim();
-  // 判斷是地址還是醫院名稱：包含醫院/診所/醫學/醫療等字樣 → 名稱搜尋
-  if (val && (val.match(/醫院|診所|醫學|醫療|榮總|慈濟|馬偕|長庚|台大|成大|高醫|奇美|秀傳|基督教|天主教|聖母|博愛|仁愛|耕莘|亞東|安泰|澄清|童綜合|阮綜/) || isHospitalName(val))) {
-    searchMode = "name";
-    nameQuery = val;
-  } else {
-    searchMode = "addr";
-    manualAddr = val;
-    nameQuery = "";
-  }
-  renderContent();
-}
+let currentUser   = null;
+let familyData    = null;
+let familyFileName = null;
+let personDataMap  = {};
+let currentTab     = "all";  // "all" or personId
+let editingPolicy  = null;   // null=新增, object=編輯中的保單
+let editingPersonId = null;
 
-function isHospitalName(val) {
-  // 檢查是否為醫院名稱片段（非地址格式）
-  if (!hospitalsData) return false;
-  return hospitalsData.hospitals.some(function(h){
-    return h.name.indexOf(val) >= 0;
-  });
-}
-var dataSource = "local"; // "live" or "local"
+// ── 初始化 ────────────────────────────────────────────────
+window.addEventListener("nbs_nav_ready", async function(e) {
+  currentUser       = e.detail.user;  // 賦值給全域變數
+  familyData        = e.detail.familyData;
+  currentPersonId   = e.detail.currentPersonId;
+  familyFileName    = e.detail.familyFileName;
 
-// ── nav ready ─────────────────────────────────────────────────
-// 同時監聽事件與 DOMContentLoaded，以防事件已在頁面載入前觸發
-var navReady = false;
-function onNavReady(detail) {
-  if (navReady) return;
-  navReady = true;
-  var fd = detail && detail.familyData;
-  members = fd ? (fd.members || []).filter(function(m){ return m.role !== "beneficiary_only"; }) : [];
-  currentMemberId = members.length > 0 ? members[0].personId : null;
-  renderTabs();
-  loadHospitals();
-}
-
-window.addEventListener("nbs_nav_ready", function(e){ onNavReady(e.detail); });
-
-// 保護：若 3 秒後 nav 還沒 ready，用空成員繼續
-setTimeout(function(){
-  if (!navReady) {
-    // 嘗試直接讀取
-    if (window.NBS_NAV && NBS_NAV.getFamilyData) {
-      onNavReady({ familyData: NBS_NAV.getFamilyData() });
-    } else {
-      onNavReady({ familyData: null });
-    }
-  }
-}, 3000);
-
-// ── 讀取醫院資料：內嵌先顯示，背景從 GAS 取最新 ─────────────
-function loadHospitals() {
-  // 立即用內嵌資料顯示
-  hospitalsData = FALLBACK_DATA;
-  dataSource = "local";
-  updateBadge();
-  renderContent();
-
-  // 優先從 GAS getHospitals 取最新版（走您的後台，無 CORS 問題）
-  if (getGasUrl()) {
-    fetch(getGasUrl() + "?action=getHospitals", { redirect: "follow" })
-      .then(function(r){ return r.json(); })
-      .then(function(res){
-        if (res.status === "ok" && res.data && res.data.hospitals) {
-          hospitalsData = res.data;
-          dataSource = "live";
-          updateBadge();
-          renderContent();
-        }
-      })
-      .catch(function(){
-        // GAS 失敗，再嘗試 GitHub 上的靜態檔案
-        tryGithubFallback();
-      });
+  if (!currentUser || !familyData) {
+    document.getElementById("loading").innerHTML = "載入失敗：請重新登入";
     return;
   }
 
-  // 沒設定 GAS，嘗試 GitHub 靜態檔案
-  tryGithubFallback();
-}
-
-function tryGithubFallback() {
-  fetch("hospitals.json", { cache: "no-cache" })
-    .then(function(r){ if (!r.ok) throw new Error("404"); return r.json(); })
-    .then(function(data){
-      if (!data.hospitals) throw new Error("invalid");
-      hospitalsData = data;
-      dataSource = "live";
-      updateBadge();
-      renderContent();
-    })
-    .catch(function(){ /* 靜默，繼續用內嵌資料 */ });
-}
-
-function reloadFromDrive() {
-  navReady = true; // 防止重複觸發
-  loadHospitals();
-}
-
-function updateBadge() {
-  var b = document.getElementById("data-badge");
-  if (!b) return;
-  if (dataSource === "live") {
-    b.innerHTML = '更新：' + (hospitalsData.updated||"—") + '<span class="src-tag src-live">雲端</span>';
-  } else {
-    b.innerHTML = '內嵌資料 ' + (hospitalsData.updated||"") + '<span class="src-tag src-local">本機</span>';
-  }
-}
-
-// ── Tab ──────────────────────────────────────────────────────
-function renderTabs() {
-  var el = document.getElementById("member-tabs");
-  if (!el) return;
-  if (!members.length) { el.style.display = "none"; return; }
-  el.innerHTML = members.map(function(m){
-    return '<button class="member-tab'+(m.personId===currentMemberId?" active":"")+'" onclick="switchMember(\''+m.personId+'\')">'+m.name+'</button>';
-  }).join("");
-}
-
-function switchMember(pid) {
-  currentMemberId = pid;
-  renderTabs();
-  renderContent();
-}
-
-// ── 主內容 ───────────────────────────────────────────────────
-function renderContent() {
-  var el = document.getElementById("main-content");
-  var member = members.find(function(m){ return m.personId === currentMemberId; });
-  var memberName = member ? member.name : "查詢者";
-  var addr = manualAddr || (member ? (member.address || "").trim() : "");
-  var city = extractCity(addr);
-  var district = extractDistrict(addr);
-  var avg = calcAverage(hospitalsData.hospitals);
-  var html = "";
-
-  // ── 搜尋框（通用：地址 or 醫院名稱）──
-  var inputVal = searchMode === "name" ? nameQuery : addr;
-  html += '<div class="addr-card"><div class="addr-icon">'+(searchMode==="name"?"🔍":"📍")+'</div><div class="addr-info">';
-  html += '<div class="addr-label">' + memberName + ' · 地址或醫院名稱</div>';
-  if (inputVal) {
-    html += '<div class="addr-text">' + inputVal + '</div>';
-    if (searchMode === "addr" && city) html += '<div style="font-size:11px;color:#888;margin-top:2px">搜尋：' + city + (district?" · "+district:"") + '</div>';
-    if (searchMode === "name") html += '<div style="font-size:11px;color:#378ADD;margin-top:2px">醫院名稱搜尋</div>';
-  }
-  html += '<div style="margin-top:8px;display:flex;gap:6px">';
-  html += '<input id="addr-input" type="text" value="'+inputVal.replace(/"/g,"&quot;")+'" placeholder="地址（板橋、高雄市…）或醫院名（長庚、榮總…）" style="flex:1;padding:6px 10px;border:1px solid #ddd;border-radius:7px;font-size:12px;font-family:inherit;outline:none" onkeydown="if(event.key===\'Enter\')searchAddr()">';
-  html += '<button onclick="searchAddr()" style="padding:6px 14px;background:#378ADD;color:#fff;border:none;border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit;white-space:nowrap">查詢</button>';
-  html += '</div></div></div>';
-
-  // ── 篩選列 ──
-  html += '<div class="filter-bar">';
-  [{k:"all",l:"全部"},{k:"醫學中心",l:"醫學中心"},{k:"區域醫院",l:"區域醫院"},{k:"地區醫院",l:"地區醫院"}].forEach(function(f){
-    html += '<button class="filter-btn'+(activeFilter===f.k?" active":"")+'" onclick="setFilter(\''+f.k+'\')">'+f.l+'</button>';
-  });
-  html += '</div>';
-
-  // ── 名稱搜尋模式 ──
-  if (searchMode === "name" && nameQuery) {
-    var results = hospitalsData.hospitals.filter(function(h){
-      return h.name.indexOf(nameQuery) >= 0;
+  try {
+    // 載入所有成員個人資料
+    // 載入所有成員個人資料 (效能優化：使用 Promise.all 併發請求)
+    const activeMembers = familyData.members.filter(m => m.role !== "beneficiary_only");
+    
+    const fetchPromises = activeMembers.map(m => {
+      return callGAS("readFile", {
+        email: currentUser.email,
+        fileType: "person",
+        fileName: m.name + "_" + m.personId + ".json"
+      }).then(pr => {
+        if (pr.status === "ok") personDataMap[m.personId] = pr.content;
+      }).catch(err => console.error("讀取 " + m.name + " 失敗", err));
     });
-    var filtered = activeFilter === "all" ? results : results.filter(function(h){ return h.level === activeFilter; });
-    if (filtered.length === 0) {
-      html += '<div style="padding:24px;text-align:center;color:#aaa;font-size:13px">查無「' + nameQuery + '」相關醫院</div>';
-    } else {
-      html += '<div class="match-label">🔍 「' + nameQuery + '」搜尋結果<span class="match-badge match-exact">' + filtered.length + ' 家</span></div>';
-      html += '<div class="hospital-list">';
-      filtered.forEach(function(h){ html += renderHospitalCard(h); });
-      html += '</div>';
-    }
-  } else {
-    // ── 地址模式 ──
-    var matched = matchHospitals(city, district);
-    if (addr && city) {
-      var shownIds = [];
-      if (matched.district.length) {
-        html += renderGroup("📍 同區醫院（" + district + "）", matched.district, "match-exact", "精確");
-        matched.district.forEach(function(h){ shownIds.push(h.id); });
-      }
-      var cityOnly = matched.city.filter(function(h){ return shownIds.indexOf(h.id) < 0; });
-      if (cityOnly.length) {
-        html += renderGroup("🏙 同市其他醫院（" + city + "）", cityOnly, "match-city", "同市");
-        cityOnly.forEach(function(h){ shownIds.push(h.id); });
-      }
-      var regionOnly = matched.region.filter(function(h){ return shownIds.indexOf(h.id) < 0; });
-      if (regionOnly.length) {
-        html += renderGroup("🗺 同大區醫院（" + matched.regionName + "）", regionOnly, "match-region", "同大區");
-      }
-      if (!matched.district.length && !cityOnly.length && !regionOnly.length) {
-        html += '<div style="padding:20px;text-align:center;color:#aaa;font-size:13px">查無鄰近醫院資料，顯示全台列表</div>';
-        html += renderGroup("🏥 全台醫院", hospitalsData.hospitals, "match-avg", "全台");
-      }
-    } else {
-      html += renderGroup("🏥 全台醫院", hospitalsData.hospitals, "match-avg", "全台");
-    }
+
+    // 讓系統同時發出所有請求，並等待所有人一起回來
+    await Promise.all(fetchPromises);
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("content").style.display = "block";
+    renderTabs();
+    renderPolicies();
+  } catch(err) {
+    console.error("policy.html init error", err);
+    document.getElementById("loading").innerHTML = "載入失敗：" + err.message;
   }
+});
 
-  // ── 全台平均 ──
-  html += '<div class="avg-section"><div class="avg-title">📊 全台平均病房差額（' + hospitalsData.hospitals.length + ' 家醫院）</div>';
-  html += '<div class="avg-grid">' + avgItem("套房/豪華單人", avg.single_hi) + avgItem("一人房", avg.single) + avgItem("二人房", avg.double) + '</div></div>';
-  html += '<div class="data-src">資料來源：' + (hospitalsData.source||"—") + '<br>最後更新：' + (hospitalsData.updated||"—") + '　·　共 ' + hospitalsData.hospitals.length + ' 家醫院</div>';
-  el.innerHTML = html;
-}
+// ── 成員 Tab ──────────────────────────────────────────────
+function renderTabs() {
+  const members = familyData.members.filter(m => m.role !== "beneficiary_only");
+  const allCount = members.reduce((s, m) => s + (personDataMap[m.personId]?.policies?.length || 0), 0);
 
-function renderHospitalCard(h) {
-  var html = '<div class="hospital-card"><div class="h-header">';
-  html += '<span class="h-level level-' + h.level + '">' + h.level + '</span>';
-  html += '<span class="h-name">' + h.name + '</span>';
-  html += '<span class="h-location">' + h.city + ' · ' + h.district + '</span>';
-  html += '</div><div class="h-rooms">';
-  html += roomItem("套房/豪華單人", h.rooms.single_hi);
-  html += roomItem("一人房差額", h.rooms.single);
-  html += roomItem("二人房差額", h.rooms.double);
-  html += '</div></div>';
-  return html;
-}
+  let html = `<div class="member-tab ${currentTab==='all'?'active':''}" onclick="switchTab('all')">
+    全家 <span class="tab-count">${allCount}</span></div>`;
 
-function renderGroup(title, hospitals, badgeClass, badgeText) {
-  var list = activeFilter === "all" ? hospitals : hospitals.filter(function(h){ return h.level === activeFilter; });
-  if (!list.length) return "";
-  var html = '<div class="match-label">' + title + '<span class="match-badge ' + badgeClass + '">' + badgeText + '</span></div>';
-  html += '<div class="hospital-list">';
-  list.forEach(function(h){ html += renderHospitalCard(h); });
-  html += '</div>';
-  return html;
-}
-
-function roomItem(label, val) {
-  if (val === null || val === undefined)
-    return '<div class="room-item"><div class="room-label">' + label + '</div><div class="room-val null-val">無資料</div></div>';
-  return '<div class="room-item"><div class="room-label">' + label + '</div><div class="room-val">' + val.toLocaleString() + '<span class="room-unit"> 元/日</span></div></div>';
-}
-
-function avgItem(label, val) {
-  return '<div class="avg-item"><div class="room-label">' + label + '</div><div class="room-val">' + (val ? Math.round(val).toLocaleString() : "—") + '<span class="room-unit"> 元/日</span></div></div>';
-}
-
-function matchHospitals(city, district) {
-  var h = hospitalsData.hospitals;
-  var regionName = "";
-  if (city) { var f = h.find(function(x){ return x.city===city; }); if(f) regionName = f.region; }
-  return {
-    district: district ? h.filter(function(x){ return x.city===city && x.district===district; }) : [],
-    city:     city     ? h.filter(function(x){ return x.city===city; }) : [],
-    region:   regionName ? h.filter(function(x){ return x.region===regionName; }) : [],
-    regionName: regionName
-  };
-}
-
-function calcAverage(hospitals) {
-  function avg(key) {
-    var vals = hospitals.map(function(h){ return h.rooms[key]; }).filter(function(v){ return v!=null; });
-    return vals.length ? vals.reduce(function(a,b){return a+b;},0)/vals.length : null;
-  }
-  return { single_hi: avg("single_hi"), single: avg("single"), double: avg("double") };
-}
-
-// ── 城市名稱標準化對照 ──────────────────────────────────────
-var CITY_ALIASES = {
-  "台北":"台北市","臺北":"台北市","新北":"新北市","桃園":"桃園市",
-  "台中":"台中市","臺中":"台中市","台南":"台南市","臺南":"台南市",
-  "高雄":"高雄市","基隆":"基隆市","新竹市":"新竹市","新竹縣":"新竹縣",
-  "新竹":"新竹市","苗栗":"苗栗縣","彰化":"彰化縣","南投":"南投縣",
-  "雲林":"雲林縣","嘉義市":"嘉義市","嘉義縣":"嘉義縣","嘉義":"嘉義市",
-  "屏東":"屏東縣","宜蘭":"宜蘭縣","花蓮":"花蓮縣","台東":"台東縣",
-  "臺東":"台東縣","澎湖":"澎湖縣","金門":"金門縣","連江":"連江縣"
-};
-
-function normalizeCity(raw) {
-  if (!raw) return "";
-  // 已是完整城市名
-  if (raw.match(/^.{2,3}[市縣]$/)) return raw;
-  // 查對照表
-  return CITY_ALIASES[raw] || raw;
-}
-
-// ── 地址解析（支援多種輸入格式）────────────────────────────
-function buildDistrictMap() {
-  var map = {};
-  if (!hospitalsData) return map;
-  hospitalsData.hospitals.forEach(function(h){
-    if (h.district && h.city) map[h.district] = h.city;
+  members.forEach(m => {
+    const count = personDataMap[m.personId]?.policies?.length || 0;
+    html += `<div class="member-tab ${currentTab===m.personId?'active':''}" onclick="switchTab('${m.personId}')">
+      ${m.name} <span class="tab-count">${count}</span></div>`;
   });
-  return map;
+
+  document.getElementById("member-tabs").innerHTML = html;
 }
 
-function extractCity(addr) {
-  if (!addr) return "";
-  addr = addr.trim();
-  // 完整地址：台北市信義區…
-  var m = addr.match(/^(.{2,3}[市縣])/);
-  if (m) return m[1];
-  // 只輸入縣市（含不完整如「高雄」）
-  var normalized = normalizeCity(addr);
-  if (normalized !== addr && normalized.match(/[市縣]$/)) return normalized;
-  // 只輸入區（含「區」字）：板橋區 → 從醫院資料反查城市
-  var districtMap = buildDistrictMap();
-  var distOnly = addr.match(/^(.{2,4}[區鄉鎮市])$/);
-  if (distOnly && districtMap[distOnly[1]]) return districtMap[distOnly[1]];
-  // 模糊匹配：輸入「板橋」→ 找 districtMap 中包含「板橋」的 key
-  if (addr.length >= 2) {
-    for (var dk in districtMap) {
-      if (dk.indexOf(addr) === 0 || addr.indexOf(dk.replace(/[區鄉鎮市]$/,"")) === 0) {
-        return districtMap[dk];
-      }
-    }
-  }
-  // 從地址中間找市縣
-  m = addr.match(/([^\s]{2,3}[市縣])/);
-  if (m) return m[1];
-  // 最後嘗試對照表（允許輸入「高雄」等不含市縣字的簡稱）
-  for (var alias in CITY_ALIASES) {
-    if (addr.startsWith(alias)) return CITY_ALIASES[alias];
-  }
-  return "";
+function switchTab(tab) {
+  currentTab = tab;
+  renderTabs();
+  renderPolicies();
 }
 
-function extractDistrict(addr) {
-  if (!addr) return "";
-  // 完整地址中的區
-  var m = addr.match(/[市縣](.{2,4}[區鄉鎮市])/);
-  if (m) return m[1];
-  // 只輸入區名（含「區」字）
-  m = addr.match(/^(.{2,4}[區鄉鎮市])$/);
-  if (m) return m[1];
-  // 模糊匹配：輸入「板橋」→ 找 districtMap 中開頭匹配的 key
-  if (addr.length >= 2) {
-    var districtMap = buildDistrictMap();
-    for (var dk in districtMap) {
-      if (dk.indexOf(addr) === 0) return dk;
-    }
-  }
-  return "";
-}
-function setFilter(f) { activeFilter = f; renderContent(); }
-
-// ── 管理員功能 ───────────────────────────────────────────────
-var ADMIN_PW = "NBS2024"; // ← 可自行修改
-var adminUnlocked = false;
-var editingId = null;
-
-function openAdmin() {
-  document.getElementById("admin-panel").classList.add("open");
-  if (adminUnlocked) renderAdminList();
-}
-function closeAdmin() {
-  document.getElementById("admin-panel").classList.remove("open");
-  editingId = null;
-}
-function checkPw() {
-  var pw = document.getElementById("admin-pw").value;
-  if (pw === ADMIN_PW) {
-    adminUnlocked = true;
-    document.getElementById("admin-lock").style.display = "none";
-    document.getElementById("admin-content").style.display = "block";
-    renderAdminList();
+// ── 渲染保單列表 ──────────────────────────────────────────
+// ── 新增：附約摺疊切換函數 ──────────────────────────────────────────
+function toggleRiders(safeId) {
+  const container = document.getElementById("riders-" + safeId);
+  const icon = document.getElementById("icon-" + safeId);
+  if (container.style.display === "none") {
+    container.style.display = "block";
+    if (icon) icon.style.transform = "rotate(90deg)";
   } else {
-    document.getElementById("admin-pw-err").textContent = "密碼錯誤，請再試一次";
-    document.getElementById("admin-pw").value = "";
+    container.style.display = "none";
+    if (icon) icon.style.transform = "rotate(0deg)";
   }
 }
-function renderAdminList() {
-  var q = (document.getElementById("admin-search").value || "").trim();
-  var list = hospitalsData.hospitals.filter(function(h){ return !q || h.name.indexOf(q) >= 0; });
-  document.getElementById("admin-count").textContent = hospitalsData.hospitals.length;
-  document.getElementById("admin-list").innerHTML = list.map(function(h){
-    return '<div class="admin-item">' +
-      '<span class="admin-item-name">' + h.name + '</span>' +
-      '<span class="admin-item-meta">' + h.city + ' · ' + h.district + '</span>' +
-      '<span class="admin-item-meta" style="margin-left:4px">' + (h.rooms.single ? h.rooms.single.toLocaleString()+'元' : '—') + '</span>' +
-      '<button class="admin-item-del" onclick="editHospital(\''+h.id+'\')" title="編輯">✏️</button>' +
-      '<button class="admin-item-del" onclick="deleteHospital(\''+h.id+'\')" title="刪除">🗑</button>' +
-    '</div>';
-  }).join("") || '<div style="padding:16px;text-align:center;color:#bbb;font-size:12px">無符合資料</div>';
-}
-function addHospital() {
-  var name = document.getElementById("f-name").value.trim();
-  var level = document.getElementById("f-level").value;
-  var city = document.getElementById("f-city").value.trim();
-  var district = document.getElementById("f-district").value.trim();
-  var region = document.getElementById("f-region").value;
-  var shi = document.getElementById("f-single-hi").value;
-  var si  = document.getElementById("f-single").value;
-  var di  = document.getElementById("f-double").value;
-  var msg = document.getElementById("admin-add-msg");
-  if (!name || !city || !district) {
-    msg.style.color = "#F44336";
-    msg.textContent = "請填寫醫院名稱、縣市、區鄉鎮";
+
+// ── 替換：重新渲染保單列表 ──────────────────────────────────────────
+// ── 替換：重新渲染保單列表 (加入主/附約數量統計) ──────────────────────────
+function renderPolicies() {
+  const members = familyData.members.filter(m => m.role !== "beneficiary_only");
+
+  // 1. 蒐集要顯示的保單
+  let allPolicies = [];
+  members.forEach(m => {
+    const policies = personDataMap[m.personId]?.policies || [];
+    policies.forEach(p => allPolicies.push({ ...p, _memberId: m.personId, _memberName: m.name }));
+  });
+
+  const filtered = currentTab === "all" ? allPolicies : allPolicies.filter(p => p._memberId === currentTab);
+
+  if (filtered.length === 0) {
+    document.getElementById("stats-row").innerHTML = `
+      <div class="stat-card"><div class="stat-label">${currentTab==='all'?'全家保單':'本人保單'}</div><div class="stat-value">0 筆</div></div>
+      <div class="stat-card"><div class="stat-label">年繳總保費</div><div class="stat-value">NT$ 0</div></div>
+      <div class="stat-card"><div class="stat-label">月均保費</div><div class="stat-value">0</div></div>`;
+    document.getElementById("policy-list").innerHTML =
+      '<div class="empty-state">尚無保單，點下方「新增主約保單」開始輸入</div>';
     return;
   }
-  var newH = { id: editingId || ("h"+String(Date.now()).slice(-6)), name:name, level:level, region:region, city:city, district:district,
-    rooms:{ single_hi: shi?parseInt(shi):null, single: si?parseInt(si):null, double: di?parseInt(di):null } };
-  if (editingId) {
-    var idx = hospitalsData.hospitals.findIndex(function(h){ return h.id===editingId; });
-    if (idx >= 0) hospitalsData.hospitals[idx] = newH;
-    editingId = null;
-    msg.textContent = "✅ 已更新「" + name + "」";
-  } else {
-    hospitalsData.hospitals.push(newH);
-    msg.textContent = "✅ 已新增「" + name + "」（共 " + hospitalsData.hospitals.length + " 家）";
+
+  // 2. 依保單號碼分組 (提早執行，以便計算主附約數量)
+  const groups = {};
+  filtered.forEach(p => {
+    const key = p.policyNo || p.id;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(p);
+  });
+
+  // 3. 計算統計數據：群組數=主約數，剩餘=附約數
+  const mainCount = Object.keys(groups).length;
+  const riderCount = filtered.length - mainCount;
+  const totalTWD = filtered.filter(p => p.status === "有效").reduce((s, p) => s + (p.premiumTWD || 0), 0);
+
+  // 4. 渲染統計卡片 (修改筆數顯示方式)
+  document.getElementById("stats-row").innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">${currentTab==='all'?'全家保單':'本人保單'}</div>
+      <div class="stat-value" style="font-size:14px; color:#0C447C;">${mainCount}主 / ${riderCount}附</div>
+    </div>
+    <div class="stat-card"><div class="stat-label">年繳總保費</div><div class="stat-value">NT$ ${(totalTWD/10000).toFixed(1)}萬</div></div>
+    <div class="stat-card"><div class="stat-label">月均保費</div><div class="stat-value">${Math.round(totalTWD/12).toLocaleString()}</div></div>`;
+
+  // 5. 渲染保單列表 (維持主附約摺疊邏輯)
+  let html = "";
+  Object.entries(groups).forEach(([policyNo, rows]) => {
+    const groupTotal = rows.reduce((s,p) => s+(p.premiumTWD||0), 0);
+    const member = familyData.members.find(m => m.personId === rows[0]._memberId);
+
+    // 判斷主約與附約
+    let mainPol = rows.find(p => p.isMain === true);
+    if (!mainPol) mainPol = rows[0]; // 向下相容舊資料
+    const riders = rows.filter(p => p !== mainPol);
+
+    // 產生安全 ID 用於 DOM 操作
+    const safeId = policyNo.replace(/[^a-zA-Z0-9]/g, '') + "_" + Math.random().toString(36).substr(2, 5);
+
+    // 渲染群組標題 (點擊可展開/收合附約)
+    html += `<div class="policy-group">
+      <div class="group-header" onclick="toggleRiders('${safeId}')" style="cursor:pointer; display:flex; align-items:center;">
+        <span class="expand-icon" id="icon-${safeId}" style="margin-right:8px; font-size:12px; transition:transform 0.2s; color:#999;">${riders.length > 0 ? '▶' : ''}</span>
+        <span class="policy-no-badge">${policyNo}</span>
+        <span class="group-company" style="margin-left:8px;">${rows[0].company||'—'}</span>
+        ${currentTab==='all' && member ? `<span class="group-member-badge" style="margin-left:8px;">${member.name}</span>` : ''}
+        <span class="group-total">年繳 NT${groupTotal.toLocaleString()}</span>
+      </div>`;
+
+    // 單列渲染輔助函數
+    const renderRow = (p, isMainNode) => {
+      const catClass = "cat-" + (p.category||"");
+      const statusClass = "status-" + (p.status||"有效");
+      const isFx = p.currency && p.currency !== "TWD";
+      const badge = isMainNode 
+        ? `<span style="font-size:10px;color:#fff;background:#378ADD;padding:1px 4px;border-radius:3px;margin-right:4px;">主約</span>` 
+        : `<span style="font-size:10px;color:#666;background:#e0e0e0;padding:1px 4px;border-radius:3px;margin-right:4px;">附約</span>`;
+
+      return `<div class="policy-row" onclick="event.stopPropagation(); openForm('edit','${p._memberId}','${p.id}')">
+        <div class="pr-cell"><span class="cat-badge ${catClass}">${p.category||'—'}</span></div>
+        <div class="pr-cell" style="overflow:hidden">
+          <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px">${badge}${p.itemName||'—'}</div>
+          <div style="font-size:10px;color:#bbb;margin-top:1px;display:flex;gap:8px">
+            <span style="font-family:monospace">${p.policyNo||''}</span>
+            ${p.insuredAmount?`<span style="color:#0C447C;font-weight:500">保額 ${p.insuredAmount} ${p.insuredAmountUnit||'萬元'}</span>`:''}
+          </div>
+        </div>
+        <div class="pr-cell pr-amount">
+          ${isFx?`<span style="font-size:10px;color:#aaa">${p.currency} </span>`:''}
+          ${(p.premiumTWD||0).toLocaleString()}
+        </div>
+        <div class="pr-cell"><span class="status-badge ${statusClass}">${p.status||'有效'}</span></div>
+        <div class="pr-cell pr-chevron">›</div>
+      </div>`;
+    };
+
+    // 渲染主約
+    html += renderRow(mainPol, true);
+
+    // 渲染附約區塊
+    html += `<div class="riders-container" id="riders-${safeId}" style="display:none; background:#fafafa; border-top:1px solid #f0f0f0;">`;
+    riders.forEach(r => {
+      html += renderRow(r, false);
+    });
+    html += `<button class="add-rider-btn" onclick="event.stopPropagation(); openForm('rider','${rows[0]._memberId}','${policyNo}')" style="background:#f9f9f9;">
+      ＋ 在此保單下新增附約</button>`;
+    html += `</div></div>`;
+  });
+
+  document.getElementById("policy-list").innerHTML = html;
+}// ── 表單開啟 ─────────────────────────────────────────────
+// ── 要保人選單：從家庭成員動態建立 ──────────────────────────
+function buildOwnerOptions(selectedName) {
+  const sel = document.getElementById("f-owner");
+  if (!sel) return;
+  // 收集所有成員（含受益人身份的人，要保人不限）
+  const members = familyData ? familyData.members : [];
+  let html = "";
+  members.forEach(m => {
+    const relation = m.relation || m.role || "";
+    const label    = m.name + (relation ? "（" + relation + "）" : "");
+    const selected = (m.name === selectedName) ? " selected" : "";
+    html += `<option value="${m.name}"${selected}>${label}</option>`;
+  });
+  // 若 selectedName 不在成員名單（舊資料），加一個保留選項
+  if (selectedName && !members.find(m => m.name === selectedName)) {
+    html = `<option value="${selectedName}" selected>${selectedName}（舊資料）</option>` + html;
   }
-  msg.style.color = "#27AE8F";
-  ["f-name","f-city","f-district","f-single-hi","f-single","f-double"].forEach(function(id){ document.getElementById(id).value=""; });
-  renderAdminList();
-  renderContent();
+  sel.innerHTML = html;
 }
-function editHospital(id) {
-  var h = hospitalsData.hospitals.find(function(x){ return x.id===id; });
-  if (!h) return;
-  editingId = id;
-  document.getElementById("f-name").value = h.name;
-  document.getElementById("f-level").value = h.level;
-  document.getElementById("f-city").value = h.city;
-  document.getElementById("f-district").value = h.district;
-  document.getElementById("f-region").value = h.region;
-  document.getElementById("f-single-hi").value = h.rooms.single_hi||"";
-  document.getElementById("f-single").value = h.rooms.single||"";
-  document.getElementById("f-double").value = h.rooms.double||"";
-  var msg = document.getElementById("admin-add-msg");
-  msg.style.color = "#F57F17";
-  msg.textContent = "✏️ 編輯模式：「"+h.name+"」，修改後按加入";
+
+function openForm(mode, memberId, policyIdOrNo) {
+  editingPolicy = null;
+  editingPersonId = memberId || (currentTab !== "all" ? currentTab : familyData.members.find(m=>m.role==="primary")?.personId);
+
+  // 重置表單
+  ["f-policyno","f-item","f-start","f-payend","f-covend","f-premium","f-rate"].forEach(id => {
+    document.getElementById(id).value = "";
+  });
+  ["f-start-hint","f-payend-hint","f-covend-hint"].forEach(id => {
+    document.getElementById(id).textContent = "";
+  });
+  document.getElementById("f-cat").value = "";
+  document.getElementById("f-company-search").value = "";
+  document.getElementById("f-company").value = "";
+  // 要保人：預設為當前被保險人
+  const currentMember = familyData && familyData.members.find(m => m.personId === memberId);
+  buildOwnerOptions(currentMember ? currentMember.name : "");
+  document.getElementById("f-status").value = "有效";
+  document.getElementById("f-paymode").value = "年繳";
+  document.getElementById("f-currency").value = "TWD";
+  document.getElementById("f-amount").value = "";
+  document.getElementById("f-amount-unit").value = "萬元";
+  document.getElementById("f-amount-unit-custom").style.display = "none";
+  document.getElementById("f-amount-unit-custom").value = "";
+  document.getElementById("twd-display").style.display = "none";
+  document.getElementById("form-error").style.display = "none";
+  document.getElementById("delete-btn").style.display = "none";
+  document.getElementById("company-list").style.display = "none";
+  document.getElementById("f-ismain").value = "true";
+  toggleFx();
+
+  // 渲染被保人選擇
+  renderMemberSelector(editingPersonId);
+
+  if (mode === "edit") {
+    // 找到要編輯的保單
+    const person = personDataMap[memberId];
+    const policy = person?.policies?.find(p => p.id === policyIdOrNo);
+    if (!policy) return;
+
+    editingPolicy = policy;
+    document.getElementById("form-title").textContent = "編輯保單";
+    document.getElementById("delete-btn").style.display = "block";
+
+    document.getElementById("f-policyno").value  = policy.policyNo || "";
+    document.getElementById("f-cat").value       = policy.category || "";
+    document.getElementById("f-company-search").value = policy.company || "";
+    document.getElementById("f-company").value   = policy.company || "";
+    buildOwnerOptions(policy.owner || "");
+    document.getElementById("f-status").value    = policy.status || "有效";
+    document.getElementById("f-item").value      = policy.itemName || "";
+    document.getElementById("f-amount").value = policy.insuredAmount || "";
+    document.getElementById("f-ismain").value = (policy.isMain !== false) ? "true" : "false";
+    var savedUnit = policy.insuredAmountUnit || "萬元";
+    var unitOptions = ["萬元","元","計劃","型","份"];
+    var unitSel = document.getElementById("f-amount-unit");
+    var customEl = document.getElementById("f-amount-unit-custom");
+    if (unitOptions.includes(savedUnit)) {
+      unitSel.value = savedUnit;
+      customEl.style.display = "none";
+    } else {
+      unitSel.value = "custom";
+      customEl.value = savedUnit;
+      customEl.style.display = "block";
+    }
+    document.getElementById("f-start").value     = policy.startDateRaw || "";
+    document.getElementById("f-payend").value    = policy.payEndRaw || "";
+    document.getElementById("f-covend").value    = policy.covEndRaw || "";
+    document.getElementById("f-paymode").value   = policy.payMode || "年繳";
+    document.getElementById("f-currency").value  = policy.currency || "TWD";
+    document.getElementById("f-premium").value   = policy.premiumOrig || "";
+    document.getElementById("f-rate").value      = policy.exchangeRate || "";
+
+    if (policy.startDateRaw)  parseDate("f-start","f-start-hint");
+    if (policy.payEndRaw)     parseDate("f-payend","f-payend-hint");
+    if (policy.covEndRaw)     parseDate("f-covend","f-covend-hint");
+    toggleFx();
+    calcTWD();
+
+  } else if (mode === "rider") {
+    document.getElementById("form-title").textContent = "新增附約（保單號碼：" + policyIdOrNo + "）";
+    document.getElementById("f-policyno").value = policyIdOrNo;
+    document.getElementById("f-ismain").value = "false";
+
+    // 自動帶入主約的保險公司
+    const riderPerson = personDataMap[editingPersonId];
+    const masterPols = (riderPerson?.policies || []).filter(p => p.policyNo === policyIdOrNo);
+    if (masterPols.length > 0) {
+      const masterCompany = masterPols[0].company || "";
+      document.getElementById("f-company-search").value = masterCompany;
+      document.getElementById("f-company").value = masterCompany;
+    }
+  } else {
+    document.getElementById("form-title").textContent = "新增主約保單";
+  }
+
+  document.getElementById("form-modal").classList.add("active");
 }
-function deleteHospital(id) {
-  var h = hospitalsData.hospitals.find(function(x){ return x.id===id; });
-  if (!h || !confirm("確定刪除「"+h.name+"」？")) return;
-  hospitalsData.hospitals = hospitalsData.hospitals.filter(function(x){ return x.id!==id; });
-  renderAdminList(); renderContent();
+
+function closeForm() {
+  document.getElementById("form-modal").classList.remove("active");
+  document.getElementById("company-list").style.display = "none";
 }
-function exportJson() {
-  var today = new Date();
-  hospitalsData.updated = (today.getFullYear()-1911) + "/" + String(today.getMonth()+1).padStart(2,"0");
-  var blob = new Blob([JSON.stringify(hospitalsData, null, 2)], {type:"application/json"});
-  var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "hospitals.json"; a.click();
-  URL.revokeObjectURL(a.href);
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById("form-modal")) closeForm();
 }
-</script>
-<script>
-  NBS_NAV.onMemberChange = function(pid) {
-    currentMemberId = pid;
-    manualAddr = "";
-    renderTabs();
-    renderContent();
+
+// ── 被保人選擇渲染 ────────────────────────────────────────
+function renderMemberSelector(selectedId) {
+  const members = familyData.members.filter(m => m.role !== "beneficiary_only");
+  const html = members.map(m => `
+    <div class="member-sel-item ${editingPersonId === m.personId ? 'active' : ''}"
+         onclick="selectFormMember('${m.personId}')">
+      <div class="member-sel-avatar">${m.name[0]}</div>
+      <div>
+        <div class="member-sel-name">${m.name}</div>
+        <div class="member-sel-rel">${m.relation || ''}</div>
+      </div>
+    </div>`).join("");
+  document.getElementById("member-selector").innerHTML = html;
+}
+
+function selectFormMember(personId) {
+  editingPersonId = personId;
+  renderMemberSelector(personId);
+}
+
+// ── 保險公司搜尋 ──────────────────────────────────────────
+function showCompanyList() {
+  filterCompany(document.getElementById("f-company-search").value);
+}
+
+function filterCompany(q) {
+  const filtered = q ? COMPANIES.filter(c => c.includes(q)) : COMPANIES;
+  const list = document.getElementById("company-list");
+  list.style.display = "block";
+  list.innerHTML = filtered.map(c =>
+    `<div onclick="pickCompany('${c}')" style="padding:8px 12px;font-size:13px;cursor:pointer;border-bottom:1px solid #f5f5f5;"
+     onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background=''">${c}</div>`
+  ).join("") || `<div style="padding:8px 12px;font-size:12px;color:#aaa">找不到結果</div>`;
+}
+
+function pickCompany(name) {
+  document.getElementById("f-company-search").value = name;
+  document.getElementById("f-company").value = name;
+  document.getElementById("company-list").style.display = "none";
+}
+
+document.addEventListener("click", e => {
+  const wrap = document.querySelector(".search-wrap");
+  if (wrap && !wrap.contains(e.target)) {
+    document.getElementById("company-list").style.display = "none";
+  }
+});
+
+// ── 日期快速解析 ──────────────────────────────────────────
+function parseDate(inputId, hintId) {
+  const val = document.getElementById(inputId).value.replace(/\D/g,"");
+  const hint = document.getElementById(hintId);
+  if (!val) { hint.textContent = ""; return; }
+  if (val.length === 7) {
+    const y=parseInt(val.slice(0,3)), m=parseInt(val.slice(3,5)), d=parseInt(val.slice(5,7));
+    if (m>=1&&m<=12&&d>=1&&d<=31) { hint.textContent = y+"年"+m+"月"+d+"日"; return; }
+  }
+  if (val.length === 6) {
+    const y=parseInt(val.slice(0,2)), m=parseInt(val.slice(2,4)), d=parseInt(val.slice(4,6));
+    if (m>=1&&m<=12&&d>=1&&d<=31) { hint.textContent = y+"年"+m+"月"+d+"日"; return; }
+  }
+  hint.textContent = "";
+}
+
+// 日期字串轉西元
+function rocToWestern(raw) {
+  if (!raw) return null;
+  const d = raw.replace(/\D/g,"");
+  if (d.length === 7) return (parseInt(d.slice(0,3))+1911) + "-" + d.slice(3,5) + "-" + d.slice(5,7);
+  if (d.length === 6) return (parseInt(d.slice(0,2))+1911) + "-" + d.slice(2,4) + "-" + d.slice(4,6);
+  return null;
+}
+
+// ── 保額單位自訂切換 ─────────────────────────────────────
+function toggleAmountCustom() {
+  var unit = document.getElementById("f-amount-unit").value;
+  var customEl = document.getElementById("f-amount-unit-custom");
+  if (unit === "custom") {
+    customEl.style.display = "block";
+    customEl.focus();
+  } else {
+    customEl.style.display = "none";
+  }
+}
+
+// ── 幣別切換 ─────────────────────────────────────────────
+function toggleFx() {
+  const currency = document.getElementById("f-currency").value;
+  const fxField = document.getElementById("fx-field");
+  const label = document.getElementById("premium-label");
+  label.textContent = `年繳保費（${currency}）`;
+  if (currency === "TWD") {
+    fxField.style.opacity = "0.4";
+    fxField.style.pointerEvents = "none";
+    document.getElementById("f-rate").value = "";
+  } else {
+    fxField.style.opacity = "1";
+    fxField.style.pointerEvents = "auto";
+  }
+  calcTWD();
+}
+
+// ── 年繳台幣換算 ──────────────────────────────────────────
+function calcTWD() {
+  const currency = document.getElementById("f-currency").value;
+  const premium  = parseFloat(document.getElementById("f-premium").value) || 0;
+  const rate     = parseFloat(document.getElementById("f-rate").value) || 0;
+  const display  = document.getElementById("twd-display");
+  const valEl    = document.getElementById("twd-value");
+  const calcEl   = document.getElementById("twd-calc");
+
+  if (!premium) { display.style.display = "none"; return; }
+  display.style.display = "flex";
+
+  if (currency === "TWD") {
+    valEl.textContent = "NT$ " + premium.toLocaleString();
+    calcEl.textContent = "";
+  } else {
+    if (!rate) { valEl.textContent = "請填入匯率"; calcEl.textContent = ""; return; }
+    const twd = Math.round(premium * rate);
+    valEl.textContent = "NT$ " + twd.toLocaleString();
+    calcEl.textContent = premium.toLocaleString() + " " + currency + " × " + rate;
+  }
+}
+
+// ── 儲存保單 ─────────────────────────────────────────────
+async function savePolicy() {
+  const policyNo = document.getElementById("f-policyno").value.trim();
+  const cat      = document.getElementById("f-cat").value;
+  const company  = document.getElementById("f-company").value || document.getElementById("f-company-search").value.trim();
+  const item     = document.getElementById("f-item").value.trim();
+
+  if (!policyNo || !cat || !company) {
+    const err = document.getElementById("form-error");
+    err.textContent = "請填寫保單號碼、類別、保險公司";
+    err.style.display = "block";
+    return;
+  }
+
+  document.getElementById("form-error").style.display = "none";
+  const btn = document.getElementById("save-btn");
+  btn.disabled = true;
+  btn.textContent = "儲存中…";
+
+  const currency = document.getElementById("f-currency").value;
+  const premium  = parseFloat(document.getElementById("f-premium").value) || 0;
+  const rate     = parseFloat(document.getElementById("f-rate").value) || null;
+  const premiumTWD = currency === "TWD" ? premium : Math.round(premium * (rate||1));
+
+  const startRaw  = document.getElementById("f-start").value.trim();
+  const payEndRaw = document.getElementById("f-payend").value.trim();
+  const covEndRaw = document.getElementById("f-covend").value.trim();
+
+  const policy = {
+    id:          editingPolicy ? editingPolicy.id : "pol_" + Date.now(),
+    isMain:      document.getElementById("f-ismain").value === "true",
+    policyNo,
+    category:    cat,
+    company,
+    owner:       document.getElementById("f-owner").value,
+    itemName:    item,
+    insuredAmount:     document.getElementById("f-amount").value.trim() || null,
+    insuredAmountUnit: (function(){
+      var u = document.getElementById("f-amount-unit").value;
+      if (u === "custom") return document.getElementById("f-amount-unit-custom").value.trim() || "萬元";
+      return u;
+    })(),
+    startDateRaw:  startRaw,
+    payEndRaw,
+    covEndRaw,
+    startDate:   rocToWestern(startRaw),
+    payEndDate:  rocToWestern(payEndRaw),
+    covEndDate:  rocToWestern(covEndRaw),
+    payMode:     document.getElementById("f-paymode").value,
+    currency,
+    exchangeRate: rate,
+    premiumOrig: premium,
+    premiumTWD,
+    status:      document.getElementById("f-status").value,
+    updatedAt:   new Date().toISOString(),
   };
-  NBS_NAV.init({ page: "hospital" });
+
+  try {
+    const person = personDataMap[editingPersonId];
+    if (!person) throw new Error("找不到被保人資料");
+
+    if (editingPolicy) {
+      // 編輯：替換
+      const idx = person.policies.findIndex(p => p.id === editingPolicy.id);
+      if (idx >= 0) person.policies[idx] = policy;
+      else person.policies.push(policy);
+    } else {
+      // 新增
+      person.policies.push(policy);
+    }
+
+    person.updatedAt = new Date().toISOString();
+
+    const member = familyData.members.find(m => m.personId === editingPersonId);
+    await callGAS("saveFile", {
+      email: currentUser.email,
+      fileType: "person",
+      fileId: editingPersonId,
+      fileName: member.name + "_" + editingPersonId + ".json",
+      content: person,
+    });
+
+    closeForm();
+    renderTabs();
+    renderPolicies();
+
+  } catch(e) {
+    alert("儲存失敗：" + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "儲存";
+  }
+}
+
+// ── 刪除保單 ─────────────────────────────────────────────
+async function deletePolicy() {
+  if (!editingPolicy || !confirm("確定要刪除這筆保單？")) return;
+
+  try {
+    const person = personDataMap[editingPersonId];
+    person.policies = person.policies.filter(p => p.id !== editingPolicy.id);
+    person.updatedAt = new Date().toISOString();
+
+    const member = familyData.members.find(m => m.personId === editingPersonId);
+    await callGAS("saveFile", {
+      email: currentUser.email,
+      fileType: "person",
+      fileId: editingPersonId,
+      fileName: member.name + "_" + editingPersonId + ".json",
+      content: person,
+    });
+
+    closeForm();
+    renderTabs();
+    renderPolicies();
+  } catch(e) {
+    alert("刪除失敗：" + e.message);
+  }
+}
+
+// ── 工具函式 ──────────────────────────────────────────────
+function toRoc(dateStr) {
+  if (!dateStr) return "—";
+  const d = new Date(dateStr);
+  if (isNaN(d)) return "—";
+  return (d.getFullYear()-1911)+"年"+(d.getMonth()+1)+"月"+d.getDate()+"日";
+}
+
+function goBack() { window.location.href = "family.html"; }
+
+function callGAS(action, params) {
+  // 統一路由到 nav.js 的 NBS_NAV.callGAS（直連 Drive API，含 OAuth token）
+  if (window.NBS_NAV && typeof NBS_NAV.callGAS === 'function') {
+    return NBS_NAV.callGAS(action, params);
+  }
+  return Promise.reject(new Error('nav.js 未載入，請重新整理頁面'));
+}
+
+
+// ── NBS 導覽 ──────────────────────────────────────────────
+NBS_NAV.onMemberChange = function(pid) {
+  currentPersonId = pid;
+  if (typeof renderContent  === "function") renderContent();
+  if (typeof showListView   === "function") showListView();
+  if (typeof renderContent  === "function") renderContent();
+};
+NBS_NAV.init({ page: "policy" });
 </script>
 </body>
 </html>
