@@ -295,26 +295,37 @@ async function loadVisits() {
 
   // 背景從 GAS 取最新，合併後更新
   try {
-    var result = await gasCall("listVisits", { email:AGENT_EMAIL, familyId:familyId||"" });
-    if (result && result.status === "ok" && Array.isArray(result.visits)) {
-      var gasVisits = result.visits;
-      // 合併：GAS 沒有的 localStorage 資料補上（防止資料遺失）
-      var localVisits = stored ? JSON.parse(stored) : [];
-      localVisits.forEach(function(lv){
-        if (!gasVisits.find(function(gv){ return gv.id === lv.id; })) {
-          gasVisits.push(lv);
-          // 同時把本機多的資料推到 GAS
-          gasCall("saveVisit", { email:AGENT_EMAIL, visit:lv }).catch(function(){});
-        }
-      });
-      visits = gasVisits.sort(function(a,b){ return b.date.localeCompare(a.date); });
-      localStorage.setItem("visits_" + familyId, JSON.stringify(visits));
-      renderVisits();
+      var result = await gasCall("listVisits", { email:AGENT_EMAIL, familyId:familyId||"" });
+      if (result && result.status === "ok" && Array.isArray(result.visits)) {
+        var gasVisits = result.visits;
+        var localVisits = stored ? JSON.parse(stored) : [];
+        
+        // 建立伺服器資料字典，方便比對
+        var gasMap = {};
+        gasVisits.forEach(function(gv) { gasMap[gv.id] = gv; });
+
+        localVisits.forEach(function(lv) {
+          var gv = gasMap[lv.id];
+          if (!gv) {
+             // 若伺服器沒有，不盲目上傳，避免已刪除的資料復活
+             // 實務上這裡直接以伺服器為主，捨棄本機舊有但伺服器已刪除的資料
+          } else {
+             // 若本機與伺服器都有，比對更新時間
+             if (lv.updatedAt && gv.updatedAt && new Date(lv.updatedAt) > new Date(gv.updatedAt)) {
+                gasMap[lv.id] = lv; // 本機較新，取代伺服器版本
+                gasCall("saveVisit", { email:AGENT_EMAIL, visit:lv }).catch(function(){}); // 重新推上雲端
+             }
+          }
+        });
+
+        // 轉回陣列並排序
+        visits = Object.values(gasMap).sort(function(a,b){ return b.date.localeCompare(a.date); });
+        localStorage.setItem("visits_" + familyId, JSON.stringify(visits));
+        renderVisits();
+      }
+    } catch(e) {
+      // 連線失敗 → 繼續用 localStorage
     }
-    // GAS 回傳 error → 繼續用 localStorage，不顯示錯誤訊息
-  } catch(e) {
-    // 連線失敗 → 繼續用 localStorage
-  }
 }
 
 async function saveVisit() {
