@@ -576,7 +576,7 @@
 </div>
 
 <script>
-const GAS_URL = "https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec";
+    // GAS_URL 已移至 nav.js 統一管理
 
 const COMPANIES = [
   "富邦人壽","國泰人壽","南山人壽","新光人壽","中國人壽","台灣人壽",
@@ -1165,25 +1165,11 @@ function toRoc(dateStr) {
 function goBack() { window.location.href = "family.html"; }
 
 function callGAS(action, params) {
-  // saveFile 用 POST（資料量大，GET 會超過 URL 長度限制）
-  if (action === "saveFile") {
-    return fetch(GAS_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({ action, ...params }),
-    }).then(res => res.json());
+  // 統一路由到 nav.js 的 NBS_NAV.callGAS（直連 Drive API，含 OAuth token）
+  if (window.NBS_NAV && typeof NBS_NAV.callGAS === 'function') {
+    return NBS_NAV.callGAS(action, params);
   }
-  // 其他 action 用 GET
-  const url = new URL(GAS_URL);
-  url.searchParams.set("action", action);
-  Object.entries(params || {}).forEach(([k, v]) => {
-    if (typeof v === "object") {
-      url.searchParams.set(k, encodeURIComponent(JSON.stringify(v)));
-    } else if (v !== null && v !== undefined) {
-      url.searchParams.set(k, v);
-    }
-  });
-  return fetch(url.toString()).then(res => res.json());
+  return Promise.reject(new Error('nav.js 未載入，請重新整理頁面'));
 }
 
 

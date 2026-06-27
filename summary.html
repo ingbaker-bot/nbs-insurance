@@ -137,7 +137,7 @@
 </div>
 
 <script>
-const GAS_URL = "https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec";
+    // GAS_URL 已移至 nav.js 統一管理
 
 // ── 輔助加總計算機 ─────────────────────────────────────────
 function sumCov(keys, policies, coverage) {
@@ -949,22 +949,12 @@ function handleModalOverlay(e) { if(e.target===document.getElementById("edit-mod
 
 function goBack() { window.location.href="family.html"; }
 
-function callGAS(action,params) {
-  if (action === "saveFile") {
-    return fetch(GAS_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({ action, ...params }),
-    }).then(r => r.json());
+function callGAS(action, params) {
+  // 統一路由到 nav.js 的 NBS_NAV.callGAS（直連 Drive API，含 OAuth token）
+  if (window.NBS_NAV && typeof NBS_NAV.callGAS === 'function') {
+    return NBS_NAV.callGAS(action, params);
   }
-  
-  const url=new URL(GAS_URL);
-  url.searchParams.set("action",action);
-  Object.entries(params||{}).forEach(([k,v])=>{
-    if(typeof v==="object") url.searchParams.set(k,encodeURIComponent(JSON.stringify(v)));
-    else if(v!==null&&v!==undefined) url.searchParams.set(k,v);
-  });
-  return fetch(url.toString()).then(r=>r.json());
+  return Promise.reject(new Error('nav.js 未載入，請重新整理頁面'));
 }
 
 NBS_NAV.onMemberChange = function(pid) {
