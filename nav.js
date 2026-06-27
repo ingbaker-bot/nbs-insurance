@@ -9,6 +9,7 @@
   // ==========================================
   var AUTH_GAS_URL = "https://script.google.com/macros/s/AKfycbwzDwyZy09189eOJOs-zEwkZOml2_pJOq15nYGtHF2Kyrtv6ag5VY-I2M8sDyrt0iPdZQ/exec"; // 身分驗證用
   var STORAGE_GAS_URL = "https://script.google.com/macros/s/AKfycbyskv8mVyD-DOinIIn_dhNa6SKkZRXjj5287E59tsi2ohpFFuz3p-0VRgWz9VOiVAbouQ/exec"; // 資料存取用
+  var CLIENT_ID = "524622074888-iuij6ib2qvr0qddvvrpfqnmfbt85gvti.apps.googleusercontent.com"; // Google OAuth Client ID
   
   window._NBS_AUTH_GAS_URL = AUTH_GAS_URL;
   window._NBS_STORAGE_GAS_URL = STORAGE_GAS_URL;
@@ -317,12 +318,6 @@
       detail: { user:_user, familyData: isError ? null : _family, currentPersonId: isError ? null : _personId, familyFileName:fn }
     }));
   }
-function _setup(opts) {
-    _injectStyles();
-    _insertNav();          // 插入側欄 DOM（空的）
-    _loadData(opts);       // 非同步載入資料後填充側欄
-  }
-
   // ── 插入側欄 DOM（不動頁面內容）────────────────────────
   function _insertNav() {
     // 側欄
@@ -403,61 +398,6 @@ function _setup(opts) {
       document.body.style.paddingTop  = "0";
       document.body.style.paddingBottom = "0";
     }
-  }
-
-  // ── 載入資料 ────────────────────────────────────────────
-  function _loadData(opts) {
-    var saved = localStorage.getItem("nbs_user");
-    if (!saved) { window.location.href = "index.html"; return; }
-    _user = JSON.parse(saved);
-
-    var fn = localStorage.getItem("nbs_current_family");
-    if (!fn) { window.location.href = "main.html"; return; }
-
-    // sessionStorage 快取：同一次瀏覽切換功能頁不重複呼叫 GAS
-    var cacheKey = "nbs_fam_" + fn;
-    var cached = sessionStorage.getItem(cacheKey);
-    if (cached) {
-      try {
-        _family = JSON.parse(cached);
-        _personId = localStorage.getItem("nbs_current_person");
-        if (!_personId) {
-          var prim = _family.members.find(function(m){ return m.role==="primary"; });
-          _personId = prim ? prim.personId : (_family.members[0] && _family.members[0].personId);
-          if (_personId) localStorage.setItem("nbs_current_person", _personId);
-        }
-        _renderAll();
-        window.dispatchEvent(new CustomEvent("nbs_nav_ready", {
-          detail: { user:_user, familyData:_family, currentPersonId:_personId, familyFileName:fn }
-        }));
-        return;
-      } catch(e) { sessionStorage.removeItem(cacheKey); }
-    }
-
-    // 快取沒有 → 呼叫 GAS
-    _callGAS("readFile", { email: _user.email, fileType: "family", fileName: fn })
-      .then(function(fr) {
-        _family = fr.content;
-        try { sessionStorage.setItem(cacheKey, JSON.stringify(_family)); } catch(e) {}
-        _personId = localStorage.getItem("nbs_current_person");
-        if (!_personId) {
-          var prim = _family.members.find(function(m){ return m.role==="primary"; });
-          _personId = prim ? prim.personId : (_family.members[0] && _family.members[0].personId);
-          if (_personId) localStorage.setItem("nbs_current_person", _personId);
-        }
-        _renderAll();
-        window.dispatchEvent(new CustomEvent("nbs_nav_ready", {
-          detail: { user:_user, familyData:_family, currentPersonId:_personId, familyFileName:fn }
-        }));
-      })
-      .catch(function(e) {
-        console.error("NBS_NAV load error", e);
-        // 若發生錯誤，提示使用者確認授權
-        alert("系統偵測到您尚未開通雲端空間，請在跳出的視窗中點擊「允許」，以啟用個人保單體檢功能。");
-        window.dispatchEvent(new CustomEvent("nbs_nav_ready", {
-        detail: { user:_user, familyData:null, currentPersonId:null, familyFileName:fn }
-        }));
-      });
   }
 
   // ── 渲染所有導覽元件 ─────────────────────────────────────
