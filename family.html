@@ -613,6 +613,14 @@
         await Promise.all(fetchPromises);
 
         renderPage();
+
+        // family 資料已載入，通知 nav.js 更新側邊欄
+        if (window.NBS_NAV && typeof NBS_NAV.getFamilyData === "function" && !NBS_NAV.getFamilyData()) {
+          // nav.js 的 _family 還是 null，直接把資料傳進去渲染
+          window.dispatchEvent(new CustomEvent("nbs_family_loaded", {
+            detail: { familyData: familyData, familyFileName: familyFileName }
+          }));
+        }
       } catch(e) {
         document.getElementById("loading-view").innerHTML =
           '<div style="color:#e74c3c">載入失敗：' + e.message + '</div>';
