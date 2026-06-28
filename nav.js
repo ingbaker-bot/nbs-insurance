@@ -234,9 +234,9 @@
       _accessToken = storedToken;
       _loadData(opts);
     } else {
-      // 顯示授權畫面
-      _currentOpts = opts;
-      _triggerAuth(opts);
+      // 沒有 Drive token，跳回 index.html 重新登入（登入時會同時取得 Drive token）
+      localStorage.removeItem("nbs_user"); // 清除登入狀態，強制重新登入
+      window.location.href = "index.html";
     }
   }
 
