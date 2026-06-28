@@ -249,7 +249,18 @@ function checkAndGo(email) {
       u.isAdmin   = r.isAdmin||false;
       localStorage.setItem("nbs_user", JSON.stringify(u));
       showStatus("login-status","success","✓ 驗證成功，正在進入系統…");
-      setTimeout(function(){ window.location.href = "main.html"; }, 800);
+      setTimeout(function(){
+        var t = localStorage.getItem("nbs_token");
+        var e = localStorage.getItem("nbs_token_expiry");
+        if (t && e && Date.now() < parseInt(e)) {
+          // 已有有效 token，直接進入
+          window.location.href = "main.html";
+        } else {
+          // 需要取得 Drive token，重新跳轉 Google（帶 drive.file scope）
+          // prompt 空字串：已登入的帳號會自動授權，不需要選帳號
+          window.location.href = buildLoginUrl().replace("prompt=select_account", "prompt=");
+        }
+      }, 800);
     } else {
       showLogin();
       if (r.status==="申請中") {
