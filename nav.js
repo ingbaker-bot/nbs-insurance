@@ -191,26 +191,13 @@
         });
         return await res.json();
       } else {
-        // GAS API2（GAS 用 DriveApp 讀寫）
-        const isWrite = ["saveFile","saveVisit","deleteVisit","deleteFamily"].indexOf(action) !== -1;
-        if (isWrite) {
-          const res = await fetch(STORAGE_GAS_URL, {
-            method: "POST",
-            headers: { "Content-Type": "text/plain" },
-            body: JSON.stringify(Object.assign({ action: action }, params))
-          });
-          return await res.json();
-        } else {
-          const url = new URL(STORAGE_GAS_URL);
-          url.searchParams.set("action", action);
-          Object.entries(params || {}).forEach(function(kv) {
-            var k = kv[0], v = kv[1];
-            if (typeof v === "object") url.searchParams.set(k, encodeURIComponent(JSON.stringify(v)));
-            else if (v !== null && v !== undefined) url.searchParams.set(k, v);
-          });
-          const res = await fetch(url.toString());
-          return await res.json();
-        }
+        // GAS API2：全部走 POST（GAS 只有 doPost）
+        const res = await fetch(STORAGE_GAS_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain" },
+          body: JSON.stringify(Object.assign({ action: action }, params || {}))
+        });
+        return await res.json();
       }
     },
     onMemberChange: null,
