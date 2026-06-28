@@ -1183,19 +1183,36 @@ function renderBlock(key){
     });
     html+='</tbody></table><div style="font-size:11px;color:#bbb;padding:6px 14px">💡 疾病住院＝實支病房＋日額病房＋日額出院療養　　💡 意外住院＝疾病住院＋意外日額</div></div>';
 
-    // 各項保障加總
+    // 各項保障加總（與 summary.html 相同格式）
     html+='<div style="font-size:11px;font-weight:500;color:#999;margin-bottom:8px">各項保障加總</div>';
-    html+='<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">';
+    html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">';
     COVERAGE_GROUPS_EX.forEach(function(g){
       html+='<div style="background:#fff;border:1px solid #e8e8e8;border-radius:8px;overflow:hidden;border-top:3px solid '+g.color+'">'+
         '<div style="display:flex;align-items:center;padding:7px 12px;background:'+g.color+'0D;border-bottom:1px solid #f0f0f0">'+
           '<span style="font-size:12px;font-weight:600;letter-spacing:.04em;color:'+g.color+'">'+g.label+'</span>'+
         '</div>';
       g.items.forEach(function(item){
-        var total=sumCovEx(item.keys,policies,cov);
+        // 判斷是否為最低~最高範圍型（含 _max 且對應有 _min）
+        var maxKey = item.keys && item.keys.find(function(k){ return k.endsWith('_max'); });
+        var minKey = maxKey ? maxKey.replace('_max','_min') : null;
+        var minVal = minKey ? sumCovEx([minKey],policies,cov) : 0;
+        var maxVal = maxKey ? sumCovEx([maxKey],policies,cov) : 0;
+        var isRange = !!(maxKey && (minVal>0 || maxVal>0));
+        var total, displayVal;
+        if (isRange) {
+          total = maxVal;
+          displayVal = '<span style="font-size:11px;font-weight:600;font-family:monospace;color:'+g.color+'">'+
+            minVal.toLocaleString()+'<span style="color:#aaa;margin:0 2px">～</span>'+maxVal.toLocaleString()+
+            '<span style="font-size:9px;color:#999;margin-left:2px">'+item.unit+'</span></span>';
+        } else {
+          total = sumCovEx(item.keys,policies,cov);
+          displayVal = total>0
+            ? '<span style="font-size:13px;font-weight:600;font-family:monospace;color:'+g.color+'">'+total.toLocaleString()+'<span style="font-size:10px;color:#999;font-weight:normal;font-family:sans-serif;margin-left:2px">'+item.unit+'</span></span>'
+            : '<span style="color:#ddd">—</span>';
+        }
         html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 12px;border-bottom:1px dashed #f5f5f5;opacity:'+(total>0?1:0.45)+'">'+
           '<span style="font-size:11px;color:'+(total>0?"#444":"#bbb")+'">'+item.label+'</span>'+
-          (total>0?'<span style="font-size:13px;font-weight:600;font-family:monospace;color:'+g.color+'">'+total.toLocaleString()+'<span style="font-size:10px;color:#999;font-weight:normal;font-family:sans-serif;margin-left:2px">'+item.unit+'</span></span>':'<span style="color:#ddd">—</span>')+
+          displayVal+
         '</div>';
       });
       html+='</div>';
