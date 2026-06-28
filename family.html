@@ -588,7 +588,7 @@
       try {
         const result = await callGAS("readFile", {
           email: currentUser.email,
-          fileType: "family",
+          fileType: "families",
           fileName: familyFileName,
         });
 
@@ -602,7 +602,7 @@
         const fetchPromises = activeMembers.map(m => {
           return callGAS("readFile", {
             email: currentUser.email,
-            fileType: "person",
+            fileType: "persons",
             fileName: m.name + "_" + m.personId + ".json",
           }).then(pr => {
             if (pr.status === "ok") personDataMap[m.personId] = pr.content;
@@ -777,7 +777,7 @@
         if (role !== "beneficiary_only") {
           await callGAS("saveFile", {
             email: currentUser.email,
-            fileType: "person",
+            fileType: "persons",
             fileId: personId,
             fileName: name + "_" + personId + ".json",
             content: personData,
@@ -791,7 +791,7 @@
 
         await callGAS("saveFile", {
           email: currentUser.email,
-          fileType: "family",
+          fileType: "families",
           fileId: familyData.familyId,
           fileName: familyFileName,
           content: familyData,
@@ -869,7 +869,7 @@
       try {
         await callGAS("saveFile", {
           email: currentUser.email,
-          fileType: "person",
+          fileType: "persons",
           fileId: selectedPersonId,
           fileName: person.profile.name + "_" + selectedPersonId + ".json",
           content: person,
@@ -882,7 +882,7 @@
           familyData.updatedAt = new Date().toISOString();
           await callGAS("saveFile", {
             email: currentUser.email,
-            fileType: "family",
+            fileType: "families",
             fileId: familyData.familyId,
             fileName: familyFileName,
             content: familyData,
