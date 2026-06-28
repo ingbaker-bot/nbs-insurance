@@ -271,7 +271,14 @@
              _accessToken = resp.access_token;
              localStorage.setItem("nbs_token", _accessToken);
              localStorage.setItem("nbs_token_expiry", String(Date.now() + 3000000));
-             _loadData(_currentOpts);
+              // 若是從 main.html 跳來授權的，授權完跳回去
+              var afterAuth = localStorage.getItem("nbs_after_auth");
+              if (afterAuth) {
+                localStorage.removeItem("nbs_after_auth");
+                window.location.href = afterAuth;
+                return;
+              }
+              _loadData(_currentOpts);
            }
          },
          error_callback: function(err) {
