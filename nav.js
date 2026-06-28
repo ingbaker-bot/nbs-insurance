@@ -8,7 +8,7 @@
   // 1. 系統核心設定 (請填入你的 API 1 網址)
   // ==========================================
   var AUTH_GAS_URL = "https://script.google.com/macros/s/AKfycbwzDwyZy09189eOJOs-zEwkZOml2_pJOq15nYGtHF2Kyrtv6ag5VY-I2M8sDyrt0iPdZQ/exec"; // 身分驗證用
-  var STORAGE_GAS_URL = "https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec"; // 資料存取用（同 main.html）
+  var STORAGE_GAS_URL = "https://script.google.com/macros/s/AKfycbyskv8mVyD-DOinIIn_dhNa6SKkZRXjj5287E59tsi2ohpFFuz3p-0VRgWz9VOiVAbouQ/exec"; // 資料存取用
   
   window._NBS_AUTH_GAS_URL = AUTH_GAS_URL;
   window._NBS_STORAGE_GAS_URL = STORAGE_GAS_URL;
@@ -30,7 +30,8 @@
   var _user = null;
   var _tokenClient = null;
   var _accessToken = null;
-  var SCOPES = "https://www.googleapis.com/auth/drive";
+  var CLIENT_ID = "283591037159-ilcpl2sq7jopkdbp92ldbjti6dm7bhd5.apps.googleusercontent.com";
+  var SCOPES = "https://www.googleapis.com/auth/drive.file";
   // ==========================================
   // 2. Google Drive 直接存取引擎 (DriveDB)
   // ==========================================
@@ -191,24 +192,18 @@
         });
         return await res.json();
       } else {
-        // 寫入用 POST，讀取用 GET（和 main.html 一致）
-        const writeActions = ["saveFile","saveVisit","deleteVisit","deleteFamily","deleteFile"];
-        if (writeActions.indexOf(action) !== -1) {
-          const res = await fetch(STORAGE_GAS_URL, {
-            method: "POST",
-            headers: { "Content-Type": "text/plain" },
-            body: JSON.stringify(Object.assign({ action: action }, params || {}))
-          });
-          return await res.json();
-        } else {
-          const url = new URL(STORAGE_GAS_URL);
-          url.searchParams.set("action", action);
-          Object.entries(params || {}).forEach(function(kv) {
-            var k = kv[0], v = kv[1];
-            if (typeof v === "object") url.searchParams.set(k, encodeURIComponent(JSON.stringify(v)));
-            else if (v !== null && v !== undefined) url.searchParams.set(k, v);
-          });
-          return fetch(url.toString()).then(function(r){ return r.json(); });
+        // 直連 Drive API
+        if (!_accessToken) throw new Error("無效的授權 Token");
+        try {
+          if (action === "saveFile") return await DriveDB.saveFile(params.email, params.fileType === "family" ? "families" : "persons", params.fileName, params.content);
+          if (action === "readFile") return await DriveDB.readFile(params.email, params.fileType === "family" ? "families" : "persons", params.fileName);
+          if (action === "saveVisit") return await DriveDB.saveFile(params.email, "visits", `visit_${params.visit.id}.json`, params.visit);
+          if (action === "listVisits") return await DriveDB.listVisits(params.email, params.familyId);
+          if (action === "deleteVisit") return await DriveDB.deleteVisit(params.email, params.visitId);
+          throw new Error("未支援的 Drive 動作: " + action);
+        } catch(e) {
+          console.error("Drive API 錯誤:", e);
+          throw e;
         }
       }
     },
@@ -229,8 +224,38 @@
     }
     if (savedUser) _user = JSON.parse(savedUser);
 
-    // GAS API2 不需要 Drive token，直接載入資料
-    _loadData(opts);
+    // 【關鍵修正】檢查是否有未過期的 Token
+    var storedToken = localStorage.getItem("nbs_token");
+    var tokenExpiry = localStorage.getItem("nbs_token_expiry");
+
+    if (storedToken && tokenExpiry && Date.now() < parseInt(tokenExpiry)) {
+      // 若 Token 仍在有效時間內，直接取用並載入資料，不彈出授權視窗
+      _accessToken = storedToken;
+      _loadData(opts); 
+    } else {
+      // 沒有 Token，等待 Google 套件載入並顯示授權畫面
+      var checkGsi = setInterval(() => {
+        if (window.google && window.google.accounts) {
+          clearInterval(checkGsi);
+          _tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: CLIENT_ID,
+            scope: SCOPES,
+            callback: (tokenResponse) => {
+              if (tokenResponse && tokenResponse.access_token) {
+                _accessToken = tokenResponse.access_token;
+                // 將 Token 存入 sessionStorage 記住 50 分鐘 (3,000,000 毫秒)
+                localStorage.setItem("nbs_token", _accessToken);
+                localStorage.setItem("nbs_token_expiry", Date.now() + 3000000);
+                _loadData(opts);
+              }
+            },
+          });
+          
+          // 觸發授權
+          _triggerAuth();
+        }
+      }, 100);
+    }
   }
 
   function _triggerAuth() {
@@ -251,8 +276,9 @@
     document.body.appendChild(overlay);
 
     document.getElementById("nbs-auth-btn").onclick = function() {
-      _tokenClient.requestAccessToken();
-      overlay.remove(); // 點擊後移除遮罩
+      var btn = document.getElementById("nbs-auth-btn");
+      btn.textContent = "授權中…"; btn.disabled = true; btn.style.opacity = "0.6";
+      _tokenClient.requestAccessToken({ prompt: "" });
     };
   }
 
@@ -264,8 +290,7 @@
     if (!fn) { window.location.href = "main.html"; return; }
 
     var cacheKey = "nbs_fam_" + fn;
-    // 每次換頁都清除 cache，確保從 GAS 讀取最新資料
-    sessionStorage.removeItem(cacheKey);
+    sessionStorage.removeItem(cacheKey); // 每次重新從 Drive 讀取
 
     NBS_NAV.callGAS("readFile", { email: _user.email, fileType: "family", fileName: fn })
       .then(function(fr) {
@@ -761,7 +786,7 @@
           // 更新家庭
           await _callGAS_POST("saveFile", { email:_user.email, fileType:"family", fileId:_family.id||"", fileName:_family.familyName+"_f_"+(_family.id||"")+".json", content:_family });
           // 清除 sessionStorage 快取
-          sessionStorage.clear();
+          sessionStorage.clear(); localStorage.removeItem("nbs_token"); localStorage.removeItem("nbs_token_expiry");
           if (typeof NBS_NAV.onMemberChange === "function") NBS_NAV.onMemberChange(_editingPersonId);
         }
       } else {
@@ -773,7 +798,7 @@
         _family.members.push({ personId:newId, name:name, role:"secondary", relation:rel, birthDate:birth||null });
         await _callGAS_POST("saveFile", { email:_user.email, fileType:"person", fileId:newId, fileName:name+"_"+newId+".json", content:newPerson });
         await _callGAS_POST("saveFile", { email:_user.email, fileType:"family", fileId:_family.id||"", fileName:localStorage.getItem("nbs_current_family"), content:_family });
-        sessionStorage.clear();
+        sessionStorage.clear(); localStorage.removeItem("nbs_token"); localStorage.removeItem("nbs_token_expiry");
       }
       NBS_NAV._closeMemberModal();
       _renderSidebar();
