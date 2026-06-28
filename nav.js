@@ -29,10 +29,9 @@
   var _personId = null;
   var _user = null;
   var _tokenClient = null;
-  var _currentOpts = null;
   var _accessToken = null;
   var CLIENT_ID = "283591037159-ilcpl2sq7jopkdbp92ldbjti6dm7bhd5.apps.googleusercontent.com";
-  var SCOPES = "https://www.googleapis.com/auth/drive.file";
+  var SCOPES = "https://www.googleapis.com/auth/drive";
   // ==========================================
   // 2. Google Drive 直接存取引擎 (DriveDB)
   // ==========================================
@@ -193,19 +192,13 @@
         });
         return await res.json();
       } else {
-        // 直連 Drive API
-        if (!_accessToken) throw new Error("無效的授權 Token");
-        try {
-          if (action === "saveFile") return await DriveDB.saveFile(params.email, params.fileType === "family" ? "families" : "persons", params.fileName, params.content);
-          if (action === "readFile") return await DriveDB.readFile(params.email, params.fileType === "family" ? "families" : "persons", params.fileName);
-          if (action === "saveVisit") return await DriveDB.saveFile(params.email, "visits", `visit_${params.visit.id}.json`, params.visit);
-          if (action === "listVisits") return await DriveDB.listVisits(params.email, params.familyId);
-          if (action === "deleteVisit") return await DriveDB.deleteVisit(params.email, params.visitId);
-          throw new Error("未支援的 Drive 動作: " + action);
-        } catch(e) {
-          console.error("Drive API 錯誤:", e);
-          throw e;
-        }
+        // GAS API2（統一 POST）
+        const res = await fetch(STORAGE_GAS_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain" },
+          body: JSON.stringify(Object.assign({ action: action }, params || {}))
+        });
+        return await res.json();
       }
     },
     onMemberChange: null,
@@ -225,22 +218,11 @@
     }
     if (savedUser) _user = JSON.parse(savedUser);
 
-    // 【關鍵修正】檢查是否有未過期的 Token
-    var storedToken = localStorage.getItem("nbs_token");
-    var tokenExpiry = localStorage.getItem("nbs_token_expiry");
-
-    if (storedToken && tokenExpiry && Date.now() < parseInt(tokenExpiry)) {
-      // token 有效，直接載入
-      _accessToken = storedToken;
-      _loadData(opts);
-    } else {
-      // 沒有 Drive token，跳回 index.html 重新登入（登入時會同時取得 Drive token）
-      localStorage.removeItem("nbs_user"); // 清除登入狀態，強制重新登入
-      window.location.href = "index.html";
-    }
+    // GAS API2 不需要 Drive token，直接載入
+    _loadData(opts);
   }
 
-  function _triggerAuth(opts) {
+  function _triggerAuth() {
     // 建立一個滿版的授權提示畫面，要求使用者手動點擊（因為瀏覽器禁止自動彈出視窗）
     var overlay = document.createElement("div");
     overlay.id = "nbs-auth-overlay";
@@ -254,55 +236,16 @@
       <button id="nbs-auth-btn" style="padding:12px 24px;background:#378ADD;color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;box-shadow:0 4px 12px rgba(55,138,221,0.3);">
         連結 Google 帳號
       </button>
-      <p style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:12px;">首次使用需要一次性授權</p>
     `;
     document.body.appendChild(overlay);
 
-     document.getElementById("nbs-auth-btn").onclick = function() {
-       var btn = document.getElementById("nbs-auth-btn");
-       btn.textContent = "授權中…"; btn.disabled = true; btn.style.opacity = "0.6";
-       // 等 GSI 載入後再初始化 tokenClient
-       function doAuth() {
-         var client = google.accounts.oauth2.initTokenClient({
-           client_id: CLIENT_ID,
-           scope: SCOPES,
-           callback: function(resp) {
-             var ov = document.getElementById("nbs-auth-overlay");
-             if (ov) ov.remove();
-             if (resp && resp.access_token) {
-               _accessToken = resp.access_token;
-               localStorage.setItem("nbs_token", _accessToken);
-               localStorage.setItem("nbs_token_expiry", String(Date.now() + 3000000));
-               var afterAuth = localStorage.getItem("nbs_after_auth");
-               if (afterAuth) {
-                 localStorage.removeItem("nbs_after_auth");
-                 window.location.href = afterAuth;
-                 return;
-               }
-               _loadData(_currentOpts);
-             } else {
-               if (btn) { btn.textContent = "連結 Google 帳號"; btn.disabled = false; btn.style.opacity = "1"; }
-             }
-           },
-           error_callback: function(err) {
-             if (btn) { btn.textContent = "連結 Google 帳號"; btn.disabled = false; btn.style.opacity = "1"; }
-           }
-         });
-         client.requestAccessToken({ prompt: "consent" });
-       }
-       if (window.google && window.google.accounts) {
-         doAuth();
-       } else {
-         // GSI 還沒載入，等待
-         var wait = setInterval(function() {
-           if (window.google && window.google.accounts) {
-             clearInterval(wait);
-             doAuth();
-           }
-         }, 100);
-       }
-     };
-   }
+    document.getElementById("nbs-auth-btn").onclick = function() {
+      _tokenClient.requestAccessToken();
+      overlay.remove(); // 點擊後移除遮罩
+    };
+  }
+
+  // ==========================================
   // 5. 資料載入 (接續原本的邏輯)
   // ==========================================
   function _loadData(opts) {
@@ -310,7 +253,7 @@
     if (!fn) { window.location.href = "main.html"; return; }
 
     var cacheKey = "nbs_fam_" + fn;
-    sessionStorage.removeItem(cacheKey); // 每次重新從 Drive 讀取
+    sessionStorage.removeItem(cacheKey);
 
     NBS_NAV.callGAS("readFile", { email: _user.email, fileType: "family", fileName: fn })
       .then(function(fr) {
@@ -806,7 +749,7 @@
           // 更新家庭
           await _callGAS_POST("saveFile", { email:_user.email, fileType:"family", fileId:_family.id||"", fileName:_family.familyName+"_f_"+(_family.id||"")+".json", content:_family });
           // 清除 sessionStorage 快取
-          sessionStorage.clear(); localStorage.removeItem("nbs_token"); localStorage.removeItem("nbs_token_expiry");
+          sessionStorage.clear();
           if (typeof NBS_NAV.onMemberChange === "function") NBS_NAV.onMemberChange(_editingPersonId);
         }
       } else {
@@ -818,7 +761,7 @@
         _family.members.push({ personId:newId, name:name, role:"secondary", relation:rel, birthDate:birth||null });
         await _callGAS_POST("saveFile", { email:_user.email, fileType:"person", fileId:newId, fileName:name+"_"+newId+".json", content:newPerson });
         await _callGAS_POST("saveFile", { email:_user.email, fileType:"family", fileId:_family.id||"", fileName:localStorage.getItem("nbs_current_family"), content:_family });
-        sessionStorage.clear(); localStorage.removeItem("nbs_token"); localStorage.removeItem("nbs_token_expiry");
+        sessionStorage.clear();
       }
       NBS_NAV._closeMemberModal();
       _renderSidebar();
