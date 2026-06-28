@@ -241,14 +241,32 @@
             client_id: CLIENT_ID,
             scope: SCOPES,
             callback: (tokenResponse) => {
+              // 無論成功失敗，先移除授權遮罩
+              var overlay = document.getElementById("nbs-auth-overlay");
+              if (overlay) overlay.remove();
+
               if (tokenResponse && tokenResponse.access_token) {
                 _accessToken = tokenResponse.access_token;
-                // 將 Token 存入 sessionStorage 記住 50 分鐘 (3,000,000 毫秒)
                 sessionStorage.setItem("nbs_token", _accessToken);
                 sessionStorage.setItem("nbs_token_expiry", Date.now() + 3000000);
                 _loadData(opts);
+              } else {
+                // 授權失敗（用戶拒絕或其他錯誤），重新顯示授權畫面
+                console.error("授權失敗", tokenResponse);
+                _triggerAuth();
               }
             },
+            error_callback: (err) => {
+              // popup_closed = 用戶關掉彈窗，重新顯示按鈕讓他再試
+              var overlay = document.getElementById("nbs-auth-overlay");
+              if (overlay) {
+                var btn = document.getElementById("nbs-auth-btn");
+                var hint = document.getElementById("nbs-auth-hint");
+                if (btn) { btn.textContent = "連結 Google 帳號"; btn.disabled = false; btn.style.opacity = "1"; }
+                if (hint) hint.style.display = "none";
+              }
+              console.warn("授權視窗關閉或錯誤", err);
+            }
           });
           
           // 觸發授權
@@ -259,7 +277,6 @@
   }
 
   function _triggerAuth() {
-    // 建立一個滿版的授權提示畫面，要求使用者手動點擊（因為瀏覽器禁止自動彈出視窗）
     var overlay = document.createElement("div");
     overlay.id = "nbs-auth-overlay";
     overlay.style.cssText = "position:fixed;inset:0;background:#1A2B4A;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;padding:20px;text-align:center;";
@@ -272,12 +289,25 @@
       <button id="nbs-auth-btn" style="padding:12px 24px;background:#378ADD;color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;box-shadow:0 4px 12px rgba(55,138,221,0.3);">
         連結 Google 帳號
       </button>
+      <p id="nbs-auth-hint" style="margin-top:16px;font-size:12px;color:rgba(255,255,255,0.4);display:none;">
+        授權視窗已開啟，請在跳出視窗中完成授權…
+      </p>
     `;
     document.body.appendChild(overlay);
 
+    // ── 關鍵修正：不在點擊時移除 overlay ──────────────────
+    // 移除 overlay 會導致 DOM 焦點消失，瀏覽器安全機制會立刻關閉彈窗
+    // 正確做法：點擊後只改變按鈕狀態，等 token callback 成功後才移除
     document.getElementById("nbs-auth-btn").onclick = function() {
-      _tokenClient.requestAccessToken();
-      overlay.remove(); // 點擊後移除遮罩
+      var btn = document.getElementById("nbs-auth-btn");
+      var hint = document.getElementById("nbs-auth-hint");
+      btn.textContent = "授權中…";
+      btn.disabled = true;
+      btn.style.opacity = "0.6";
+      if (hint) hint.style.display = "block";
+      // overlay 保留在 DOM，確保彈窗不被瀏覽器關閉
+      // overlay 會在 _setup 的 callback 收到 token 後由 _loadData 流程自然蓋掉
+      _tokenClient.requestAccessToken({ prompt: "" });
     };
   }
 
