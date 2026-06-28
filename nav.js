@@ -229,36 +229,28 @@
     var tokenExpiry = localStorage.getItem("nbs_token_expiry");
 
     if (storedToken && tokenExpiry && Date.now() < parseInt(tokenExpiry)) {
-      // 若 Token 仍在有效時間內，直接取用並載入資料，不彈出授權視窗
+      // token 有效，直接載入
       _accessToken = storedToken;
-      _loadData(opts); 
+      _loadData(opts);
     } else {
-      // 沒有 Token，等待 Google 套件載入並顯示授權畫面
-      var checkGsi = setInterval(() => {
-        if (window.google && window.google.accounts) {
-          clearInterval(checkGsi);
-          _tokenClient = google.accounts.oauth2.initTokenClient({
-            client_id: CLIENT_ID,
-            scope: SCOPES,
-            callback: (tokenResponse) => {
-              if (tokenResponse && tokenResponse.access_token) {
-                _accessToken = tokenResponse.access_token;
-                // 將 Token 存入 sessionStorage 記住 50 分鐘 (3,000,000 毫秒)
-                localStorage.setItem("nbs_token", _accessToken);
-                localStorage.setItem("nbs_token_expiry", Date.now() + 3000000);
-                _loadData(opts);
-              }
-            },
-          });
-          
-          // 觸發授權
-          _triggerAuth();
-        }
-      }, 100);
+      // 檢查是否從 OAuth redirect 回來（token 在 URL hash）
+      var hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+      var hashToken = hashParams.get("access_token");
+      var hashExpiry = hashParams.get("expires_in");
+      if (hashToken) {
+        window.history.replaceState({}, "", location.pathname + location.search);
+        _accessToken = hashToken;
+        localStorage.setItem("nbs_token", _accessToken);
+        localStorage.setItem("nbs_token_expiry", String(Date.now() + (parseInt(hashExpiry)||3600)*1000));
+        _loadData(opts);
+      } else {
+        // 顯示授權畫面（redirect 模式，不需要彈窗）
+        _triggerAuth(opts);
+      }
     }
   }
 
-  function _triggerAuth() {
+  function _triggerAuth(opts) {
     // 建立一個滿版的授權提示畫面，要求使用者手動點擊（因為瀏覽器禁止自動彈出視窗）
     var overlay = document.createElement("div");
     overlay.id = "nbs-auth-overlay";
@@ -275,14 +267,14 @@
     `;
     document.body.appendChild(overlay);
 
-    document.getElementById("nbs-auth-btn").onclick = function() {
-      var btn = document.getElementById("nbs-auth-btn");
-      btn.textContent = "授權中…"; btn.disabled = true; btn.style.opacity = "0.6";
-      _tokenClient.requestAccessToken({ prompt: "" });
-    };
-  }
-
-  // ==========================================
+     document.getElementById("nbs-auth-btn").onclick = function() {
+       var btn = document.getElementById("nbs-auth-btn");
+       btn.textContent = "跳轉中…"; btn.disabled = true;
+       var redirectUri = location.origin + location.pathname;
+       var p = new URLSearchParams({ client_id: CLIENT_ID, redirect_uri: redirectUri, response_type: "token", scope: SCOPES, include_granted_scopes: "true" });
+       window.location.href = "https://accounts.google.com/o/oauth2/v2/auth?" + p.toString();
+     };
+   }
   // 5. 資料載入 (接續原本的邏輯)
   // ==========================================
   function _loadData(opts) {
