@@ -351,6 +351,17 @@
     _renderAll();
   });
 
+  // 各頁面載入完資料後可發送此事件讓 nav 更新側邊欄
+  window.addEventListener("nbs_page_data_ready", function(e) {
+    if (_family) return; // nav 已有資料
+    var detail = e.detail || {};
+    if (!detail.familyData) return;
+    _family = detail.familyData;
+    _personId = detail.currentPersonId ||
+      (_family.members && _family.members[0] && _family.members[0].personId) || null;
+    _renderAll();
+  });
+
   // ==========================================
   // 7. UI 插入與渲染（維持原版）
   // ==========================================
@@ -438,7 +449,17 @@
 
   function _renderSidebar() {
     var el = document.getElementById("nbs-sidebar");
-    if (!el || !_family) return;
+    // _family 未載入時也顯示基本側邊欄
+    if (!_family) {
+      el.innerHTML = '<div style="padding:16px 14px 10px;border-bottom:1px solid rgba(255,255,255,.08)">'
+        + '<div style="font-size:14px;font-weight:700;color:#fff">🛡️ NBS</div>'
+        + '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:4px">載入中…</div>'
+        + '</div><div style="flex:1"></div>'
+        + '<div class="nbs-foot">'
+        + '<button class="nbs-bbtn" onclick="NBS_NAV._back()">← 返回家庭列表</button>'
+        + '</div>';
+      return;
+    }
     var navHtml = NAV_ITEMS.map(function(item) {
       var active = _page === item.key;
       return '<div class="nbs-ni'+(active?" nbs-ni-on":"")+'" onclick="NBS_NAV._go(\''+item.href+'\')">' +
