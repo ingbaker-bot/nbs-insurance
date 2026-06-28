@@ -576,7 +576,7 @@
 </div>
 
 <script>
-    // GAS_URL 已移至 nav.js 統一管理
+const GAS_URL = "https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec";
 
 const COMPANIES = [
   "富邦人壽","國泰人壽","南山人壽","新光人壽","中國人壽","台灣人壽",
@@ -600,8 +600,14 @@ window.addEventListener("nbs_nav_ready", async function(e) {
   currentPersonId   = e.detail.currentPersonId;
   familyFileName    = e.detail.familyFileName;
 
-  if (!currentUser || !familyData) {
+  if (!currentUser) {
     document.getElementById("loading").innerHTML = "載入失敗：請重新登入";
+    return;
+  }
+  if (!familyData) {
+    // 家庭資料尚未建立，顯示空白頁面
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("content").style.display = "block";
     return;
   }
 
@@ -616,7 +622,7 @@ window.addEventListener("nbs_nav_ready", async function(e) {
         fileType: "person",
         fileName: m.name + "_" + m.personId + ".json"
       }).then(pr => {
-        if (pr.status === "ok") personDataMap[m.personId] = pr.content;
+        if (pr.status === "ok" && pr.content) personDataMap[m.personId] = pr.content;
       }).catch(err => console.error("讀取 " + m.name + " 失敗", err));
     });
 
@@ -1165,11 +1171,10 @@ function toRoc(dateStr) {
 function goBack() { window.location.href = "family.html"; }
 
 function callGAS(action, params) {
-  // 統一路由到 nav.js 的 NBS_NAV.callGAS（直連 Drive API，含 OAuth token）
   if (window.NBS_NAV && typeof NBS_NAV.callGAS === 'function') {
     return NBS_NAV.callGAS(action, params);
   }
-  return Promise.reject(new Error('nav.js 未載入，請重新整理頁面'));
+  return Promise.reject(new Error('nav.js 未載入'));
 }
 
 
