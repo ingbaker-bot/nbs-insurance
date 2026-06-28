@@ -132,17 +132,36 @@ window.onload = function() {
     return;
   }
 
+  // token flow：access_token 在 hash 中（response_type=token）
+  var accessToken = hashParams.get("access_token");
+  var expiresIn   = hashParams.get("expires_in");
+  if (accessToken) {
+    clearUrl();
+    showLoading();
+    // 存 Drive token
+    localStorage.setItem("nbs_token", accessToken);
+    localStorage.setItem("nbs_token_expiry", String(Date.now() + (parseInt(expiresIn)||3600)*1000));
+    // 用 access_token 取得使用者資訊
+    fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+      headers: { Authorization: "Bearer " + accessToken }
+    }).then(function(r){ return r.json(); }).then(function(info) {
+      if (info.email) {
+        saveAndCheck(info.email, info.name||"", info.picture||"");
+      } else {
+        showLogin();
+        showStatus("login-status","error","登入失敗，請重試");
+      }
+    }).catch(function(){
+      showLogin();
+      showStatus("login-status","error","連線失敗，請重試");
+    });
+    return;
+  }
+
   if (token) {
-    // implicit flow：直接解析 id_token，同時取得 Drive access_token
+    // id_token fallback
     clearUrl();
     var info = parseJwt(token);
-    // 讀取 Drive access_token（在 hash 中的 access_token 欄位）
-    var accessToken = hashParams.get("access_token");
-    var expiresIn = hashParams.get("expires_in");
-    if (accessToken) {
-      localStorage.setItem("nbs_token", accessToken);
-      localStorage.setItem("nbs_token_expiry", String(Date.now() + (parseInt(expiresIn)||3600)*1000));
-    }
     if (info && info.email) {
       saveAndCheck(info.email, info.name||"", info.picture||"");
     } else {
@@ -183,68 +202,20 @@ window.onload = function() {
     }
   }
 
-  // 設定登入按鈕 - 點擊後用 GIS 同時取得 Drive token 和 Google 身份
-  document.getElementById("login-btn").onclick = function(e) {
-    e.preventDefault();
-    doGoogleLogin();
-  };
-  document.getElementById("login-btn").href = "#";
+  // 設定登入按鈕 - 直接跳轉 Google（不用彈窗）
+  document.getElementById("login-btn").href = buildLoginUrl();
   showLogin();
 };
 
-function doGoogleLogin() {
-  showLoading();
-  // 等 GSI 載入
-  function tryInit() {
-    if (!window.google || !window.google.accounts) {
-      setTimeout(tryInit, 100); return;
-    }
-    // 用 Token Client 取得 Drive access token
-    var tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: CLIENT_ID,
-      scope: "openid email profile " + DRIVE_SCOPE,
-      callback: function(tokenResp) {
-        if (tokenResp.error) {
-          showLogin();
-          showStatus("login-status","error","授權失敗，請重試");
-          return;
-        }
-        // 存 Drive token
-        localStorage.setItem("nbs_token", tokenResp.access_token);
-        localStorage.setItem("nbs_token_expiry", String(Date.now() + (tokenResp.expires_in||3600)*1000));
-        // 用 access_token 取得使用者資訊
-        fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-          headers: { Authorization: "Bearer " + tokenResp.access_token }
-        }).then(function(r){ return r.json(); }).then(function(info) {
-          if (info.email) {
-            saveAndCheck(info.email, info.name||"", info.picture||"");
-          } else {
-            showLogin();
-            showStatus("login-status","error","無法取得帳號資訊");
-          }
-        }).catch(function(){
-          showLogin();
-          showStatus("login-status","error","連線失敗，請重試");
-        });
-      },
-      error_callback: function(err) {
-        showLogin();
-        showStatus("login-status","warning","登入已取消");
-      }
-    });
-    tokenClient.requestAccessToken({ prompt: "select_account" });
-  }
-  tryInit();
-}
-
 // ── 建立 OAuth URL（implicit flow，直接回傳 id_token）───
 function buildLoginUrl() {
+  // response_type=token：直接在 hash 回傳 access_token（不需要彈窗）
+  // 同時帶 drive.file scope，登入一次就取得 Drive 授權
   var p = new URLSearchParams({
     client_id:     CLIENT_ID,
     redirect_uri:  REDIRECT,
-    response_type: "token id_token",           // 同時取 Drive token 和 id_token
+    response_type: "token",
     scope:         "openid email profile https://www.googleapis.com/auth/drive.file",
-    nonce:         Math.random().toString(36).slice(2),
     prompt:        "select_account",
     include_granted_scopes: "true",
   });
