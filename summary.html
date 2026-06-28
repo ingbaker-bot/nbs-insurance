@@ -357,6 +357,16 @@ function getItemCurrent(key, policies, coverage, covOverrides) {
       return amt;
   }
 
+  // 這些 key 是明細欄位，沒有填就應該是 0，不應該用保額填充
+  const NO_FALLBACK_KEYS = [
+    "acc_medical", "acc_hosp", "hosp_real_room", "hosp_daily",
+    "surgery", "cancer_hosp", "ltc_disable", "ltc_support",
+    "ltc_care", "cancer_hospice", "cancer_death"
+  ];
+  if (NO_FALLBACK_KEYS.includes(key)) {
+    return sumCov(map.keys, policies, coverage);
+  }
+
   let amt = sumCov(map.keys, policies, coverage);
 
   const matchedPolicies = policies.filter(p => map.cats.includes(p.category));
