@@ -1187,7 +1187,9 @@ function renderBlock(key){
     html+='<div style="font-size:11px;font-weight:500;color:#999;margin-bottom:8px">各項保障加總</div>';
     html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-items:start">';
     COVERAGE_GROUPS_EX.forEach(function(g){
-      html+='<div style="background:#fff;border:1px solid #e8e8e8;border-radius:8px;overflow:hidden;border-top:3px solid '+g.color+'">'+
+      // 失能長照強制放第2欄
+      var colStyle = g.label==='失能長照' ? 'grid-column:2;' : '';
+      html+='<div style="'+colStyle+'background:#fff;border:1px solid #e8e8e8;border-radius:8px;overflow:hidden;border-top:3px solid '+g.color+'">'+
         '<div style="display:flex;align-items:center;padding:7px 12px;background:'+g.color+'0D;border-bottom:1px solid #f0f0f0">'+
           '<span style="font-size:12px;font-weight:600;letter-spacing:.04em;color:'+g.color+'">'+g.label+'</span>'+
         '</div>';
