@@ -1183,13 +1183,22 @@ function renderBlock(key){
     });
     html+='</tbody></table><div style="font-size:11px;color:#bbb;padding:6px 14px">💡 疾病住院＝實支病房＋日額病房＋日額出院療養　　💡 意外住院＝疾病住院＋意外日額</div></div>';
 
-    // 各項保障加總（與 summary.html 相同格式）
+    // 各項保障加總（固定欄位放置）
     html+='<div style="font-size:11px;font-weight:500;color:#999;margin-bottom:8px">各項保障加總</div>';
+    // 手動指定每個群組的位置：row/col
+    var covPositions = {
+      '壽險保障':        'grid-row:1;grid-column:1',
+      '意外險':          'grid-row:1;grid-column:2',
+      '住院醫療 (實支實付)': 'grid-row:1;grid-column:3',
+      '日額型住院':      'grid-row:2;grid-column:1',
+      '定額手術':        'grid-row:2;grid-column:2',
+      '癌症醫療':        'grid-row:2;grid-column:3',
+      '失能長照':        'grid-row:3;grid-column:2',
+    };
     html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-items:start">';
     COVERAGE_GROUPS_EX.forEach(function(g){
-      // 失能長照強制放第2欄
-      var colStyle = g.label==='失能長照' ? 'grid-column:2;' : '';
-      html+='<div style="'+colStyle+'background:#fff;border:1px solid #e8e8e8;border-radius:8px;overflow:hidden;border-top:3px solid '+g.color+'">'+
+      var pos = covPositions[g.label] || '';
+      html+='<div style="'+pos+';background:#fff;border:1px solid #e8e8e8;border-radius:8px;overflow:hidden;border-top:3px solid '+g.color+'">'+
         '<div style="display:flex;align-items:center;padding:7px 12px;background:'+g.color+'0D;border-bottom:1px solid #f0f0f0">'+
           '<span style="font-size:12px;font-weight:600;letter-spacing:.04em;color:'+g.color+'">'+g.label+'</span>'+
         '</div>';
