@@ -106,9 +106,8 @@
 
 <script>
 var GAS = "https://script.google.com/macros/s/AKfycbwzDwyZy09189eOJOs-zEwkZOml2_pJOq15nYGtHF2Kyrtv6ag5VY-I2M8sDyrt0iPdZQ/exec";
-var CLIENT_ID = "283591037159-ilcpl2sq7jopkdbp92ldbjti6dm7bhd5.apps.googleusercontent.com";
+var CLIENT_ID = "524622074888-iuij6ib2qvr0qddvvrpfqnmfbt85gvti.apps.googleusercontent.com";
 var REDIRECT = location.origin + location.pathname;
-var DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 
 // ── 按鈕綁定（同步）─────────────────────────────────────
 document.getElementById("apply-link-btn").onclick = function(){ showApply(); };
@@ -132,34 +131,8 @@ window.onload = function() {
     return;
   }
 
-  // token flow：access_token 在 hash 中（response_type=token）
-  var accessToken = hashParams.get("access_token");
-  var expiresIn   = hashParams.get("expires_in");
-  if (accessToken) {
-    clearUrl();
-    showLoading();
-    // 存 Drive token
-    localStorage.setItem("nbs_token", accessToken);
-    localStorage.setItem("nbs_token_expiry", String(Date.now() + (parseInt(expiresIn)||3600)*1000));
-    // 用 access_token 取得使用者資訊
-    fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-      headers: { Authorization: "Bearer " + accessToken }
-    }).then(function(r){ return r.json(); }).then(function(info) {
-      if (info.email) {
-        saveAndCheck(info.email, info.name||"", info.picture||"");
-      } else {
-        showLogin();
-        showStatus("login-status","error","登入失敗，請重試");
-      }
-    }).catch(function(){
-      showLogin();
-      showStatus("login-status","error","連線失敗，請重試");
-    });
-    return;
-  }
-
   if (token) {
-    // id_token fallback
+    // implicit flow：直接解析 id_token（在 hash 中）
     clearUrl();
     var info = parseJwt(token);
     if (info && info.email) {
@@ -202,22 +175,20 @@ window.onload = function() {
     }
   }
 
-  // 設定登入按鈕 - 直接跳轉 Google（不用彈窗）
+  // 設定登入按鈕 - 使用 implicit flow（不需要後端）
   document.getElementById("login-btn").href = buildLoginUrl();
   showLogin();
 };
 
 // ── 建立 OAuth URL（implicit flow，直接回傳 id_token）───
 function buildLoginUrl() {
-  // response_type=token：直接在 hash 回傳 access_token（不需要彈窗）
-  // 同時帶 drive.file scope，登入一次就取得 Drive 授權
   var p = new URLSearchParams({
     client_id:     CLIENT_ID,
     redirect_uri:  REDIRECT,
-    response_type: "token",
-    scope:         "openid email profile https://www.googleapis.com/auth/drive.file",
+    response_type: "id_token",
+    scope:         "openid email profile",
+    nonce:         Math.random().toString(36).slice(2),
     prompt:        "select_account",
-    include_granted_scopes: "true",
   });
   return "https://accounts.google.com/o/oauth2/v2/auth?" + p.toString();
 }
@@ -249,18 +220,7 @@ function checkAndGo(email) {
       u.isAdmin   = r.isAdmin||false;
       localStorage.setItem("nbs_user", JSON.stringify(u));
       showStatus("login-status","success","✓ 驗證成功，正在進入系統…");
-      setTimeout(function(){
-        var t = localStorage.getItem("nbs_token");
-        var e = localStorage.getItem("nbs_token_expiry");
-        if (t && e && Date.now() < parseInt(e)) {
-          // 已有有效 token，直接進入
-          window.location.href = "main.html";
-        } else {
-          // 需要取得 Drive token，重新跳轉 Google（帶 drive.file scope）
-          // prompt 空字串：已登入的帳號會自動授權，不需要選帳號
-          window.location.href = buildLoginUrl().replace("prompt=select_account", "prompt=");
-        }
-      }, 800);
+      setTimeout(function(){ window.location.href = "main.html"; }, 800);
     } else {
       showLogin();
       if (r.status==="申請中") {
@@ -340,7 +300,6 @@ function clearUrl() {
 
 // ── GAS ──────────────────────────────────────────────────
 function gas(action, params) {
-  // NBS API 1 只有 doPost，用 POST 傳送
   return fetch(GAS, {
     method: "POST",
     headers: { "Content-Type": "text/plain" },
