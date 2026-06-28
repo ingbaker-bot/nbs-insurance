@@ -7,13 +7,19 @@
 
   <script>
     (function(){
-      // 在 nav.js 與畫面載入前，強制炸掉所有舊的暫存，強迫兩邊資料 100% 同步
-      const keepUser = localStorage.getItem("nbs_user");
-      const keepFam = localStorage.getItem("nbs_current_family");
+      // 清除舊快取，但保留登入資訊與 token，避免重新觸發 OAuth 授權
+      const keepUser    = localStorage.getItem("nbs_user");
+      const keepFam     = localStorage.getItem("nbs_current_family");
+      const keepPerson  = localStorage.getItem("nbs_current_person");
+      const keepToken   = localStorage.getItem("nbs_access_token");
+      const keepExpiry  = localStorage.getItem("nbs_token_expiry");
       localStorage.clear();
       sessionStorage.clear();
-      if (keepUser) localStorage.setItem("nbs_user", keepUser);
-      if (keepFam) localStorage.setItem("nbs_current_family", keepFam);
+      if (keepUser)   localStorage.setItem("nbs_user",           keepUser);
+      if (keepFam)    localStorage.setItem("nbs_current_family",  keepFam);
+      if (keepPerson) localStorage.setItem("nbs_current_person",  keepPerson);
+      if (keepToken)  localStorage.setItem("nbs_access_token",    keepToken);
+      if (keepExpiry) localStorage.setItem("nbs_token_expiry",    keepExpiry);
     })();
   </script>
   <style>
