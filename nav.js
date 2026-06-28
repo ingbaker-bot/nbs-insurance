@@ -259,33 +259,47 @@
 
      document.getElementById("nbs-auth-btn").onclick = function() {
        var btn = document.getElementById("nbs-auth-btn");
-       btn.textContent = "跳轉中…"; btn.disabled = true;
-       // 用 GIS Token Client + ux_mode implicit（不需要 redirect URI 設定）
-       var client = google.accounts.oauth2.initTokenClient({
-         client_id: CLIENT_ID,
-         scope: SCOPES,
-         callback: function(resp) {
-           var ov = document.getElementById("nbs-auth-overlay");
-           if (ov) ov.remove();
-           if (resp && resp.access_token) {
-             _accessToken = resp.access_token;
-             localStorage.setItem("nbs_token", _accessToken);
-             localStorage.setItem("nbs_token_expiry", String(Date.now() + 3000000));
-              // 若是從 main.html 跳來授權的，授權完跳回去
-              var afterAuth = localStorage.getItem("nbs_after_auth");
-              if (afterAuth) {
-                localStorage.removeItem("nbs_after_auth");
-                window.location.href = afterAuth;
-                return;
-              }
-              _loadData(_currentOpts);
+       btn.textContent = "授權中…"; btn.disabled = true; btn.style.opacity = "0.6";
+       // 等 GSI 載入後再初始化 tokenClient
+       function doAuth() {
+         var client = google.accounts.oauth2.initTokenClient({
+           client_id: CLIENT_ID,
+           scope: SCOPES,
+           callback: function(resp) {
+             var ov = document.getElementById("nbs-auth-overlay");
+             if (ov) ov.remove();
+             if (resp && resp.access_token) {
+               _accessToken = resp.access_token;
+               localStorage.setItem("nbs_token", _accessToken);
+               localStorage.setItem("nbs_token_expiry", String(Date.now() + 3000000));
+               var afterAuth = localStorage.getItem("nbs_after_auth");
+               if (afterAuth) {
+                 localStorage.removeItem("nbs_after_auth");
+                 window.location.href = afterAuth;
+                 return;
+               }
+               _loadData(_currentOpts);
+             } else {
+               if (btn) { btn.textContent = "連結 Google 帳號"; btn.disabled = false; btn.style.opacity = "1"; }
+             }
+           },
+           error_callback: function(err) {
+             if (btn) { btn.textContent = "連結 Google 帳號"; btn.disabled = false; btn.style.opacity = "1"; }
            }
-         },
-         error_callback: function(err) {
-           if (btn) { btn.textContent = "連結 Google 帳號"; btn.disabled = false; }
-         }
-       });
-       client.requestAccessToken({ prompt: "consent" });
+         });
+         client.requestAccessToken({ prompt: "consent" });
+       }
+       if (window.google && window.google.accounts) {
+         doAuth();
+       } else {
+         // GSI 還沒載入，等待
+         var wait = setInterval(function() {
+           if (window.google && window.google.accounts) {
+             clearInterval(wait);
+             doAuth();
+           }
+         }, 100);
+       }
      };
    }
   // 5. 資料載入 (接續原本的邏輯)
