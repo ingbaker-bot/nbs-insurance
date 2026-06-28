@@ -36,7 +36,6 @@
     .divider{font-size:12px;color:#aaa;margin-bottom:12px}
     .load-wrap{padding:10px 0;display:none}
   </style>
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
@@ -104,12 +103,18 @@
 
 <div class="footer">NBS 雲端保單體檢 v1.0 · 資料存放於您的 Google 雲端硬碟</div>
 
-<script>
-var GAS = "https://script.google.com/macros/s/AKfycbwzDwyZy09189eOJOs-zEwkZOml2_pJOq15nYGtHF2Kyrtv6ag5VY-I2M8sDyrt0iPdZQ/exec";
-var CLIENT_ID = "524622074888-iuij6ib2qvr0qddvvrpfqnmfbt85gvti.apps.googleusercontent.com";
-var REDIRECT = location.origin + location.pathname;
+<!-- 靜默授權用隱藏 iframe -->
+<iframe id="silent-iframe" style="display:none" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
 
-// ── 按鈕綁定（同步）─────────────────────────────────────
+<script>
+var GAS      = "https://script.google.com/macros/s/AKfycbwzDwyZy09189eOJOs-zEwkZOml2_pJOq15nYGtHF2Kyrtv6ag5VY-I2M8sDyrt0iPdZQ/exec";
+var CLIENT_ID = "524622074888-iuij6ib2qvr0qddvvrpfqnmfbt85gvti.apps.googleusercontent.com";
+var REDIRECT  = location.origin + location.pathname;
+
+// token 有效期留 5 分鐘緩衝
+var TOKEN_MARGIN = 5 * 60 * 1000;
+
+// ── 按鈕綁定 ─────────────────────────────────────────────
 document.getElementById("apply-link-btn").onclick = function(){ showApply(); };
 document.getElementById("back-from-wait").onclick  = function(){ showLogin(); };
 document.getElementById("back-from-apply").onclick = function(){ showLogin(); };
@@ -117,26 +122,42 @@ document.getElementById("apply-btn").onclick       = doApply;
 
 // ── 頁面載入 ─────────────────────────────────────────────
 window.onload = function() {
-  // implicit flow 把參數放在 hash (#) 後面，需要用 hash 讀取
-  var hashParams = new URLSearchParams(window.location.hash.replace(/^#/,""));
+  var hashParams   = new URLSearchParams(window.location.hash.replace(/^#/,""));
   var searchParams = new URLSearchParams(window.location.search);
-  var token = hashParams.get("id_token");
-  var code  = searchParams.get("code");
-  var err   = hashParams.get("error") || searchParams.get("error");
 
+  var idToken    = hashParams.get("id_token");
+  var accToken   = hashParams.get("access_token");
+  var expiresIn  = hashParams.get("expires_in");   // 秒數
+  var isSilent   = hashParams.get("state") === "silent";
+  var err        = hashParams.get("error") || searchParams.get("error");
+
+  // ── 錯誤處理 ──────────────────────────────────────────
   if (err) {
     clearUrl();
-    showLogin();
-    showStatus("login-status","warning","登入已取消");
+    if (isSilent) {
+      // 靜默授權失敗 → 顯示正常登入按鈕
+      showLogin();
+    } else {
+      showLogin();
+      showStatus("login-status","warning","登入已取消");
+    }
     return;
   }
 
-  if (token) {
-    // implicit flow：直接解析 id_token（在 hash 中）
+  // ── OAuth 回調（正常登入 或 靜默授權）────────────────
+  if (idToken && accToken) {
     clearUrl();
-    var info = parseJwt(token);
+    var info = parseJwt(idToken);
     if (info && info.email) {
-      saveAndCheck(info.email, info.name||"", info.picture||"");
+      // 計算 token 到期時間
+      var expiry = Date.now() + ((parseInt(expiresIn,10)||3600) * 1000);
+      saveTokens(accToken, expiry);
+      if (isSilent) {
+        // 靜默授權成功：token 已更新，直接進主畫面
+        goMain();
+      } else {
+        saveAndCheck(info.email, info.name||"", info.picture||"");
+      }
     } else {
       showLogin();
       showStatus("login-status","error","登入失敗，請重試");
@@ -144,53 +165,107 @@ window.onload = function() {
     return;
   }
 
-  if (code) {
-    // authorization code flow：呼叫 GAS 換取使用者資訊
+  // ── 只有 idToken 沒有 accToken（舊 implicit flow 回調）──
+  if (idToken && !accToken) {
     clearUrl();
-    showLoading();
-    gas("exchangeCode", {code: code, redirect_uri: REDIRECT}).then(function(r){
-      if (r.status==="ok" && r.email) {
-        saveAndCheck(r.email, r.name||"", r.picture||"");
-      } else {
-        showLogin();
-        showStatus("login-status","error","登入失敗，請重試");
-      }
-    }).catch(function(){
+    var info2 = parseJwt(idToken);
+    if (info2 && info2.email) {
+      // 重新用完整 scope 授權拿 access_token
+      showLoading();
+      window.location.href = buildLoginUrl(info2.email, false);
+    } else {
       showLogin();
-      showStatus("login-status","error","連線失敗，請重試");
-    });
+      showStatus("login-status","error","登入失敗，請重試");
+    }
     return;
   }
 
-  // 檢查已儲存的登入資訊
+  // ── 已有本地登入資訊 ──────────────────────────────────
   var saved = localStorage.getItem("nbs_user");
   if (saved) {
     try {
       var u = JSON.parse(saved);
-      showLoading();
-      checkAndGo(u.email);
-      return;
+      var tokenExpiry = parseInt(localStorage.getItem("nbs_token_expiry")||"0", 10);
+      var now = Date.now();
+
+      if (tokenExpiry - now > TOKEN_MARGIN) {
+        // Token 還有效 → 直接進主畫面
+        goMain();
+        return;
+      } else {
+        // Token 快過期或已過期 → 靜默重新授權
+        showLoading();
+        trySilentAuth(u.email);
+        return;
+      }
     } catch(e) {
       localStorage.removeItem("nbs_user");
     }
   }
 
-  // 設定登入按鈕 - 使用 implicit flow（不需要後端）
-  document.getElementById("login-btn").href = buildLoginUrl();
+  // ── 全新登入 ──────────────────────────────────────────
+  document.getElementById("login-btn").href = buildLoginUrl("", false);
   showLogin();
 };
 
-// ── 建立 OAuth URL（implicit flow，直接回傳 id_token）───
-function buildLoginUrl() {
+// ── 建立 OAuth URL ────────────────────────────────────────
+// silent=true 時用 prompt=none + state=silent，透過 iframe 執行
+function buildLoginUrl(hint, silent) {
   var p = new URLSearchParams({
     client_id:     CLIENT_ID,
     redirect_uri:  REDIRECT,
-    response_type: "id_token",
-    scope:         "openid email profile",
+    response_type: "token id_token",
+    scope:         "openid email profile https://www.googleapis.com/auth/drive.file",
     nonce:         Math.random().toString(36).slice(2),
-    prompt:        "select_account",
+    prompt:        silent ? "none" : "select_account consent",
+    state:         silent ? "silent" : "normal",
   });
+  if (hint) p.set("login_hint", hint);
   return "https://accounts.google.com/o/oauth2/v2/auth?" + p.toString();
+}
+
+// ── 靜默授權（iframe）────────────────────────────────────
+function trySilentAuth(email) {
+  var iframe = document.getElementById("silent-iframe");
+  var url    = buildLoginUrl(email, true);
+  var done   = false;
+
+  // 監聽 iframe 回來後觸發的 hashchange（利用 iframe load）
+  iframe.onload = function() {
+    if (done) return;
+    try {
+      var hash = iframe.contentWindow.location.hash;
+      if (!hash) return;
+      done = true;
+      // 把 iframe 拿到的 hash 複製到主視窗 URL 後重新解析
+      window.location.hash = hash;
+      window.location.reload();
+    } catch(e) {
+      // 跨域讀取失敗 → 降級為正常登入
+      if (!done) {
+        done = true;
+        showLogin();
+        showStatus("login-status","info","請重新登入以繼續使用");
+      }
+    }
+  };
+
+  // 超時 8 秒降級
+  setTimeout(function() {
+    if (!done) {
+      done = true;
+      showLogin();
+      showStatus("login-status","info","請重新登入以繼續使用");
+    }
+  }, 8000);
+
+  iframe.src = url;
+}
+
+// ── 儲存 token ───────────────────────────────────────────
+function saveTokens(accessToken, expiry) {
+  localStorage.setItem("nbs_access_token", accessToken);
+  localStorage.setItem("nbs_token_expiry",  String(expiry));
 }
 
 // ── 解析 JWT ─────────────────────────────────────────────
@@ -203,7 +278,7 @@ function parseJwt(token) {
   } catch(e) { return null; }
 }
 
-// ── 儲存使用者資訊並驗證 ─────────────────────────────────
+// ── 儲存使用者並呼叫 GAS 驗證 ────────────────────────────
 function saveAndCheck(email, name, picture) {
   showLoading();
   localStorage.setItem("nbs_user", JSON.stringify({email:email, name:name, picture:picture}));
@@ -220,10 +295,11 @@ function checkAndGo(email) {
       u.isAdmin   = r.isAdmin||false;
       localStorage.setItem("nbs_user", JSON.stringify(u));
       showStatus("login-status","success","✓ 驗證成功，正在進入系統…");
-        setTimeout(function(){ 
-        localStorage.removeItem("nbs_current_family");       // ← 新增這行
-        localStorage.removeItem("nbs_current_family_name");  // ← 新增這行（選擇性）
-        window.location.href = "main.html"; 
+      setTimeout(function(){
+        // 清除舊的 family 暫存，確保從 main.html 重新選擇
+        localStorage.removeItem("nbs_current_family");
+        localStorage.removeItem("nbs_current_family_name");
+        goMain();
       }, 800);
     } else {
       showLogin();
@@ -244,6 +320,10 @@ function checkAndGo(email) {
   });
 }
 
+function goMain() {
+  window.location.href = "main.html";
+}
+
 // ── 申請帳號 ─────────────────────────────────────────────
 function doApply() {
   var name    = document.getElementById("apply-name").value.trim();
@@ -257,7 +337,7 @@ function doApply() {
   btn.disabled=true; btn.textContent="送出中…";
   gas("apply",{name:name,email:email,agentNo:agentNo,company:company}).then(function(r){
     btn.disabled=false; btn.textContent="送出申請";
-    if(r.status==="ok")         showStatus("apply-status","success","✓ 申請成功！管理員審核後會發送通知至 "+email);
+    if(r.status==="ok")                showStatus("apply-status","success","✓ 申請成功！管理員審核後會發送通知至 "+email);
     else if(r.status==="already_approved") showStatus("apply-status","info","此帳號已核准，請直接登入");
     else if(r.status==="already_applied")  showStatus("apply-status","warning","此帳號已申請過，請等待審核");
     else showStatus("apply-status","error",r.message||"申請失敗，請重試");
@@ -275,34 +355,28 @@ function showLogin() {
   document.getElementById("login-status").style.display  = "none";
   document.getElementById("load-wrap").style.display     = "none";
   document.getElementById("login-btn").style.display     = "flex";
-  // 更新登入按鈕的 OAuth URL
-  document.getElementById("login-btn").href = buildLoginUrl();
+  document.getElementById("login-btn").href = buildLoginUrl("", false);
 }
-
 function showLoading() {
   document.getElementById("load-wrap").style.display  = "block";
   document.getElementById("login-btn").style.display  = "none";
 }
-
 function showApply() {
   document.getElementById("view-login").style.display  = "none";
   document.getElementById("view-apply").style.display  = "block";
 }
-
 function showStatus(id, type, msg) {
-  var el=document.getElementById(id);
-  if(!el) return;
-  el.className="status-box "+type;
-  el.textContent=msg;
-  el.style.display="block";
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.className = "status-box " + type;
+  el.textContent = msg;
+  el.style.display = "block";
 }
-
 function clearUrl() {
-  // 清除 search 和 hash 兩種參數
-  window.history.replaceState({},"",location.pathname);
+  window.history.replaceState({}, "", location.pathname);
 }
 
-// ── GAS ──────────────────────────────────────────────────
+// ── GAS（身份驗證用）────────────────────────────────────
 function gas(action, params) {
   return fetch(GAS, {
     method: "POST",
