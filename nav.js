@@ -315,14 +315,16 @@
     DriveDB.readFile(_user.email, "families", fn)
       .then(function(fr) {
         if (!fr || fr.status === "not_found" || !fr.content) {
+          console.warn("[nav] 家庭資料 not_found，fn=", fn);
           _finishLoad(fn, true); return;
         }
         _family = fr.content;
-        _personId = localStorage.getItem("nbs_current_person") || _family.members[0].personId;
+        _personId = localStorage.getItem("nbs_current_person") ||
+                    (_family.members && _family.members[0] && _family.members[0].personId) || null;
         _finishLoad(fn, false);
       })
       .catch(function(e) {
-        console.error("載入家庭失敗", e);
+        console.error("[nav] 載入家庭失敗", e);
         _finishLoad(fn, true);
       });
   }
@@ -338,6 +340,16 @@
       }
     }));
   }
+
+  // family.html 自己載入資料後通知 nav 補渲染側邊欄
+  window.addEventListener("nbs_family_loaded", function(e) {
+    if (_family) return; // nav 已有資料，不需重複
+    var detail = e.detail || {};
+    _family = detail.familyData || null;
+    if (!_family) return;
+    _personId = (_family.members && _family.members[0] && _family.members[0].personId) || null;
+    _renderAll();
+  });
 
   // ==========================================
   // 7. UI 插入與渲染（維持原版）
