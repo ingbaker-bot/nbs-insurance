@@ -264,15 +264,8 @@
     if (!fn) { window.location.href = "main.html"; return; }
 
     var cacheKey = "nbs_fam_" + fn;
-    var cached = sessionStorage.getItem(cacheKey);
-    if (cached) {
-      try {
-        _family = JSON.parse(cached);
-        _personId = localStorage.getItem("nbs_current_person") || _family.members[0].personId;
-        _finishLoad(fn);
-        return;
-      } catch(e) { sessionStorage.removeItem(cacheKey); }
-    }
+    // 每次換頁都清除 cache，確保從 GAS 讀取最新資料
+    sessionStorage.removeItem(cacheKey);
 
     NBS_NAV.callGAS("readFile", { email: _user.email, fileType: "family", fileName: fn })
       .then(function(fr) {
