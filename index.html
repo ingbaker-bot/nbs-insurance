@@ -105,8 +105,8 @@
 <div class="footer">NBS 雲端保單體檢 v1.0 · 資料存放於您的 Google 雲端硬碟</div>
 
 <script>
-var GAS = "https://script.google.com/macros/library/d/1STuOK38rJwuA6riwhhNydC2wQhFuMnFAQ4btnlpKcqWbouFbFIwTZbyv/6";
-var CLIENT_ID = "283591037159-ilcpl2sq7jopkdbp92ldbjti6dm7bhd5.apps.googleusercontent.com";
+var GAS = "https://script.google.com/macros/s/AKfycbwzDwyZy09189eOJOs-zEwkZOml2_pJOq15nYGtHF2Kyrtv6ag5VY-I2M8sDyrt0iPdZQ/exec";
+var CLIENT_ID = "524622074888-iuij6ib2qvr0qddvvrpfqnmfbt85gvti.apps.googleusercontent.com";
 var REDIRECT = location.origin + location.pathname;
 
 // ── 按鈕綁定（同步）─────────────────────────────────────
@@ -300,14 +300,12 @@ function clearUrl() {
 
 // ── GAS ──────────────────────────────────────────────────
 function gas(action, params) {
-  var url = new URL(GAS);
-  url.searchParams.set("action", action);
-  Object.entries(params||{}).forEach(function(kv){
-    var k=kv[0], v=kv[1];
-    if(typeof v==="object") url.searchParams.set(k, encodeURIComponent(JSON.stringify(v)));
-    else if(v!==null&&v!==undefined) url.searchParams.set(k, v);
-  });
-  return fetch(url.toString()).then(function(r){ return r.json(); });
+  // NBS API 1 只有 doPost，改用 POST 傳送
+  return fetch(GAS, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain" },
+    body: JSON.stringify(Object.assign({ action: action }, params || {}))
+  }).then(function(r){ return r.json(); });
 }
 </script>
 </body>
