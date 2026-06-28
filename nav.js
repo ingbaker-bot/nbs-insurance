@@ -243,13 +243,21 @@
             client_id: CLIENT_ID,
             scope: SCOPES,
             callback: (tokenResponse) => {
+              var ov = document.getElementById("nbs-auth-overlay");
+              if (ov) ov.remove();
               if (tokenResponse && tokenResponse.access_token) {
                 _accessToken = tokenResponse.access_token;
-                // 將 Token 存入 sessionStorage 記住 50 分鐘 (3,000,000 毫秒)
                 localStorage.setItem("nbs_token", _accessToken);
                 localStorage.setItem("nbs_token_expiry", Date.now() + 3000000);
                 _loadData(opts);
+              } else {
+                _triggerAuth();
               }
+            },
+            error_callback: (err) => {
+              var btn = document.getElementById("nbs-auth-btn");
+              if (btn) { btn.textContent = "連結 Google 帳號"; btn.disabled = false; btn.style.opacity = "1"; }
+              console.warn("授權錯誤", err);
             },
           });
           
@@ -278,8 +286,12 @@
     document.body.appendChild(overlay);
 
     document.getElementById("nbs-auth-btn").onclick = function() {
-      _tokenClient.requestAccessToken();
-      overlay.remove(); // 點擊後移除遮罩
+      var btn = document.getElementById("nbs-auth-btn");
+      btn.textContent = "授權中…";
+      btn.disabled = true;
+      btn.style.opacity = "0.6";
+      _tokenClient.requestAccessToken({ prompt: "" });
+      // overlay 保留，等 token callback 成功後才移除
     };
   }
 
@@ -304,8 +316,6 @@
     NBS_NAV.callGAS("readFile", { email: _user.email, fileType: "family", fileName: fn })
       .then(function(fr) {
         if (fr.status === "not_found" || !fr.content) {
-          // 第一次使用，Drive 尚無此家庭檔案 → 當作空家庭繼續
-          console.log("家庭檔案尚未建立，使用空白資料");
           _finishLoad(fn, true);
           return;
         }
@@ -325,11 +335,6 @@
     window.dispatchEvent(new CustomEvent("nbs_nav_ready", {
       detail: { user:_user, familyData: isError ? null : _family, currentPersonId: isError ? null : _personId, familyFileName:fn }
     }));
-  }
-function _setup(opts) {
-    _injectStyles();
-    _insertNav();          // 插入側欄 DOM（空的）
-    _loadData(opts);       // 非同步載入資料後填充側欄
   }
 
   // ── 插入側欄 DOM（不動頁面內容）────────────────────────
@@ -414,62 +419,8 @@ function _setup(opts) {
     }
   }
 
-  // ── 載入資料 ────────────────────────────────────────────
-  function _loadData(opts) {
-    var saved = localStorage.getItem("nbs_user");
-    if (!saved) { window.location.href = "index.html"; return; }
-    _user = JSON.parse(saved);
 
-    var fn = localStorage.getItem("nbs_current_family");
-    if (!fn) { window.location.href = "main.html"; return; }
-
-    // sessionStorage 快取：同一次瀏覽切換功能頁不重複呼叫 GAS
-    var cacheKey = "nbs_fam_" + fn;
-    var cached = sessionStorage.getItem(cacheKey);
-    if (cached) {
-      try {
-        _family = JSON.parse(cached);
-        _personId = localStorage.getItem("nbs_current_person");
-        if (!_personId) {
-          var prim = _family.members.find(function(m){ return m.role==="primary"; });
-          _personId = prim ? prim.personId : (_family.members[0] && _family.members[0].personId);
-          if (_personId) localStorage.setItem("nbs_current_person", _personId);
-        }
-        _renderAll();
-        window.dispatchEvent(new CustomEvent("nbs_nav_ready", {
-          detail: { user:_user, familyData:_family, currentPersonId:_personId, familyFileName:fn }
-        }));
-        return;
-      } catch(e) { sessionStorage.removeItem(cacheKey); }
-    }
-
-    // 快取沒有 → 呼叫 GAS
-    _callGAS("readFile", { email: _user.email, fileType: "family", fileName: fn })
-      .then(function(fr) {
-        _family = fr.content;
-        try { sessionStorage.setItem(cacheKey, JSON.stringify(_family)); } catch(e) {}
-        _personId = localStorage.getItem("nbs_current_person");
-        if (!_personId) {
-          var prim = _family.members.find(function(m){ return m.role==="primary"; });
-          _personId = prim ? prim.personId : (_family.members[0] && _family.members[0].personId);
-          if (_personId) localStorage.setItem("nbs_current_person", _personId);
-        }
-        _renderAll();
-        window.dispatchEvent(new CustomEvent("nbs_nav_ready", {
-          detail: { user:_user, familyData:_family, currentPersonId:_personId, familyFileName:fn }
-        }));
-      })
-      .catch(function(e) {
-        console.error("NBS_NAV load error", e);
-        // 若發生錯誤，提示使用者確認授權
-        alert("系統偵測到您尚未開通雲端空間，請在跳出的視窗中點擊「允許」，以啟用個人保單體檢功能。");
-        window.dispatchEvent(new CustomEvent("nbs_nav_ready", {
-        detail: { user:_user, familyData:null, currentPersonId:null, familyFileName:fn }
-        }));
-      });
-  }
-
-  // ── 渲染所有導覽元件 ─────────────────────────────────────
+    // ── 渲染所有導覽元件 ─────────────────────────────────────
   function _renderAll() {
     _renderSidebar();
     _renderBottomTab();
