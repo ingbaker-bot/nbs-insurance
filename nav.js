@@ -31,7 +31,7 @@
   var _tokenClient = null;
   var _accessToken = null;
   var CLIENT_ID = "283591037159-ilcpl2sq7jopkdbp92ldbjti6dm7bhd5.apps.googleusercontent.com";
-  var SCOPES = "https://www.googleapis.com/auth/drive.file";
+  var SCOPES = "openid email profile";
   // ==========================================
   // 2. Google Drive 直接存取引擎 (DriveDB)
   // ==========================================
@@ -194,18 +194,25 @@
         });
         return await res.json();
       } else {
-        // 直連 Drive API
-        if (!_accessToken) throw new Error("無效的授權 Token");
-        try {
-          if (action === "saveFile") return await DriveDB.saveFile(params.email, params.fileType === "family" ? "families" : "persons", params.fileName, params.content);
-          if (action === "readFile") return await DriveDB.readFile(params.email, params.fileType === "family" ? "families" : "persons", params.fileName);
-          if (action === "saveVisit") return await DriveDB.saveFile(params.email, "visits", `visit_${params.visit.id}.json`, params.visit);
-          if (action === "listVisits") return await DriveDB.listVisits(params.email, params.familyId);
-          if (action === "deleteVisit") return await DriveDB.deleteVisit(params.email, params.visitId);
-          throw new Error("未支援的 Drive 動作: " + action);
-        } catch(e) {
-          console.error("Drive API 錯誤:", e);
-          throw e;
+        // 打 GAS API2（GAS 用 DriveApp 存取，可讀寫所有資料）
+        const isWrite = ["saveFile", "saveVisit", "deleteVisit", "deleteFamily"].indexOf(action) !== -1;
+        if (isWrite) {
+          const res = await fetch(STORAGE_GAS_URL, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain" },
+            body: JSON.stringify(Object.assign({ action: action }, params))
+          });
+          return await res.json();
+        } else {
+          const url = new URL(STORAGE_GAS_URL);
+          url.searchParams.set("action", action);
+          Object.entries(params || {}).forEach(function(kv) {
+            var k = kv[0], v = kv[1];
+            if (typeof v === "object") url.searchParams.set(k, encodeURIComponent(JSON.stringify(v)));
+            else if (v !== null && v !== undefined) url.searchParams.set(k, v);
+          });
+          const res = await fetch(url.toString());
+          return await res.json();
         }
       }
     },
@@ -243,21 +250,13 @@
             client_id: CLIENT_ID,
             scope: SCOPES,
             callback: (tokenResponse) => {
-              var ov = document.getElementById("nbs-auth-overlay");
-              if (ov) ov.remove();
               if (tokenResponse && tokenResponse.access_token) {
                 _accessToken = tokenResponse.access_token;
+                // 將 Token 存入 sessionStorage 記住 50 分鐘 (3,000,000 毫秒)
                 localStorage.setItem("nbs_token", _accessToken);
                 localStorage.setItem("nbs_token_expiry", Date.now() + 3000000);
                 _loadData(opts);
-              } else {
-                _triggerAuth();
               }
-            },
-            error_callback: (err) => {
-              var btn = document.getElementById("nbs-auth-btn");
-              if (btn) { btn.textContent = "連結 Google 帳號"; btn.disabled = false; btn.style.opacity = "1"; }
-              console.warn("授權錯誤", err);
             },
           });
           
@@ -286,12 +285,8 @@
     document.body.appendChild(overlay);
 
     document.getElementById("nbs-auth-btn").onclick = function() {
-      var btn = document.getElementById("nbs-auth-btn");
-      btn.textContent = "授權中…";
-      btn.disabled = true;
-      btn.style.opacity = "0.6";
-      _tokenClient.requestAccessToken({ prompt: "" });
-      // overlay 保留，等 token callback 成功後才移除
+      _tokenClient.requestAccessToken();
+      overlay.remove(); // 點擊後移除遮罩
     };
   }
 
@@ -315,10 +310,6 @@
 
     NBS_NAV.callGAS("readFile", { email: _user.email, fileType: "family", fileName: fn })
       .then(function(fr) {
-        if (fr.status === "not_found" || !fr.content) {
-          _finishLoad(fn, true);
-          return;
-        }
         _family = fr.content;
         sessionStorage.setItem(cacheKey, JSON.stringify(_family));
         _personId = localStorage.getItem("nbs_current_person") || _family.members[0].personId;
