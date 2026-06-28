@@ -30,7 +30,7 @@
   var _user = null;
   var _tokenClient = null;
   var _accessToken = null;
-  var CLIENT_ID = "283591037159-ilcpl2sq7jopkdbp92ldbjti6dm7bhd5.apps.googleusercontent.com"; // Google OAuth Client ID
+  var CLIENT_ID = "283591037159-ilcpl2sq7jopkdbp92ldbjti6dm7bhd5.apps.googleusercontent.com";
   var SCOPES = "https://www.googleapis.com/auth/drive.file";
   // ==========================================
   // 2. Google Drive 直接存取引擎 (DriveDB)
@@ -123,7 +123,9 @@
       const res = await this.request(`drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id)`);
       const data = await res.json();
       
-      if (!data.files || data.files.length === 0) throw new Error("檔案不存在");
+      if (!data.files || data.files.length === 0) {
+        return { status: "not_found", content: null };
+      }
       
       const fileRes = await this.request(`drive/v3/files/${data.files[0].id}?alt=media`);
       const content = await fileRes.json();
@@ -301,6 +303,12 @@
 
     NBS_NAV.callGAS("readFile", { email: _user.email, fileType: "family", fileName: fn })
       .then(function(fr) {
+        if (fr.status === "not_found" || !fr.content) {
+          // 第一次使用，Drive 尚無此家庭檔案 → 當作空家庭繼續
+          console.log("家庭檔案尚未建立，使用空白資料");
+          _finishLoad(fn, true);
+          return;
+        }
         _family = fr.content;
         sessionStorage.setItem(cacheKey, JSON.stringify(_family));
         _personId = localStorage.getItem("nbs_current_person") || _family.members[0].personId;
