@@ -1586,6 +1586,13 @@ window.addEventListener("nbs_nav_ready", async function(e) {
     console.error("export load error", ex); 
   }
   updatePrevBtn();
+
+  // 通知 nav.js 更新側邊欄（nav.js 自己讀 Drive 可能失敗）
+  if (familyData) {
+    window.dispatchEvent(new CustomEvent("nbs_page_data_ready", {
+      detail: { familyData: familyData, currentPersonId: currentPersonId }
+    }));
+  }
 });
 
 // ── NBS 導覽 ──────────────────────────────────────────────
@@ -1603,9 +1610,6 @@ if (typeof NBS_NAV !== "undefined") {
     };
 }
 
-// 支援兩種事件：nav.js 自行載入 或 family.html 先載入後通知
-
-NBS_NAV.init({ page: "export" });
 </script>
 </body>
 </html>
