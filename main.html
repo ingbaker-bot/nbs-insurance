@@ -520,16 +520,6 @@
       document.getElementById("analysis-date").value = today;
       updateAnalysisRoc();
 
-      // 檢查 Drive token
-      var token = localStorage.getItem("nbs_token");
-      var expiry = localStorage.getItem("nbs_token_expiry");
-      if (!token || !expiry || Date.now() >= parseInt(expiry)) {
-        // 沒有 token，先去 family.html 授權（授權後 token 存到 localStorage）
-        localStorage.setItem("nbs_after_auth", "main.html");
-        window.location.href = "family.html";
-        return;
-      }
-
       // 載入家庭列表
       loadFamilies();
     };
@@ -786,109 +776,27 @@
       window.location.href = "index.html";
     }
 
-    // ── 呼叫 Drive API（資料存在業務員自己的 Drive）──────────
-    function getToken() {
-      var token = localStorage.getItem("nbs_token");
-      var expiry = localStorage.getItem("nbs_token_expiry");
-      if (token && expiry && Date.now() < parseInt(expiry)) return token;
-      return null;
-    }
-
-    async function driveRequest(path, options) {
-      var token = getToken();
-      if (!token) throw new Error("Drive token 不存在，請重新整理頁面");
-      var headers = Object.assign({ Authorization: "Bearer " + token }, options && options.headers || {});
-      var res = await fetch("https://www.googleapis.com/" + path, Object.assign({}, options, { headers }));
-      if (res.status === 401) {
-        localStorage.removeItem("nbs_token");
-        localStorage.removeItem("nbs_token_expiry");
-        window.location.href = "family.html";
-        throw new Error("Token 過期");
-      }
-      return res;
-    }
-
-    async function ensureFolder(name, parentId) {
-      parentId = parentId || "root";
-      var q = "name='" + name + "' and '" + parentId + "' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false";
-      var res = await driveRequest("drive/v3/files?q=" + encodeURIComponent(q) + "&fields=files(id)");
-      var data = await res.json();
-      if (data.files && data.files.length > 0) return data.files[0].id;
-      var cr = await driveRequest("drive/v3/files", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, mimeType: "application/vnd.google-apps.folder", parents: [parentId] })
-      });
-      var d = await cr.json();
-      return d.id;
-    }
-
-    async function getAgentFolderId(email) {
-      var rootId = await ensureFolder("NBS雲端保單體檢");
-      var agentName = email.replace(/[^a-zA-Z0-9]/g, "_");
-      return await ensureFolder(agentName, rootId);
-    }
-
-    async function callGAS(action, params) {
-      var email = params && params.email || (currentUser && currentUser.email);
-
-      if (action === "listFamilies") {
-        var agentId = await getAgentFolderId(email);
-        var famId = await ensureFolder("families", agentId);
-        var q = "'" + famId + "' in parents and trashed=false";
-        var res = await driveRequest("drive/v3/files?q=" + encodeURIComponent(q) + "&fields=files(id,name)");
-        var data = await res.json();
-        var families = [];
-        for (var file of (data.files || [])) {
-          try {
-            var fr = await driveRequest("drive/v3/files/" + file.id + "?alt=media");
-            var f = await fr.json();
-            families.push(Object.assign({}, f, { fileName: file.name, memberCount: f.memberCount || (f.members && f.members.length) || 0 }));
-          } catch(e) {}
+    // ── 呼叫 GAS API ─────────────────────────────────────────
+    function callGAS(action, params) {
+  if (action === "saveFile") {
+    return fetch(GAS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({ action, ...params }),
+    }).then(r => r.json());
+  }
+  
+      const url = new URL(GAS_URL);
+      url.searchParams.set("action", action);
+      Object.entries(params || {}).forEach(([k, v]) => {
+        if (typeof v === "object") {
+          url.searchParams.set(k, encodeURIComponent(JSON.stringify(v)));
+        } else if (v !== null && v !== undefined) {
+          url.searchParams.set(k, v);
         }
-        return { status: "ok", families };
-      }
-
-      if (action === "saveFile") {
-        var agentId = await getAgentFolderId(email);
-        var subFolder = params.fileType === "family" ? "families" : "persons";
-        var folderId = await ensureFolder(subFolder, agentId);
-        // 先找看看有沒有同名檔案
-        var q = "name='" + params.fileName + "' and '" + folderId + "' in parents and trashed=false";
-        var searchRes = await driveRequest("drive/v3/files?q=" + encodeURIComponent(q) + "&fields=files(id)");
-        var searchData = await searchRes.json();
-        var jsonStr = JSON.stringify(params.content);
-        if (searchData.files && searchData.files.length > 0) {
-          // 更新
-          var fileId = searchData.files[0].id;
-          await driveRequest("upload/drive/v3/files/" + fileId + "?uploadType=media", {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: jsonStr
-          });
-        } else {
-          // 新增
-          var meta = { name: params.fileName, parents: [folderId] };
-          var boundary = "boundary" + Date.now();
-          var multipart = "--" + boundary + "\r\nContent-Type: application/json\r\n\r\n" +
-            JSON.stringify(meta) + "\r\n--" + boundary + "\r\nContent-Type: application/json\r\n\r\n" +
-            jsonStr + "\r\n--" + boundary + "--";
-          await driveRequest("upload/drive/v3/files?uploadType=multipart", {
-            method: "POST",
-            headers: { "Content-Type": "multipart/related; boundary=" + boundary },
-            body: multipart
-          });
-        }
-        return { status: "ok" };
-      }
-
-      // 其他 action 備用（打舊 GAS）
-      var res = await fetch(GAS_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify(Object.assign({ action }, params || {}))
       });
-      return await res.json();
+      return fetch(url.toString())
+        .then(res => res.json());
     }
   </script>
 
