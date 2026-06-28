@@ -809,7 +809,7 @@ function buildOwnerOptions(selectedName) {
 
 function openForm(mode, memberId, policyIdOrNo) {
   editingPolicy = null;
-  editingPersonId = memberId || (currentTab !== "all" ? currentTab : familyData.members.find(m=>m.role==="primary")?.personId);
+  editingPersonId = memberId || (currentTab !== "all" ? currentTab : (familyData && familyData.members ? familyData.members.find(m=>m.role==="primary")?.personId : null));
 
   // 重置表單
   ["f-policyno","f-item","f-start","f-payend","f-covend","f-premium","f-rate"].forEach(id => {
