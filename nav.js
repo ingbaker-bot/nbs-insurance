@@ -217,7 +217,7 @@
       window.location.href = "index.html"; return; 
     }
     if (savedUser) _user = JSON.parse(savedUser);
-
+    if (window.location.href.indexOf("main.html") !== -1) return;
     // GAS API2 不需要 Drive token，直接載入
     _loadData(opts);
   }
