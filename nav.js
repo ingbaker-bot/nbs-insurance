@@ -29,6 +29,7 @@
   var _personId = null;
   var _user = null;
   var _tokenClient = null;
+  var _currentOpts = null;
   var _accessToken = null;
   var CLIENT_ID = "283591037159-ilcpl2sq7jopkdbp92ldbjti6dm7bhd5.apps.googleusercontent.com";
   var SCOPES = "https://www.googleapis.com/auth/drive.file";
@@ -233,20 +234,9 @@
       _accessToken = storedToken;
       _loadData(opts);
     } else {
-      // 檢查是否從 OAuth redirect 回來（token 在 URL hash）
-      var hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-      var hashToken = hashParams.get("access_token");
-      var hashExpiry = hashParams.get("expires_in");
-      if (hashToken) {
-        window.history.replaceState({}, "", location.pathname + location.search);
-        _accessToken = hashToken;
-        localStorage.setItem("nbs_token", _accessToken);
-        localStorage.setItem("nbs_token_expiry", String(Date.now() + (parseInt(hashExpiry)||3600)*1000));
-        _loadData(opts);
-      } else {
-        // 顯示授權畫面（redirect 模式，不需要彈窗）
-        _triggerAuth(opts);
-      }
+      // 顯示授權畫面
+      _currentOpts = opts;
+      _triggerAuth(opts);
     }
   }
 
@@ -270,9 +260,25 @@
      document.getElementById("nbs-auth-btn").onclick = function() {
        var btn = document.getElementById("nbs-auth-btn");
        btn.textContent = "跳轉中…"; btn.disabled = true;
-       var redirectUri = location.origin + location.pathname;
-       var p = new URLSearchParams({ client_id: CLIENT_ID, redirect_uri: redirectUri, response_type: "token", scope: SCOPES, include_granted_scopes: "true" });
-       window.location.href = "https://accounts.google.com/o/oauth2/v2/auth?" + p.toString();
+       // 用 GIS Token Client + ux_mode implicit（不需要 redirect URI 設定）
+       var client = google.accounts.oauth2.initTokenClient({
+         client_id: CLIENT_ID,
+         scope: SCOPES,
+         callback: function(resp) {
+           var ov = document.getElementById("nbs-auth-overlay");
+           if (ov) ov.remove();
+           if (resp && resp.access_token) {
+             _accessToken = resp.access_token;
+             localStorage.setItem("nbs_token", _accessToken);
+             localStorage.setItem("nbs_token_expiry", String(Date.now() + 3000000));
+             _loadData(_currentOpts);
+           }
+         },
+         error_callback: function(err) {
+           if (btn) { btn.textContent = "連結 Google 帳號"; btn.disabled = false; }
+         }
+       });
+       client.requestAccessToken({ prompt: "consent" });
      };
    }
   // 5. 資料載入 (接續原本的邏輯)
