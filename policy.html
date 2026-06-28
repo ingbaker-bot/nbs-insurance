@@ -738,7 +738,7 @@ function renderPolicies() {
     // 渲染群組標題 (點擊可展開/收合附約)
     html += `<div class="policy-group">
       <div class="group-header" onclick="toggleRiders('${safeId}')" style="cursor:pointer; display:flex; align-items:center;">
-        <span class="expand-icon" id="icon-${safeId}" style="margin-right:8px; font-size:12px; transition:transform 0.2s; color:#999;">${riders.length > 0 ? '▶' : ''}</span>
+        <span class="expand-icon" id="icon-${safeId}" style="margin-right:8px; font-size:12px; transition:transform 0.2s; color:#999;">▶</span>
         <span class="policy-no-badge">${policyNo}</span>
         <span class="group-company" style="margin-left:8px;">${rows[0].company||'—'}</span>
         ${currentTab==='all' && member ? `<span class="group-member-badge" style="margin-left:8px;">${member.name}</span>` : ''}
@@ -776,12 +776,15 @@ function renderPolicies() {
     html += renderRow(mainPol, true);
 
     // 渲染附約區塊
-    html += `<div class="riders-container" id="riders-${safeId}" style="display:none; background:#fafafa; border-top:1px solid #f0f0f0;">`;
+    html += `<div class="riders-container" id="riders-${safeId}" style="display:block; background:#fafafa; border-top:1px solid #f0f0f0;">`;
+    // 箭頭預設向下
+    setTimeout(function(){ var ic=document.getElementById("icon-"+safeId); if(ic) ic.style.transform="rotate(90deg)"; }, 0);
     riders.forEach(r => {
       html += renderRow(r, false);
     });
-    html += `<button class="add-rider-btn" onclick="event.stopPropagation(); openForm('rider','${rows[0]._memberId}','${policyNo}')" style="background:#f9f9f9;">
-      ＋ 在此保單下新增附約</button>`;
+    html += `<button class="add-rider-btn" onclick="event.stopPropagation(); openForm('rider','${rows[0]._memberId}','${policyNo}')"
+      style="background:#EBF4FF; color:#378ADD; border:1.5px dashed #378ADD; font-weight:500; padding:10px;">
+      ＋ 新增附約（保單號碼：${policyNo}）</button>`;
     html += `</div></div>`;
   });
 
