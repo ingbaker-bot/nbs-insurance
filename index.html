@@ -318,14 +318,12 @@ function clearUrl() {
 
 // ── GAS ──────────────────────────────────────────────────
 function gas(action, params) {
-  var url = new URL(GAS);
-  url.searchParams.set("action", action);
-  Object.entries(params||{}).forEach(function(kv){
-    var k=kv[0], v=kv[1];
-    if(typeof v==="object") url.searchParams.set(k, encodeURIComponent(JSON.stringify(v)));
-    else if(v!==null&&v!==undefined) url.searchParams.set(k, v);
-  });
-  return fetch(url.toString()).then(function(r){ return r.json(); });
+  // NBS API 1 只有 doPost，用 POST 傳送
+  return fetch(GAS, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain" },
+    body: JSON.stringify(Object.assign({ action: action }, params || {}))
+  }).then(function(r){ return r.json(); });
 }
 </script>
 </body>
