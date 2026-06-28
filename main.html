@@ -365,7 +365,7 @@
     .status-msg.error   { background: #FCEBEB; color: #791F1F; }
     .status-msg.success { background: #EAF3DE; color: #27500A; }
   </style>
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="nav.js"></script>
 </head>
 <body>
 
@@ -481,7 +481,7 @@
 
   <script>
     // ── 設定 ─────────────────────────────────────────────────
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec";
+    const AUTH_GAS_URL = "https://script.google.com/macros/s/AKfycbwzDwyZy09189eOJOs-zEwkZOml2_pJOq15nYGtHF2Kyrtv6ag5VY-I2M8sDyrt0iPdZQ/exec"; // 僅身份驗證用
 
     let currentUser = null;
     let allFamilies = [];
@@ -520,6 +520,18 @@
       document.getElementById("analysis-date").value = today;
       updateAnalysisRoc();
 
+      // 初始化 DriveDB（從 nav.js 取得）
+      if (!_initDriveDB()) {
+        // nav.js 還沒準備好，等一下再試
+        var retry = 0;
+        var t = setInterval(function() {
+          if (_initDriveDB() || ++retry > 20) {
+            clearInterval(t);
+            loadFamilies();
+          }
+        }, 100);
+        return;
+      }
       // 載入家庭列表
       loadFamilies();
     };
@@ -529,12 +541,14 @@
       document.getElementById("family-list").innerHTML =
         '<div class="loading-state"><span class="spinner"></span>載入中…</div>';
 
-      callGAS("listFamilies", { email: currentUser.email })
+      // 直接用 DriveDB（nav.js）讀取使用者自己的 Drive
+      NBS_DriveDB.listFamilies(currentUser.email)
         .then(result => {
           allFamilies = result.families || [];
           renderFamilies(allFamilies);
         })
         .catch(err => {
+          console.error("loadFamilies error", err);
           document.getElementById("family-list").innerHTML =
             '<div class="empty-state"><div class="text">載入失敗，請重新整理頁面</div></div>';
         });
@@ -688,20 +702,8 @@
       };
 
       // 先儲存個人 JSON，再儲存家庭 JSON
-      callGAS("saveFile", {
-        email: currentUser.email,
-        fileType: "person",
-        fileId: personId,
-        fileName: primaryName + "_" + personId + ".json",
-        content: personData,
-      })
-      .then(() => callGAS("saveFile", {
-        email: currentUser.email,
-        fileType: "family",
-        fileId: familyId,
-        fileName: familyName + "_" + familyId + ".json",
-        content: familyData,
-      }))
+      NBS_DriveDB.saveFile(currentUser.email, "persons", primaryName + "_" + personId + ".json", personData)
+      .then(() => NBS_DriveDB.saveFile(currentUser.email, "families", familyName + "_" + familyId + ".json", familyData))
       .then(result => {
         btn.disabled = false;
         btn.textContent = "建立家庭";
@@ -776,9 +778,20 @@
       window.location.href = "index.html";
     }
 
-    // ── 呼叫 GAS API ─────────────────────────────────────────
-    function callGAS(action, params) {
-      return fetch(GAS_URL, {
+    // ── Drive API（透過 nav.js DriveDB）────────────────────
+    // nav.js 載入後 NBS_NAV.DriveDB 即可使用，這裡建立別名方便呼叫
+    var NBS_DriveDB = null;
+    function _initDriveDB() {
+      if (window.NBS_NAV && window.NBS_NAV.DriveDB) {
+        NBS_DriveDB = window.NBS_NAV.DriveDB;
+        return true;
+      }
+      return false;
+    }
+
+    // ── 身份驗證 GAS（僅 checkAuth / apply 用）───────────
+    function callAuthGAS(action, params) {
+      return fetch(AUTH_GAS_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain" },
         body: JSON.stringify(Object.assign({ action: action }, params || {})),
