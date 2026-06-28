@@ -220,7 +220,11 @@ function checkAndGo(email) {
       u.isAdmin   = r.isAdmin||false;
       localStorage.setItem("nbs_user", JSON.stringify(u));
       showStatus("login-status","success","✓ 驗證成功，正在進入系統…");
-      setTimeout(function(){ window.location.href = "main.html"; }, 800);
+        setTimeout(function(){ 
+        localStorage.removeItem("nbs_current_family");       // ← 新增這行
+        localStorage.removeItem("nbs_current_family_name");  // ← 新增這行（選擇性）
+        window.location.href = "main.html"; 
+      }, 800);
     } else {
       showLogin();
       if (r.status==="申請中") {
