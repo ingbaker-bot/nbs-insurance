@@ -619,7 +619,7 @@ window.addEventListener("nbs_nav_ready", async function(e) {
     const fetchPromises = activeMembers.map(m => {
       return callGAS("readFile", {
         email: currentUser.email,
-        fileType: "person",
+        fileType: "persons",
         fileName: m.name + "_" + m.personId + ".json"
       }).then(pr => {
         if (pr.status === "ok" && pr.content) personDataMap[m.personId] = pr.content;
@@ -1116,7 +1116,7 @@ async function savePolicy() {
     const member = familyData.members.find(m => m.personId === editingPersonId);
     await callGAS("saveFile", {
       email: currentUser.email,
-      fileType: "person",
+      fileType: "persons",
       fileId: editingPersonId,
       fileName: member.name + "_" + editingPersonId + ".json",
       content: person,
@@ -1146,7 +1146,7 @@ async function deletePolicy() {
     const member = familyData.members.find(m => m.personId === editingPersonId);
     await callGAS("saveFile", {
       email: currentUser.email,
-      fileType: "person",
+      fileType: "persons",
       fileId: editingPersonId,
       fileName: member.name + "_" + editingPersonId + ".json",
       content: person,
