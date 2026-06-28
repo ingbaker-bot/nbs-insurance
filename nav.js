@@ -254,6 +254,7 @@
       <button id="nbs-auth-btn" style="padding:12px 24px;background:#378ADD;color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;box-shadow:0 4px 12px rgba(55,138,221,0.3);">
         連結 Google 帳號
       </button>
+      <p style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:12px;">首次使用需要一次性授權</p>
     `;
     document.body.appendChild(overlay);
 
