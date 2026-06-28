@@ -1126,6 +1126,17 @@ async function savePolicy() {
     renderTabs();
     renderPolicies();
 
+    // 若是新增主約，詢問是否繼續新增附約
+    if (!editingPolicy && policy.isMain) {
+      const savedPolicyNo = policy.policyNo;
+      const savedMemberId = editingPersonId;
+      setTimeout(function() {
+        if (confirm("主約已儲存！\n\n是否立即在「" + savedPolicyNo + "」下新增附約？")) {
+          openForm("rider", savedMemberId, savedPolicyNo);
+        }
+      }, 150);
+    }
+
   } catch(e) {
     alert("儲存失敗：" + e.message);
   } finally {
