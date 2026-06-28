@@ -8,7 +8,7 @@
   // 1. 系統核心設定 (請填入你的 API 1 網址)
   // ==========================================
   var AUTH_GAS_URL = "https://script.google.com/macros/s/AKfycbwzDwyZy09189eOJOs-zEwkZOml2_pJOq15nYGtHF2Kyrtv6ag5VY-I2M8sDyrt0iPdZQ/exec"; // 身分驗證用
-  var STORAGE_GAS_URL = "https://script.google.com/macros/s/AKfycbyskv8mVyD-DOinIIn_dhNa6SKkZRXjj5287E59tsi2ohpFFuz3p-0VRgWz9VOiVAbouQ/exec"; // 資料存取用
+  var STORAGE_GAS_URL = "https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec"; // 資料存取用
   
   window._NBS_AUTH_GAS_URL = AUTH_GAS_URL;
   window._NBS_STORAGE_GAS_URL = STORAGE_GAS_URL;
