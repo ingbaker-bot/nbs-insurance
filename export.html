@@ -615,52 +615,6 @@ function getItemStatusEx(key, policies, coverage, targets, covOverrides) {
   return {status:"insufficient", current, target, pct:current/target};
 }
 
-window.addEventListener("nbs_nav_ready", async function(e) {
-  currentUser       = e.detail.user;
-  familyData        = e.detail.familyData;
-  currentPersonId   = e.detail.currentPersonId;
-  familyFileName    = e.detail.familyFileName;
-
-  if (!currentUser || !familyData) {
-    document.getElementById("loading").innerHTML = "載入失敗：請重新登入";
-    return;
-  }
-
-  try {
-    var activeMembers = familyData.members.filter(m => m.role !== "beneficiary_only");
-    
-    var fetchPromises = activeMembers.map(m => {
-      var cacheKey = "nbs_person_" + m.personId;
-      var cachedData = sessionStorage.getItem(cacheKey);
-
-      if (cachedData) {
-        personDataMap[m.personId] = JSON.parse(cachedData);
-        return Promise.resolve();
-      } else {
-        return callGAS("readFile", {
-          email: currentUser.email,
-          fileType: "persons",
-          fileName: m.name + "_" + m.personId + ".json"
-        }).then(pr => {
-          if (pr.status === "ok") {
-            personDataMap[m.personId] = pr.content;
-            sessionStorage.setItem(cacheKey, JSON.stringify(pr.content));
-          }
-        }).catch(err => console.error("讀取 " + m.name + " 失敗", err));
-      }
-    });
-
-    await Promise.all(fetchPromises);
-    document.getElementById("loading").style.display = "none";
-    document.getElementById("content").style.display = "block";
-    renderTabs();
-    renderContent();
-  } catch(err) {
-    console.error("summary.html init error", err);
-    document.getElementById("loading").innerHTML = "載入失敗：" + err.message;
-  }
-});
-
 function renderTabs() {
   var members = familyData.members.filter(m=>m.role!=="beneficiary_only");
   document.getElementById("member-tabs").innerHTML = members.map(m=>`
