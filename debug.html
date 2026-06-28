@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8"/>
+  <title>NBS 診斷工具</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="nav.js"></script>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #1a1a2e; color: #eee; }
+    h2 { color: #4fc3f7; }
+    .ok { color: #81c784; }
+    .err { color: #ef9a9a; }
+    .warn { color: #ffcc02; }
+    pre { background: #0d0d1a; padding: 12px; border-radius: 6px; white-space: pre-wrap; word-break: break-all; }
+    button { margin: 8px 4px; padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-family: monospace; font-size: 13px; }
+    #btn-auth  { background: #1565c0; color: #fff; }
+    #btn-test  { background: #2e7d32; color: #fff; }
+    #btn-clear { background: #b71c1c; color: #fff; }
+  </style>
+</head>
+<body>
+<h2>🔍 NBS Drive API 診斷工具</h2>
+<button id="btn-auth">① 取得 Drive Token</button>
+<button id="btn-test">② 測試 Drive API</button>
+<button id="btn-clear">清除 Session</button>
+<pre id="log">等待操作...</pre>
+
+<script>
+var log = document.getElementById('log');
+function print(msg, cls) {
+  var line = document.createElement('div');
+  line.className = cls || '';
+  line.textContent = new Date().toLocaleTimeString() + ' ' + msg;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+}
+
+// 清除
+document.getElementById('btn-clear').onclick = function() {
+  sessionStorage.clear();
+  localStorage.removeItem('nbs_token');
+  log.innerHTML = '';
+  print('已清除 sessionStorage', 'warn');
+};
+
+// ── 診斷項目 ────────────────────────────────────────────
+window.addEventListener('load', function() {
+  log.innerHTML = '';
+  print('=== 環境檢查 ===');
+  
+  // 1. nav.js
+  print('window.NBS_NAV: ' + (window.NBS_NAV ? '✅ 已載入' : '❌ 未載入'), window.NBS_NAV ? 'ok' : 'err');
+  
+  // 2. GSI
+  setTimeout(function() {
+    print('window.google: ' + (window.google ? '✅' : '❌'), window.google ? 'ok' : 'err');
+    print('google.accounts: ' + (window.google && window.google.accounts ? '✅' : '❌'), 
+      (window.google && window.google.accounts) ? 'ok' : 'err');
+    
+    // 3. localStorage
+    var user = localStorage.getItem('nbs_user');
+    print('nbs_user: ' + (user ? '✅ ' + JSON.parse(user).email : '❌ 未登入'), user ? 'ok' : 'err');
+    
+    // 4. token
+    var token = sessionStorage.getItem('nbs_token');
+    var expiry = sessionStorage.getItem('nbs_token_expiry');
+    print('Drive token: ' + (token ? '✅ 有 (長度:' + token.length + ')' : '❌ 無'), token ? 'ok' : 'warn');
+    if (expiry) {
+      var remain = Math.round((parseInt(expiry) - Date.now()) / 60000);
+      print('Token 剩餘: ' + remain + ' 分鐘', remain > 0 ? 'ok' : 'err');
+    }
+    
+    print('=== SCOPES & CLIENT_ID ===');
+    // 讀 nav.js 內部變數（透過 NBS_NAV 暴露的方式）
+    print('SCOPES: 請看下方 ① 取得Token 時的授權畫面顯示的權限');
+    
+  }, 1500);
+});
+
+// ── Token 授權按鈕 ──────────────────────────────────────
+document.getElementById('btn-auth').onclick = function() {
+  print('=== 嘗試取得 Drive Token ===');
+  
+  if (!window.google || !window.google.accounts) {
+    print('❌ GSI 未載入！請確認 nav.js 上方有 gsi/client script', 'err');
+    return;
+  }
+  
+  // 直接用 nav.js 的 CLIENT_ID（從 window 讀取，若有暴露）
+  var clientId = window._NBS_CLIENT_ID || '524622074888-iuij6ib2qvr0qddvvrpfqnmfbt85gvti.apps.googleusercontent.com';
+  var scope = 'https://www.googleapis.com/auth/drive.file';
+  
+  print('Client ID: ' + clientId.substring(0, 20) + '...', 'ok');
+  print('Scope: ' + scope, 'ok');
+  
+  var client = google.accounts.oauth2.initTokenClient({
+    client_id: clientId,
+    scope: scope,
+    callback: function(resp) {
+      if (resp.error) {
+        print('❌ 授權錯誤: ' + resp.error + ' / ' + (resp.error_description || ''), 'err');
+        print('  → 若是 access_denied: 確認測試使用者或 scope 設定', 'warn');
+      } else {
+        print('✅ Token 取得成功！', 'ok');
+        print('  access_token 長度: ' + resp.access_token.length, 'ok');
+        sessionStorage.setItem('nbs_token', resp.access_token);
+        sessionStorage.setItem('nbs_token_expiry', Date.now() + 3000000);
+      }
+    },
+    error_callback: function(err) {
+      print('❌ error_callback: ' + JSON.stringify(err), 'err');
+    }
+  });
+  
+  client.requestAccessToken({ prompt: 'consent' });
+};
+
+// ── 測試 Drive API ──────────────────────────────────────
+document.getElementById('btn-test').onclick = async function() {
+  print('=== 測試 Drive API ===');
+  var token = sessionStorage.getItem('nbs_token');
+  if (!token) { print('❌ 先點「取得 Token」', 'err'); return; }
+  
+  try {
+    // 1. 列出根目錄檔案
+    print('呼叫 drive/v3/files?q=name=\'NBS雲端保單體檢\'...');
+    var r1 = await fetch(
+      "https://www.googleapis.com/drive/v3/files?q=" + 
+      encodeURIComponent("name='NBS雲端保單體檢' and trashed=false") +
+      "&fields=files(id,name)",
+      { headers: { Authorization: 'Bearer ' + token } }
+    );
+    var d1 = await r1.json();
+    if (d1.error) {
+      print('❌ Drive API 錯誤: ' + d1.error.code + ' ' + d1.error.message, 'err');
+      print('  → 若是 403: Drive API 可能未在 GCP 啟用', 'warn');
+    } else {
+      print('✅ Drive API 回應正常', 'ok');
+      print('  找到資料夾: ' + JSON.stringify(d1.files), 'ok');
+    }
+    
+    // 2. 嘗試建立測試資料夾
+    print('嘗試建立測試資料夾...');
+    var r2 = await fetch('https://www.googleapis.com/drive/v3/files', {
+      method: 'POST',
+      headers: { 
+        Authorization: 'Bearer ' + token,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        name: 'NBS_診斷測試_可刪除',
+        mimeType: 'application/vnd.google-apps.folder',
+        appProperties: { nbs: 'test' }
+      })
+    });
+    var d2 = await r2.json();
+    if (d2.error) {
+      print('❌ 建立資料夾失敗: ' + d2.error.code + ' ' + d2.error.message, 'err');
+    } else {
+      print('✅ 成功建立資料夾 id=' + d2.id, 'ok');
+      print('  （請到 Google Drive 手動刪除「NBS_診斷測試_可刪除」）', 'warn');
+    }
+    
+  } catch(e) {
+    print('❌ Fetch 例外: ' + e.message, 'err');
+  }
+};
+</script>
+</body>
+</html>
