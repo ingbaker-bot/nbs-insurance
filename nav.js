@@ -8,7 +8,7 @@
   // 1. 系統核心設定 (請填入你的 API 1 網址)
   // ==========================================
   var AUTH_GAS_URL = "https://script.google.com/macros/s/AKfycbwzDwyZy09189eOJOs-zEwkZOml2_pJOq15nYGtHF2Kyrtv6ag5VY-I2M8sDyrt0iPdZQ/exec"; // 身分驗證用
-  var STORAGE_GAS_URL = "https://script.google.com/macros/s/AKfycbyskv8mVyD-DOinIIn_dhNa6SKkZRXjj5287E59tsi2ohpFFuz3p-0VRgWz9VOiVAbouQ/exec"; // 資料存取用
+  var STORAGE_GAS_URL = "https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec"; // 資料存取用（同 main.html）
   
   window._NBS_AUTH_GAS_URL = AUTH_GAS_URL;
   window._NBS_STORAGE_GAS_URL = STORAGE_GAS_URL;
@@ -191,13 +191,25 @@
         });
         return await res.json();
       } else {
-        // GAS API2：全部走 POST（GAS 只有 doPost）
-        const res = await fetch(STORAGE_GAS_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain" },
-          body: JSON.stringify(Object.assign({ action: action }, params || {}))
-        });
-        return await res.json();
+        // 寫入用 POST，讀取用 GET（和 main.html 一致）
+        const writeActions = ["saveFile","saveVisit","deleteVisit","deleteFamily","deleteFile"];
+        if (writeActions.indexOf(action) !== -1) {
+          const res = await fetch(STORAGE_GAS_URL, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain" },
+            body: JSON.stringify(Object.assign({ action: action }, params || {}))
+          });
+          return await res.json();
+        } else {
+          const url = new URL(STORAGE_GAS_URL);
+          url.searchParams.set("action", action);
+          Object.entries(params || {}).forEach(function(kv) {
+            var k = kv[0], v = kv[1];
+            if (typeof v === "object") url.searchParams.set(k, encodeURIComponent(JSON.stringify(v)));
+            else if (v !== null && v !== undefined) url.searchParams.set(k, v);
+          });
+          return fetch(url.toString()).then(function(r){ return r.json(); });
+        }
       }
     },
     onMemberChange: null,
