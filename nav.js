@@ -8,7 +8,6 @@
   // 1. 系統核心設定 (請填入你的 API 1 網址)
   // ==========================================
   var AUTH_GAS_URL = "https://script.google.com/macros/s/AKfycbwzDwyZy09189eOJOs-zEwkZOml2_pJOq15nYGtHF2Kyrtv6ag5VY-I2M8sDyrt0iPdZQ/exec"; // 身分驗證用
-  var CLIENT_ID = "283591037159-ilcpl2sq7jopkdbp92ldbjti6dm7bhd5.apps.googleusercontent.com";
   var STORAGE_GAS_URL = "https://script.google.com/macros/s/AKfycbyskv8mVyD-DOinIIn_dhNa6SKkZRXjj5287E59tsi2ohpFFuz3p-0VRgWz9VOiVAbouQ/exec"; // 資料存取用
   
   window._NBS_AUTH_GAS_URL = AUTH_GAS_URL;
@@ -31,6 +30,7 @@
   var _user = null;
   var _tokenClient = null;
   var _accessToken = null;
+  var CLIENT_ID = "283591037159-ilcpl2sq7jopkdbp92ldbjti6dm7bhd5.apps.googleusercontent.com"; // Google OAuth Client ID
   var SCOPES = "https://www.googleapis.com/auth/drive.file";
   // ==========================================
   // 2. Google Drive 直接存取引擎 (DriveDB)
@@ -225,8 +225,8 @@
     if (savedUser) _user = JSON.parse(savedUser);
 
     // 【關鍵修正】檢查是否有未過期的 Token
-    var storedToken = sessionStorage.getItem("nbs_token");
-    var tokenExpiry = sessionStorage.getItem("nbs_token_expiry");
+    var storedToken = localStorage.getItem("nbs_token");
+    var tokenExpiry = localStorage.getItem("nbs_token_expiry");
 
     if (storedToken && tokenExpiry && Date.now() < parseInt(tokenExpiry)) {
       // 若 Token 仍在有效時間內，直接取用並載入資料，不彈出授權視窗
@@ -241,32 +241,14 @@
             client_id: CLIENT_ID,
             scope: SCOPES,
             callback: (tokenResponse) => {
-              // 無論成功失敗，先移除授權遮罩
-              var overlay = document.getElementById("nbs-auth-overlay");
-              if (overlay) overlay.remove();
-
               if (tokenResponse && tokenResponse.access_token) {
                 _accessToken = tokenResponse.access_token;
-                sessionStorage.setItem("nbs_token", _accessToken);
-                sessionStorage.setItem("nbs_token_expiry", Date.now() + 3000000);
+                // 將 Token 存入 sessionStorage 記住 50 分鐘 (3,000,000 毫秒)
+                localStorage.setItem("nbs_token", _accessToken);
+                localStorage.setItem("nbs_token_expiry", Date.now() + 3000000);
                 _loadData(opts);
-              } else {
-                // 授權失敗（用戶拒絕或其他錯誤），重新顯示授權畫面
-                console.error("授權失敗", tokenResponse);
-                _triggerAuth();
               }
             },
-            error_callback: (err) => {
-              // popup_closed = 用戶關掉彈窗，重新顯示按鈕讓他再試
-              var overlay = document.getElementById("nbs-auth-overlay");
-              if (overlay) {
-                var btn = document.getElementById("nbs-auth-btn");
-                var hint = document.getElementById("nbs-auth-hint");
-                if (btn) { btn.textContent = "連結 Google 帳號"; btn.disabled = false; btn.style.opacity = "1"; }
-                if (hint) hint.style.display = "none";
-              }
-              console.warn("授權視窗關閉或錯誤", err);
-            }
           });
           
           // 觸發授權
@@ -277,6 +259,7 @@
   }
 
   function _triggerAuth() {
+    // 建立一個滿版的授權提示畫面，要求使用者手動點擊（因為瀏覽器禁止自動彈出視窗）
     var overlay = document.createElement("div");
     overlay.id = "nbs-auth-overlay";
     overlay.style.cssText = "position:fixed;inset:0;background:#1A2B4A;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;padding:20px;text-align:center;";
@@ -289,25 +272,12 @@
       <button id="nbs-auth-btn" style="padding:12px 24px;background:#378ADD;color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;box-shadow:0 4px 12px rgba(55,138,221,0.3);">
         連結 Google 帳號
       </button>
-      <p id="nbs-auth-hint" style="margin-top:16px;font-size:12px;color:rgba(255,255,255,0.4);display:none;">
-        授權視窗已開啟，請在跳出視窗中完成授權…
-      </p>
     `;
     document.body.appendChild(overlay);
 
-    // ── 關鍵修正：不在點擊時移除 overlay ──────────────────
-    // 移除 overlay 會導致 DOM 焦點消失，瀏覽器安全機制會立刻關閉彈窗
-    // 正確做法：點擊後只改變按鈕狀態，等 token callback 成功後才移除
     document.getElementById("nbs-auth-btn").onclick = function() {
-      var btn = document.getElementById("nbs-auth-btn");
-      var hint = document.getElementById("nbs-auth-hint");
-      btn.textContent = "授權中…";
-      btn.disabled = true;
-      btn.style.opacity = "0.6";
-      if (hint) hint.style.display = "block";
-      // overlay 保留在 DOM，確保彈窗不被瀏覽器關閉
-      // overlay 會在 _setup 的 callback 收到 token 後由 _loadData 流程自然蓋掉
-      _tokenClient.requestAccessToken({ prompt: "" });
+      _tokenClient.requestAccessToken();
+      overlay.remove(); // 點擊後移除遮罩
     };
   }
 
@@ -347,6 +317,11 @@
     window.dispatchEvent(new CustomEvent("nbs_nav_ready", {
       detail: { user:_user, familyData: isError ? null : _family, currentPersonId: isError ? null : _personId, familyFileName:fn }
     }));
+  }
+function _setup(opts) {
+    _injectStyles();
+    _insertNav();          // 插入側欄 DOM（空的）
+    _loadData(opts);       // 非同步載入資料後填充側欄
   }
 
   // ── 插入側欄 DOM（不動頁面內容）────────────────────────
@@ -431,8 +406,62 @@
     }
   }
 
+  // ── 載入資料 ────────────────────────────────────────────
+  function _loadData(opts) {
+    var saved = localStorage.getItem("nbs_user");
+    if (!saved) { window.location.href = "index.html"; return; }
+    _user = JSON.parse(saved);
 
-    // ── 渲染所有導覽元件 ─────────────────────────────────────
+    var fn = localStorage.getItem("nbs_current_family");
+    if (!fn) { window.location.href = "main.html"; return; }
+
+    // sessionStorage 快取：同一次瀏覽切換功能頁不重複呼叫 GAS
+    var cacheKey = "nbs_fam_" + fn;
+    var cached = sessionStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        _family = JSON.parse(cached);
+        _personId = localStorage.getItem("nbs_current_person");
+        if (!_personId) {
+          var prim = _family.members.find(function(m){ return m.role==="primary"; });
+          _personId = prim ? prim.personId : (_family.members[0] && _family.members[0].personId);
+          if (_personId) localStorage.setItem("nbs_current_person", _personId);
+        }
+        _renderAll();
+        window.dispatchEvent(new CustomEvent("nbs_nav_ready", {
+          detail: { user:_user, familyData:_family, currentPersonId:_personId, familyFileName:fn }
+        }));
+        return;
+      } catch(e) { sessionStorage.removeItem(cacheKey); }
+    }
+
+    // 快取沒有 → 呼叫 GAS
+    _callGAS("readFile", { email: _user.email, fileType: "family", fileName: fn })
+      .then(function(fr) {
+        _family = fr.content;
+        try { sessionStorage.setItem(cacheKey, JSON.stringify(_family)); } catch(e) {}
+        _personId = localStorage.getItem("nbs_current_person");
+        if (!_personId) {
+          var prim = _family.members.find(function(m){ return m.role==="primary"; });
+          _personId = prim ? prim.personId : (_family.members[0] && _family.members[0].personId);
+          if (_personId) localStorage.setItem("nbs_current_person", _personId);
+        }
+        _renderAll();
+        window.dispatchEvent(new CustomEvent("nbs_nav_ready", {
+          detail: { user:_user, familyData:_family, currentPersonId:_personId, familyFileName:fn }
+        }));
+      })
+      .catch(function(e) {
+        console.error("NBS_NAV load error", e);
+        // 若發生錯誤，提示使用者確認授權
+        alert("系統偵測到您尚未開通雲端空間，請在跳出的視窗中點擊「允許」，以啟用個人保單體檢功能。");
+        window.dispatchEvent(new CustomEvent("nbs_nav_ready", {
+        detail: { user:_user, familyData:null, currentPersonId:null, familyFileName:fn }
+        }));
+      });
+  }
+
+  // ── 渲染所有導覽元件 ─────────────────────────────────────
   function _renderAll() {
     _renderSidebar();
     _renderBottomTab();
@@ -820,7 +849,7 @@
           // 更新家庭
           await _callGAS_POST("saveFile", { email:_user.email, fileType:"family", fileId:_family.id||"", fileName:_family.familyName+"_f_"+(_family.id||"")+".json", content:_family });
           // 清除 sessionStorage 快取
-          sessionStorage.clear();
+          sessionStorage.clear(); localStorage.removeItem("nbs_token"); localStorage.removeItem("nbs_token_expiry");
           if (typeof NBS_NAV.onMemberChange === "function") NBS_NAV.onMemberChange(_editingPersonId);
         }
       } else {
@@ -832,7 +861,7 @@
         _family.members.push({ personId:newId, name:name, role:"secondary", relation:rel, birthDate:birth||null });
         await _callGAS_POST("saveFile", { email:_user.email, fileType:"person", fileId:newId, fileName:name+"_"+newId+".json", content:newPerson });
         await _callGAS_POST("saveFile", { email:_user.email, fileType:"family", fileId:_family.id||"", fileName:localStorage.getItem("nbs_current_family"), content:_family });
-        sessionStorage.clear();
+        sessionStorage.clear(); localStorage.removeItem("nbs_token"); localStorage.removeItem("nbs_token_expiry");
       }
       NBS_NAV._closeMemberModal();
       _renderSidebar();
@@ -852,12 +881,23 @@
     return (d.getFullYear()-1911)+"年"+(d.getMonth()+1)+"月"+d.getDate()+"日";
   }
   function _debounce(fn, ms) { var t; return function(){ clearTimeout(t); t=setTimeout(fn,ms); }; }
-  // _callGAS_POST / _callGAS → 統一委派給 NBS_NAV.callGAS（Drive API + token）
   function _callGAS_POST(action, params) {
-    return NBS_NAV.callGAS(action, params);
+    return fetch(GAS_URL, {
+      method:"POST",
+      headers:{"Content-Type":"text/plain"},
+      body:JSON.stringify(Object.assign({action:action},params))
+    }).then(function(r){ return r.json(); });
   }
+
   function _callGAS(action, params) {
-    return NBS_NAV.callGAS(action, params);
+    var url = new URL(GAS_URL);
+    url.searchParams.set("action", action);
+    Object.entries(params||{}).forEach(function(kv){
+      var k=kv[0],v=kv[1];
+      if(typeof v==="object") url.searchParams.set(k,encodeURIComponent(JSON.stringify(v)));
+      else if(v!==null&&v!==undefined) url.searchParams.set(k,v);
+    });
+    return fetch(url.toString()).then(function(r){ return r.json(); });
   }
 
   // ── 樣式 ─────────────────────────────────────────────────
