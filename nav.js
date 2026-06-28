@@ -312,7 +312,7 @@
     var fn = localStorage.getItem("nbs_current_family");
     if (!fn) { window.location.href = "main.html"; return; }
 
-    DriveDB.readFile(_user.email, "family", fn)
+    DriveDB.readFile(_user.email, "families", fn)
       .then(function(fr) {
         if (!fr || fr.status === "not_found" || !fr.content) {
           _finishLoad(fn, true); return;
