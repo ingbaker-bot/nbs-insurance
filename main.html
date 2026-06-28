@@ -778,13 +778,12 @@
 
     // ── 呼叫 GAS API ─────────────────────────────────────────
     function callGAS(action, params) {
-  if (action === "saveFile") {
-    return fetch(GAS_URL, {
+      return fetch(GAS_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({ action, ...params }),
-    }).then(r => r.json());
-  }
+      body: JSON.stringify(Object.assign({ action: action }, params || {})),
+      }).then(r => r.json());
+    }
   
       const url = new URL(GAS_URL);
       url.searchParams.set("action", action);
