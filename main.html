@@ -571,7 +571,7 @@
           <div class="family-avatar">${f.familyName[0] || "?"}</div>
           <div class="family-info">
             <div class="family-name">${f.familyName}</div>
-            <div class="family-meta">${f.memberCount} 位成員　·　分析日 ${toRoc(f.analysisDate)}</div>
+            <div class="family-meta">${f.memberCount || (f.members && f.members.length) || 0} 位成員　·　分析日 ${toRoc(f.analysisDate)}</div>
           </div>
           <div class="chevron">›</div>
         </div>
@@ -843,7 +843,7 @@
           try {
             var fr = await driveRequest("drive/v3/files/" + file.id + "?alt=media");
             var f = await fr.json();
-            families.push(Object.assign({}, f, { fileName: file.name }));
+            families.push(Object.assign({}, f, { fileName: file.name, memberCount: f.memberCount || (f.members && f.members.length) || 0 }));
           } catch(e) {}
         }
         return { status: "ok", families };
