@@ -516,6 +516,15 @@ var COVERAGE_GROUPS_EX = [
     { label:"手術看護療養金", keys:["surg_nurse_max", "surg_nurse"], unit:"元" },
     { label:"保險給付限制", keys:["surg_limit"], unit:"萬元" },
   ]},
+  { label:"失能長照", color:"#27500A", items:[
+    { label:"長照/長看關懷", keys:["ltc_care"], unit:"萬元" },
+    { label:"長期照護療養 (月)", keys:["ltc_monthly"], unit:"萬元/月" },
+    { label:"生活扶助/重大傷病", keys:["ltc_life"], unit:"萬元/月" },
+    { label:"特定傷病 (年)", keys:["ltc_yr"], unit:"萬元/年" },
+    { label:"特定傷病 (月)", keys:["ltc_mo"], unit:"萬元/月" },
+    { label:"失能(殘廢)保險金", keys:["ltc_dis_amt"], unit:"萬元" },
+    { label:"失能生活扶助金", keys:["ltc_dis_life"], unit:"萬元/月" },
+  ]},
   { label:"癌症醫療", color:"#E74C3C", items:[
     { label:"低侵襲/特定癌症", keys:["can_low"], unit:"元" },
     { label:"初次罹癌 (一次)", keys:["can_first"], unit:"萬元" },
@@ -534,15 +543,6 @@ var COVERAGE_GROUPS_EX = [
     { label:"癌症給付總限額", keys:["can_total"], unit:"萬元" },
     { label:"安寧照護", keys:["can_hospice"], unit:"萬元" },
     { label:"癌症身故", keys:["can_death"], unit:"萬元" },
-  ]},
-  { label:"失能長照", color:"#27500A", items:[
-    { label:"長照/長看關懷", keys:["ltc_care"], unit:"萬元" },
-    { label:"長期照護療養 (月)", keys:["ltc_monthly"], unit:"萬元/月" },
-    { label:"生活扶助/重大傷病", keys:["ltc_life"], unit:"萬元/月" },
-    { label:"特定傷病 (年)", keys:["ltc_yr"], unit:"萬元/年" },
-    { label:"特定傷病 (月)", keys:["ltc_mo"], unit:"萬元/月" },
-    { label:"失能(殘廢)保險金", keys:["ltc_dis_amt"], unit:"萬元" },
-    { label:"失能生活扶助金", keys:["ltc_dis_life"], unit:"萬元/月" },
   ]},
 ];
 
@@ -1185,7 +1185,7 @@ function renderBlock(key){
 
     // 各項保障加總（與 summary.html 相同格式）
     html+='<div style="font-size:11px;font-weight:500;color:#999;margin-bottom:8px">各項保障加總</div>';
-    html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">';
+    html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-items:start">';
     COVERAGE_GROUPS_EX.forEach(function(g){
       html+='<div style="background:#fff;border:1px solid #e8e8e8;border-radius:8px;overflow:hidden;border-top:3px solid '+g.color+'">'+
         '<div style="display:flex;align-items:center;padding:7px 12px;background:'+g.color+'0D;border-bottom:1px solid #f0f0f0">'+
