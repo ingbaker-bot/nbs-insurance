@@ -381,11 +381,11 @@ function getItemStatus(key, policies, coverage, targets, covOverrides) {
   return {status:"insufficient", current, target, pct:current/target};
 }
 
-window.addEventListener("nbs_nav_ready", async function(e) {
-  currentUser       = e.detail.user;
-  familyData        = e.detail.familyData;
-  currentPersonId   = e.detail.currentPersonId;
-  familyFileName    = e.detail.familyFileName;
+async function initPage(detail) {
+  currentUser       = detail.user;
+  familyData        = detail.familyData;
+  currentPersonId   = detail.currentPersonId;
+  familyFileName    = detail.familyFileName;
 
   if (!currentUser || !familyData) {
     document.getElementById("loading").innerHTML = "載入失敗：請重新登入";
@@ -425,6 +425,19 @@ window.addEventListener("nbs_nav_ready", async function(e) {
     console.error("summary.html init error", err);
     document.getElementById("loading").innerHTML = "載入失敗：" + err.message;
   }
+}
+
+// 支援兩種事件：nav.js 自行載入 或 family.html 先載入後通知
+window.addEventListener("nbs_nav_ready",     function(e) { initPage(e.detail); });
+window.addEventListener("nbs_family_loaded", function(e) {
+  if (familyData) return; // 已初始化
+  var u = JSON.parse(localStorage.getItem("nbs_user") || "{}");
+  initPage({
+    user:            u,
+    familyData:      e.detail.familyData,
+    currentPersonId: e.detail.familyData && e.detail.familyData.members && e.detail.familyData.members[0] && e.detail.familyData.members[0].personId,
+    familyFileName:  e.detail.familyFileName
+  });
 });
 
 function renderTabs() {

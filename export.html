@@ -1005,6 +1005,21 @@ NBS_NAV.onMemberChange = function(pid) {
   currentPersonId = pid;
   if (typeof renderContent  === "function") renderContent();
 };
+
+// 支援兩種事件：nav.js 自行載入 或 family.html 先載入後通知
+window.addEventListener("nbs_family_loaded", function(e) {
+  if (typeof familyData !== "undefined" && familyData) return; // 已初始化
+  var u = JSON.parse(localStorage.getItem("nbs_user") || "{}");
+  window.dispatchEvent(new CustomEvent("nbs_nav_ready", {
+    detail: {
+      user:            u,
+      familyData:      e.detail.familyData,
+      currentPersonId: e.detail.familyData && e.detail.familyData.members &&
+                       e.detail.familyData.members[0] && e.detail.familyData.members[0].personId,
+      familyFileName:  e.detail.familyFileName
+    }
+  }));
+});
 NBS_NAV.init({ page: "summary" });
 
 // ── 渲染各區塊 HTML ───────────────────────────────────────
@@ -1623,7 +1638,22 @@ if (typeof NBS_NAV !== "undefined") {
         updatePrevBtn();
       }
     };
-    NBS_NAV.init({ page: "export" }); 
+    
+// 支援兩種事件：nav.js 自行載入 或 family.html 先載入後通知
+window.addEventListener("nbs_family_loaded", function(e) {
+  if (typeof familyData !== "undefined" && familyData) return; // 已初始化
+  var u = JSON.parse(localStorage.getItem("nbs_user") || "{}");
+  window.dispatchEvent(new CustomEvent("nbs_nav_ready", {
+    detail: {
+      user:            u,
+      familyData:      e.detail.familyData,
+      currentPersonId: e.detail.familyData && e.detail.familyData.members &&
+                       e.detail.familyData.members[0] && e.detail.familyData.members[0].personId,
+      familyFileName:  e.detail.familyFileName
+    }
+  }));
+});
+NBS_NAV.init({ page: "export" }); 
 }
 </script>
 </body>
