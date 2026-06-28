@@ -405,7 +405,7 @@ window.addEventListener("nbs_nav_ready", async function(e) {
       } else {
         return callGAS("readFile", {
           email: currentUser.email,
-          fileType: "person",
+          fileType: "persons",
           fileName: m.name + "_" + m.personId + ".json"
         }).then(pr => {
           if (pr.status === "ok") {

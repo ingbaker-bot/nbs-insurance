@@ -173,7 +173,7 @@ window.addEventListener("nbs_nav_ready", async function(e) {
     const fetchPromises = activeMembers.map(m => {
       return callGAS("readFile", {
         email: currentUser.email,
-        fileType: "person",
+        fileType: "persons",
         fileName: m.name + "_" + m.personId + ".json"
       }).then(pr => {
         if (pr.status === "ok") personDataMap[m.personId] = pr.content;
@@ -598,7 +598,7 @@ async function saveCoverage(isAutoSave = false) {
   try {
     await callGAS("saveFile", {
       email: currentUser.email,
-      fileType: "person",
+      fileType: "persons",
       fileId: currentPersonId,
       fileName: member.name + "_" + currentPersonId + ".json",
       content: person

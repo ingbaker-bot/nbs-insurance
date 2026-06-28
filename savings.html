@@ -248,7 +248,7 @@ async function loadData() {
       const cacheKey = "nbs_person_" + m.personId;
       // 每次重新讀取，確保保單異動即時反映
       const pr = await callGAS("readFile", {
-        email: currentUser.email, fileType:"person",
+        email: currentUser.email, fileType:"persons",
         fileName: m.name + "_" + m.personId + ".json"
       });
       if (pr.status === "ok") {
@@ -656,7 +656,7 @@ async function saveAll() {
   try {
     const member = familyData.members.find(m => m.personId === currentPersonId);
     await callGAS("saveFile", {
-      email: currentUser.email, fileType:"person", fileId: currentPersonId,
+      email: currentUser.email, fileType:"persons", fileId: currentPersonId,
       fileName: member.name + "_" + currentPersonId + ".json", content: person,
     });
     sessionStorage.setItem("nbs_person_" + currentPersonId, JSON.stringify(person));

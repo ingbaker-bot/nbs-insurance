@@ -630,7 +630,7 @@ window.addEventListener("nbs_nav_ready", async function(e) {
       } else {
         return callGAS("readFile", {
           email: currentUser.email,
-          fileType: "person",
+          fileType: "persons",
           fileName: m.name + "_" + m.personId + ".json"
         }).then(pr => {
           if (pr.status === "ok") {
@@ -1581,7 +1581,7 @@ window.addEventListener("nbs_nav_ready", async function(e) {
       } else {
         return gas("readFile", {
           email: currentUser.email,
-          fileType: "person",
+          fileType: "persons",
           fileName: mem.name + "_" + mem.personId + ".json"
         }).then(function(pr) {
           if (pr.status === "ok") {
