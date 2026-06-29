@@ -215,7 +215,7 @@ function buildLoginUrl(hint, silent) {
     client_id:     CLIENT_ID,
     redirect_uri:  REDIRECT,
     response_type: "token id_token",
-    scope:         "openid email profile https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file",
+    scope:         "openid email profile https://www.googleapis.com/auth/drive.file",
     nonce:         Math.random().toString(36).slice(2),
     prompt:        silent ? "none" : "select_account consent",
     state:         silent ? "silent" : "normal",
