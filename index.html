@@ -142,15 +142,13 @@ window.onload = function() {
     return;
   }
 
-  // ── OAuth 回調（正常登入 或 靜默授權）────────────────
-  if (idToken && accToken) {
+  // ── OAuth 回調（id_token 回來）────────────────
+  if (idToken) {
     clearUrl();
     var info = parseJwt(idToken);
     if (info && info.email) {
-      // 計算 token 到期時間
-      var expiry = Date.now() + ((parseInt(expiresIn,10)||3600) * 1000);
       if (isSilent) {
-        // 靜默授權成功：token 已更新，直接進主畫面
+        // 靜默授權成功：直接進主畫面
         goMain();
       } else {
         saveAndCheck(info.email, info.name||"", info.picture||"");
