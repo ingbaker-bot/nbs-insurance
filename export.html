@@ -668,7 +668,7 @@ function buildDonutChartEx(active, coverage, targets, covOverrides) {
   var allItems = GAP_GROUPS_EX.flatMap(g=>g.items);
   var n = allItems.length;
   
-  var cx=200, cy=140, OR=90, IR=48;
+  var cx=300, cy=210, OR=135, IR=72;
   var gapA=0.03, sliceA=(Math.PI*2-n*gapA)/n;
 
   var angle=-Math.PI/2;
@@ -744,7 +744,7 @@ function buildDonutChartEx(active, coverage, targets, covOverrides) {
     labels += `
       <polyline points="${x0},${y0} ${x1},${y1} ${x2},${y2}" fill="none" stroke="${item.color}60" stroke-width="1.2"/>
       <circle cx="${x0}" cy="${y0}" r="2" fill="${item.color}"/>
-      <text x="${textX}" y="${y2+4}" text-anchor="${textAnchor}" style="font-size:22px;fill:${textColor};font-weight:${fw};letter-spacing:0.03em">${prefix}${item.label}</text>
+      <text x="${textX}" y="${y2+4}" text-anchor="${textAnchor}" style="font-size:11px;fill:${textColor};font-weight:${fw};letter-spacing:0.03em">${prefix}${item.label}</text>
     `;
   });
 
@@ -754,13 +754,13 @@ function buildDonutChartEx(active, coverage, targets, covOverrides) {
 
   return `<div style="display:flex;flex-direction:column;width:100%">
     <div style="display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap;margin-bottom:20px;padding:0">
-      <svg viewBox="0 0 400 280" style="width:100%; max-width:440px; flex-shrink:0;">
+      <svg viewBox="0 0 600 420" style="width:100%; max-width:660px; flex-shrink:0;">
         ${paths}
         ${labels}
-        <text x="${cx}" y="${cy-14}" text-anchor="middle" style="font-size:22px;fill:#888">✅ 達標</text>
-        <text x="${cx}" y="${cy+4}"  text-anchor="middle" style="font-size:48px;font-weight:bold;fill:#333">${okN}</text>
-        <text x="${cx}" y="${cy+20}" text-anchor="middle" style="font-size:20px;fill:#E74C3C">❌ 缺口 ${gapN}</text>
-        <text x="${cx}" y="${cy+34}" text-anchor="middle" style="font-size:20px;fill:#F5A623">⚠ 不足 ${insN}</text>
+        <text x="${cx}" y="${cy-14}" text-anchor="middle" style="font-size:13px;fill:#888">✅ 達標</text>
+        <text x="${cx}" y="${cy+4}"  text-anchor="middle" style="font-size:28px;font-weight:bold;fill:#333">${okN}</text>
+        <text x="${cx}" y="${cy+20}" text-anchor="middle" style="font-size:13px;fill:#E74C3C">❌ 缺口 ${gapN}</text>
+        <text x="${cx}" y="${cy+34}" text-anchor="middle" style="font-size:13px;fill:#F5A623">⚠ 不足 ${insN}</text>
       </svg>
       <div style="min-width:170px;background:#fafafa;padding:12px 16px;border-radius:10px;border:1px solid #f0f0f0">
         ${legendFamily}
