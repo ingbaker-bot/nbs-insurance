@@ -520,19 +520,6 @@
       document.getElementById("analysis-date").value = today;
       updateAnalysisRoc();
 
-      // 初始化 DriveDB（從 nav.js 取得）
-      if (!_initDriveDB()) {
-        // nav.js 還沒準備好，等一下再試
-        var retry = 0;
-        var t = setInterval(function() {
-          if (_initDriveDB() || ++retry > 20) {
-            clearInterval(t);
-            loadFamilies();
-          }
-        }, 100);
-        return;
-      }
-      // 載入家庭列表
       loadFamilies();
     };
 
@@ -542,7 +529,7 @@
         '<div class="loading-state"><span class="spinner"></span>載入中…</div>';
 
       // 直接用 DriveDB（nav.js）讀取使用者自己的 Drive
-      NBS_DriveDB.listFamilies(currentUser.email)
+      callGAS("listFamilies", {})
         .then(result => {
           allFamilies = result.families || [];
           renderFamilies(allFamilies);
@@ -702,8 +689,8 @@
       };
 
       // 先儲存個人 JSON，再儲存家庭 JSON
-      NBS_DriveDB.saveFile(currentUser.email, "persons", primaryName + "_" + personId + ".json", personData)
-      .then(() => NBS_DriveDB.saveFile(currentUser.email, "families", familyName + "_" + familyId + ".json", familyData))
+      callGAS("saveFile", { fileType: "persons", fileName: primaryName + "_" + personId + ".json", content: personData })
+      .then(() => callGAS("saveFile", { fileType: "families", fileName: familyName + "_" + familyId + ".json", content: familyData }))
       .then(result => {
         btn.disabled = false;
         btn.textContent = "建立家庭";
@@ -778,19 +765,12 @@
       window.location.href = "index.html";
     }
 
-    // ── Drive API（透過 nav.js DriveDB）────────────────────
-    // nav.js 載入後 NBS_NAV.DriveDB 即可使用，這裡建立別名方便呼叫
-    var NBS_DriveDB = null;
-    function _initDriveDB() {
-      if (window.NBS_NAV && window.NBS_NAV.DriveDB) {
-        NBS_DriveDB = window.NBS_NAV.DriveDB;
-        return true;
+    // ── 呼叫 GAS（統一透過 nav.js）─────────────────────────
+    function callGAS(action, params) {
+      if (window.NBS_NAV && typeof NBS_NAV.callGAS === "function") {
+        return NBS_NAV.callGAS(action, params);
       }
-      return false;
-    }
-
-    // ── 身份驗證 GAS（僅 checkAuth / apply 用）───────────
-    function callAuthGAS(action, params) {
+      // fallback：直接呼叫 GAS
       return fetch(AUTH_GAS_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain" },
