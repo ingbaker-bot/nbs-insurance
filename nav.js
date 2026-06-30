@@ -30,37 +30,41 @@
   // ==========================================
   // 2. GAS API 呼叫（統一 POST）
   // ==========================================
-  // 韌性補強：GAS（尤其是免費帳號）偶爾會因為配額/暫時性問題卡住、
-  // 逾時或回傳非 JSON 的錯誤頁。以前是 N+1 次分散請求，單次失敗影響有限；
-  // 現在合併成 1 次 readFamilyBundle 後，這一次失敗就會讓整頁掛掉，
-  // 所以這裡加上「失敗自動重試 1 次」，緩解這類偶發性問題。
-  function _fetchOnce(body) {
-    return fetch(GAS_URL, {
+  // ── 替換 nav.js 第 2 區塊 (約第 25 行開始) ──
+  // 注意：需要讓 _fetchOnce 接收 url 參數
+  function _fetchOnce(url, body) {
+    return fetch(url, {
       method:  "POST",
       headers: { "Content-Type": "text/plain" },
       body:    JSON.stringify(body)
     }).then(function(r) {
       return r.text().then(function(text) {
-        try {
-          return JSON.parse(text);
-        } catch (e) {
-          // 回傳的不是 JSON（例如 Google 錯誤頁），視為失敗，讓外層重試
-          throw new Error("GAS 回應非 JSON（可能是逾時或配額限制）：" + text.slice(0, 80));
-        }
+        try { return JSON.parse(text); } 
+        catch (e) { throw new Error("GAS 回應非 JSON：" + text.slice(0, 80)); }
       });
     });
   }
 
   function _gas(action, params) {
     var body = Object.assign({ action: action }, params || {});
-    // 加入使用者 email 讓 API1 知道要轉發給哪個 Shell
     var user = _user || JSON.parse(localStorage.getItem("nbs_user") || "{}");
     if (user.email) body.email = user.email;
 
-    return _fetchOnce(body).catch(function(err) {
-      console.warn("[nav] GAS 請求失敗，1 秒後重試一次：", err.message || err);
+    // ── 核心修改：判斷是否直連 ──
+    var targetUrl = GAS_URL; // 預設 API 1
+    var shellUrl = localStorage.getItem("nbs_shell_url");
+    var isAuthAction = (action === 'checkAuth' || action === 'registerShell' || action === 'apply');
+    var isAdmin = user && user.isAdmin;
+
+    // 非驗證動作 + 非管理員 + 有專屬網址 ➔ 直連！
+    if (!isAuthAction && !isAdmin && shellUrl && shellUrl.startsWith("https://")) {
+      targetUrl = shellUrl;
+    }
+
+    return _fetchOnce(targetUrl, body).catch(function(err) {
+      console.warn("[nav] 請求失敗，1 秒後重試一次：", err.message || err);
       return new Promise(function(resolve) { setTimeout(resolve, 1000); })
-        .then(function() { return _fetchOnce(body); });
+        .then(function() { return _fetchOnce(targetUrl, body); });
     });
   }
 
