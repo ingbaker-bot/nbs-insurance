@@ -633,14 +633,16 @@
       if (!familyFileName) { window.location.href = "main.html"; return; }
 
       // 保護：理論上 nav.js 一定會觸發 nbs_nav_ready，
-      // 但萬一發生意外狀況，8 秒後還沒收到資料就提示重新整理，
-      // 避免畫面卡死在「載入中」。
+      // 但萬一發生意外狀況，等待時間拉長到 20 秒
+      // （nav.js 現在失敗會自動重試一次，最壞情況下單次嘗試+重試
+      //  可能要 15~20 秒，逾時門檻要跟著放寬，避免明明還在重試
+      //  卻被誤判成逾時）。
       setTimeout(function() {
         if (!_navDataReceived) {
           document.getElementById("loading-view").innerHTML =
             '<div style="color:#e74c3c">載入逾時，請重新整理頁面</div>';
         }
-      }, 8000);
+      }, 20000);
     };
 
     // ── 渲染頁面 ──────────────────────────────────────────────
