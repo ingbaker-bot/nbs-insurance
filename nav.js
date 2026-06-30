@@ -58,6 +58,7 @@
 
     getCurrentPersonId: function() { return _personId; },
     getFamilyData:      function() { return _family; },
+    getPersonsData:     function() { return _personsData; },
     getUser:            function() { return _user; },
 
     // callGAS：統一入口，所有頁面呼叫此函式
@@ -92,25 +93,50 @@
 
   // ==========================================
   // 5. 載入家庭資料
+  //    效能優化：優先用 readFamilyBundle 一次拿回家庭 + 所有成員資料，
+  //    這樣各頁面就不用再自己重複呼叫一次（見 _personsData 與
+  //    getPersonsData()，頁面可以直接拿現成資料，不用再打一次 GAS）。
+  //    若 Shell 尚未更新到支援 readFamilyBundle 的版本，自動降級回舊的
+  //    純 readFile（只有家庭資料，沒有成員資料），行為不受影響。
   // ==========================================
+  var _personsData = {};
+
   function _loadData(opts) {
     var fn = localStorage.getItem("nbs_current_family");
     if (!fn) { window.location.href = "main.html"; return; }
 
-    _gas("readFile", { fileType: "families", fileName: fn })
+    _gas("readFamilyBundle", { fileType: "families", fileName: fn })
       .then(function(fr) {
-        if (!fr || fr.status === "not_found" || !fr.content) {
-          // Shell 尚未安裝，或讀取失敗
-          if (fr && fr.needInstall) {
-            window.location.href = "install.html";
-            return;
-          }
-          _finishLoad(fn, true); return;
+        if (fr && fr.status === "ok" && fr.family) {
+          // 新版 Shell：一次拿到家庭 + 全部成員資料
+          _family = fr.family;
+          _personsData = fr.persons || {};
+          _personId = localStorage.getItem("nbs_current_person") ||
+                      (_family.members && _family.members[0] && _family.members[0].personId) || null;
+          _finishLoad(fn, false);
+          return;
         }
-        _family = fr.content;
-        _personId = localStorage.getItem("nbs_current_person") ||
-                    (_family.members && _family.members[0] && _family.members[0].personId) || null;
-        _finishLoad(fn, false);
+        if (fr && fr.needInstall) {
+          window.location.href = "install.html";
+          return;
+        }
+        // 舊版 Shell（尚未支援 readFamilyBundle）：降級走原本的純 readFile
+        _gas("readFile", { fileType: "families", fileName: fn })
+          .then(function(fr2) {
+            if (!fr2 || fr2.status === "not_found" || !fr2.content) {
+              if (fr2 && fr2.needInstall) { window.location.href = "install.html"; return; }
+              _finishLoad(fn, true); return;
+            }
+            _family = fr2.content;
+            _personsData = {};
+            _personId = localStorage.getItem("nbs_current_person") ||
+                        (_family.members && _family.members[0] && _family.members[0].personId) || null;
+            _finishLoad(fn, false);
+          })
+          .catch(function(e) {
+            console.error("[nav] 載入家庭失敗", e);
+            _finishLoad(fn, true);
+          });
       })
       .catch(function(e) {
         console.error("[nav] 載入家庭失敗", e);
@@ -124,6 +150,7 @@
       detail: {
         user:            _user,
         familyData:      isError ? null : _family,
+        personsData:     isError ? null : _personsData,
         currentPersonId: isError ? null : _personId,
         familyFileName:  fn
       }
