@@ -77,10 +77,11 @@
       }
     },
 
-    getCurrentPersonId: function() { return _personId; },
-    getFamilyData:      function() { return _family; },
-    getPersonsData:     function() { return _personsData; },
-    getUser:            function() { return _user; },
+    getCurrentPersonId:    function() { return _personId; },
+    getFamilyData:         function() { return _family; },
+    getPersonsData:        function() { return _personsData; },
+    getUser:               function() { return _user; },
+    invalidateBundleCache: function(fn) { _invalidateBundleCache(fn || localStorage.getItem("nbs_current_family")); },
 
     // callGAS：統一入口，所有頁面呼叫此函式
     callGAS: function(action, params) {
@@ -114,19 +115,12 @@
 
   // ==========================================
   // 5. 載入家庭資料
-  //    效能優化：優先用 readFamilyBundle 一次拿回家庭 + 所有成員資料，
-  //    這樣各頁面就不用再自己重複呼叫一次（見 _personsData 與
-  //    getPersonsData()，頁面可以直接拿現成資料，不用再打一次 GAS）。
-  //    若 Shell 尚未更新到支援 readFamilyBundle 的版本，自動降級回舊的
-  //    純 readFile（只有家庭資料，沒有成員資料），行為不受影響。
   // ==========================================
   var _personsData = {};
 
   // bug 修正：nbs_current_person 是全域的 localStorage 設定，
   // 切換家庭時並不會自動清掉，導致「家庭A 選的成員 ID」被誤用到
-  // 「家庭B」身上（兩個家庭的成員 ID 不同，會查不到資料而誤判成
-  // 「尚無保單」）。這裡統一驗證：快取的 personId 必須真的屬於
-  // 目前這個家庭的成員，不是的話一律退回第一位成員。
+  // 「家庭B」身上。這裡統一驗證 ID 是否真的屬於目前家庭。
   function _resolvePersonId(family) {
     var members = (family && family.members) || [];
     var cached  = localStorage.getItem("nbs_current_person");
@@ -134,32 +128,90 @@
     if (valid) return cached;
     var fallback = members[0] && members[0].personId || null;
     if (cached && !valid) {
-      // 快取的 ID 不屬於這個家庭，順手更新成正確的，避免下次又誤判
       if (fallback) localStorage.setItem("nbs_current_person", fallback);
       else localStorage.removeItem("nbs_current_person");
     }
     return fallback;
   }
 
+  // ── sessionStorage 快取輔助函式 ────────────────────────────
+  // 目的：讓同一個工作階段內切換頁面時，可以立即從 sessionStorage
+  // 拿到上次抓到的資料直接顯示（< 50ms），不用再等 GAS 的 5 秒冷啟動。
+  // 第一次仍然需要完整等待，之後的每次切換都會秒開。
+  var BUNDLE_CACHE_TTL = 10 * 60 * 1000; // 10 分鐘
+
+  function _getBundleCache(fn) {
+    try {
+      var raw = sessionStorage.getItem("nbs_bundle_" + fn);
+      if (!raw) return null;
+      var obj = JSON.parse(raw);
+      if (!obj || !obj.ts || !obj.data) return null;
+      if (Date.now() - obj.ts > BUNDLE_CACHE_TTL) {
+        sessionStorage.removeItem("nbs_bundle_" + fn);
+        return null;
+      }
+      return obj.data;
+    } catch(e) { return null; }
+  }
+
+  function _setBundleCache(fn, data) {
+    try {
+      sessionStorage.setItem("nbs_bundle_" + fn, JSON.stringify({ ts: Date.now(), data: data }));
+    } catch(e) {}
+  }
+
+  // 儲存成功後呼叫此函式，清除對應的快取，下次載入才會拿到最新資料
+  function _invalidateBundleCache(fn) {
+    try {
+      if (fn) sessionStorage.removeItem("nbs_bundle_" + fn);
+    } catch(e) {}
+  }
+
+  function _applyBundle(fr, fn) {
+    _family      = fr.family;
+    _personsData = fr.persons || {};
+    _personId    = _resolvePersonId(_family);
+    _setBundleCache(fn, fr);
+    _finishLoad(fn, false);
+  }
+
   function _loadData(opts) {
     var fn = localStorage.getItem("nbs_current_family");
     if (!fn) { window.location.href = "main.html"; return; }
 
+    // ── Step 1：先查 sessionStorage 快取，有就立即渲染 ─────────
+    var cached = _getBundleCache(fn);
+    if (cached && cached.family) {
+      _family      = cached.family;
+      _personsData = cached.persons || {};
+      _personId    = _resolvePersonId(_family);
+      _finishLoad(fn, false); // 立即顯示，< 50ms
+
+      // ── Step 2：背景靜默更新，讓資料保持最新 ─────────────────
+      // 不阻塞頁面，失敗也沒關係（下次開頁面會重抓）
+      setTimeout(function() {
+        _gas("readFamilyBundle", { fileType: "families", fileName: fn })
+          .then(function(fr) {
+            if (fr && fr.status === "ok" && fr.family) {
+              _setBundleCache(fn, fr);
+              // 靜默更新記憶體中的資料，不再重新觸發 nbs_nav_ready
+              _family      = fr.family;
+              _personsData = fr.persons || {};
+            }
+          }).catch(function() {});
+      }, 200);
+      return;
+    }
+
+    // ── 快取未命中：正常流程（第一次或快取過期）──────────────────
     _gas("readFamilyBundle", { fileType: "families", fileName: fn })
       .then(function(fr) {
         if (fr && fr.status === "ok" && fr.family) {
-          // 新版 Shell：一次拿到家庭 + 全部成員資料
-          _family = fr.family;
-          _personsData = fr.persons || {};
-          _personId = _resolvePersonId(_family);
-          _finishLoad(fn, false);
+          _applyBundle(fr, fn);
           return;
         }
-        if (fr && fr.needInstall) {
-          window.location.href = "install.html";
-          return;
-        }
-        // 舊版 Shell（尚未支援 readFamilyBundle）：降級走原本的純 readFile
+        if (fr && fr.needInstall) { window.location.href = "install.html"; return; }
+        // 降級回舊版 readFile
         _gas("readFile", { fileType: "families", fileName: fn })
           .then(function(fr2) {
             if (!fr2 || fr2.status === "not_found" || !fr2.content) {
@@ -171,15 +223,9 @@
             _personId = _resolvePersonId(_family);
             _finishLoad(fn, false);
           })
-          .catch(function(e) {
-            console.error("[nav] 載入家庭失敗", e);
-            _finishLoad(fn, true);
-          });
+          .catch(function(e) { console.error("[nav] 載入家庭失敗", e); _finishLoad(fn, true); });
       })
-      .catch(function(e) {
-        console.error("[nav] 載入家庭失敗", e);
-        _finishLoad(fn, true);
-      });
+      .catch(function(e) { console.error("[nav] 載入家庭失敗", e); _finishLoad(fn, true); });
   }
 
   function _finishLoad(fn, isError) {
