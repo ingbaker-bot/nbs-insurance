@@ -488,39 +488,36 @@
 
     // ── 初始化 ────────────────────────────────────────────────
     window.onload = function() {
-      // 取得登入資訊
       const saved = localStorage.getItem("nbs_user");
-      if (!saved) {
-        window.location.href = "index.html";
-        return;
-      }
-
+      if (!saved) { window.location.href = "index.html"; return; }
       currentUser = JSON.parse(saved);
 
-      // 更新 Header
       const nameEl = document.getElementById("user-name");
       const avatarEl = document.getElementById("user-avatar");
       const adminBadge = document.getElementById("admin-badge");
-
       nameEl.textContent = currentUser.agentName || currentUser.name || currentUser.email;
 
       if (currentUser.picture) {
         avatarEl.innerHTML = `<img src="${currentUser.picture}" alt="avatar" />`;
       } else {
-        const n = currentUser.agentName || currentUser.name || "?";
-        avatarEl.textContent = n[0];
+        avatarEl.textContent = nameEl.textContent[0];
       }
+      if (currentUser.isAdmin) adminBadge.style.display = "inline";
 
-      if (currentUser.isAdmin) {
-        adminBadge.style.display = "inline";
-      }
-
-      // 設定分析日預設為今天
       const today = new Date().toISOString().slice(0, 10);
       document.getElementById("analysis-date").value = today;
       updateAnalysisRoc();
 
-      loadFamilies();
+      // ── 新增：檢查是否有直連網址，沒有就補抓 ──
+      const shellUrl = localStorage.getItem("nbs_shell_url");
+      if (!shellUrl && !currentUser.isAdmin) {
+        callGAS("checkAuth", { email: currentUser.email }).then(res => {
+          if (res.shellUrl) localStorage.setItem("nbs_shell_url", res.shellUrl);
+          loadFamilies();
+        }).catch(() => loadFamilies());
+      } else {
+        loadFamilies();
+      }
     };
 
     // ── 載入家庭列表 ──────────────────────────────────────────
