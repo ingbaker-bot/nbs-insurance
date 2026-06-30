@@ -404,29 +404,37 @@ async function initPage(detail) {
 
   try {
     const activeMembers = familyData.members.filter(m => m.role !== "beneficiary_only");
-    
-    const fetchPromises = activeMembers.map(m => {
-      const cacheKey = "nbs_person_" + m.personId;
-      const cachedData = sessionStorage.getItem(cacheKey);
 
-      if (cachedData) {
-        personDataMap[m.personId] = JSON.parse(cachedData);
-        return Promise.resolve();
-      } else {
-        return callGAS("readFile", {
-          email: currentUser.email,
-          fileType: "persons",
-          fileName: m.name + "_" + m.personId + ".json"
-        }).then(pr => {
-          if (pr.status === "ok") {
-            personDataMap[m.personId] = pr.content;
-            sessionStorage.setItem(cacheKey, JSON.stringify(pr.content));
-          }
-        }).catch(err => console.error("讀取 " + m.name + " 失敗", err));
-      }
-    });
+    // 效能優化：優先借用 nav.js（readFamilyBundle）已經抓好的資料，
+    // 缺少的成員才依序走 sessionStorage 快取 → 最後才補打 readFile。
+    const navPersons = detail.personsData || {};
+    personDataMap = Object.assign({}, navPersons);
 
-    await Promise.all(fetchPromises);
+    const missingMembers = activeMembers.filter(m => !personDataMap[m.personId]);
+    if (missingMembers.length) {
+      const fetchPromises = missingMembers.map(m => {
+        const cacheKey = "nbs_person_" + m.personId;
+        const cachedData = sessionStorage.getItem(cacheKey);
+
+        if (cachedData) {
+          personDataMap[m.personId] = JSON.parse(cachedData);
+          return Promise.resolve();
+        } else {
+          return callGAS("readFile", {
+            email: currentUser.email,
+            fileType: "persons",
+            fileName: m.name + "_" + m.personId + ".json"
+          }).then(pr => {
+            if (pr.status === "ok") {
+              personDataMap[m.personId] = pr.content;
+              sessionStorage.setItem(cacheKey, JSON.stringify(pr.content));
+            }
+          }).catch(err => console.error("讀取 " + m.name + " 失敗", err));
+        }
+      });
+      await Promise.all(fetchPromises);
+    }
+
     document.getElementById("loading").style.display = "none";
     document.getElementById("content").style.display = "block";
     renderTabs();
