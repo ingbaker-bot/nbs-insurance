@@ -524,14 +524,55 @@
     };
 
     // ── 載入家庭列表 ──────────────────────────────────────────
-    function loadFamilies() {
+    const FAMILIES_CACHE_KEY = "nbs_families_list";
+    const FAMILIES_CACHE_TTL = 10 * 60 * 1000; // 10 分鐘
+
+    function getFamiliesCache() {
+      try {
+        const raw = sessionStorage.getItem(FAMILIES_CACHE_KEY);
+        if (!raw) return null;
+        const obj = JSON.parse(raw);
+        if (!obj || !obj.ts || !obj.data) return null;
+        if (Date.now() - obj.ts > FAMILIES_CACHE_TTL) { sessionStorage.removeItem(FAMILIES_CACHE_KEY); return null; }
+        return obj.data;
+      } catch(e) { return null; }
+    }
+    function setFamiliesCache(data) {
+      try { sessionStorage.setItem(FAMILIES_CACHE_KEY, JSON.stringify({ ts: Date.now(), data })); } catch(e) {}
+    }
+    function invalidateFamiliesCache() {
+      try { sessionStorage.removeItem(FAMILIES_CACHE_KEY); } catch(e) {}
+    }
+
+    function loadFamilies(forceRefresh) {
+      // 先查快取，有就立即顯示（< 50ms）
+      if (!forceRefresh) {
+        const cached = getFamiliesCache();
+        if (cached) {
+          allFamilies = cached;
+          renderFamilies(allFamilies);
+          // 背景靜默更新，不影響畫面
+          setTimeout(function() {
+            callGAS("listFamilies", {})
+              .then(result => {
+                const fresh = result.families || [];
+                setFamiliesCache(fresh);
+                allFamilies = fresh;
+                renderFamilies(allFamilies); // 靜默更新列表
+              }).catch(() => {});
+          }, 300);
+          return;
+        }
+      }
+
+      // 快取未命中：正常流程
       document.getElementById("family-list").innerHTML =
         '<div class="loading-state"><span class="spinner"></span>載入中…</div>';
 
-      // 直接用 DriveDB（nav.js）讀取使用者自己的 Drive
       callGAS("listFamilies", {})
         .then(result => {
           allFamilies = result.families || [];
+          setFamiliesCache(allFamilies);
           renderFamilies(allFamilies);
         })
         .catch(err => {
@@ -695,7 +736,8 @@
         btn.disabled = false;
         btn.textContent = "建立家庭";
         closeModal();
-        loadFamilies(); // 重新載入列表
+        invalidateFamiliesCache();
+        loadFamilies(true); // 清快取後強制重新載入，確保列表最新
       })
       .catch(err => {
         btn.disabled = false;
