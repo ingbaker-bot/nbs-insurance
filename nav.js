@@ -106,7 +106,7 @@
     }
     _user = JSON.parse(savedUser);
 
-    // main.html 不載入 family
+    // main.html 不載入 family 資料
     if (window.location.href.indexOf("main.html") !== -1) return;
 
     _loadData(opts);
