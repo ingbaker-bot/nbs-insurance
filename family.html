@@ -586,31 +586,46 @@
 
       // 載入家庭資料
       try {
-        const result = await callGAS("readFile", {
+        // 效能優化：優先用 readFamilyBundle 一次拿回家庭+所有成員資料
+        // （Shell 端若尚未更新到支援此 action 的版本，會自動降級回舊的
+        //  readFile + Promise.all 寫法，行為不受影響，只是少了加速效果）
+        const bundle = await callGAS("readFamilyBundle", {
           email: currentUser.email,
-          fileType: "families",
           fileName: familyFileName,
         });
 
-        if (result.status !== "ok") throw new Error(result.message);
-        familyData = result.content;
-
-        // 載入所有成員資料
-        // 載入所有成員資料 (效能優化：使用 Promise.all 併發請求)
-        const activeMembers = familyData.members.filter(m => m.role !== "beneficiary_only");
-        
-        const fetchPromises = activeMembers.map(m => {
-          return callGAS("readFile", {
+        if (bundle && bundle.status === "ok") {
+          // 新版 Shell：一次拿到家庭 + 全部成員資料
+          familyData = bundle.family;
+          personDataMap = bundle.persons || {};
+          if (bundle.failedPersonIds && bundle.failedPersonIds.length) {
+            console.warn("以下成員資料讀取失敗：", bundle.failedPersonIds);
+          }
+        } else {
+          // 舊版 Shell（尚未更新，不認得 readFamilyBundle）：走原本的 N+1 流程
+          const result = await callGAS("readFile", {
             email: currentUser.email,
-            fileType: "persons",
-            fileName: m.name + "_" + m.personId + ".json",
-          }).then(pr => {
-            if (pr.status === "ok") personDataMap[m.personId] = pr.content;
-          }).catch(e => console.error("讀取 " + m.name + " 失敗", e));
-        });
+            fileType: "families",
+            fileName: familyFileName,
+          });
 
-        // 讓系統同時發出所有請求，並等待所有人一起回來
-        await Promise.all(fetchPromises);
+          if (result.status !== "ok") throw new Error(result.message);
+          familyData = result.content;
+
+          const activeMembers = familyData.members.filter(m => m.role !== "beneficiary_only");
+
+          const fetchPromises = activeMembers.map(m => {
+            return callGAS("readFile", {
+              email: currentUser.email,
+              fileType: "persons",
+              fileName: m.name + "_" + m.personId + ".json",
+            }).then(pr => {
+              if (pr.status === "ok") personDataMap[m.personId] = pr.content;
+            }).catch(e => console.error("讀取 " + m.name + " 失敗", e));
+          });
+
+          await Promise.all(fetchPromises);
+        }
 
         renderPage();
 
