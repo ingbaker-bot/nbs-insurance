@@ -572,9 +572,57 @@
     let familyFileName = null;
     let personDataMap = {};      // personId → personData
     let selectedPersonId = null;
+    let _navDataReceived = false;
+
+    // ── 效能優化：不再自己重複呼叫一次 readFamilyBundle，
+    //    改成直接「借用」nav.js 已經抓好的資料（nav.js 也已經改用
+    //    readFamilyBundle，一次連家庭+成員資料都拿到了）。
+    //    這樣同一個頁面就不會出現「nav.js 抓一次、頁面自己又抓一次」
+    //    這種重複請求的情況。
+    function _handleNavReady(detail) {
+      if (_navDataReceived) return;
+      _navDataReceived = true;
+
+      if (!detail || !detail.familyData) {
+        document.getElementById("loading-view").innerHTML =
+          '<div style="color:#e74c3c">載入失敗，請重新整理頁面</div>';
+        return;
+      }
+
+      familyData    = detail.familyData;
+      personDataMap = detail.personsData || {};
+
+      const activeMembers   = (familyData.members || []).filter(m => m.role !== "beneficiary_only");
+      const missingMembers  = activeMembers.filter(m => !personDataMap[m.personId]);
+
+      if (missingMembers.length === 0) {
+        renderPage();
+        return;
+      }
+
+      // 降級保護：如果 nav.js 那邊是用舊版 Shell（沒有成員資料），
+      // 在這裡補抓缺少的成員資料，行為跟以前一致，只是不會整批重抓。
+      const savedUser = JSON.parse(localStorage.getItem("nbs_user") || "{}");
+      const fetchPromises = missingMembers.map(m => {
+        return callGAS("readFile", {
+          email: savedUser.email,
+          fileType: "persons",
+          fileName: m.name + "_" + m.personId + ".json",
+        }).then(pr => {
+          if (pr.status === "ok") personDataMap[m.personId] = pr.content;
+        }).catch(e => console.error("讀取 " + m.name + " 失敗", e));
+      });
+
+      Promise.all(fetchPromises).then(renderPage).catch(e => {
+        document.getElementById("loading-view").innerHTML =
+          '<div style="color:#e74c3c">載入失敗：' + e.message + '</div>';
+      });
+    }
+
+    window.addEventListener("nbs_nav_ready", function(e) { _handleNavReady(e.detail); });
 
     // ── 初始化 ────────────────────────────────────────────────
-    window.onload = async function() {
+    window.onload = function() {
       // 驗證登入
       const saved = localStorage.getItem("nbs_user");
       if (!saved) { window.location.href = "index.html"; return; }
@@ -584,62 +632,15 @@
       familyFileName = localStorage.getItem("nbs_current_family");
       if (!familyFileName) { window.location.href = "main.html"; return; }
 
-      // 載入家庭資料
-      try {
-        // 效能優化：優先用 readFamilyBundle 一次拿回家庭+所有成員資料
-        // （Shell 端若尚未更新到支援此 action 的版本，會自動降級回舊的
-        //  readFile + Promise.all 寫法，行為不受影響，只是少了加速效果）
-        const bundle = await callGAS("readFamilyBundle", {
-          email: currentUser.email,
-          fileName: familyFileName,
-        });
-
-        if (bundle && bundle.status === "ok") {
-          // 新版 Shell：一次拿到家庭 + 全部成員資料
-          familyData = bundle.family;
-          personDataMap = bundle.persons || {};
-          if (bundle.failedPersonIds && bundle.failedPersonIds.length) {
-            console.warn("以下成員資料讀取失敗：", bundle.failedPersonIds);
-          }
-        } else {
-          // 舊版 Shell（尚未更新，不認得 readFamilyBundle）：走原本的 N+1 流程
-          const result = await callGAS("readFile", {
-            email: currentUser.email,
-            fileType: "families",
-            fileName: familyFileName,
-          });
-
-          if (result.status !== "ok") throw new Error(result.message);
-          familyData = result.content;
-
-          const activeMembers = familyData.members.filter(m => m.role !== "beneficiary_only");
-
-          const fetchPromises = activeMembers.map(m => {
-            return callGAS("readFile", {
-              email: currentUser.email,
-              fileType: "persons",
-              fileName: m.name + "_" + m.personId + ".json",
-            }).then(pr => {
-              if (pr.status === "ok") personDataMap[m.personId] = pr.content;
-            }).catch(e => console.error("讀取 " + m.name + " 失敗", e));
-          });
-
-          await Promise.all(fetchPromises);
+      // 保護：理論上 nav.js 一定會觸發 nbs_nav_ready，
+      // 但萬一發生意外狀況，8 秒後還沒收到資料就提示重新整理，
+      // 避免畫面卡死在「載入中」。
+      setTimeout(function() {
+        if (!_navDataReceived) {
+          document.getElementById("loading-view").innerHTML =
+            '<div style="color:#e74c3c">載入逾時，請重新整理頁面</div>';
         }
-
-        renderPage();
-
-        // family 資料已載入，通知 nav.js 更新側邊欄
-        if (window.NBS_NAV && typeof NBS_NAV.getFamilyData === "function" && !NBS_NAV.getFamilyData()) {
-          // nav.js 的 _family 還是 null，直接把資料傳進去渲染
-          window.dispatchEvent(new CustomEvent("nbs_family_loaded", {
-            detail: { familyData: familyData, familyFileName: familyFileName }
-          }));
-        }
-      } catch(e) {
-        document.getElementById("loading-view").innerHTML =
-          '<div style="color:#e74c3c">載入失敗：' + e.message + '</div>';
-      }
+      }, 8000);
     };
 
     // ── 渲染頁面 ──────────────────────────────────────────────
