@@ -141,31 +141,42 @@
       }
 
       try {
+        // 效能優化：nav.js 已經用 readFamilyBundle 把家庭+成員資料一起
+        // 抓好了，這裡優先直接借用 e.detail.personsData，不再讓每個
+        // 成員各自平行打一次 readFile（這也是之前出現 404 的主因之一
+        // ——太多平行請求同時打到 GAS，容易互相卡住）。
+        // sessionStorage 快取保留，當作 nav.js 也沒有資料時的備援。
         const activeMembers = familyData.members.filter(m => m.role !== "beneficiary_only");
-        const fetchPromises = activeMembers.map(m => {
-          const cacheKey = "nbs_person_" + m.personId;
-          const cachedData = sessionStorage.getItem(cacheKey);
+        const navPersons = e.detail.personsData || {};
+        personDataMap = Object.assign({}, navPersons);
 
-          if (cachedData) {
-            personDataMap[m.personId] = JSON.parse(cachedData);
-            return Promise.resolve();
-          } else {
-            return callGAS("readFile", {
-              email: currentUser.email,
-              fileType: "persons",
-              fileName: m.name + "_" + m.personId + ".json"
-            }).then(pr => {
-              if (pr && pr.status === "ok") {
-                personDataMap[m.personId] = pr.content;
-                sessionStorage.setItem(cacheKey, JSON.stringify(pr.content));
-              } else {
-                personDataMap[m.personId] = { policies: [] };
-              }
-            }).catch(err => console.error(err));
-          }
-        });
+        const missingMembers = activeMembers.filter(m => !personDataMap[m.personId]);
+        if (missingMembers.length) {
+          const fetchPromises = missingMembers.map(m => {
+            const cacheKey = "nbs_person_" + m.personId;
+            const cachedData = sessionStorage.getItem(cacheKey);
 
-        await Promise.all(fetchPromises);
+            if (cachedData) {
+              personDataMap[m.personId] = JSON.parse(cachedData);
+              return Promise.resolve();
+            } else {
+              return callGAS("readFile", {
+                email: currentUser.email,
+                fileType: "persons",
+                fileName: m.name + "_" + m.personId + ".json"
+              }).then(pr => {
+                if (pr && pr.status === "ok") {
+                  personDataMap[m.personId] = pr.content;
+                  sessionStorage.setItem(cacheKey, JSON.stringify(pr.content));
+                } else {
+                  personDataMap[m.personId] = { policies: [] };
+                }
+              }).catch(err => console.error(err));
+            }
+          });
+          await Promise.all(fetchPromises);
+        }
+
         renderTabs();
         renderPolicyView();
       } catch(err) {
