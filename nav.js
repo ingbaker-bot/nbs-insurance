@@ -101,6 +101,25 @@
   // ==========================================
   var _personsData = {};
 
+  // bug 修正：nbs_current_person 是全域的 localStorage 設定，
+  // 切換家庭時並不會自動清掉，導致「家庭A 選的成員 ID」被誤用到
+  // 「家庭B」身上（兩個家庭的成員 ID 不同，會查不到資料而誤判成
+  // 「尚無保單」）。這裡統一驗證：快取的 personId 必須真的屬於
+  // 目前這個家庭的成員，不是的話一律退回第一位成員。
+  function _resolvePersonId(family) {
+    var members = (family && family.members) || [];
+    var cached  = localStorage.getItem("nbs_current_person");
+    var valid   = cached && members.some(function(m) { return m.personId === cached; });
+    if (valid) return cached;
+    var fallback = members[0] && members[0].personId || null;
+    if (cached && !valid) {
+      // 快取的 ID 不屬於這個家庭，順手更新成正確的，避免下次又誤判
+      if (fallback) localStorage.setItem("nbs_current_person", fallback);
+      else localStorage.removeItem("nbs_current_person");
+    }
+    return fallback;
+  }
+
   function _loadData(opts) {
     var fn = localStorage.getItem("nbs_current_family");
     if (!fn) { window.location.href = "main.html"; return; }
@@ -111,8 +130,7 @@
           // 新版 Shell：一次拿到家庭 + 全部成員資料
           _family = fr.family;
           _personsData = fr.persons || {};
-          _personId = localStorage.getItem("nbs_current_person") ||
-                      (_family.members && _family.members[0] && _family.members[0].personId) || null;
+          _personId = _resolvePersonId(_family);
           _finishLoad(fn, false);
           return;
         }
@@ -129,8 +147,7 @@
             }
             _family = fr2.content;
             _personsData = {};
-            _personId = localStorage.getItem("nbs_current_person") ||
-                        (_family.members && _family.members[0] && _family.members[0].personId) || null;
+            _personId = _resolvePersonId(_family);
             _finishLoad(fn, false);
           })
           .catch(function(e) {
