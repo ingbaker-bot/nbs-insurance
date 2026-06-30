@@ -809,11 +809,21 @@
       if (window.NBS_NAV && typeof NBS_NAV.callGAS === "function") {
         return NBS_NAV.callGAS(action, params);
       }
-      // fallback：直接呼叫 GAS
-      return fetch(AUTH_GAS_URL, {
+      
+      // ── 新增：判斷走 API 1 還是走直連 ──
+      let targetUrl = AUTH_GAS_URL;
+      const shellUrl = localStorage.getItem("nbs_shell_url");
+      const isAuthAction = (action === 'checkAuth' || action === 'registerShell' || action === 'apply');
+      
+      // 非驗證動作 + 非管理員 + 擁有直連網址，就直接打給 Shell！
+      if (!isAuthAction && (!currentUser || !currentUser.isAdmin) && shellUrl) {
+        targetUrl = shellUrl;
+      }
+
+      return fetch(targetUrl, {
         method: "POST",
         headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify(Object.assign({ action: action }, params || {})),
+        body: JSON.stringify(Object.assign({ action: action, email: currentUser ? currentUser.email : "" }, params || {})),
       }).then(r => r.json());
     }
   </script>
