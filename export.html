@@ -1356,13 +1356,11 @@ function renderBlock(key){
   }
   if(key==="savings_timeline"){
     var now2 = new Date().getFullYear();
-    var pdm2 = {};
-    var fmem2 = (familyData && familyData.members) || [];
-    fmem2.filter(function(m){ return m.role!=="beneficiary_only"; }).forEach(function(m){
-      var cached = sessionStorage.getItem("nbs_person_"+m.personId);
-      if(cached) pdm2[m.personId]=JSON.parse(cached);
-    });
-    return renderSavingsTimeline(pdm2, familyData, now2, now2+14);
+    // 修正：改用初始化時已經載入好的 personDataMap（來自 nav.js 的
+    // readFamilyBundle，或缺資料時的補抓），不要再另外只看 sessionStorage
+    // ——後者在「資料是直接借用 nav.js 現成資料、沒有另外發送網路請求」
+    // 的情況下會是空的，導致這裡誤判成「尚無資料」。
+    return renderSavingsTimeline(personDataMap, familyData, now2, now2+14);
   }
   if(key==="monthly"){
     var now=new Date().getMonth();
@@ -1569,11 +1567,12 @@ window.addEventListener("nbs_nav_ready", async function(e) {
   if(btn){btn.disabled=true;btn.textContent="資料載入中…";btn.style.background="#ccc";}
 
   try {
-    var pdm = {};
+    var pdm = Object.assign({}, e.detail.personsData || {}); // 效能優化：優先用 nav.js 抓好的資料
     var fmem = (familyData && familyData.members) || [];
     var activeMembers = fmem.filter(function(m) { return m.role !== "beneficiary_only"; });
+    var missingMembers = activeMembers.filter(function(m) { return !pdm[m.personId]; });
 
-    var fetchPromises = activeMembers.map(function(mem) {
+    var fetchPromises = missingMembers.map(function(mem) {
       var cacheKey = "nbs_person_" + mem.personId;
       var cachedData = sessionStorage.getItem(cacheKey);
 
@@ -1596,6 +1595,7 @@ window.addEventListener("nbs_nav_ready", async function(e) {
 
     await Promise.all(fetchPromises);
 
+    personDataMap = pdm; // 讓其他區塊（如儲蓄險現金流時間軸）可以共用同一份已載入的資料
     person = pdm[currentPersonId] || {};
     policies = person.policies || [];
     coverage = person.coverage || {};
