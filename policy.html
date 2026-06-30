@@ -397,7 +397,6 @@
   <div class="stats-row" id="stats-row"></div>
   <div id="policy-list"></div>
   <button class="add-main-btn" onclick="openForm('new', null, null)">＋ 新增主約保單</button>
-</div>
   </div><!-- /content -->
 </div><!-- /main wrapper -->
 
@@ -1193,9 +1192,8 @@ function callGAS(action, params) {
 // ── NBS 導覽 ──────────────────────────────────────────────
 NBS_NAV.onMemberChange = function(pid) {
   currentPersonId = pid;
-  if (typeof renderContent  === "function") renderContent();
-  if (typeof showListView   === "function") showListView();
-  if (typeof renderContent  === "function") renderContent();
+  if (typeof renderTabs === "function") renderTabs();
+  if (typeof renderPolicies === "function") renderPolicies();
 };
 
 // 支援兩種事件：nav.js 自行載入 或 family.html 先載入後通知
