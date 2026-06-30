@@ -261,13 +261,17 @@ window.addEventListener("nbs_nav_ready", function(e) {
   ensureFamilyFolder().then(loadVisits);
 });
 
+// 效能優化備註：nav.js 改用 readFamilyBundle 後，單次請求會連同
+// 所有成員資料一起抓，耗時比以前單純抓家庭資料略長，
+// 因此這裡的安全逾時從 3 秒放寬到 8 秒，避免資料其實還在路上、
+// 只是稍微晚到，就被誤判成「沒有載入家庭」而跳出警告畫面。
 setTimeout(function(){
   if (!familyData) {
     document.getElementById("family-name").textContent = "（未載入家庭）";
     document.getElementById("visit-list-wrap").innerHTML =
       '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-text">請從家庭保單頁面進入</div></div>';
   }
-}, 3000);
+}, 8000);
 
 // ── Apps Script API（直接使用 nav.js 的 GAS_URL）────────────
 // GAS URL 已在 nav.js 第 8 行定義，所有頁面共用同一個後台
