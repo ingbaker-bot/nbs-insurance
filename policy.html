@@ -477,12 +477,24 @@
       </div>
     </div>
 
-    <!-- 保險項目名稱 -->
+<!-- 保險項目名稱 + 保單狀態 -->
+    <div class="grid-2">
     <div class="field">
       <label>保險項目名稱</label>
       <input type="text" id="f-item" placeholder="如：AD&D意外身故及殘廢保險附約" />
     </div>
+    <div class="field">
+      <label>繳費方式</label>
+      <select id="f-paymode">
+        <option>月繳</option>
+        <option>季繳</option>
+        <option>半年繳</option>
+        <option selected>年繳</option>
+        <option>躉繳</option>
+      </select>
+    </div>
 
+      
     <!-- 保險金額 -->
     <div class="field">
       <label>保險金額／計畫</label>
@@ -517,18 +529,6 @@
         <input type="text" id="f-covend" placeholder="終身可留空" oninput="parseDate('f-covend','f-covend-hint')" />
         <div class="hint" id="f-covend-hint"></div>
       </div>
-    </div>
-
-    <!-- 繳費方式 -->
-    <div class="field">
-      <label>繳費方式</label>
-      <select id="f-paymode">
-        <option>月繳</option>
-        <option>季繳</option>
-        <option>半年繳</option>
-        <option selected>年繳</option>
-        <option>躉繳</option>
-      </select>
     </div>
 
     <!-- 幣別 + 保費 + 匯率 -->
