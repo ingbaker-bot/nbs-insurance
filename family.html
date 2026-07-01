@@ -589,9 +589,10 @@
       if (!detail || !detail.familyData) {
         document.getElementById("loading-view").innerHTML =
           '<div style="color:#e74c3c">載入失敗，請重新整理頁面</div>';
-        return;
-      }}
+        return; // 這個 return 現在是正確的，因為它在 function 裡面
+      } // <--- 只留這一個關閉括號！
 
+      // 以下這些程式碼現在才會正確地包含在 function 內
       familyData    = detail.familyData;
       personDataMap = detail.personsData || {};
 
@@ -603,8 +604,6 @@
         return;
       }
 
-      // 降級保護：如果 nav.js 那邊是用舊版 Shell（沒有成員資料），
-      // 在這裡補抓缺少的成員資料，行為跟以前一致，只是不會整批重抓。
       const savedUser = JSON.parse(localStorage.getItem("nbs_user") || "{}");
       const fetchPromises = missingMembers.map(m => {
         return callGAS("readFile", {
