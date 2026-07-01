@@ -469,7 +469,7 @@
 
   <!-- 載入中 -->
   <div id="loading-view" style="text-align:center; padding:60px 20px; color:#bbb; font-size:13px;">
-    <span class="spinner"></span> 載入中…
+    <span class="spinner"></span> <span id="family-loading-text">保單資料庫安全連線中...</span>
   </div>
 
   <!-- 新增成員 Modal -->
@@ -582,12 +582,15 @@
     function _handleNavReady(detail) {
       if (_navDataReceived) return;
       _navDataReceived = true;
+      
+      // 資料回來了，立刻關閉輪播計時器
+      if (typeof familyLoadingTimer !== 'undefined') clearInterval(familyLoadingTimer);
 
       if (!detail || !detail.familyData) {
         document.getElementById("loading-view").innerHTML =
           '<div style="color:#e74c3c">載入失敗，請重新整理頁面</div>';
         return;
-      }
+      }}
 
       familyData    = detail.familyData;
       personDataMap = detail.personsData || {};
@@ -621,6 +624,20 @@
 
     window.addEventListener("nbs_nav_ready", function(e) { _handleNavReady(e.detail); });
 
+    // ── 動態載入文字設定 ──
+    const familyLoadingMessages = [
+      "保單資料庫安全連線中...",
+      "正在載入家庭成員清單...",
+      "精算各項保障額度與明細...",
+      "即將為您呈現專屬報告..."
+    ];
+    let familyMsgIndex = 0;
+    const familyLoadingTimer = setInterval(() => {
+      familyMsgIndex = (familyMsgIndex + 1) % familyLoadingMessages.length;
+      const textEl = document.getElementById("family-loading-text");
+      if (textEl) textEl.textContent = familyLoadingMessages[familyMsgIndex];
+    }, 1500);
+    
     // ── 初始化 ────────────────────────────────────────────────
     window.onload = function() {
       // 驗證登入
