@@ -486,7 +486,14 @@
 
     let currentUser = null;
     let allFamilies = [];
-
+    // ── 新增：動態載入文字設定 ──
+    let loadingTimer = null;
+    const loadingMessages = [
+      "保單資料庫安全連線中...",
+      "正在彙整各險種保障明細...",
+      "保障缺口運算即將完成，請稍候..."
+    ];
+    
     // ── 初始化 ────────────────────────────────────────────────
     window.onload = function() {
       const saved = localStorage.getItem("nbs_user");
@@ -563,17 +570,29 @@
         }
       }
 
-      // 快取未命中：正常流程
+      // 快取未命中：正常流程，啟動「有溫度的動態載入」
       document.getElementById("family-list").innerHTML =
-        '<div class="loading-state"><span class="spinner"></span>名冊資料載入中…</div>';
+        '<div class="loading-state"><span class="spinner"></span><span id="loading-text">保單資料庫安全連線中...</span></div>';
 
+      // 啟動文字輪播計時器 (每 1.5 秒換一句)
+      let msgIndex = 0;
+      if (loadingTimer) clearInterval(loadingTimer);
+      loadingTimer = setInterval(() => {
+        msgIndex = (msgIndex + 1) % loadingMessages.length;
+        const textEl = document.getElementById("loading-text");
+        if (textEl) textEl.textContent = loadingMessages[msgIndex];
+      }, 1500);
+
+      // 發送請求給 GAS
       callGAS("listFamilies", {})
         .then(result => {
+          clearInterval(loadingTimer); // 資料回來了，關閉計時器
           allFamilies = result.families || [];
           setFamiliesCache(allFamilies);
           renderFamilies(allFamilies);
         })
         .catch(err => {
+          clearInterval(loadingTimer); // 發生錯誤，關閉計時器
           console.error("loadFamilies error", err);
           document.getElementById("family-list").innerHTML =
             '<div class="empty-state"><div class="text">載入失敗，請重新整理頁面</div></div>';
