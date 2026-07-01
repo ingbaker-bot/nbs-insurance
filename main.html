@@ -377,7 +377,7 @@
     <div class="header-right">
       <div class="user-badge">
         <div class="user-avatar" id="user-avatar">?</div>
-        <span id="user-name">載入中</span>
+        <span id="user-name">名冊資料載入中</span>
         <span id="admin-badge" class="admin-badge" style="display:none">管理員</span>
       </div>
       <button class="logout-btn" onclick="logout()">登出</button>
@@ -565,7 +565,7 @@
 
       // 快取未命中：正常流程
       document.getElementById("family-list").innerHTML =
-        '<div class="loading-state"><span class="spinner"></span>載入中…</div>';
+        '<div class="loading-state"><span class="spinner"></span>名冊資料載入中…</div>';
 
       callGAS("listFamilies", {})
         .then(result => {
