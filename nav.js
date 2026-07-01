@@ -272,7 +272,7 @@
   function _insertNav() {
     var sidebar = document.createElement("div");
     sidebar.id = "nbs-sidebar";
-    sidebar.innerHTML = '<div style="padding:20px;color:rgba(255,255,255,0.3);font-size:12px">載入中…</div>';
+    sidebar.innerHTML = '<div style="padding:20px;color:rgba(255,255,255,0.3);font-size:12px">連線同步中...</div>';
     document.body.insertBefore(sidebar, document.body.firstChild);
 
     var tab = document.createElement("div");
@@ -359,7 +359,7 @@
       el.innerHTML =
         '<div style="padding:16px 14px 10px;border-bottom:1px solid rgba(255,255,255,.08)">' +
           '<div style="font-size:14px;font-weight:700;color:#fff">🛡️ NBS</div>' +
-          '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:4px">載入中…</div>' +
+          '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:4px">資料讀取中...</div>' +
         '</div>' +
         '<div style="flex:1"></div>' +
         '<div class="nbs-foot">' +
