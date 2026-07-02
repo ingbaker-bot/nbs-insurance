@@ -379,7 +379,6 @@
         '<img src="https://i.ibb.co/FkVkNhhd/NBS-4F3.jpg" class="nbs-logo-img" onerror="this.style.display=\'none\'"/>' +
       '</div>' +
       '<div class="nbs-fam">' +
-        '<div class="nbs-sl">目前家庭</div>' +
         '<div class="nbs-fn">'+_family.familyName+'</div>' +
         '<div class="nbs-fd">分析日 '+_fmtROC(_family.analysisDate)+'</div>' +
       '</div>' +
@@ -595,7 +594,7 @@
       ".nbs-nsec{padding:8px 10px;flex:1;overflow-y:auto;min-height:0}",
       "#nbs-mobile-hdr{position:fixed;top:0;left:0;right:0;height:50px;background:rgba(238,244,255,.95);backdrop-filter:blur(14px);border-bottom:1px solid rgba(120,140,255,.13);display:none;align-items:center;gap:8px;padding:0 14px;z-index:200}",
       "#nbs-bottom-tab{position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border-top:1px solid rgba(120,140,255,.12);display:none;z-index:200;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:env(safe-area-inset-bottom,0)}",
-      ".nbs-fam{padding:10px 14px 8px;border-bottom:1px solid rgba(120,140,255,.10);margin-bottom:4px}",
+      ".nbs-fam{padding:8px 14px 6px;border-bottom:1px solid rgba(120,140,255,.10);margin-bottom:4px}",
       ".nbs-fn{font-size:14px;font-weight:800;color:#111827;letter-spacing:-.2px}",
       ".nbs-fd{font-size:11px;color:#9CA3AF;margin-top:2px}",
       ".nbs-sl{font-size:10px;font-weight:700;color:#9CA3AF;padding:0 8px 5px;letter-spacing:.07em;text-transform:uppercase}",
@@ -642,8 +641,8 @@
       ".nbs-ef-cancel{flex:1;padding:9px;background:transparent;color:#666;border:1px solid #ddd;border-radius:7px;cursor:pointer;font-family:inherit;font-size:13px}",
       ".nbs-ef-save{flex:2;padding:9px;background:linear-gradient(90deg,#3B82F6,#7C3AED);color:#fff;border:none;border-radius:9px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600}",
       "@media print{#nbs-sidebar,#nbs-mobile-hdr,#nbs-bottom-tab{display:none!important}body{padding-left:0!important;padding-top:0!important;padding-bottom:0!important}}",
-      ".nbs-logo{padding:10px 12px 8px;border-bottom:1px solid rgba(120,140,255,.12)}",
-      ".nbs-logo-img{width:100%;max-width:160px;height:auto;object-fit:contain;display:block}"
+      ".nbs-logo{border-bottom:1px solid rgba(120,140,255,.12);overflow:hidden}",
+      ".nbs-logo-img{width:100%;height:72px;object-fit:cover;object-position:center;display:block}"
     ].join("\n");
     document.head.appendChild(s);
   }
