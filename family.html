@@ -126,7 +126,6 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 30px;
       font-weight: 800;
       color: #6D28D9;
     }
@@ -137,11 +136,11 @@
       box-shadow: 0 2px 8px rgba(124,58,237,.30);
     }
 
-    .member-name { font-size: 26px; font-weight: 700; color: #111827; }
-    .member-age  { font-size: 20px; color: #9CA3AF; }
+    .member-name { font-size: 20px; font-weight: 700; color: #111827; }
+    .member-age  { font-size: 15px; color: #9CA3AF; }
 
     .role-badge {
-      font-size: 20px;
+      font-size: 15px;
       padding: 1px 6px;
       border-radius: 99px;
     }
@@ -279,8 +278,8 @@
     }
     .module-btn:active { transform: translateY(0); }
 
-    .module-icon { font-size: 44px; }
-    .module-label { font-size: 24px; font-weight: 600; color: #374151; }
+    .module-icon { font-size: 30px; }
+    .module-label { font-size: 18px; font-weight: 600; color: #374151; }
 
     /* ── 新增成員 Modal ── */
     .modal-overlay {
@@ -306,7 +305,7 @@
     }
 
     .modal-title {
-      font-size: 32px;
+      font-size: 24px;
       font-weight: 600;
       margin-bottom: 20px;
       display: flex;
@@ -711,7 +710,8 @@
         const person = personDataMap[m.personId];
         const age = person ? calcInsAge(person.profile.birthDate, person.profile.analysisDate) : null;
         const rc = m.role === "primary" ? "role-primary" : "role-secondary";
-        const rl = m.role === "primary" ? "主要" : "次要";
+        // 主要成員顯示「本人」，次要成員優先顯示 relation（配偶/子女…），否則顯示「次要」
+        const rl = m.role === "primary" ? "本人" : (m.relation || "次要");
         return `
           <div class="member-card ${selectedPersonId === m.personId ? 'active' : ''}"
                onclick="selectMember('${m.personId}')">
@@ -722,8 +722,8 @@
           </div>`;
       }).join("") + `
         <button class="add-member-btn" onclick="openAddMember()">
-          <span style="font-size: 44px">＋</span>
-          <span style="font-size: 24px">新增</span>
+          <span style="font-size: 24px">＋</span>
+          <span style="font-size: 15px">新增</span>
         </button>`;
 
       // 受益人名單
