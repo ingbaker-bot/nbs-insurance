@@ -1067,10 +1067,20 @@ async function savePolicy() {
   const company  = document.getElementById("f-company").value || document.getElementById("f-company-search").value.trim();
   const item     = document.getElementById("f-item").value.trim();
 
+  const _currency = document.getElementById("f-currency").value;
+  const _rate     = parseFloat(document.getElementById("f-rate").value) || 0;
   if (!policyNo || !cat || !company) {
     const err = document.getElementById("form-error");
     err.textContent = "請填寫保單號碼、類別、保險公司";
     err.style.display = "block";
+    return;
+  }
+  // 外幣保單：匯率必填，避免台幣換算為 0 或錯誤值
+  if (_currency !== "TWD" && !_rate) {
+    const err = document.getElementById("form-error");
+    err.textContent = "外幣保單請填寫匯率（如 USD 填 31.5），否則台幣年繳無法正確計算";
+    err.style.display = "block";
+    document.getElementById("f-rate").focus();
     return;
   }
 
@@ -1082,7 +1092,7 @@ async function savePolicy() {
   const currency = document.getElementById("f-currency").value;
   const premium  = parseFloat(document.getElementById("f-premium").value) || 0;
   const rate     = parseFloat(document.getElementById("f-rate").value) || null;
-  const premiumTWD = currency === "TWD" ? premium : Math.round(premium * (rate||1));
+  const premiumTWD = currency === "TWD" ? premium : (rate ? Math.round(premium * rate) : 0);
 
   const startRaw  = document.getElementById("f-start").value.trim();
   const payEndRaw = document.getElementById("f-payend").value.trim();
