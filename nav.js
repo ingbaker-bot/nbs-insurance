@@ -339,7 +339,7 @@
       sidebar.style.display = "flex";
       tab.style.display = "none";
       hdr.style.display = "none";
-      document.body.style.paddingLeft = "220px";
+      document.body.style.paddingLeft = "200px";
       document.body.style.paddingTop  = "0";
       document.body.style.paddingBottom = "0";
     }
@@ -358,7 +358,7 @@
     if (!_family) {
       el.innerHTML =
         '<div style="padding:16px 14px 10px;border-bottom:1px solid rgba(255,255,255,.08)">' +
-          '<div style="font-size:14px;font-weight:700;color:#fff">🛡️ NBS</div>' +
+          '<div class="nbs-logo-wrap"><img src="https://i.ibb.co/FkVkNhhd/NBS-4F3.jpg" class="nbs-logo-img" onerror="this.style.display=\'none\'"/></div>' +
           '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:4px">資料讀取中...</div>' +
         '</div>' +
         '<div style="flex:1"></div>' +
@@ -375,8 +375,8 @@
       '</div>';
     }).join("");
     el.innerHTML =
-      '<div class="nbs-logo" style="padding:12px 14px 10px;border-bottom:1px solid rgba(255,255,255,.08)">' +
-        '<div style="font-size:16px;font-weight:700;color:#fff;letter-spacing:.5px">🛡️ NBS</div>' +
+      '<div class="nbs-logo">' +
+        '<img src="https://i.ibb.co/FkVkNhhd/NBS-4F3.jpg" class="nbs-logo-img" onerror="this.style.display=\'none\'"/>' +
       '</div>' +
       '<div class="nbs-fam">' +
         '<div class="nbs-sl">目前家庭</div>' +
@@ -387,9 +387,9 @@
         '<div class="nbs-sl">功能模組</div>' +
         navHtml +
       '</div>' +
-      '<div class="nbs-member-entry" onclick="NBS_NAV._openMemberModal()">' +
-        '<span class="nbs-nicon">👨‍👩‍👧</span>' +
-        '<span class="nbs-nlabel">家庭成員管理</span>' +
+      '<div class="nbs-ni" onclick="NBS_NAV._goFamily()">' +
+        '<span class="nbs-nicon">🏠</span>' +
+        '<span class="nbs-nlabel">家庭保單首頁</span>' +
       '</div>' +
       '<div class="nbs-foot">' +
         '<button class="nbs-pbtn" onclick="NBS_NAV._print()">🖨️ 快速列印此頁</button>' +
@@ -419,7 +419,7 @@
       return '<option value="'+m.personId+'"'+(m.personId===_personId?" selected":"")+'>'+m.name+'（'+(m.relation||m.role)+'）</option>';
     }).join("") + '<option value="__add__">＋ 新增成員</option>';
     el.innerHTML =
-      '<div style="font-size:14px;font-weight:700;color:#fff;flex-shrink:0">🛡️ NBS</div>' +
+      '<img src="https://i.ibb.co/FkVkNhhd/NBS-4F3.jpg" style="height:28px;width:auto;object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'"/>' +
       '<div style="flex:1;min-width:0;font-size:11px;color:rgba(255,255,255,0.5);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+_family.familyName+'</div>' +
       '<select onchange="NBS_NAV._setPerson(this.value)" style="padding:4px 8px;font-size:12px;border:none;border-radius:99px;background:rgba(255,255,255,0.12);color:#fff;outline:none;cursor:pointer;font-family:inherit">'+opts+'</select>' +
       '<button onclick="NBS_NAV._print()" style="padding:5px 8px;background:rgba(255,255,255,0.12);border:none;border-radius:6px;color:rgba(255,255,255,0.8);font-size:13px;cursor:pointer">🖨️</button>';
@@ -568,7 +568,8 @@
   };
   global.NBS_NAV._go    = function(href) { window.location.href = href; };
   global.NBS_NAV._print = function() { window.print(); };
-  global.NBS_NAV._back  = function() { window.location.href = "main.html"; };
+  global.NBS_NAV._back     = function() { window.location.href = "main.html"; };
+  global.NBS_NAV._goFamily  = function() { window.location.href = "family.html"; };
 
   // ==========================================
   // 9. 工具函式
@@ -590,34 +591,32 @@
     s.id = "nbs-nav-css";
     s.textContent = [
       /* ── 方案A：淡色玻璃側欄，延續 index/main 漸層風格 ── */
-      "#nbs-sidebar{position:fixed;top:0;left:0;bottom:0;width:220px;background:linear-gradient(180deg,rgba(238,244,255,.96) 0%,rgba(245,240,255,.96) 100%);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-right:1px solid rgba(120,140,255,.13);display:flex;flex-direction:column;overflow-y:hidden;z-index:200}",
+      "#nbs-sidebar{position:fixed;top:0;left:0;bottom:0;width:200px;background:linear-gradient(180deg,rgba(238,244,255,.96) 0%,rgba(245,240,255,.96) 100%);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-right:1px solid rgba(120,140,255,.13);display:flex;flex-direction:column;overflow-y:hidden;z-index:200}",
       ".nbs-nsec{padding:8px 10px;flex:1;overflow-y:auto;min-height:0}",
       "#nbs-mobile-hdr{position:fixed;top:0;left:0;right:0;height:50px;background:rgba(238,244,255,.95);backdrop-filter:blur(14px);border-bottom:1px solid rgba(120,140,255,.13);display:none;align-items:center;gap:8px;padding:0 14px;z-index:200}",
       "#nbs-bottom-tab{position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border-top:1px solid rgba(120,140,255,.12);display:none;z-index:200;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:env(safe-area-inset-bottom,0)}",
       ".nbs-fam{padding:10px 14px 8px;border-bottom:1px solid rgba(120,140,255,.10);margin-bottom:4px}",
-      ".nbs-fn{font-size:13px;font-weight:800;color:#111827;letter-spacing:-.2px}",
-      ".nbs-fd{font-size:10px;color:#9CA3AF;margin-top:2px}",
-      ".nbs-sl{font-size:9px;font-weight:700;color:#9CA3AF;padding:0 8px 5px;letter-spacing:.07em;text-transform:uppercase}",
+      ".nbs-fn{font-size:14px;font-weight:800;color:#111827;letter-spacing:-.2px}",
+      ".nbs-fd{font-size:11px;color:#9CA3AF;margin-top:2px}",
+      ".nbs-sl{font-size:10px;font-weight:700;color:#9CA3AF;padding:0 8px 5px;letter-spacing:.07em;text-transform:uppercase}",
       ".nbs-ni{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:9px;cursor:pointer;margin-bottom:2px;border-left:3px solid transparent;transition:all .15s}",
       ".nbs-ni:hover{background:rgba(59,130,246,.07);color:#1D4ED8}",
       ".nbs-ni-on{background:rgba(59,130,246,.10);border-left-color:#7C3AED}",
-      ".nbs-nicon{font-size:14px;flex-shrink:0}",
-      ".nbs-nlabel{font-size:12px;color:#6B7280;font-weight:500}",
+      ".nbs-nicon{font-size:16px;flex-shrink:0}",
+      ".nbs-nlabel{font-size:13px;color:#6B7280;font-weight:500}",
       ".nbs-ni:hover .nbs-nlabel{color:#1D4ED8}",
       ".nbs-ni-on .nbs-nlabel{color:#4F46E5;font-weight:700}",
       ".nbs-foot{padding:10px;border-top:1px solid rgba(120,140,255,.10)}",
       ".nbs-disclaimer{margin-top:8px;padding:8px 10px;border-radius:8px;background:rgba(120,140,255,.05);border:1px solid rgba(120,140,255,.10);font-size:10px;color:#9CA3AF;line-height:1.6;letter-spacing:.01em}",
-      ".nbs-pbtn{width:100%;padding:8px;margin-bottom:5px;background:linear-gradient(90deg,rgba(59,130,246,.10),rgba(124,58,237,.10));color:#4F46E5;border:1px solid rgba(120,140,255,.18);border-radius:9px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px}",
+      ".nbs-pbtn{width:100%;padding:8px;margin-bottom:5px;background:linear-gradient(90deg,rgba(59,130,246,.10),rgba(124,58,237,.10));color:#4F46E5;border:1px solid rgba(120,140,255,.18);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px}",
       ".nbs-pbtn:hover{background:linear-gradient(90deg,rgba(59,130,246,.16),rgba(124,58,237,.16))}",
-      ".nbs-bbtn{width:100%;padding:7px;background:transparent;color:#9CA3AF;border:none;border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px}",
+      ".nbs-bbtn{width:100%;padding:7px;background:transparent;color:#9CA3AF;border:none;border-radius:7px;font-size:13px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px}",
       ".nbs-bbtn:hover{color:#6B7280}",
       ".nbs-ti{flex:0 0 auto;min-width:64px;max-width:80px;display:flex;flex-direction:column;align-items:center;padding:8px 4px 5px;cursor:pointer;color:#999}",
       ".nbs-ti-on{color:#6D28D9}",
       ".nbs-tl{font-size:9px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}",
       ".nbs-ti-on .nbs-tl{font-weight:500}",
       ".nbs-tdot{width:20px;height:2px;background:linear-gradient(90deg,#3B82F6,#7C3AED);border-radius:99px;margin-top:2px}",
-      ".nbs-member-entry{display:flex;align-items:center;gap:10px;padding:9px 10px;margin:4px 10px 0;border-radius:10px;cursor:pointer;border:1px dashed rgba(120,140,255,.25);transition:all .15s}",
-      ".nbs-member-entry:hover{background:rgba(59,130,246,.06);border-color:rgba(99,102,241,.35)}",
       "#nbs-member-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:500;align-items:center;justify-content:center;padding:20px}",
       "#nbs-member-modal.open{display:flex}",
       "#nbs-member-modal-box{background:#fff;border-radius:14px;width:100%;max-width:460px;max-height:85vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.2)}",
@@ -642,7 +641,9 @@
       ".nbs-ef-btns{display:flex;gap:8px;margin-top:4px}",
       ".nbs-ef-cancel{flex:1;padding:9px;background:transparent;color:#666;border:1px solid #ddd;border-radius:7px;cursor:pointer;font-family:inherit;font-size:13px}",
       ".nbs-ef-save{flex:2;padding:9px;background:linear-gradient(90deg,#3B82F6,#7C3AED);color:#fff;border:none;border-radius:9px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600}",
-      "@media print{#nbs-sidebar,#nbs-mobile-hdr,#nbs-bottom-tab{display:none!important}body{padding-left:0!important;padding-top:0!important;padding-bottom:0!important}}"
+      "@media print{#nbs-sidebar,#nbs-mobile-hdr,#nbs-bottom-tab{display:none!important}body{padding-left:0!important;padding-top:0!important;padding-bottom:0!important}}",
+      ".nbs-logo{padding:10px 12px 8px;border-bottom:1px solid rgba(120,140,255,.12)}",
+      ".nbs-logo-img{width:100%;max-width:160px;height:auto;object-fit:contain;display:block}"
     ].join("\n");
     document.head.appendChild(s);
   }
