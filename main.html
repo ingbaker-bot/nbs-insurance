@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>NBS 雲端保單體檢 - 主畫面</title>
-  <style>
+    <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
@@ -14,7 +14,6 @@
       color: #111827;
     }
 
-    /* 背景裝飾光暈 */
     body::before {
       content: '';
       position: fixed; top: -120px; right: -80px;
@@ -30,7 +29,6 @@
       pointer-events: none; z-index: 0;
     }
 
-    /* ── Header ── */
     .header {
       background: rgba(255,255,255,.82);
       backdrop-filter: blur(14px);
@@ -51,7 +49,6 @@
       gap: 10px;
     }
 
-    /* Logo 在 header 內 */
     .header-logo {
       height: 32px;
       width: auto;
@@ -80,68 +77,40 @@
     }
 
     .user-avatar {
-      width: 30px;
-      height: 30px;
+      width: 30px; height: 30px;
       border-radius: 50%;
       background: linear-gradient(135deg, #3B82F6, #7C3AED);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 12px;
-      font-weight: 700;
-      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; color: #fff;
       overflow: hidden;
       box-shadow: 0 2px 8px rgba(124,58,237,.25);
       flex-shrink: 0;
     }
 
-    .user-avatar img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
+    .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
 
     .logout-btn {
-      font-size: 12px;
-      color: #9CA3AF;
-      cursor: pointer;
-      background: none;
-      border: 1.5px solid #E5E7EB;
-      border-radius: 7px;
-      padding: 4px 10px;
-      font-family: inherit;
+      font-size: 12px; color: #9CA3AF; cursor: pointer;
+      background: none; border: 1.5px solid #E5E7EB;
+      border-radius: 7px; padding: 4px 10px; font-family: inherit;
       transition: border-color .15s, color .15s;
     }
     .logout-btn:hover { border-color: #9CA3AF; color: #374151; }
 
-    /* ── 主內容 ── */
-    .main {
-      padding: 20px 16px;
-      max-width: 540px;
-      margin: 0 auto;
-      position: relative;
-      z-index: 1;
-    }
+    .main { padding: 20px 16px; max-width: 540px; margin: 0 auto; position: relative; z-index: 1; }
 
-    /* ── 搜尋欄 ── */
-    .search-bar {
-      position: relative;
-      margin-bottom: 16px;
-    }
+    .search-bar { position: relative; margin-bottom: 16px; }
 
     .search-bar input {
       width: 100%;
       padding: 11px 14px 11px 40px;
       font-size: 14px;
       border: 1.5px solid rgba(120,140,255,.18);
-      border-radius: 12px;
-      outline: none;
+      border-radius: 12px; outline: none;
       background: rgba(255,255,255,.80);
-      font-family: inherit;
-      color: #111827;
+      font-family: inherit; color: #111827;
       transition: border-color .15s, background .15s, box-shadow .15s;
     }
-
     .search-bar input:focus {
       border-color: #3B82F6;
       background: rgba(255,255,255,.95);
@@ -150,40 +119,24 @@
     .search-bar input::placeholder { color: #9CA3AF; }
 
     .search-icon {
-      position: absolute;
-      left: 13px;
-      top: 50%;
+      position: absolute; left: 13px; top: 50%;
       transform: translateY(-50%);
-      color: #9CA3AF;
-      font-size: 16px;
-      pointer-events: none;
+      color: #9CA3AF; font-size: 16px; pointer-events: none;
     }
 
-    /* ── 區塊標題 ── */
     .section-label {
-      font-size: 11px;
-      font-weight: 700;
-      color: #9CA3AF;
-      letter-spacing: .07em;
-      text-transform: uppercase;
-      margin-bottom: 10px;
+      font-size: 11px; font-weight: 700; color: #9CA3AF;
+      letter-spacing: .07em; text-transform: uppercase; margin-bottom: 10px;
     }
 
-    /* ── 家庭卡片 ── */
     .family-card {
       background: rgba(255,255,255,.82);
       border: 1px solid rgba(120,140,255,.12);
-      border-radius: 14px;
-      padding: 13px 15px;
-      margin-bottom: 8px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 13px;
+      border-radius: 14px; padding: 13px 15px; margin-bottom: 8px;
+      cursor: pointer; display: flex; align-items: center; gap: 13px;
       transition: background .15s, transform .1s, box-shadow .15s;
       box-shadow: 0 2px 10px rgba(100,120,255,.05);
     }
-
     .family-card:hover {
       background: rgba(255,255,255,.96);
       transform: translateY(-1px);
@@ -192,38 +145,23 @@
     }
 
     .family-avatar {
-      width: 42px;
-      height: 42px;
-      border-radius: 13px;
+      width: 42px; height: 42px; border-radius: 13px;
       background: linear-gradient(135deg, #EEF4FF, #EDE9FF);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 17px;
-      font-weight: 800;
-      color: #6D28D9;
-      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px; font-weight: 800; color: #6D28D9; flex-shrink: 0;
     }
 
     .family-info { flex: 1; min-width: 0; }
     .family-name { font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 3px; }
     .family-meta { font-size: 12px; color: #9CA3AF; }
-
     .chevron { color: #D1D5DB; font-size: 18px; flex-shrink: 0; }
 
-    /* ── 新增按鈕 ── */
     .add-btn {
-      width: 100%;
-      padding: 13px;
+      width: 100%; padding: 13px;
       background: linear-gradient(90deg, #3B82F6, #7C3AED);
-      color: #fff;
-      border: none;
-      border-radius: 12px;
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-      font-family: inherit;
-      margin-top: 6px;
+      color: #fff; border: none; border-radius: 12px;
+      font-size: 14px; font-weight: 700; cursor: pointer;
+      font-family: inherit; margin-top: 6px;
       transition: opacity .15s, transform .1s;
       box-shadow: 0 4px 16px rgba(100,120,255,.25);
       letter-spacing: .02em;
@@ -231,139 +169,77 @@
     .add-btn:hover { opacity: .92; transform: translateY(-1px); }
     .add-btn:active { transform: translateY(0); }
 
-    /* ── 空狀態 ── */
-    .empty-state {
-      text-align: center;
-      padding: 48px 20px;
-      color: #9CA3AF;
-    }
+    .empty-state { text-align: center; padding: 48px 20px; color: #9CA3AF; }
     .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
     .empty-state .text { font-size: 13px; line-height: 1.7; }
 
-    /* ── 載入中 ── */
-    .loading-state {
-      text-align: center;
-      padding: 48px 20px;
-      color: #9CA3AF;
-      font-size: 13px;
-    }
+    .loading-state { text-align: center; padding: 48px 20px; color: #9CA3AF; font-size: 13px; }
 
     .spinner {
-      display: inline-block;
-      width: 18px; height: 18px;
-      border: 2px solid #E5E7EB;
-      border-top-color: #3B82F6;
-      border-radius: 50%;
-      animation: spin .7s linear infinite;
-      margin-right: 6px;
-      vertical-align: middle;
+      display: inline-block; width: 18px; height: 18px;
+      border: 2px solid #E5E7EB; border-top-color: #3B82F6;
+      border-radius: 50%; animation: spin .7s linear infinite;
+      margin-right: 6px; vertical-align: middle;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── Modal ── */
     .modal-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
+      display: none; position: fixed; inset: 0;
       background: rgba(17,24,39,.45);
       backdrop-filter: blur(4px);
-      z-index: 200;
-      align-items: flex-end;
-      justify-content: center;
-      padding: 0;
+      z-index: 200; align-items: flex-end; justify-content: center; padding: 0;
     }
     .modal-overlay.active { display: flex; }
 
     .modal {
-      background: #fff;
-      border-radius: 20px 20px 0 0;
-      padding: 24px 20px;
-      width: 100%;
-      max-width: 540px;
-      max-height: 90vh;
-      overflow-y: auto;
+      background: #fff; border-radius: 20px 20px 0 0;
+      padding: 24px 20px; width: 100%; max-width: 540px;
+      max-height: 90vh; overflow-y: auto;
     }
 
     .modal-title {
-      font-size: 16px;
-      font-weight: 700;
-      color: #111827;
-      margin-bottom: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+      font-size: 16px; font-weight: 700; color: #111827;
+      margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;
     }
 
     .modal-close {
-      background: #F3F4F6;
-      border: none;
-      font-size: 18px;
-      color: #6B7280;
-      cursor: pointer;
-      padding: 0;
-      width: 28px; height: 28px;
-      border-radius: 50%;
+      background: #F3F4F6; border: none; font-size: 18px; color: #6B7280;
+      cursor: pointer; padding: 0; width: 28px; height: 28px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
-      line-height: 1;
-      transition: background .15s;
+      line-height: 1; transition: background .15s;
     }
     .modal-close:hover { background: #E5E7EB; color: #374151; }
 
-    /* 步驟指示 */
-    .steps {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-bottom: 20px;
-    }
+    .steps { display: flex; align-items: center; gap: 6px; margin-bottom: 20px; }
 
     .step-dot {
-      width: 26px; height: 26px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 11px;
-      font-weight: 700;
-      flex-shrink: 0;
+      width: 26px; height: 26px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; flex-shrink: 0;
     }
     .step-dot.active   { background: linear-gradient(135deg,#3B82F6,#7C3AED); color: #fff; }
     .step-dot.done     { background: #D1FAE5; color: #065F46; }
     .step-dot.inactive { background: #F3F4F6; color: #9CA3AF; }
     .step-line { flex: 1; height: 1px; background: #E5E7EB; }
 
-    /* 表單 */
     .field { margin-bottom: 14px; }
     .field label {
-      display: block;
-      font-size: 11px;
-      font-weight: 700;
-      color: #6B7280;
-      margin-bottom: 5px;
-      letter-spacing: .04em;
-      text-transform: uppercase;
+      display: block; font-size: 11px; font-weight: 700; color: #6B7280;
+      margin-bottom: 5px; letter-spacing: .04em; text-transform: uppercase;
     }
     .field input, .field select {
-      width: 100%;
-      padding: 10px 12px;
-      font-size: 14px;
-      border: 1.5px solid #E5E7EB;
-      border-radius: 10px;
-      outline: none;
-      font-family: inherit;
-      background: #FAFAFA;
-      color: #111827;
+      width: 100%; padding: 10px 12px; font-size: 14px;
+      border: 1.5px solid #E5E7EB; border-radius: 10px;
+      outline: none; font-family: inherit; background: #FAFAFA; color: #111827;
       transition: border-color .15s, background .15s, box-shadow .15s;
     }
     .field input:focus, .field select:focus {
-      border-color: #3B82F6;
-      background: #fff;
+      border-color: #3B82F6; background: #fff;
       box-shadow: 0 0 0 3px rgba(59,130,246,.10);
     }
     .field input::placeholder { color: #9CA3AF; }
     .field .hint { font-size: 11px; color: #3B82F6; margin-top: 3px; }
 
-    /* Modal 按鈕 */
     .btn-row { display: flex; gap: 8px; margin-top: 20px; }
     .btn-primary {
       flex: 2; padding: 11px;
@@ -375,43 +251,34 @@
     .btn-primary:hover { opacity: .9; }
     .btn-primary:disabled { opacity: .45; cursor: default; }
     .btn-secondary {
-      flex: 1; padding: 11px;
-      background: transparent; color: #6B7280;
+      flex: 1; padding: 11px; background: transparent; color: #6B7280;
       border: 1.5px solid #E5E7EB; border-radius: 10px;
       font-size: 13px; cursor: pointer; font-family: inherit;
       transition: border-color .15s, color .15s;
     }
     .btn-secondary:hover { border-color: #9CA3AF; color: #374151; }
 
-    /* 保險年齡提示 */
     .age-hint { font-size: 11px; color: #3B82F6; margin-top: 3px; min-height: 16px; }
 
-    /* 管理員標籤 */
     .admin-badge {
-      font-size: 10px;
-      padding: 2px 8px;
-      border-radius: 99px;
+      font-size: 10px; padding: 2px 8px; border-radius: 99px;
       background: linear-gradient(90deg, #EEF4FF, #F3EEFF);
-      color: #6D28D9;
-      font-weight: 700;
+      color: #6D28D9; font-weight: 700;
       border: 1px solid rgba(109,40,217,.15);
     }
 
-    /* 狀態訊息 */
     .status-msg {
-      font-size: 12px;
-      padding: 9px 12px;
-      border-radius: 8px;
-      margin-top: 8px;
-      display: none;
+      font-size: 12px; padding: 9px 12px; border-radius: 8px;
+      margin-top: 8px; display: none;
     }
     .status-msg.error   { background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA; }
     .status-msg.success { background: #F0FDF4; color: #166534; border: 1px solid #BBF7D0; }
+  </style>
   <script src="nav.js"></script>
 </head>
 <body>
 
-  <!-- Header -->
+    <!-- Header -->
   <div class="header">
     <div class="header-left">
       <img class="header-logo"
@@ -442,8 +309,9 @@
     <!-- 家庭列表 -->
     <div class="section-label" id="list-label">家庭列表</div>
     <div id="family-list">
-      <div class="loading-state">
-        <span class="spinner"></span>載入中…
+      <div class="loading-state" id="loading-view">
+        <span class="spinner"></span> 
+        <span id="loading-text">保單體檢資料連線中，請稍候...</span>
       </div>
     </div>
 
@@ -531,56 +399,113 @@
 
     let currentUser = null;
     let allFamilies = [];
-
+    // ── 新增：動態載入文字設定 ──
+    let loadingTimer = null;
+    const loadingMessages = [
+      "保單資料庫安全連線中...",
+      "正在彙整各險種保障明細...",
+      "保障缺口運算即將完成，請稍候..."
+    ];
+    
     // ── 初始化 ────────────────────────────────────────────────
     window.onload = function() {
-      // 取得登入資訊
       const saved = localStorage.getItem("nbs_user");
-      if (!saved) {
-        window.location.href = "index.html";
-        return;
-      }
-
+      if (!saved) { window.location.href = "index.html"; return; }
       currentUser = JSON.parse(saved);
 
-      // 更新 Header
       const nameEl = document.getElementById("user-name");
       const avatarEl = document.getElementById("user-avatar");
       const adminBadge = document.getElementById("admin-badge");
-
       nameEl.textContent = currentUser.agentName || currentUser.name || currentUser.email;
 
       if (currentUser.picture) {
         avatarEl.innerHTML = `<img src="${currentUser.picture}" alt="avatar" />`;
       } else {
-        const n = currentUser.agentName || currentUser.name || "?";
-        avatarEl.textContent = n[0];
+        avatarEl.textContent = nameEl.textContent[0];
       }
+      if (currentUser.isAdmin) adminBadge.style.display = "inline";
 
-      if (currentUser.isAdmin) {
-        adminBadge.style.display = "inline";
-      }
-
-      // 設定分析日預設為今天
       const today = new Date().toISOString().slice(0, 10);
       document.getElementById("analysis-date").value = today;
       updateAnalysisRoc();
 
-      loadFamilies();
+      // ── 新增：檢查是否有直連網址，沒有就補抓 ──
+      const shellUrl = localStorage.getItem("nbs_shell_url");
+      if (!shellUrl && !currentUser.isAdmin) {
+        callGAS("checkAuth", { email: currentUser.email }).then(res => {
+          if (res.shellUrl) localStorage.setItem("nbs_shell_url", res.shellUrl);
+          loadFamilies();
+        }).catch(() => loadFamilies());
+      } else {
+        loadFamilies();
+      }
     };
 
     // ── 載入家庭列表 ──────────────────────────────────────────
-    function loadFamilies() {
-      document.getElementById("family-list").innerHTML =
-        '<div class="loading-state"><span class="spinner"></span>載入中…</div>';
+    const FAMILIES_CACHE_KEY = "nbs_families_list";
+    const FAMILIES_CACHE_TTL = 10 * 60 * 1000; // 10 分鐘
 
-      // 直接用 DriveDB（nav.js）讀取使用者自己的 Drive
+    function getFamiliesCache() {
+      try {
+        const raw = sessionStorage.getItem(FAMILIES_CACHE_KEY);
+        if (!raw) return null;
+        const obj = JSON.parse(raw);
+        if (!obj || !obj.ts || !obj.data) return null;
+        if (Date.now() - obj.ts > FAMILIES_CACHE_TTL) { sessionStorage.removeItem(FAMILIES_CACHE_KEY); return null; }
+        return obj.data;
+      } catch(e) { return null; }
+    }
+    function setFamiliesCache(data) {
+      try { sessionStorage.setItem(FAMILIES_CACHE_KEY, JSON.stringify({ ts: Date.now(), data })); } catch(e) {}
+    }
+    function invalidateFamiliesCache() {
+      try { sessionStorage.removeItem(FAMILIES_CACHE_KEY); } catch(e) {}
+    }
+
+    function loadFamilies(forceRefresh) {
+      // 先查快取，有就立即顯示（< 50ms）
+      if (!forceRefresh) {
+        const cached = getFamiliesCache();
+        if (cached) {
+          allFamilies = cached;
+          renderFamilies(allFamilies);
+          // 背景靜默更新，不影響畫面
+          setTimeout(function() {
+            callGAS("listFamilies", {})
+              .then(result => {
+                const fresh = result.families || [];
+                setFamiliesCache(fresh);
+                allFamilies = fresh;
+                renderFamilies(allFamilies); // 靜默更新列表
+              }).catch(() => {});
+          }, 300);
+          return;
+        }
+      }
+
+      // 快取未命中：正常流程，啟動「有溫度的動態載入」
+      document.getElementById("family-list").innerHTML =
+        '<div class="loading-state"><span class="spinner"></span><span id="loading-text">保單資料庫安全連線中...</span></div>';
+
+      // 啟動文字輪播計時器 (每 1.5 秒換一句)
+      let msgIndex = 0;
+      if (loadingTimer) clearInterval(loadingTimer);
+      loadingTimer = setInterval(() => {
+        msgIndex = (msgIndex + 1) % loadingMessages.length;
+        const textEl = document.getElementById("loading-text");
+        if (textEl) textEl.textContent = loadingMessages[msgIndex];
+      }, 1500);
+
+      // 發送請求給 GAS
       callGAS("listFamilies", {})
         .then(result => {
+          clearInterval(loadingTimer); // 資料回來了，關閉計時器
           allFamilies = result.families || [];
+          setFamiliesCache(allFamilies);
           renderFamilies(allFamilies);
         })
         .catch(err => {
+          clearInterval(loadingTimer); // 發生錯誤，關閉計時器
           console.error("loadFamilies error", err);
           document.getElementById("family-list").innerHTML =
             '<div class="empty-state"><div class="text">載入失敗，請重新整理頁面</div></div>';
@@ -741,7 +666,8 @@
         btn.disabled = false;
         btn.textContent = "建立家庭";
         closeModal();
-        loadFamilies(); // 重新載入列表
+        invalidateFamiliesCache();
+        loadFamilies(true); // 清快取後強制重新載入，確保列表最新
       })
       .catch(err => {
         btn.disabled = false;
@@ -816,11 +742,21 @@
       if (window.NBS_NAV && typeof NBS_NAV.callGAS === "function") {
         return NBS_NAV.callGAS(action, params);
       }
-      // fallback：直接呼叫 GAS
-      return fetch(AUTH_GAS_URL, {
+      
+      // ── 新增：判斷走 API 1 還是走直連 ──
+      let targetUrl = AUTH_GAS_URL;
+      const shellUrl = localStorage.getItem("nbs_shell_url");
+      const isAuthAction = (action === 'checkAuth' || action === 'registerShell' || action === 'apply');
+      
+      // 非驗證動作 + 非管理員 + 擁有直連網址，就直接打給 Shell！
+      if (!isAuthAction && (!currentUser || !currentUser.isAdmin) && shellUrl) {
+        targetUrl = shellUrl;
+      }
+
+      return fetch(targetUrl, {
         method: "POST",
         headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify(Object.assign({ action: action }, params || {})),
+        body: JSON.stringify(Object.assign({ action: action, email: currentUser ? currentUser.email : "" }, params || {})),
       }).then(r => r.json());
     }
   </script>
