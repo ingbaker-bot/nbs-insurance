@@ -130,10 +130,11 @@ const GAS="https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQ
 
 // ▼ 新增受益人模塊
 const BLOCKS=[
-  {key:"monthly",          label:"每月應繳保費",      icon:"📅",desc:"月曆式繳費分配"},
-  {key:"summary",          label:"保單彙總一覽",      icon:"📊",desc:"保單列表、保費結構、各項保障加總"},
+  {key:"payment_table",   label:"保險繳費明細一覽表",icon:"📅",desc:"月曆繳費 + 各筆保費 + 受益人一覽"},
+  {key:"policy_summary",   label:"保單彙總一覽表",    icon:"📊",desc:"A4橫式：圓餅圖+家庭責任 / 醫療前中後期 / 就醫狀況"},
+  {key:"policy_detail",    label:"保單明細一覽表",    icon:"🛡️",desc:"各項保障加總"},
   {key:"savings_timeline", label:"儲蓄險現金流時間軸",icon:"📈",desc:"未來15年各被保險人現金流匯整"},
-  {key:"beneficiary",      label:"受益人與傳承",      icon:"👥",desc:"傳承規劃與保額對應關係"},
+  {key:"declaration",      label:"專屬保單檢視聲明",  icon:"📋",desc:"聲明與免責條款"},
 ];
 const FMTS=[
   {key:"png_single",  type:"png",label:"PNG 一張長圖",desc:"所有區塊合併，適合 LINE 傳送"},
@@ -989,7 +990,306 @@ NBS_NAV.init({ page: "export" });
 function renderBlock(key){
   var active=policies.filter(function(p){return p.status==="有效";});
 
-  // ▼ 新版受益人與傳承模塊渲染
+  // ══════════════════════════════════════════════════════
+  // ① 保險繳費明細一覽表
+  //    = 月曆 + 保單列表（主/附約＋保費＋狀態＋受益人）
+  // ══════════════════════════════════════════════════════
+  if(key==="payment_table"){
+    var active2=policies.filter(function(p){return p.status==="有效";});
+    var totalTWD2=active2.reduce(function(s,p){return s+(p.premiumTWD||0);},0);
+    var now2=new Date().getMonth();
+
+    // 月曆
+    var cells=Array.from({length:12},function(_,mi){
+      var t=0;
+      active2.forEach(function(p){
+        var sm=new Date(p.startDate||"2020-01-01").getMonth(),pr=p.premiumTWD||0;
+        if(p.payMode==="月繳")t+=Math.round(pr/12);
+        else if(p.payMode==="季繳"&&(mi-sm+12)%3===0)t+=Math.round(pr/4);
+        else if(p.payMode==="半年繳"&&(mi-sm+12)%6===0)t+=Math.round(pr/2);
+        else if(p.payMode==="年繳"&&mi===sm%12)t+=pr;
+      });
+      return'<div style="padding:6px 4px;background:'+(mi===now2?"#EEF4FF":"#f7f7f5")+';border-radius:6px;text-align:center;border:'+(mi===now2?"1.5px solid #3B82F6":"1px solid #e0e0e0")+'">'+
+        '<div style="font-size:20px;font-weight:500;color:'+(mi===now2?"#3B82F6":"#444")+'">'+(mi+1)+'月</div>'+
+        '<div style="font-size:22px;font-weight:600;color:'+(mi===now2?"#3B82F6":"#333")+'">'+
+          (t>0?t.toLocaleString():"—")+
+        '</div>'+
+        '</div>';
+    });
+    var calHtml='<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:12px">'+cells.slice(0,6).join("")+'</div>'+
+      '<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:16px">'+cells.slice(6,12).join("")+'</div>';
+
+    // 年繳/月均
+    var statHtml='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">'+
+      '<div style="padding:10px 14px;border-radius:10px;background:#EEF4FF">'+
+        '<div style="font-size:20px;color:#3B82F6">年繳總保費</div>'+
+        '<div style="font-size:32px;font-weight:700;color:#1D4ED8">NT$ '+(totalTWD2/10000).toFixed(1)+'萬</div>'+
+      '</div>'+
+      '<div style="padding:10px 14px;border-radius:10px;background:#F0FDF4">'+
+        '<div style="font-size:20px;color:#22C55E">月均保費</div>'+
+        '<div style="font-size:32px;font-weight:700;color:#15803D">NT$ '+Math.round(totalTWD2/12).toLocaleString()+'</div>'+
+      '</div>'+
+    '</div>';
+
+    // 保單明細 + 受益人合併表
+    var BENEF_RULES_PT={
+      "壽險保障":{death:"可設定",live:"不適用"},
+      "意外險":{death:"可設定",live:"不適用"},
+      "醫療保障":{death:"鎖定本人",live:"不適用"},
+      "癌症醫療":{death:"鎖定本人",live:"不適用"},
+      "重大疾病險":{death:"可設定",live:"可設定"},
+      "重大傷病險":{death:"鎖定本人",live:"鎖定本人"},
+      "特定傷病險":{death:"鎖定本人",live:"鎖定本人"},
+      "失能長照":{death:"可設定",live:"鎖定本人"},
+      "儲蓄險":{death:"可設定",live:"可設定"},
+      "年金險":{death:"可設定",live:"鎖定本人"},
+      "投資型保險":{death:"可設定",live:"鎖定本人"}
+    };
+    var thS='padding:8px 10px;font-size:20px;font-weight:600;color:#888;border-bottom:2px solid #e0e0e0;background:#f7f7f5;white-space:nowrap;';
+    var tdS='padding:8px 10px;font-size:22px;border-bottom:1px solid #f0f0f0;vertical-align:middle;';
+
+    var tableHtml='<table style="width:100%;border-collapse:collapse">'+
+      '<thead><tr>'+
+        '<th style="'+thS+'width:44px">主/附約</th>'+
+        '<th style="'+thS+'">險種</th>'+
+        '<th style="'+thS+'">保單號碼</th>'+
+        '<th style="'+thS+'">商品名稱</th>'+
+        '<th style="'+thS+'text-align:right">當年度保額</th>'+
+        '<th style="'+thS+'text-align:right">年繳保費</th>'+
+        '<th style="'+thS+'width:52px;text-align:center">狀態</th>'+
+        '<th style="'+thS+'">身故受益人</th>'+
+        '<th style="'+thS+'">生存/滿期受益人</th>'+
+      '</tr></thead><tbody>';
+
+    policies.forEach(function(p){
+      var cc=CC[p.category]||"#999";
+      var isMR=p.isMain!==false;
+      var rule=BENEF_RULES_PT[p.category]||{death:"可設定",live:"可設定"};
+      var ownerName=p.ownerName||p.proposer||p.applicant||"—";
+      var amtText=p.insuredAmount?(p.insuredAmount+" "+(p.insuredAmountUnit||"萬元")):"—";
+
+      // 身故受益人
+      var dStr="未設定";
+      if(p.isRider) dStr="同主約";
+      else if(rule.death==="鎖定本人") dStr="被保險人本人 🔒";
+      else if(p.beneficiaryDeathText) dStr=p.beneficiaryDeathText;
+      else if(p.beneficiaryDeathCustom&&p.beneficiaryDeathCustom.length>0)
+        dStr=p.beneficiaryDeathCustom.map(function(c){return c.customName||"指定家人";}).join("、");
+
+      // 生存/滿期受益人
+      var lStr="—",mStr="—";
+      if(p.beneficiaryLiveText) lStr=p.beneficiaryLiveText;
+      else if(p.beneficiaryLiveType==="self") lStr="被保險人本人";
+      else if(p.beneficiaryLiveType==="owner") lStr=ownerName+"(要保人)";
+      if(p.beneficiaryMaturityText) mStr=p.beneficiaryMaturityText;
+      else if(p.beneficiaryMaturityType==="self") mStr="被保險人本人";
+      else if(p.beneficiaryMaturityType==="owner") mStr=ownerName+"(要保人)";
+      var liveDisplay="無 / 不適用";
+      if(rule.live==="鎖定本人") liveDisplay='<span style="color:#888">本人 🔒</span>';
+      else if(rule.live!=="不適用"){
+        var parts=[];
+        if(lStr&&lStr!=="—") parts.push("生存金："+lStr);
+        if(mStr&&mStr!=="—") parts.push("滿期金："+mStr);
+        if(parts.length) liveDisplay=parts.join("<br/>");
+      }
+      var dColor=dStr==="未設定"?"#ccc":"#333";
+      var statusBg=p.status==="有效"?"#D1FAE5":"#F3F4F6";
+      var statusCo=p.status==="有效"?"#065F46":"#9CA3AF";
+
+      tableHtml+='<tr>'+
+        '<td style="'+tdS+'text-align:center">'+
+          '<span style="font-size:18px;font-weight:700;color:#fff;background:'+(isMR?"linear-gradient(90deg,#3B82F6,#7C3AED)":"#ccc")+';padding:2px 6px;border-radius:5px">'+(isMR?"主約":"附約")+'</span>'+
+        '</td>'+
+        '<td style="'+tdS+'">'+
+          '<span style="font-size:20px;padding:2px 7px;border-radius:99px;background:'+cc+'15;color:'+cc+'">'+( p.category||"—")+'</span>'+
+        '</td>'+
+        '<td style="'+tdS+'">'+
+          '<span style="font-family:monospace;font-size:20px;background:#EEF4FF;color:#3B82F6;padding:2px 7px;border-radius:99px;white-space:nowrap">'+(p.policyNo||p.id)+'</span>'+
+        '</td>'+
+        '<td style="'+tdS+'font-weight:600">'+(p.itemName||"—")+'</td>'+
+        '<td style="'+tdS+'text-align:right;font-weight:600;color:#1D4ED8;white-space:nowrap">'+ amtText+'</td>'+
+        '<td style="'+tdS+'text-align:right;font-weight:600;white-space:nowrap">'+(p.premiumTWD||0).toLocaleString()+'</td>'+
+        '<td style="'+tdS+'text-align:center">'+
+          '<span style="font-size:18px;padding:2px 8px;border-radius:99px;background:'+statusBg+';color:'+statusCo+'">'+( p.status||"有效")+'</span>'+
+        '</td>'+
+        '<td style="'+tdS+'color:'+dColor+';white-space:pre-wrap;line-height:1.6">'+ dStr+'</td>'+
+        '<td style="'+tdS+'line-height:1.6">'+liveDisplay+'</td>'+
+      '</tr>';
+    });
+    tableHtml+='</tbody></table>';
+
+    return'<div style="padding:10px 12px">'+statHtml+calHtml+
+      '<div style="font-size:22px;font-weight:600;color:#6B7280;margin-bottom:8px">保費 / 受益人明細</div>'+
+      '<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;overflow:hidden">'+ tableHtml+'</div>'+
+    '</div>';
+  }
+
+  // ══════════════════════════════════════════════════════
+  // ② 保單彙總一覽表（A4橫式：圓餅+家庭責任 / 醫療前中後期+簡要明細 / 就醫狀況）
+  // ══════════════════════════════════════════════════════
+  if(key==="policy_summary"){
+    var active3=policies.filter(function(p){return p.status==="有效";});
+    var cov3={};
+    policies.forEach(function(p){
+      Object.entries(p.coverage||{}).forEach(function(e){
+        if(typeof e[1]==="number") cov3[e[0]]=(cov3[e[0]]||0)+e[1]; else cov3[e[0]]=e[1];
+      });
+    });
+
+    // ── 列 1：圓餅圖 + 家庭責任 ──
+    var row1='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">'+
+      '<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:14px">'+
+        '<div style="font-size:20px;font-weight:600;color:#6B7280;margin-bottom:8px">保障覆蓋率</div>'+
+        '<div style="display:flex;gap:10px;font-size:18px;color:#888;margin-bottom:8px">'+
+          '<span>✅ 已規劃</span><span style="color:#F5A623">⚠️ 不足</span><span style="color:#bbb">❌ 缺口</span>'+
+        '</div>'+
+        buildDonutChartEx(active3,cov3,{},{})+
+      '</div>'+
+      '<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:14px">'+
+        '<div style="font-size:20px;font-weight:600;color:#6B7280;margin-bottom:10px">家庭責任</div>'+
+        buildFamilyDutySection()+
+      '</div>'+
+    '</div>';
+
+    // ── 列 2：醫療前中後期（含保障簡要明細）──
+    function sumKeyPS(k){ var t=0; policies.forEach(function(p){var v=p.coverage&&p.coverage[k];if(v&&typeof v==="number")t+=v;}); return t||null; }
+    function hasCatPS(cats){ return policies.some(function(p){return cats.indexOf(p.category)>=0;}); }
+    var phases3=[
+      {l:"醫療前期",c:"#5BAD6F",items:[
+        ["重大疾病",hasCatPS(["重大疾病險"])?(sumKeyPS("can_first")||"有規劃"):null],
+        ["重大傷病",hasCatPS(["重大傷病險"])?"有規劃":null],
+        ["特定傷病",hasCatPS(["特定傷病險"])?"有規劃":null],
+        ["初次罹癌",sumKeyPS("can_first")?(sumKeyPS("can_first")+"萬元"):null],
+      ]},
+      {l:"醫療中期",c:"#378ADD",items:[
+        ["住院日額",sumKeyPS("daily_room_1_30")?(sumKeyPS("daily_room_1_30")+"元/日"):hasCatPS(["醫療保障"])?"有規劃":null],
+        ["住院醫療（實支）",sumKeyPS("hosp_room")?(sumKeyPS("hosp_room")+"元/日"):null],
+        ["癌症住院",sumKeyPS("can_hosp")?(sumKeyPS("can_hosp")+"元/日"):null],
+        ["意外醫療",sumKeyPS("acc_opd")?(sumKeyPS("acc_opd")+"萬/次"):null],
+        ["意外住院",sumKeyPS("acc_hosp")?(sumKeyPS("acc_hosp")+"元/日"):null],
+        ["標靶藥物",sumKeyPS("can_target")?(sumKeyPS("can_target")+"萬元"):null],
+      ]},
+      {l:"醫療後期",c:"#E8638A",items:[
+        ["長照每月",sumKeyPS("ltc_monthly")?(sumKeyPS("ltc_monthly")+"萬/月"):null],
+        ["失能一次金",sumKeyPS("ltc_dis_amt")?(sumKeyPS("ltc_dis_amt")+"萬元"):null],
+        ["失能扶助",(sumKeyPS("ltc_dis_life")||sumKeyPS("acc_support"))?((sumKeyPS("ltc_dis_life")||sumKeyPS("acc_support"))+"萬/月"):null],
+        ["癌症安寧",sumKeyPS("can_hospice")?(sumKeyPS("can_hospice")+"萬元"):null],
+        ["癌症身故",sumKeyPS("can_death")?(sumKeyPS("can_death")+"萬元"):null],
+      ]},
+    ];
+    var arrowHtml3=buildSvgArrows(phases3.map(function(p){return{label:p.l,color:p.c};}));
+    var colsHtml3='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">'+
+      phases3.map(function(ph){
+        var rows3=ph.items.map(function(it){
+          var has=!!it[1];
+          return'<div style="display:flex;justify-content:space-between;align-items:center;font-size:22px;padding:5px 8px;margin-bottom:3px;border-radius:4px;background:'+(has?"#fff":"#f5f5f5")+'">'+
+            '<span style="color:'+(has?"#333":"#bbb")+'">'+ it[0]+'</span>'+
+            '<span style="font-weight:600;color:'+(has?ph.c:"#ccc")+'">'+(it[1]||"未投保")+'</span>'+
+          '</div>';
+        }).join("");
+        return'<div style="border:1.5px solid '+ph.c+'40;border-radius:8px;overflow:hidden">'+
+          '<div style="height:4px;background:'+ph.c+'"></div>'+
+          '<div style="padding:8px">'+ rows3+'</div>'+
+        '</div>';
+      }).join("")+
+    '</div>';
+
+    var row2='<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:14px;margin-bottom:16px">'+
+      '<div style="font-size:20px;font-weight:600;color:#6B7280;margin-bottom:8px">醫療前期 / 中期 / 後期</div>'+
+      arrowHtml3+'<div style="margin-top:10px">'+colsHtml3+'</div>'+
+    '</div>';
+
+    // ── 列 3：就醫狀況 ──
+    var baseHosp3=sumCovEx(["hosp_room","hosp_ext_room","daily_room_1_30","hosp_ext_daily","daily_discharge"],policies,cov3);
+    var row3='<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;overflow:hidden">'+
+      '<div style="padding:10px 14px;border-bottom:1px solid #f0f0f0">'+
+        '<span style="font-size:20px;font-weight:600;color:#6B7280">就醫狀況</span>'+
+      '</div>'+
+      '<table style="width:100%;border-collapse:collapse;font-size:22px">'+
+      '<thead><tr><th style="padding:7px 10px;text-align:left;color:#888;font-size:20px;font-weight:400"></th>'+
+        '<th style="padding:7px 10px;text-align:center;color:#27AE8F">疾病</th>'+
+        '<th style="padding:7px 10px;text-align:center;color:#F5A623">意外</th>'+
+        '<th style="padding:7px 10px;text-align:center;color:#E74C3C">癌症</th>'+
+      '</tr></thead><tbody>';
+    [["門診","opd"],["住院","hosp"]].forEach(function(rc,ri){
+      row3+='<tr style="border-top:'+(ri>0?"1px solid #f0f0f0":"none")+'"><td style="padding:7px 10px;font-weight:500;color:#555;background:#fafafa">'+ rc[0]+'</td>';
+      ["disease","accident","cancer"].forEach(function(ck){
+        if(rc[1]==="opd"&&ck==="disease"){row3+='<td style="text-align:center;padding:7px 10px"><div style="display:inline-flex;padding:3px 10px;border-radius:6px;background:#EAF3DE"><span style="font-size:22px;font-weight:500;color:#27500A">健保</span></div></td>';}
+        else{
+          var val="—",unit="";
+          if(rc[1]==="hosp"){unit="元/日";if(ck==="disease")val=baseHosp3||"—";else if(ck==="accident")val=(baseHosp3+sumCovEx(["acc_hosp"],policies,cov3))||"—";else val=(baseHosp3+sumCovEx(["can_hosp","can_discharge"],policies,cov3))||"—";}
+          if(rc[1]==="opd"){if(ck==="accident"){val=sumCovEx(["acc_opd"],policies,cov3)||"—";unit="萬/次";}else if(ck==="cancer"){val=sumCovEx(["can_opd"],policies,cov3)||"—";unit="元/次";}}
+          row3+='<td style="text-align:center;padding:7px 10px"><span style="font-size:24px;font-weight:500;color:#333">'+ val+'</span>'+(val!=="—"?'<span style="font-size:18px;color:#aaa;margin-left:2px">'+unit+'</span>':'')+'</td>';
+        }
+      });
+      row3+='</tr>';
+    });
+    row3+='</tbody></table>'+
+      '<div style="font-size:18px;color:#bbb;padding:6px 14px">💡 疾病住院＝實支病房＋日額病房＋日額出院療養</div></div>';
+
+    return'<div style="padding:10px 12px">'+ row1+row2+row3+'</div>';
+  }
+
+  // ══════════════════════════════════════════════════════
+  // ③ 保單明細一覽表（原「各項保障加總」，只改名）
+  // ══════════════════════════════════════════════════════
+  if(key==="policy_detail"){
+    // 直接沿用 summary 裡的各項保障加總邏輯
+    var cov4={};
+    policies.forEach(function(p){
+      Object.entries(p.coverage||{}).forEach(function(e){
+        if(typeof e[1]==="number") cov4[e[0]]=(cov4[e[0]]||0)+e[1]; else cov4[e[0]]=e[1];
+      });
+    });
+    var covStyles4={"日額型住院":"grid-row:span 2;","癌症醫療":"grid-row:span 2;","失能長照":"grid-column:2;"};
+    var html4='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-items:start">';
+    COVERAGE_GROUPS_EX.forEach(function(g){
+      var extraStyle=covStyles4[g.label]||"";
+      html4+='<div style="'+extraStyle+'background:#fff;border:1px solid #e8e8e8;border-radius:8px;overflow:hidden;border-top:3px solid '+g.color+'">'+
+        '<div style="display:flex;align-items:center;padding:7px 12px;background:'+g.color+'0D;border-bottom:1px solid #f0f0f0">'+
+          '<span style="font-size:22px;font-weight:600;letter-spacing:.04em;color:'+g.color+'">'+g.label+'</span>'+
+        '</div>';
+      g.items.forEach(function(item){
+        var maxKey=item.keys&&item.keys.find(function(k){return k.endsWith("_max");});
+        var minKey=maxKey?maxKey.replace("_max","_min"):null;
+        var minVal=minKey?sumCovEx([minKey],policies,cov4):0;
+        var maxVal=maxKey?sumCovEx([maxKey],policies,cov4):0;
+        var isRange=!!(maxKey&&(minVal>0||maxVal>0));
+        var total,displayVal;
+        if(isRange){
+          total=maxVal;
+          displayVal='<span style="font-size:22px;font-weight:600;font-family:monospace;color:'+g.color+'">'+
+            minVal.toLocaleString()+'<span style="color:#aaa;margin:0 2px">～</span>'+maxVal.toLocaleString()+
+            '<span style="font-size:18px;color:#999;margin-left:2px">'+item.unit+'</span></span>';
+        }else{
+          total=sumCovEx(item.keys,policies,cov4);
+          displayVal=total>0
+            ?'<span style="font-size:24px;font-weight:600;font-family:monospace;color:'+g.color+'">'+total.toLocaleString()+'<span style="font-size:18px;color:#999;font-weight:normal;font-family:sans-serif;margin-left:2px">'+item.unit+'</span></span>'
+            :'<span style="color:#ddd">—</span>';
+        }
+        html4+='<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 12px;border-bottom:1px dashed #f5f5f5;opacity:'+(total>0?1:0.45)+'">'+
+          '<span style="font-size:20px;color:'+(total>0?"#444":"#bbb")+'">'+item.label+'</span>'+
+          displayVal+
+        '</div>';
+      });
+      html4+='</div>';
+    });
+    html4+='</div>';
+    return'<div style="padding:10px 12px">'+html4+'</div>';
+  }
+
+  // ══════════════════════════════════════════════════════
+  // ⑤ 專屬保單檢視聲明（獨立模組）
+  // ══════════════════════════════════════════════════════
+  if(key==="declaration"){
+    return'<div style="padding:20px;font-size:20px;color:#555;line-height:2">'+ 
+      '<div style="font-size:24px;font-weight:700;color:#3B82F6;margin-bottom:16px">📋 專屬保單檢視聲明</div>'+
+      document.getElementById("DECL")?.innerHTML||"本報告為保障檢視參考，實際理賠項目與條件以各保險公司正式契約條款為準。"+
+    '</div>';
+  }
+
+
+  // ▼ 舊版受益人（保留相容性）
   if(key==="beneficiary"){
     var targetCats = ["壽險保障", "儲蓄險", "年金險", "投資型保險", "重大疾病險", "重大傷病險", "特定傷病險"];
     var bp = policies.filter(function(p){ return targetCats.indexOf(p.category)>=0; });
