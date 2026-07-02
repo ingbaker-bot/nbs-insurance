@@ -357,9 +357,8 @@
     if (!el) return;
     if (!_family) {
       el.innerHTML =
-        '<div style="padding:16px 14px 10px;border-bottom:1px solid rgba(255,255,255,.08)">' +
-          '<div class="nbs-logo-wrap"><img src="https://i.ibb.co/FkVkNhhd/NBS-4F3.jpg" class="nbs-logo-img" onerror="this.style.display=\'none\'"/></div>' +
-          '<div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:4px">資料讀取中...</div>' +
+        '<div class="nbs-logo">' +
+          '<img src="https://i.ibb.co/FkVkNhhd/NBS-4F3.jpg" class="nbs-logo-img" onerror="this.style.display=\'none\'"/>' +
         '</div>' +
         '<div style="flex:1"></div>' +
         '<div class="nbs-foot">' +
@@ -641,8 +640,8 @@
       ".nbs-ef-cancel{flex:1;padding:9px;background:transparent;color:#666;border:1px solid #ddd;border-radius:7px;cursor:pointer;font-family:inherit;font-size:13px}",
       ".nbs-ef-save{flex:2;padding:9px;background:linear-gradient(90deg,#3B82F6,#7C3AED);color:#fff;border:none;border-radius:9px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600}",
       "@media print{#nbs-sidebar,#nbs-mobile-hdr,#nbs-bottom-tab{display:none!important}body{padding-left:0!important;padding-top:0!important;padding-bottom:0!important}}",
-      ".nbs-logo{border-bottom:1px solid rgba(120,140,255,.12);overflow:hidden}",
-      ".nbs-logo-img{width:100%;height:72px;object-fit:cover;object-position:center;display:block}"
+      ".nbs-logo{border-bottom:1px solid rgba(120,140,255,.12);padding:0;line-height:0;overflow:hidden}",
+      ".nbs-logo-img{width:100%;height:auto;max-width:200px;display:block;object-fit:contain}"
     ].join("\n");
     document.head.appendChild(s);
   }
