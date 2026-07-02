@@ -61,12 +61,11 @@
     .header-date { font-size: 22px; color: #bbb; }
 
     /* ── 主內容 ── */
-    .main { 
-  padding: 16px 24px; /* 電腦版左右留白稍微加大，視覺更舒適 */
-  max-width: 1200px;  /* 將原本的 560px 放大，讓大螢幕可以滿版展開 */
-  margin: 0 auto;
-  width: 100%;        /* 確保絕對不會超出手機螢幕邊界 */
-}
+    .main {
+      padding: 16px 24px;
+      width: 100%;      /* 真正撐滿整個內容區 */
+      max-width: none;  /* 移除最大寬度限制，讓 4 欄模組能完整滿版 */
+    }
 
 /* 針對手機版自動微調邊距，保持原本的緊湊感 */
 @media (max-width: 768px) {
@@ -120,6 +119,16 @@
     }
 
     .member-avatar { display: none; } /* 已移除，只顯示名字 */
+
+    .member-edit-hint {
+      font-size: 11px;
+      color: #7C3AED;
+      background: rgba(124,58,237,.08);
+      border-radius: 4px;
+      padding: 1px 5px;
+      margin-bottom: 2px;
+      pointer-events: none;
+    }
 
     .member-edit-btn {
       position: absolute;
@@ -250,8 +259,9 @@
     /* ── 功能模組 ── */
     .modules-grid {
       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      width: 100%;
     }
 
     .module-btn {
@@ -259,7 +269,7 @@
       flex-direction: column;
       align-items: center;
       gap: 6px;
-      padding: 14px 8px;
+      padding: 20px 8px;
       background: rgba(255,255,255,.82);
       border: 1px solid rgba(120,140,255,.10);
       border-radius: 13px;
@@ -267,6 +277,7 @@
       font-family: inherit;
       transition: all .15s;
       box-shadow: 0 2px 8px rgba(100,120,255,.04);
+      width: 100%;
     }
 
     .module-btn:hover {
@@ -684,7 +695,17 @@
     }
 
     // ── 渲染成員列 ────────────────────────────────────────────
-    function renderMembers() {
+    // ── 成員卡片點擊：第一次選中，已選中再點 → 開編輯 ──
+    function memberCardClick(el) {
+      var pid = el.getAttribute('data-pid');
+      if (selectedPersonId === pid) {
+        openEditPerson();  // 已選中的成員再點一次 → 開編輯
+      } else {
+        selectMember(pid); // 第一次點 → 選中
+      }
+    }
+
+        function renderMembers() {
       const row = document.getElementById("members-row");
       const activeMembers = familyData.members.filter(m => m.role !== "beneficiary_only");
       const benefMembers  = familyData.members.filter(m => m.role === "beneficiary_only");
@@ -697,8 +718,9 @@
         const rl = m.role === "primary" ? "本人" : (m.relation || "次要");
         return `
           <div class="member-card ${selectedPersonId === m.personId ? 'active' : ''}"
-               onclick="selectMember('${m.personId}')">
-            ${selectedPersonId === m.personId ? '<button class="member-edit-btn" onclick="event.stopPropagation();openEditPerson()" title="編輯成員資料">✏️</button>' : ''}
+               data-pid="${m.personId}"
+               onclick="memberCardClick(this)">
+            ${selectedPersonId === m.personId ? '<div class="member-edit-hint">✏️ 點選編輯</div>' : ''}
             <div class="member-name">${m.name}</div>
             <div class="member-age">${age !== null ? age + '歲' : '—'}</div>
             <span class="role-badge ${rc}">${rl}</span>
