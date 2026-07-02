@@ -1152,6 +1152,17 @@ async function savePolicy() {
       content: person,
     });
 
+    // 儲存成功：清除 sessionStorage bundle 快取，
+    // 確保切換到受益人/保障清單等頁面時，
+    // nav.js 會重新從 Drive 拿最新資料，而不是讀到舊快取
+    if (window.NBS_NAV && typeof NBS_NAV.invalidateBundleCache === 'function') {
+      NBS_NAV.invalidateBundleCache();
+    } else {
+      // 直接清除，以防 invalidateBundleCache 尚未掛載
+      const _fn = localStorage.getItem('nbs_current_family');
+      if (_fn) sessionStorage.removeItem('nbs_bundle_' + _fn);
+    }
+
     closeForm();
     renderTabs();
     renderPolicies();
@@ -1192,6 +1203,14 @@ async function deletePolicy() {
       fileName: member.name + "_" + editingPersonId + ".json",
       content: person,
     });
+
+    // 刪除成功也要清快取
+    if (window.NBS_NAV && typeof NBS_NAV.invalidateBundleCache === 'function') {
+      NBS_NAV.invalidateBundleCache();
+    } else {
+      const _fn = localStorage.getItem('nbs_current_family');
+      if (_fn) sessionStorage.removeItem('nbs_bundle_' + _fn);
+    }
 
     closeForm();
     renderTabs();
