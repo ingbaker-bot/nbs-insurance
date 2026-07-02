@@ -6,18 +6,18 @@
   <title>NBS - 受益人設定</title>
   <style>
     * { box-sizing:border-box; margin:0; padding:0; }
-    body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:#f5f5f3; min-height:100vh; color:#1a1a1a; }
+    body { background: linear-gradient(160deg,#EEF4FF 0%,#F5F0FF 50%,#EFF9F4 100%); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:#f5f5f3; min-height:100vh; color:#1a1a1a; }
 
     .header { background:#fff; border-bottom:1px solid #eee; padding:12px 16px; display:flex; align-items:center; gap:10px; position:sticky; top:0; z-index:100; }
-    .back-btn { background:none; border:none; font-size:22px; color:#999; cursor:pointer; padding:0; }
-    .header-title { font-size:15px; font-weight:500; flex:1; }
+    .back-btn { background:none; border:none; font-size: 33px; color:#999; cursor:pointer; padding:0; }
+    .header-title { font-size: 22.5px; font-weight:500; flex:1; }
 
     .member-tabs { display:flex; background:#fafafa; border-bottom:1px solid #eee; overflow-x:auto; padding:0 16px; }
-    .member-tab { padding:9px 14px; font-size:12px; cursor:pointer; white-space:nowrap; border-bottom:2px solid transparent; color:#888; }
+    .member-tab { padding:9px 14px; font-size: 18px; cursor:pointer; white-space:nowrap; border-bottom:2px solid transparent; color:#888; }
     .member-tab.active { border-bottom-color:#378ADD; color:#378ADD; font-weight:500; }
 
     .content-area { padding:16px; max-width:1100px; margin:0 auto; padding-bottom:80px; }
-    .locked-tag { font-size:11px; background:#f0f0f0; color:#888; padding:2px 6px; border-radius:4px; }
+    .locked-tag { font-size: 16.5px; background:#f0f0f0; color:#888; padding:2px 6px; border-radius:4px; }
     
     /* 險種顏色設定 */
     .cat-壽險保障 { background:#E6F1FB; color:#0C447C; }
@@ -30,16 +30,16 @@
     .cat-投資型保險 { background:#f0f0f0; color:#555; }
 
     /* ── 表格樣式 ── */
-    .benef-table { width:100%; border-collapse:collapse; background:#fff; border-radius:10px; overflow:hidden; border:1px solid #e8e8e8; font-size:13px; }
+    .benef-table { width:100%; border-collapse:collapse; background:#fff; border-radius:10px; overflow:hidden; border:1px solid #e8e8e8; font-size: 19.5px; }
     .benef-table thead tr { background:#f7f7f5; }
-    .benef-table th { padding:9px 10px; text-align:left; font-size:11px; font-weight:600; color:#888; border-bottom:2px solid #e8e8e8; white-space:nowrap; }
+    .benef-table th { padding:9px 10px; text-align:left; font-size: 16.5px; font-weight:600; color:#888; border-bottom:2px solid #e8e8e8; white-space:nowrap; }
     .benef-table th.col-set { text-align:center; width:52px; }
     .benef-table td { padding:9px 10px; vertical-align:middle; border-bottom:1px solid #f0f0f0; }
     .benef-table tbody tr:last-child td { border-bottom:none; }
     .benef-table tbody tr:hover { background:#fafffe; }
-    .policy-no-badge { font-size:11px; font-family:monospace; background:#E6F1FB; color:#0C447C; padding:1px 7px; border-radius:99px; white-space:nowrap; }
-    .cat-badge { font-size:10px; padding:2px 7px; border-radius:99px; white-space:nowrap; }
-    .set-btn { font-size:12px; padding:4px 10px; border:1px solid #ddd; border-radius:6px; background:#fff; cursor:pointer; color:#666; font-family:inherit; }
+    .policy-no-badge { font-size: 16.5px; font-family:monospace; background:#E6F1FB; color:#0C447C; padding:1px 7px; border-radius:99px; white-space:nowrap; }
+    .cat-badge { font-size: 15px; padding:2px 7px; border-radius:99px; white-space:nowrap; }
+    .set-btn { font-size: 18px; padding:4px 10px; border:1px solid #ddd; border-radius:6px; background:#fff; cursor:pointer; color:#666; font-family:inherit; }
     .amount-val { font-weight:600; color:#0C447C; font-family:monospace; }
     .benef-val { color:#333; line-height:1.5; white-space:pre-wrap; }
     .benef-val.unset { color:#ccc; }
@@ -50,14 +50,14 @@
     /* Modal 視窗置中對齊 */
     .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:200; align-items:center; justify-content:center; padding:16px;}
     .modal { background:#fff; border-radius:16px; padding:20px; width:100%; max-width:560px; max-height:90vh; overflow-y:auto; }
-    .modal-title { font-size:16px; font-weight:600; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; color:#333;}
-    .modal-close { background:none; border:none; font-size:24px; color:#999; cursor:pointer; line-height:1; }
+    .modal-title { font-size: 24px; font-weight:600; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between; color:#333;}
+    .modal-close { background:none; border:none; font-size: 36px; color:#999; cursor:pointer; line-height:1; }
 
     .btn-row { display:flex; gap:10px; margin-top:20px; }
-    .btn-primary { flex:1; padding:10px; background:#378ADD; color:#fff; border:none; border-radius:8px; font-size:14px; font-weight:500; cursor:pointer; font-family:inherit; }
-    .btn-secondary { flex:1; padding:10px; background:#f5f5f3; color:#666; border:none; border-radius:8px; font-size:14px; cursor:pointer; font-family:inherit; }
+    .btn-primary { flex:1; padding:10px; background:#378ADD; color:#fff; border:none; border-radius:8px; font-size: 21px; font-weight:500; cursor:pointer; font-family:inherit; }
+    .btn-secondary { flex:1; padding:10px; background:#f5f5f3; color:#666; border:none; border-radius:8px; font-size: 21px; cursor:pointer; font-family:inherit; }
 
-    #saved-hint { display:none; position:fixed; top:60px; left:50%; transform:translateX(-50%); background:#27AE8F; color:#fff; padding:8px 16px; border-radius:8px; font-size:13px; z-index:999; box-shadow:0 2px 8px rgba(0,0,0,0.2); }
+    #saved-hint { display:none; position:fixed; top:60px; left:50%; transform:translateX(-50%); background:#27AE8F; color:#fff; padding:8px 16px; border-radius:8px; font-size: 19.5px; z-index:999; box-shadow:0 2px 8px rgba(0,0,0,0.2); }
     
     .spinner { display:inline-block; width:16px; height:16px; border:2px solid #e0e0e0; border-top-color:#378ADD; border-radius:50%; animation:spin 0.7s linear infinite; vertical-align:middle; }
     @keyframes spin { to { transform:rotate(360deg); } }
@@ -68,10 +68,10 @@
       body { background:#fff; }
       .header, .member-tabs, #saved-hint, .col-set, .print-hide { display:none !important; }
       .content-area { padding:0; max-width:100%; }
-      .benef-table { font-size:11px; border:1px solid #ccc; }
-      .benef-table th { font-size:10px; padding:6px 8px; background:#f0f0f0 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+      .benef-table { font-size: 16.5px; border:1px solid #ccc; }
+      .benef-table th { font-size: 15px; padding:6px 8px; background:#f0f0f0 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
       .benef-table td { padding:6px 8px; }
-      .print-title { display:block !important; font-size:15px; font-weight:600; margin-bottom:10px; }
+      .print-title { display:block !important; font-size: 22.5px; font-weight:600; margin-bottom:10px; }
     }
   </style>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -81,7 +81,7 @@
   <div class="header">
     <button class="back-btn" onclick="goBack()">‹</button>
     <div class="header-title">受益人設定</div>
-    <button onclick="window.print()" style="font-size:12px;padding:5px 14px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer;color:#555;font-family:inherit">🖨 列印</button>
+    <button onclick="window.print()" style="font-size:18px;padding:5px 14px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer;color:#555;font-family:inherit">🖨 列印</button>
   </div>
   
   <div class="member-tabs print-hide" id="member-tabs"></div>
@@ -90,7 +90,7 @@
   <div class="content-area">
     <div class="print-title" style="display:none"></div>
     <div id="policy-view" style="display:block;">
-      <div id="policy-list"><div style="text-align:center;padding:40px;color:#bbb;font-size:13px">載入資料中，請稍候...</div></div>
+      <div id="policy-list"><div style="text-align:center;padding:40px;color:#bbb;font-size:20px">載入資料中，請稍候...</div></div>
     </div>
   </div>
 
@@ -213,12 +213,12 @@
       if(printTitle) printTitle.textContent = (member?.name||'') + ' 受益人規劃表';
 
       if (policies.length === 0) {
-        document.getElementById("policy-list").innerHTML = '<div style="padding:40px 20px;text-align:center;color:#bbb;font-size:13px">此成員尚無具有傳承或生存金意義之保單</div>';
+        document.getElementById("policy-list").innerHTML = '<div style="padding:40px 20px;text-align:center;color:#bbb;font-size:20px">此成員尚無具有傳承或生存金意義之保單</div>';
         return;
       }
 
       let html = `
-      <div style="font-size:11px;color:#999;margin-bottom:10px" class="print-hide">為每筆保單設定受益人，灰色鎖定項目依法令規定無法更改。</div>
+      <div style="font-size:16px;color:#999;margin-bottom:10px" class="print-hide">為每筆保單設定受益人，灰色鎖定項目依法令規定無法更改。</div>
       <div style="overflow-x:auto;">
       <table class="benef-table">
         <thead>
@@ -281,8 +281,8 @@
           liveDisplay = `<span class="locked-tag">本人 🔒</span>`;
         } else {
           const parts = [];
-          if (lStr && !lStr.includes("無")) parts.push(`<div><span style="font-size:10px;color:#aaa">生存金：</span>${lStr}</div>`);
-          if (mStr && !mStr.includes("無")) parts.push(`<div><span style="font-size:10px;color:#aaa">滿期金：</span>${mStr}</div>`);
+          if (lStr && !lStr.includes("無")) parts.push(`<div><span style="font-size:15px;color:#aaa">生存金：</span>${lStr}</div>`);
+          if (mStr && !mStr.includes("無")) parts.push(`<div><span style="font-size:15px;color:#aaa">滿期金：</span>${mStr}</div>`);
           liveDisplay = parts.length ? parts.join("") : `<span class="benef-val unset">無 / 不適用</span>`;
         }
 
@@ -295,10 +295,10 @@
             <button class="set-btn" onclick="openPolicyModal('${p.id}')">設定</button>
           </td>
           <td><span class="cat-badge ${catClass}">${p.category || '—'}</span></td>
-          <td style="font-size:12px;color:#555">${owner}</td>
-          <td style="font-size:12px;color:#555">${insured}</td>
+          <td style="font-size:18px;color:#555">${owner}</td>
+          <td style="font-size:18px;color:#555">${insured}</td>
           <td><span class="policy-no-badge">${p.policyNo || p.id}</span></td>
-          <td class="col-name" style="font-size:12px;font-weight:500">${p.itemName || '—'}</td>
+          <td class="col-name" style="font-size:18px;font-weight:500">${p.itemName || '—'}</td>
           <td><span class="amount-val">${amountText}</span></td>
           <td class="col-death"><span class="benef-val ${dIsUnset?'unset':''}" style="white-space:pre-wrap">${dStr}</span></td>
           <td class="col-live">${liveDisplay}</td>
@@ -334,33 +334,73 @@
       
       // ▼ 1. 身故受益人
       html += `<div style="margin-bottom:20px">
-        <div style="font-size:13px;font-weight:600;color:#0C447C;margin-bottom:10px;border-bottom:1px solid #E6F1FB;padding-bottom:4px">身故受益人</div>`;
+        <div style="font-size:20px;font-weight:600;color:#0C447C;margin-bottom:10px;border-bottom:1px solid #E6F1FB;padding-bottom:4px">身故受益人</div>`;
 
       if (policy.isRider) {
-        html += `<div style="font-size:13px;color:#888;padding:10px;background:#f9f9f9;border-radius:8px">此為附約，身故受益人同主約。</div>`;
+        html += `<div style="font-size:20px;color:#888;padding:10px;background:#f9f9f9;border-radius:8px">此為附約，身故受益人同主約。</div>`;
       } else if (rule.death === "鎖定本人") {
-        html += `<div style="font-size:13px;color:#888;padding:10px;background:#f9f9f9;border-radius:8px">依法令或險種規定，身故理賠金限被保險人本人。</div>`;
+        html += `<div style="font-size:20px;color:#888;padding:10px;background:#f9f9f9;border-radius:8px">依法令或險種規定，身故理賠金限被保險人本人。</div>`;
       } else {
-        html += `<div style="font-size:12px;color:#666;margin-bottom:6px">請自由輸入受益人分配 (支援多順位與比例)：</div>
-        <textarea id="death-custom-text" placeholder="例如：\n順位一：配偶\n順位二：子女均分" style="width:100%;height:80px;padding:10px;font-size:13px;border:1px solid #ddd;border-radius:6px;outline:none;font-family:inherit;resize:vertical;line-height:1.5">${policy.beneficiaryDeathText || ''}</textarea>
-        
-        <div style="font-size:11px;color:#888;margin-top:8px;margin-bottom:6px">💡 點擊下方家人快速加入文字框：</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap">`;
-        
+        // 解析已存的文字回三個順位欄位
+        const deathRaw = policy.beneficiaryDeathText || '';
+        const deathLines = deathRaw.split('\n');
+        const parseRank = (lines, prefix) => {
+          const line = lines.find(l => l.startsWith(prefix));
+          return line ? line.replace(prefix,'').trim() : '';
+        };
+        const d1 = parseRank(deathLines, '第一順位：');
+        const d2 = parseRank(deathLines, '第二順位：');
+        const d3 = parseRank(deathLines, '第三順位：');
+        const dOther = deathLines.filter(l =>
+          !l.startsWith('第一順位：') && !l.startsWith('第二順位：') && !l.startsWith('第三順位：')
+        ).join('\n');
+
+        html += `
+        <div style="display:grid;grid-template-columns:80px 1fr;gap:6px 10px;align-items:center;margin-bottom:10px">
+          <label style="font-size:20px;font-weight:600;color:#374151">第一順位</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input id="death-rank1" type="text" value="${d1}"
+              placeholder="如：配偶"
+              style="flex:1;padding:7px 10px;font-size:21px;border:1.5px solid #E5E7EB;border-radius:9px;outline:none;font-family:inherit"/>
+            <div style="display:flex;gap:4px;flex-wrap:wrap">`;
         (familyData?.members || []).forEach(m => {
-           html += `<button type="button" onclick="appendText('death-custom-text', '${m.name}')" style="font-size:12px;padding:4px 10px;border:1px solid #ddd;border-radius:99px;background:#fff;cursor:pointer">${m.name}</button>`;
+          html += `<button type="button" onclick="document.getElementById('death-rank1').value='${m.name}'" style="font-size:18px;padding:3px 8px;border:1px solid #ddd;border-radius:99px;background:#F9FAFB;cursor:pointer;white-space:nowrap">${m.name}</button>`;
         });
-        
-        html += `<button type="button" onclick="clearText('death-custom-text')" style="font-size:12px;padding:4px 10px;border:1px solid #fcc;border-radius:99px;background:#fff;cursor:pointer;color:#e74c3c">清空</button></div>`;
+        html += `</div></div>
+          <label style="font-size:20px;font-weight:600;color:#374151">第二順位</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input id="death-rank2" type="text" value="${d2}"
+              placeholder="如：子女均分"
+              style="flex:1;padding:7px 10px;font-size:21px;border:1.5px solid #E5E7EB;border-radius:9px;outline:none;font-family:inherit"/>
+            <div style="display:flex;gap:4px;flex-wrap:wrap">`;
+        (familyData?.members || []).forEach(m => {
+          html += `<button type="button" onclick="document.getElementById('death-rank2').value='${m.name}'" style="font-size:18px;padding:3px 8px;border:1px solid #ddd;border-radius:99px;background:#F9FAFB;cursor:pointer;white-space:nowrap">${m.name}</button>`;
+        });
+        html += `</div></div>
+          <label style="font-size:20px;font-weight:600;color:#374151">第三順位</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input id="death-rank3" type="text" value="${d3}"
+              placeholder="如：法定繼承人"
+              style="flex:1;padding:7px 10px;font-size:21px;border:1.5px solid #E5E7EB;border-radius:9px;outline:none;font-family:inherit"/>
+            <div style="display:flex;gap:4px;flex-wrap:wrap">`;
+        (familyData?.members || []).forEach(m => {
+          html += `<button type="button" onclick="document.getElementById('death-rank3').value='${m.name}'" style="font-size:18px;padding:3px 8px;border:1px solid #ddd;border-radius:99px;background:#F9FAFB;cursor:pointer;white-space:nowrap">${m.name}</button>`;
+        });
+        html += `</div></div>
+          <label style="font-size:20px;font-weight:600;color:#374151">自行填寫</label>
+          <textarea id="death-custom-text" rows="2"
+            placeholder="其他補充說明（選填）"
+            style="padding:7px 10px;font-size:20px;border:1.5px solid #E5E7EB;border-radius:9px;outline:none;font-family:inherit;resize:vertical;line-height:1.6">${dOther}</textarea>
+        </div>`;
       }
       html += `</div>`; 
 
       // ▼ 2. 生存與滿期金受益人 (全面改為溫度的自由文字框)
       html += `<div>
-        <div style="font-size:13px;font-weight:600;color:#0C447C;margin-bottom:10px;border-bottom:1px solid #E6F1FB;padding-bottom:4px">生存 / 滿期金受益人</div>`;
+        <div style="font-size:20px;font-weight:600;color:#0C447C;margin-bottom:10px;border-bottom:1px solid #E6F1FB;padding-bottom:4px">生存 / 滿期金受益人</div>`;
 
       if (rule.live === "鎖定本人" || rule.live === "不適用" || policy.category === "年金險" || policy.category === "投資型保險") {
-        html += `<div style="font-size:13px;color:#888;padding:10px;background:#f9f9f9;border-radius:8px">此險種限被保險人本人，或不適用生存/滿期金。</div>`;
+        html += `<div style="font-size:20px;color:#888;padding:10px;background:#f9f9f9;border-radius:8px">此險種限被保險人本人，或不適用生存/滿期金。</div>`;
       } else {
         // 準備相容舊資料的預設文字
         let liveText = policy.beneficiaryLiveText || "";
@@ -381,28 +421,28 @@
 
         // 生存金區塊
         html += `<div style="margin-bottom:20px;">
-          <div style="font-size:12px;font-weight:500;color:#666;margin-bottom:6px">生存金受益人</div>
-          <textarea id="live-custom-text" placeholder="請自由輸入生存金受益人（留空代表無 / 不適用）" style="width:100%;height:60px;padding:8px 10px;font-size:13px;border:1px solid #ddd;border-radius:6px;outline:none;font-family:inherit;resize:vertical;line-height:1.5">${liveText}</textarea>
-          <div style="font-size:11px;color:#888;margin-top:6px;margin-bottom:6px">💡 點擊下方家人快速加入文字框：</div>
+          <div style="font-size:18px;font-weight:500;color:#666;margin-bottom:6px">生存金受益人</div>
+          <textarea id="live-custom-text" placeholder="請自由輸入生存金受益人（留空代表無 / 不適用）" style="width:100%;height:60px;padding:8px 10px;font-size:20px;border:1px solid #ddd;border-radius:6px;outline:none;font-family:inherit;resize:vertical;line-height:1.5">${liveText}</textarea>
+          <div style="font-size:16px;color:#888;margin-top:6px;margin-bottom:6px">💡 點擊下方家人快速加入文字框：</div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">`;
         
         (familyData?.members || []).forEach(m => {
-           html += `<button type="button" onclick="appendText('live-custom-text', '${m.name}')" style="font-size:12px;padding:4px 10px;border:1px solid #ddd;border-radius:99px;background:#fff;cursor:pointer">${m.name}</button>`;
+           html += `<button type="button" onclick="appendText('live-custom-text', '${m.name}')" style="font-size:18px;padding:4px 10px;border:1px solid #ddd;border-radius:99px;background:#fff;cursor:pointer">${m.name}</button>`;
         });
-        html += `<button type="button" onclick="clearText('live-custom-text')" style="font-size:12px;padding:4px 10px;border:1px solid #fcc;border-radius:99px;background:#fff;cursor:pointer;color:#e74c3c">清空</button></div>
+        html += `<button type="button" onclick="clearText('live-custom-text')" style="font-size:18px;padding:4px 10px;border:1px solid #fcc;border-radius:99px;background:#fff;cursor:pointer;color:#e74c3c">清空</button></div>
         </div>`;
         
         // 滿期金區塊
         html += `<div>
-          <div style="font-size:12px;font-weight:500;color:#666;margin-bottom:6px">滿期金受益人</div>
-          <textarea id="mat-custom-text" placeholder="請自由輸入滿期金受益人（留空代表無 / 不適用）" style="width:100%;height:60px;padding:8px 10px;font-size:13px;border:1px solid #ddd;border-radius:6px;outline:none;font-family:inherit;resize:vertical;line-height:1.5">${matText}</textarea>
-          <div style="font-size:11px;color:#888;margin-top:6px;margin-bottom:6px">💡 點擊下方家人快速加入文字框：</div>
+          <div style="font-size:18px;font-weight:500;color:#666;margin-bottom:6px">滿期金受益人</div>
+          <textarea id="mat-custom-text" placeholder="請自由輸入滿期金受益人（留空代表無 / 不適用）" style="width:100%;height:60px;padding:8px 10px;font-size:20px;border:1px solid #ddd;border-radius:6px;outline:none;font-family:inherit;resize:vertical;line-height:1.5">${matText}</textarea>
+          <div style="font-size:16px;color:#888;margin-top:6px;margin-bottom:6px">💡 點擊下方家人快速加入文字框：</div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">`;
           
         (familyData?.members || []).forEach(m => {
-           html += `<button type="button" onclick="appendText('mat-custom-text', '${m.name}')" style="font-size:12px;padding:4px 10px;border:1px solid #ddd;border-radius:99px;background:#fff;cursor:pointer">${m.name}</button>`;
+           html += `<button type="button" onclick="appendText('mat-custom-text', '${m.name}')" style="font-size:18px;padding:4px 10px;border:1px solid #ddd;border-radius:99px;background:#fff;cursor:pointer">${m.name}</button>`;
         });
-        html += `<button type="button" onclick="clearText('mat-custom-text')" style="font-size:12px;padding:4px 10px;border:1px solid #fcc;border-radius:99px;background:#fff;cursor:pointer;color:#e74c3c">清空</button></div>
+        html += `<button type="button" onclick="clearText('mat-custom-text')" style="font-size:18px;padding:4px 10px;border:1px solid #fcc;border-radius:99px;background:#fff;cursor:pointer;color:#e74c3c">清空</button></div>
         </div>`;
       }
       html += `</div>`;
@@ -422,15 +462,20 @@
 
       const rule = BENEF_RULES[policy.category] || { death:"可設定", live:"可設定" };
 
-      // 儲存身故文字框
+      // 儲存身故受益人：組合三順位 + 自行填寫
       if (!policy.isRider && rule.death !== "鎖定本人") {
-         const dText = document.getElementById("death-custom-text");
-         if (dText) {
-             policy.beneficiaryDeathText = dText.value.trim();
-             // 清除舊版的設定，避免渲染衝突
-             policy.beneficiaryDeathCustom = []; 
-             policy.beneficiaryDeathTplId = "";
-         }
+        const rank1 = (document.getElementById("death-rank1")?.value.trim()||"");
+        const rank2 = (document.getElementById("death-rank2")?.value.trim()||"");
+        const rank3 = (document.getElementById("death-rank3")?.value.trim()||"");
+        const rankOther = (document.getElementById("death-custom-text")?.value.trim()||"");
+        const deathParts = [];
+        if(rank1) deathParts.push("第一順位："+rank1);
+        if(rank2) deathParts.push("第二順位："+rank2);
+        if(rank3) deathParts.push("第三順位："+rank3);
+        if(rankOther) deathParts.push(rankOther);
+        policy.beneficiaryDeathText = deathParts.join("\n");
+        policy.beneficiaryDeathCustom = [];
+        policy.beneficiaryDeathTplId = "";
       }
 
       // 儲存生存與滿期金 (改為直接存新版文字框)
