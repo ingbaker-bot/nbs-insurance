@@ -6,62 +6,194 @@
   <title>NBS 雲端保單體檢</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f5f3;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
-    .card{background:#fff;border-radius:16px;padding:40px 36px;max-width:400px;width:100%;box-shadow:0 2px 20px rgba(0,0,0,.08);text-align:center}
-    .logo{font-size:40px;margin-bottom:12px}
-    .title{font-size:22px;font-weight:600;color:#1a1a1a;margin-bottom:6px}
-    .subtitle{font-size:13px;color:#999;margin-bottom:32px}
-    .google-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px 20px;background:#fff;border:1.5px solid #e0e0e0;border-radius:8px;font-size:14px;font-weight:500;color:#333;cursor:pointer;transition:background .15s;margin-bottom:16px;font-family:inherit;text-decoration:none}
-    .google-btn:hover{background:#f7f7f5;border-color:#bbb}
-    .google-btn img{width:20px;height:20px}
-    .apply-link{font-size:13px;color:#378ADD;cursor:pointer;text-decoration:underline;background:none;border:none;font-family:inherit}
-    .status-box{display:none;margin-top:16px;padding:12px 16px;border-radius:8px;font-size:13px;text-align:left;line-height:1.6}
-    .info{background:#E6F1FB;color:#0C447C;border:1px solid #A8CEF0}
-    .success{background:#EAF3DE;color:#27500A;border:1px solid #A8D5B5}
-    .warning{background:#FAEEDA;color:#633806;border:1px solid #EF9F27}
-    .error{background:#FCEBEB;color:#791F1F;border:1px solid #F0A8BF}
-    .spinner{display:inline-block;width:18px;height:18px;border:2px solid #e0e0e0;border-top-color:#378ADD;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+    body{
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;
+      min-height:100vh;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      padding:20px;
+      background:linear-gradient(160deg,#EEF4FF 0%,#F5F0FF 50%,#EFF9F4 100%);
+    }
+
+    /* ── 卡片 ── */
+    .card{
+      background:#fff;
+      border-radius:20px;
+      padding:40px 36px;
+      max-width:400px;width:100%;
+      box-shadow:0 8px 40px rgba(80,100,255,.10), 0 2px 8px rgba(0,0,0,.06);
+      text-align:center;
+      border:1px solid rgba(120,140,255,.12);
+    }
+
+    /* ── Logo ── */
+    .logo-wrap{
+      width:100%;
+      margin:0 auto 20px;
+      display:flex;align-items:center;justify-content:center;
+    }
+    .logo-wrap img{
+      width:100%;max-width:280px;
+      height:auto;object-fit:contain;
+    }
+
+    .title{font-size:22px;font-weight:800;color:#111827;margin-bottom:4px;letter-spacing:-.4px}
+    .subtitle{font-size:12px;color:#9CA3AF;margin-bottom:28px;letter-spacing:.04em}
+
+    /* ── 主登入按鈕（漸層）── */
+    .google-btn{
+      display:flex;align-items:center;justify-content:center;gap:10px;
+      width:100%;padding:13px 20px;
+      background:linear-gradient(90deg,#3B82F6,#7C3AED);
+      border:none;border-radius:12px;
+      font-size:14px;font-weight:600;color:#fff;
+      cursor:pointer;transition:opacity .15s,transform .1s;
+      margin-bottom:14px;font-family:inherit;text-decoration:none;
+    }
+    .google-btn:hover{opacity:.9;transform:translateY(-1px)}
+    .google-btn:active{transform:translateY(0);opacity:1}
+    .google-btn .g-icon{
+      width:20px;height:20px;border-radius:4px;
+      background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    }
+    .google-btn .g-icon img{width:14px;height:14px}
+
+    /* ── 分隔線 ── */
+    .divider{
+      display:flex;align-items:center;gap:10px;
+      font-size:12px;color:#D1D5DB;margin:4px 0 14px;
+    }
+    .divider::before,.divider::after{content:'';flex:1;height:1px;background:#F3F4F6}
+
+    /* ── 申請連結 ── */
+    .apply-link{
+      font-size:13px;color:#6B7280;
+      cursor:pointer;background:none;border:none;font-family:inherit;
+      display:block;width:100%;
+    }
+    .apply-link span{color:#3B82F6;font-weight:600;border-bottom:1.5px solid #BFDBFE}
+    .apply-link:hover span{color:#2563EB}
+
+    /* ── 狀態框 ── */
+    .status-box{
+      display:none;margin-top:14px;
+      padding:11px 14px;border-radius:10px;font-size:13px;text-align:left;line-height:1.6;
+    }
+    .info   {background:#EFF6FF;color:#1E40AF;border:1px solid #BFDBFE}
+    .success{background:#F0FDF4;color:#166534;border:1px solid #BBF7D0}
+    .warning{background:#FFFBEB;color:#92400E;border:1px solid #FDE68A}
+    .error  {background:#FEF2F2;color:#991B1B;border:1px solid #FECACA}
+
+    /* ── spinner ── */
+    .spinner{
+      display:inline-block;width:18px;height:18px;
+      border:2px solid #E5E7EB;border-top-color:#3B82F6;
+      border-radius:50%;animation:spin .7s linear infinite;
+      vertical-align:middle;margin-right:6px;
+    }
     @keyframes spin{to{transform:rotate(360deg)}}
-    .apply-form{display:none;text-align:left;margin-top:20px}
-    .form-title{font-size:15px;font-weight:600;margin-bottom:16px;color:#1a1a1a}
-    .field{margin-bottom:14px}
-    .field label{display:block;font-size:12px;color:#666;margin-bottom:4px}
-    .field input,.field select{width:100%;padding:9px 12px;font-size:14px;border:1px solid #e0e0e0;border-radius:7px;outline:none;font-family:inherit;background:#fff}
-    .field input:focus,.field select:focus{border-color:#378ADD}
-    .btn-primary{width:100%;padding:11px;background:#378ADD;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit}
-    .btn-primary:disabled{background:#ccc;cursor:default}
-    .btn-secondary{width:100%;padding:10px;background:transparent;color:#666;border:1px solid #e0e0e0;border-radius:8px;font-size:13px;cursor:pointer;margin-top:8px;font-family:inherit}
-    .waiting-box{display:none;text-align:center;padding:20px 0}
-    .footer{margin-top:24px;font-size:11px;color:#ccc}
-    .divider{font-size:12px;color:#aaa;margin-bottom:12px}
     .load-wrap{padding:10px 0;display:none}
+
+    /* ── 等待審核 ── */
+    .waiting-box{display:none;text-align:center;padding:12px 0}
+    .wait-icon{
+      width:56px;height:56px;border-radius:16px;
+      background:linear-gradient(135deg,#FFFBEB,#FEF3C7);
+      border:1px solid #FDE68A;
+      margin:0 auto 14px;display:flex;align-items:center;justify-content:center;font-size:26px;
+    }
+    .wait-title{font-size:16px;font-weight:700;color:#111827;margin-bottom:6px}
+    .wait-desc{font-size:13px;color:#6B7280;line-height:1.7}
+
+    /* ── 申請表單 ── */
+    .apply-form{display:none;text-align:left;margin-top:4px}
+    .form-title{font-size:15px;font-weight:700;margin-bottom:18px;color:#111827}
+    .field{margin-bottom:13px}
+    .field label{
+      display:block;font-size:11px;font-weight:600;
+      color:#6B7280;margin-bottom:5px;letter-spacing:.04em;text-transform:uppercase;
+    }
+    .field input,.field select{
+      width:100%;padding:10px 12px;font-size:14px;
+      border:1.5px solid #E5E7EB;border-radius:10px;
+      outline:none;font-family:inherit;background:#FAFAFA;
+      transition:border-color .15s,background .15s;color:#111827;
+    }
+    .field input:focus,.field select:focus{
+      border-color:#3B82F6;background:#fff;
+      box-shadow:0 0 0 3px rgba(59,130,246,.1);
+    }
+    .field input::placeholder{color:#9CA3AF}
+
+    /* ── 按鈕 ── */
+    .btn-primary{
+      width:100%;padding:12px;
+      background:linear-gradient(90deg,#3B82F6,#7C3AED);
+      color:#fff;border:none;border-radius:10px;
+      font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;
+      transition:opacity .15s;
+    }
+    .btn-primary:hover{opacity:.9}
+    .btn-primary:disabled{opacity:.5;cursor:default}
+    .btn-secondary{
+      width:100%;padding:11px;
+      background:transparent;color:#6B7280;
+      border:1.5px solid #E5E7EB;border-radius:10px;
+      font-size:13px;cursor:pointer;margin-top:8px;font-family:inherit;
+      transition:border-color .15s,color .15s;
+    }
+    .btn-secondary:hover{border-color:#9CA3AF;color:#374151}
+
+    /* ── footer ── */
+    .footer{margin-top:20px;font-size:11px;color:#9CA3AF;text-align:center;line-height:1.6}
+    .footer a{color:#6B7280}
+
+    /* ── 裝飾圓圈 ── */
+    body::before{
+      content:'';position:fixed;top:-120px;right:-80px;
+      width:340px;height:340px;border-radius:50%;
+      background:radial-gradient(circle,rgba(124,58,237,.10) 0%,transparent 70%);
+      pointer-events:none;
+    }
+    body::after{
+      content:'';position:fixed;bottom:-100px;left:-60px;
+      width:280px;height:280px;border-radius:50%;
+      background:radial-gradient(circle,rgba(59,130,246,.09) 0%,transparent 70%);
+      pointer-events:none;
+    }
   </style>
 </head>
 <body>
 
 <div class="card">
-  <div class="logo">🛡️</div>
+
+  <!-- Logo -->
+  <div class="logo-wrap">
+    <img src="https://i.ibb.co/FkVkNhhd/NBS-4F3.jpg" alt="NBS Logo"
+         onerror="this.style.display='none';this.parentNode.innerHTML='<span style=&quot;font-size:48px&quot;>🛡️</span>'"/>
+  </div>
   <div class="title">NBS 雲端保單體檢</div>
-  <div class="subtitle">富邦人壽保險顧問專用系統</div>
+  <div class="subtitle">保險顧問專用系統</div>
 
   <!-- 登入畫面 -->
   <div id="view-login">
     <div class="load-wrap" id="load-wrap">
-      <span class="spinner"></span><span style="font-size:14px;color:#666">驗證中，請稍候…</span>
+      <span class="spinner"></span><span style="font-size:14px;color:#6B7280">驗證中，請稍候…</span>
     </div>
     <a class="google-btn" id="login-btn" href="#">
-      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G"/>
+      <span class="g-icon">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G"/>
+      </span>
       使用 Google 帳號登入
     </a>
-    <div class="divider">──── 還沒有帳號？ ────</div>
-    <button class="apply-link" id="apply-link-btn">申請使用帳號</button>
+    <div class="divider">還沒有帳號</div>
+    <button class="apply-link" id="apply-link-btn">申請使用帳號 <span>立即申請 →</span></button>
   </div>
 
   <!-- 等待審核 -->
   <div class="waiting-box" id="view-waiting">
-    <div style="font-size:40px;margin-bottom:12px">⏳</div>
-    <div style="font-size:16px;font-weight:500;margin-bottom:8px">帳號審核中</div>
-    <div style="font-size:13px;color:#888;line-height:1.7" id="waiting-desc">您的申請已送出，請等待管理員審核。</div>
+    <div class="wait-icon">⏳</div>
+    <div class="wait-title">帳號審核中</div>
+    <div class="wait-desc" id="waiting-desc">您的申請已送出，請等待管理員審核。</div>
     <button class="btn-secondary" style="margin-top:16px" id="back-from-wait">返回登入</button>
   </div>
 
@@ -69,19 +201,19 @@
   <div class="apply-form" id="view-apply">
     <div class="form-title">申請使用帳號</div>
     <div class="field">
-      <label>姓名 <span style="color:#e74c3c">*</span></label>
+      <label>姓名 <span style="color:#EF4444">*</span></label>
       <input type="text" id="apply-name" placeholder="請輸入真實姓名"/>
     </div>
     <div class="field">
-      <label>Google 帳號 Email <span style="color:#e74c3c">*</span></label>
+      <label>Google 帳號 Email <span style="color:#EF4444">*</span></label>
       <input type="email" id="apply-email" placeholder="將用來登入系統的 Google 帳號"/>
     </div>
     <div class="field">
-      <label>業務員編號 <span style="color:#e74c3c">*</span></label>
+      <label>業務員編號 <span style="color:#EF4444">*</span></label>
       <input type="text" id="apply-agentno" placeholder="請輸入業務員編號"/>
     </div>
     <div class="field">
-      <label>所屬保險公司 <span style="color:#e74c3c">*</span></label>
+      <label>所屬保險公司 <span style="color:#EF4444">*</span></label>
       <select id="apply-company">
         <option value="">請選擇</option>
         <option>富邦人壽</option><option>國泰人壽</option><option>南山人壽</option>
@@ -95,64 +227,51 @@
     </div>
     <div class="status-box" id="apply-status"></div>
     <button class="btn-primary" id="apply-btn">送出申請</button>
-    <button class="btn-secondary" id="back-from-apply">返回登入</button>
+    <button class="btn-secondary" id="back-from-apply">返回</button>
   </div>
 
   <div class="status-box" id="login-status"></div>
 </div>
 
-<div class="footer">NBS 雲端保單體檢 v1.0 · 資料存放於您的 Google 雲端硬碟</div>
+<div class="footer">
+  NBS 雲端保單體檢 v1.0<br>
+  資料安全存放於您的 Google 雲端硬碟
+</div>
 
 <!-- 靜默授權用隱藏 iframe -->
 <iframe id="silent-iframe" style="display:none" sandbox="allow-scripts allow-same-origin allow-forms"></iframe>
 
 <script>
-var GAS      = "https://script.google.com/macros/s/AKfycbwzDwyZy09189eOJOs-zEwkZOml2_pJOq15nYGtHF2Kyrtv6ag5VY-I2M8sDyrt0iPdZQ/exec";
+var GAS       = "https://script.google.com/macros/s/AKfycbwzDwyZy09189eOJOs-zEwkZOml2_pJOq15nYGtHF2Kyrtv6ag5VY-I2M8sDyrt0iPdZQ/exec";
 var CLIENT_ID = "524622074888-iuij6ib2qvr0qddvvrpfqnmfbt85gvti.apps.googleusercontent.com";
 var REDIRECT  = location.origin + location.pathname;
-
-// token 有效期留 5 分鐘緩衝
 var TOKEN_MARGIN = 5 * 60 * 1000;
 
-// ── 按鈕綁定 ─────────────────────────────────────────────
 document.getElementById("apply-link-btn").onclick = function(){ showApply(); };
 document.getElementById("back-from-wait").onclick  = function(){ showLogin(); };
 document.getElementById("back-from-apply").onclick = function(){ showLogin(); };
 document.getElementById("apply-btn").onclick       = doApply;
 
-// ── 頁面載入 ─────────────────────────────────────────────
 window.onload = function() {
   var hashParams   = new URLSearchParams(window.location.hash.replace(/^#/,""));
   var searchParams = new URLSearchParams(window.location.search);
+  var idToken      = hashParams.get("id_token");
+  var isSilent     = hashParams.get("state") === "silent";
+  var err          = hashParams.get("error") || searchParams.get("error");
 
-  var idToken    = hashParams.get("id_token");
-  var isSilent   = hashParams.get("state") === "silent";
-  var err        = hashParams.get("error") || searchParams.get("error");
-
-  // ── 錯誤處理 ──────────────────────────────────────────
   if (err) {
     clearUrl();
-    if (isSilent) {
-      // 靜默授權失敗 → 顯示正常登入按鈕
-      showLogin();
-    } else {
-      showLogin();
-      showStatus("login-status","warning","登入已取消");
-    }
+    if (isSilent) { showLogin(); }
+    else { showLogin(); showStatus("login-status","warning","登入已取消"); }
     return;
   }
 
-  // ── OAuth 回調（id_token 回來）────────────────
   if (idToken) {
     clearUrl();
     var info = parseJwt(idToken);
     if (info && info.email) {
-      if (isSilent) {
-        // 靜默授權成功：直接進主畫面
-        goMain();
-      } else {
-        saveAndCheck(info.email, info.name||"", info.picture||"");
-      }
+      if (isSilent) { goMain(); }
+      else { saveAndCheck(info.email, info.name||"", info.picture||""); }
     } else {
       showLogin();
       showStatus("login-status","error","登入失敗，請重試");
@@ -160,37 +279,24 @@ window.onload = function() {
     return;
   }
 
-
-
-  // ── 已有本地登入資訊 ──────────────────────────────────
   var saved = localStorage.getItem("nbs_user");
   if (saved) {
     try {
       var u = JSON.parse(saved);
       var now = Date.now();
-
       if (tokenExpiry - now > TOKEN_MARGIN) {
-        // Token 還有效 → 直接進主畫面
-        goMain();
-        return;
+        goMain(); return;
       } else {
-        // Token 快過期或已過期 → 靜默重新授權
         showLoading();
-        trySilentAuth(u.email);
-        return;
+        trySilentAuth(u.email); return;
       }
-    } catch(e) {
-      localStorage.removeItem("nbs_user");
-    }
+    } catch(e) { localStorage.removeItem("nbs_user"); }
   }
 
-  // ── 全新登入 ──────────────────────────────────────────
   document.getElementById("login-btn").href = buildLoginUrl("", false);
   showLogin();
 };
 
-// ── 建立 OAuth URL ────────────────────────────────────────
-// silent=true 時用 prompt=none + state=silent，透過 iframe 執行
 function buildLoginUrl(hint, silent) {
   var p = new URLSearchParams({
     client_id:     CLIENT_ID,
@@ -205,24 +311,19 @@ function buildLoginUrl(hint, silent) {
   return "https://accounts.google.com/o/oauth2/v2/auth?" + p.toString();
 }
 
-// ── 靜默授權（iframe）────────────────────────────────────
 function trySilentAuth(email) {
   var iframe = document.getElementById("silent-iframe");
   var url    = buildLoginUrl(email, true);
   var done   = false;
-
-  // 監聽 iframe 回來後觸發的 hashchange（利用 iframe load）
   iframe.onload = function() {
     if (done) return;
     try {
       var hash = iframe.contentWindow.location.hash;
       if (!hash) return;
       done = true;
-      // 把 iframe 拿到的 hash 複製到主視窗 URL 後重新解析
       window.location.hash = hash;
       window.location.reload();
     } catch(e) {
-      // 跨域讀取失敗 → 降級為正常登入
       if (!done) {
         done = true;
         showLogin();
@@ -230,8 +331,6 @@ function trySilentAuth(email) {
       }
     }
   };
-
-  // 超時 8 秒降級
   setTimeout(function() {
     if (!done) {
       done = true;
@@ -239,13 +338,9 @@ function trySilentAuth(email) {
       showStatus("login-status","info","請重新登入以繼續使用");
     }
   }, 8000);
-
   iframe.src = url;
 }
 
-// ── 儲存 token ───────────────────────────────────────────
-
-// ── 解析 JWT ─────────────────────────────────────────────
 function parseJwt(token) {
   try {
     var b64 = token.split(".")[1].replace(/-/g,"+").replace(/_/g,"/");
@@ -255,7 +350,6 @@ function parseJwt(token) {
   } catch(e) { return null; }
 }
 
-// ── 儲存使用者並呼叫 GAS 驗證 ────────────────────────────
 function saveAndCheck(email, name, picture) {
   showLoading();
   localStorage.setItem("nbs_user", JSON.stringify({email:email, name:name, picture:picture}));
@@ -273,7 +367,6 @@ function checkAndGo(email) {
       localStorage.setItem("nbs_user", JSON.stringify(u));
       showStatus("login-status","success","✓ 驗證成功，正在進入系統…");
       setTimeout(function(){
-        // 清除舊的 family 暫存，確保從 main.html 重新選擇
         localStorage.removeItem("nbs_current_family");
         localStorage.removeItem("nbs_current_family_name");
         goMain();
@@ -297,11 +390,8 @@ function checkAndGo(email) {
   });
 }
 
-function goMain() {
-  window.location.href = "main.html";
-}
+function goMain() { window.location.href = "main.html"; }
 
-// ── 申請帳號 ─────────────────────────────────────────────
 function doApply() {
   var name    = document.getElementById("apply-name").value.trim();
   var email   = document.getElementById("apply-email").value.trim();
@@ -314,7 +404,7 @@ function doApply() {
   btn.disabled=true; btn.textContent="送出中…";
   gas("apply",{name:name,email:email,agentNo:agentNo,company:company}).then(function(r){
     btn.disabled=false; btn.textContent="送出申請";
-    if(r.status==="ok")                showStatus("apply-status","success","✓ 申請成功！管理員審核後會發送通知至 "+email);
+    if(r.status==="ok")                  showStatus("apply-status","success","✓ 申請成功！管理員審核後會發送通知至 "+email);
     else if(r.status==="already_approved") showStatus("apply-status","info","此帳號已核准，請直接登入");
     else if(r.status==="already_applied")  showStatus("apply-status","warning","此帳號已申請過，請等待審核");
     else showStatus("apply-status","error",r.message||"申請失敗，請重試");
@@ -324,7 +414,6 @@ function doApply() {
   });
 }
 
-// ── 畫面切換 ─────────────────────────────────────────────
 function showLogin() {
   document.getElementById("view-login").style.display    = "block";
   document.getElementById("view-waiting").style.display  = "none";
@@ -335,12 +424,12 @@ function showLogin() {
   document.getElementById("login-btn").href = buildLoginUrl("", false);
 }
 function showLoading() {
-  document.getElementById("load-wrap").style.display  = "block";
-  document.getElementById("login-btn").style.display  = "none";
+  document.getElementById("load-wrap").style.display = "block";
+  document.getElementById("login-btn").style.display = "none";
 }
 function showApply() {
-  document.getElementById("view-login").style.display  = "none";
-  document.getElementById("view-apply").style.display  = "block";
+  document.getElementById("view-login").style.display = "none";
+  document.getElementById("view-apply").style.display = "block";
 }
 function showStatus(id, type, msg) {
   var el = document.getElementById(id);
@@ -349,16 +438,13 @@ function showStatus(id, type, msg) {
   el.textContent = msg;
   el.style.display = "block";
 }
-function clearUrl() {
-  window.history.replaceState({}, "", location.pathname);
-}
+function clearUrl() { window.history.replaceState({}, "", location.pathname); }
 
-// ── GAS（身份驗證用）────────────────────────────────────
 function gas(action, params) {
   return fetch(GAS, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain" },
-    body: JSON.stringify(Object.assign({ action: action }, params || {}))
+    method:"POST",
+    headers:{"Content-Type":"text/plain"},
+    body:JSON.stringify(Object.assign({action:action}, params||{}))
   }).then(function(r){ return r.json(); });
 }
 </script>
