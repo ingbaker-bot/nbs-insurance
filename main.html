@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>NBS 雲端保單體檢 - 主畫面</title>
-    <style>
+  <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
@@ -306,6 +306,9 @@
       <input type="text" id="search-input" placeholder="搜尋家庭名稱…" oninput="filterFamilies()" />
     </div>
 
+    <!-- 新增按鈕（移到搜尋下方）-->
+    <button class="add-btn" onclick="openCreateModal()" style="margin-bottom:16px;">＋ 新增家庭</button>
+
     <!-- 家庭列表 -->
     <div class="section-label" id="list-label">家庭列表</div>
     <div id="family-list">
@@ -314,9 +317,6 @@
         <span id="loading-text">保單體檢資料連線中，請稍候...</span>
       </div>
     </div>
-
-    <!-- 新增按鈕 -->
-    <button class="add-btn" onclick="openCreateModal()">＋ 新增家庭</button>
 
   </div>
 
@@ -468,7 +468,7 @@
         const cached = getFamiliesCache();
         if (cached) {
           allFamilies = cached;
-          renderFamilies(allFamilies);
+          renderFamilies(allFamilies, false);
           // 背景靜默更新，不影響畫面
           setTimeout(function() {
             callGAS("listFamilies", {})
@@ -476,7 +476,7 @@
                 const fresh = result.families || [];
                 setFamiliesCache(fresh);
                 allFamilies = fresh;
-                renderFamilies(allFamilies); // 靜默更新列表
+                renderFamilies(allFamilies, false); // 靜默更新列表
               }).catch(() => {});
           }, 300);
           return;
@@ -502,7 +502,7 @@
           clearInterval(loadingTimer); // 資料回來了，關閉計時器
           allFamilies = result.families || [];
           setFamiliesCache(allFamilies);
-          renderFamilies(allFamilies);
+          renderFamilies(allFamilies, false);
         })
         .catch(err => {
           clearInterval(loadingTimer); // 發生錯誤，關閉計時器
@@ -513,22 +513,36 @@
     }
 
     // ── 渲染家庭列表 ──────────────────────────────────────────
-    function renderFamilies(families) {
-      const listEl = document.getElementById("family-list");
+    function renderFamilies(families, isSearch) {
+      const listEl  = document.getElementById("family-list");
       const labelEl = document.getElementById("list-label");
 
-      labelEl.textContent = `家庭列表　${families.length} 個家庭`;
-
       if (families.length === 0) {
+        labelEl.textContent = isSearch ? "找不到符合的家庭" : "家庭列表";
         listEl.innerHTML = `
           <div class="empty-state">
             <div class="icon">👨‍👩‍👧</div>
-            <div class="text">還沒有家庭資料<br/>點下方「新增家庭」開始建立</div>
+            <div class="text">${isSearch ? "沒有符合「" + document.getElementById("search-input").value + "」的家庭" : "還沒有家庭資料<br/>點上方「新增家庭」開始建立"}</div>
           </div>`;
         return;
       }
 
-      listEl.innerHTML = families.map(f => `
+      // 搜尋時顯示全部結果；非搜尋時隨機取最多 10 筆
+      let display = families;
+      if (!isSearch && families.length > 10) {
+        // Fisher-Yates shuffle 取前 10 筆（每次載入順序都不同）
+        const shuffled = families.slice();
+        for (let i = shuffled.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        display = shuffled.slice(0, 10);
+        labelEl.textContent = `家庭列表　共 ${families.length} 個（隨機顯示 10 個，搜尋可找全部）`;
+      } else {
+        labelEl.textContent = `家庭列表　${families.length} 個家庭`;
+      }
+
+      listEl.innerHTML = display.map(f => `
         <div class="family-card" onclick="openFamily('${f.fileName}', '${f.familyName}')">
           <div class="family-avatar">${f.familyName[0] || "?"}</div>
           <div class="family-info">
@@ -544,11 +558,11 @@
     function filterFamilies() {
       const q = document.getElementById("search-input").value.trim();
       if (!q) {
-        renderFamilies(allFamilies);
+        renderFamilies(allFamilies, false);  // 無搜尋：隨機 10 筆
         return;
       }
       const filtered = allFamilies.filter(f => f.familyName.includes(q));
-      renderFamilies(filtered);
+      renderFamilies(filtered, true);         // 搜尋中：顯示全部結果
     }
 
     // ── 開啟家庭（暫時 alert，之後跳到 family.html）─────────
