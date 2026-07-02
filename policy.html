@@ -145,7 +145,7 @@
     .pr-badge-cell  { width: 40px; text-align: center; }
     .pr-cat-cell    { width: 88px; }
     .pr-name-cell   { flex: 1; min-width: 0; padding: 0 10px; }
-    .pr-fx-cell     { width: 96px; text-align: right; font-size: 13px; color: #6B7280; }
+    /* pr-fx-cell 已整合進名稱欄，不再獨立使用 */
     .pr-amount-cell { width: 80px; text-align: right; }
     .pr-status-cell { width: 72px; text-align: center; }
     .pr-chevron     { width: 24px; text-align: center; color: #D1D5DB; font-size: 16px; }
@@ -764,14 +764,16 @@ function renderPolicies() {
         : `<span style="font-size:12px;font-weight:600;color:#6B7280;background:#F3F4F6;padding:2px 6px;border-radius:5px;white-space:nowrap">附約</span>`;
 
       // 商品名稱 + 保額（同一行，保額緊跟在名稱後）
-      const insuredStr = p.insuredAmount
-        ? `<span style="color:#3B82F6;font-size:13px;font-weight:500;margin-left:8px;white-space:nowrap">保額 ${p.insuredAmount} ${p.insuredAmountUnit||'萬元'}</span>`
+      // 保額 + 外幣金額合併顯示在名稱旁（省去中間大空白）
+      const fxStr = isFx
+        ? `<span style="color:#6B7280;font-size:12px;font-weight:500;margin-left:10px;white-space:nowrap">(${(p.premiumOrig||0).toLocaleString()} ${p.currency})</span>`
         : '';
+      const insuredStr = p.insuredAmount
+        ? `<span style="color:#3B82F6;font-size:13px;font-weight:500;margin-left:8px;white-space:nowrap">保額 ${p.insuredAmount} ${p.insuredAmountUnit||'萬元'}</span>${fxStr}`
+        : fxStr;
 
-      // 外幣保費欄（台幣保單不顯示，外幣保單顯示原幣金額）
-      const fxCell = isFx
-        ? `<div class="pr-cell pr-fx-cell">${(p.premiumOrig||0).toLocaleString()} ${p.currency}</div>`
-        : `<div class="pr-cell pr-fx-cell"></div>`;
+      // 外幣保費欄已整合到 insuredStr，此欄不再需要
+      const fxCell = '';
 
       return `<div class="policy-row" onclick="event.stopPropagation(); openForm('edit','${p._memberId}','${p.id}')">
         <div class="pr-cell pr-badge-cell">${badge}</div>
@@ -782,7 +784,7 @@ function renderPolicies() {
         </div>
         ${fxCell}
         <div class="pr-cell pr-amount-cell pr-amount">
-          ${isFx ? `<span style="font-size:11px;color:#9CA3AF">NT$ </span>` : ''}${(p.premiumTWD||0).toLocaleString()}
+          ${isFx ? 'NT$' : ''}${(p.premiumTWD||0).toLocaleString()}
         </div>
         <div class="pr-cell pr-status-cell"><span class="status-badge ${statusClass}">${p.status||'有效'}</span></div>
         <div class="pr-chevron">›</div>
