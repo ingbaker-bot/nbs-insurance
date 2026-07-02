@@ -1144,7 +1144,7 @@ async function savePolicy() {
     person.updatedAt = new Date().toISOString();
 
     const member = familyData.members.find(m => m.personId === editingPersonId);
-    await callGAS("saveFile", {
+    const saveResult = await callGAS("saveFile", {
       email: currentUser.email,
       fileType: "persons",
       fileId: editingPersonId,
@@ -1152,13 +1152,18 @@ async function savePolicy() {
       content: person,
     });
 
-    // 儲存成功：清除 sessionStorage bundle 快取，
-    // 確保切換到受益人/保障清單等頁面時，
-    // nav.js 會重新從 Drive 拿最新資料，而不是讀到舊快取
+    // ── 明確檢查回傳值，GAS 回傳 error 時要報錯 ──
+    if (!saveResult || saveResult.status === "error") {
+      throw new Error(
+        (saveResult && saveResult.message) ||
+        "Google Drive 寫入失敗，請確認網路連線後再試"
+      );
+    }
+
+    // 確實寫入成功後才清快取與關閉表單
     if (window.NBS_NAV && typeof NBS_NAV.invalidateBundleCache === 'function') {
       NBS_NAV.invalidateBundleCache();
     } else {
-      // 直接清除，以防 invalidateBundleCache 尚未掛載
       const _fn = localStorage.getItem('nbs_current_family');
       if (_fn) sessionStorage.removeItem('nbs_bundle_' + _fn);
     }
@@ -1179,7 +1184,11 @@ async function savePolicy() {
     }
 
   } catch(e) {
-    alert("儲存失敗：" + e.message);
+    const errEl = document.getElementById("form-error");
+    errEl.textContent = "⚠️ " + (e.message || "儲存失敗，請重試");
+    errEl.style.display = "block";
+    errEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    console.error("[savePolicy]", e);
   } finally {
     btn.disabled = false;
     btn.textContent = "儲存";
@@ -1196,7 +1205,7 @@ async function deletePolicy() {
     person.updatedAt = new Date().toISOString();
 
     const member = familyData.members.find(m => m.personId === editingPersonId);
-    await callGAS("saveFile", {
+    const delResult = await callGAS("saveFile", {
       email: currentUser.email,
       fileType: "persons",
       fileId: editingPersonId,
@@ -1204,7 +1213,13 @@ async function deletePolicy() {
       content: person,
     });
 
-    // 刪除成功也要清快取
+    if (!delResult || delResult.status === "error") {
+      throw new Error(
+        (delResult && delResult.message) ||
+        "Google Drive 寫入失敗，請確認網路連線後再試"
+      );
+    }
+
     if (window.NBS_NAV && typeof NBS_NAV.invalidateBundleCache === 'function') {
       NBS_NAV.invalidateBundleCache();
     } else {
