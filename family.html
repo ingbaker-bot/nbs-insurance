@@ -45,7 +45,7 @@
       z-index: 100;
     }
 
-    .back-btn {
+    .back-btn-unused {
       background: none;
       border: none;
       font-size: 40px;
@@ -118,23 +118,7 @@
       transform: translateY(-1px);
     }
 
-    .member-avatar {
-      width: 36px;
-      height: 36px;
-      border-radius: 11px;
-      background: linear-gradient(135deg,#EEF4FF,#EDE9FF);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 800;
-      color: #6D28D9;
-    }
-
-    .member-card.active .member-avatar {
-      background: linear-gradient(135deg,#3B82F6,#7C3AED);
-      color: #fff;
-      box-shadow: 0 2px 8px rgba(124,58,237,.30);
-    }
+    .member-avatar { display: none; } /* 已移除，只顯示名字 */
 
     .member-name { font-size: 20px; font-weight: 700; color: #111827; }
     .member-age  { font-size: 15px; color: #9CA3AF; }
@@ -407,11 +391,9 @@
 </head>
 <body>
 
-  <!-- Header -->
+  <!-- Header（分析日已在 nav 顯示，返回按鈕改由 nav 負責，此處僅顯示家庭名稱）-->
   <div class="header">
-    <button class="back-btn" onclick="goBack()">‹</button>
-    <div class="header-title" id="family-title">載入中…</div>
-    <div class="header-date" id="header-date"></div>
+    <div class="header-title" id="family-title" style="padding-left:4px">載入中…</div>
   </div>
 
   <!-- 主內容 -->
@@ -428,10 +410,13 @@
     <div class="person-card" id="person-card">
       <div class="person-card-header">
         <div class="left">
-          <span id="card-name" style="font-weight:500;">—</span>
+          <span id="card-name"
+                onclick="openEditPerson()"
+                style="font-weight:700;cursor:pointer;border-bottom:1.5px dashed rgba(124,58,237,.35);padding-bottom:1px"
+                title="點擊編輯成員資料">—</span>
           <span id="card-age-badge" class="ins-age-badge" style="display:none"></span>
+          <span style="font-size:12px;color:#9CA3AF;margin-left:6px;cursor:pointer" onclick="openEditPerson()">✏️ 點擊編輯</span>
         </div>
-        <button class="edit-btn" onclick="openEditPerson()">編輯</button>
       </div>
       <div class="person-card-body">
         <div class="info-cell">
@@ -689,8 +674,7 @@
 
       // Header
       document.getElementById("family-title").textContent = familyData.familyName;
-      document.getElementById("header-date").textContent =
-        "分析日 " + toRoc(familyData.analysisDate);
+      // 分析日已由 nav.js 在側欄顯示，header 不重複顯示
 
       // 成員列
       renderMembers();
@@ -715,7 +699,6 @@
         return `
           <div class="member-card ${selectedPersonId === m.personId ? 'active' : ''}"
                onclick="selectMember('${m.personId}')">
-            <div class="member-avatar">${m.name[0]}</div>
             <div class="member-name">${m.name}</div>
             <div class="member-age">${age !== null ? age + '歲' : '—'}</div>
             <span class="role-badge ${rc}">${rl}</span>
