@@ -42,6 +42,27 @@
   <script src="nav.js"></script>
 </head>
 <body>
+<!-- 原始 JS 初始化需要的隱藏占位元素（移除選擇UI後補回，避免 null 錯誤）-->
+<div style="display:none">
+  <div id="HDR_TITLE"></div>
+  <div id="WM_HINT"></div>
+  <div id="PV_NOTE"></div>
+  <div id="PV_BLOCKS"></div>
+  <div id="BLKLIST"></div>
+  <div id="DONE_MSG"></div>
+  <div id="DONE_FILES"></div>
+  <div id="EX_ICON"></div>
+  <div id="EX_MSG"></div>
+  <div id="EX_SUB"></div>
+  <div id="PROG"></div>
+  <div id="PROG_PCT"></div>
+  <button id="B_BACK"></button>
+  <button id="B_BACK2"></button>
+  <button id="B_PREV"></button>
+  <button id="B_EXPORT"></button>
+  <button id="B_FINISH"></button>
+  <button id="B_TOGALL"></button>
+</div>
 <div class="report-wrap" id="REPORT">
   <div class="loading" id="LOADING">
     <span class="spin"></span>報表載入中，請稍候…
