@@ -779,10 +779,10 @@ function renderPolicies() {
           ${insuredStr}
         </div>
         ${fxCell}
-        <div class="pr-cell pr-amount-cell pr-amount" style="text-align:right;white-space:nowrap">
+        <div class="pr-cell pr-amount-cell" style="text-align:right;line-height:1.25">
           ${isFx
-            ? `NT$${(p.premiumTWD||0).toLocaleString()} <span style="font-size: 14px;color:#9CA3AF;font-weight:400">(${(p.premiumOrig||0).toLocaleString()} ${p.currency})</span>`
-            : (p.premiumTWD||0).toLocaleString()
+            ? `<div class="pr-amount">NT$${(p.premiumTWD||0).toLocaleString()}</div><div style="font-size:12px;color:#9CA3AF;font-weight:400">(${(p.premiumOrig||0).toLocaleString()} ${p.currency})</div>`
+            : `<div class="pr-amount">${(p.premiumTWD||0).toLocaleString()}</div>`
           }
         </div>
         <div class="pr-cell pr-status-cell"><span class="status-badge ${statusClass}">${p.status||'有效'}</span></div>
