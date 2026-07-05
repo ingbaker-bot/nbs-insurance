@@ -1,318 +1,148 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>NBS - 保單彙總</title>
   <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{
-      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;
-      background:linear-gradient(160deg,#EEF4FF 0%,#F5F0FF 50%,#EFF9F4 100%);
-      min-height:100vh;color:#1a1a1a;
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background:#f5f5f3; min-height:100vh; color:#1a1a1a; }
+
+    .header { background:#fff; border-bottom:1px solid #eee; padding:12px 16px; display:flex; align-items:center; gap:10px; position:sticky; top:0; z-index:100; }
+    .back-btn { background:none; border:none; font-size:26px; color:#999; cursor:pointer; padding:0; }
+    .header-title { font-size:28px; font-weight:600; flex:1; }
+    .header-sub { font-size:14px; color:#bbb; }
+
+    .member-tabs { display:flex; background:#fafafa; border-bottom:1px solid #eee; overflow-x:auto; padding:0 16px; }
+    .member-tab { padding:9px 14px; font-size:22px; cursor:pointer; white-space:nowrap; border-bottom:2px solid transparent; color:#888; }
+    .member-tab.active { border-bottom-color:#378ADD; color:#378ADD; font-weight:500; }
+
+    .main { 
+      padding: 16px 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
     }
-    .report-wrap{padding:16px 20px;max-width:1200px;margin:0 auto}
-    .sec-hdr{
-      font-size:43.9px;font-weight:700;color:#374151;
-      margin:24px 0 10px;padding:8px 14px;
-      background:rgba(255,255,255,.75);
-      border:1px solid rgba(120,140,255,.15);
-      border-left:4px solid #7C3AED;
-      border-radius:0 10px 10px 0;
-      display:flex;align-items:center;gap:8px;
+
+    @media (max-width: 768px) {
+      .main { padding: 16px; }
     }
-    .loading{text-align:center;padding:60px 20px;font-size:52.8px;color:#bbb}
-    .spin{
-      display:inline-block;width:20px;height:20px;
-      border:2px solid #E5E7EB;border-top-color:#3B82F6;
-      border-radius:50%;animation:sp .7s linear infinite;
-      vertical-align:middle;margin-right:8px;
+
+    .stat-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px; }
+    .stat-card { padding:10px 12px; border-radius:10px; }
+    .stat-label { font-size:22px; margin-bottom:2px; }
+    .stat-value { font-size:28px; font-weight:600; }
+
+    .section-label { font-size:22px; font-weight:500; color:#999; margin-bottom:8px; letter-spacing:0.05em; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px; }
+    .small-btn { font-size:14px; padding:4px 12px; border:1px solid #ddd; border-radius:99px; background:transparent; color:#666; cursor:pointer; font-family:inherit; }
+
+    /* 保單號碼一覽 */
+    .policy-group-block { background:#fff; border:1px solid #e8e8e8; border-radius:10px; overflow:hidden; margin-bottom:16px; }
+    .group-header { display:flex; align-items:center; gap:8px; padding:8px 14px; background:#f7f7f5; flex-wrap:wrap; }
+    .policy-no-badge { font-family:monospace; font-size:15px; font-weight:500; background:#E6F1FB; color:#0C447C; padding:1px 8px; border-radius:99px; }
+    .group-company { font-size:24px; font-weight:500; }
+    .group-total { font-size:22px; color:#999; margin-left:auto; }
+    .policy-row { display:grid; grid-template-columns:minmax(96px,auto) 1fr minmax(96px,auto) minmax(70px,auto); align-items:center; gap:8px; padding:9px 14px; border-top:1px solid #f5f5f5; }
+    .cat-badge { font-size:15px; padding:2px 8px; border-radius:99px; text-align:center; display:inline-block; }
+    .policy-name { font-size:24px; padding-left:8px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .policy-prem { font-size:24px; font-weight:500; text-align:right; }
+    .status-badge { font-size:15px; padding:1px 6px; border-radius:99px; text-align:center; }
+    .status-有效 { background:#EAF3DE; color:#27500A; }
+    .status-停效 { background:#FCEBEB; color:#791F1F; }
+
+    /* 圓餅圖 */
+    .pie-wrap { background:#fff; border:1px solid #e8e8e8; border-radius:10px; padding:14px; margin-bottom:16px; }
+    .pie-container { display:flex; align-items:center; gap:16px; flex-wrap:wrap; justify-content:center; }
+    .pie-legend { display:flex; flex-direction:column; gap:5px; }
+    .pie-legend-item { display:flex; align-items:center; gap:8px; font-size:16px; }
+    .pie-dot { width:12px; height:12px; border-radius:3px; flex-shrink:0; }
+
+    /* 保障加總網格排版 */
+    .coverage-grid { display: grid; grid-template-columns: 1fr; gap: 16px; margin-bottom: 24px; }
+    @media (min-width: 768px) { .coverage-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (min-width: 1024px) {
+      .coverage-grid { grid-template-columns: repeat(3, 1fr); align-items: start; }
+      .card-日額型住院 { grid-row: span 2; }
+      .card-癌症醫療   { grid-row: span 2; }
+      .card-失能長照   { grid-column: 2; }
     }
-    @keyframes sp{to{transform:rotate(360deg)}}
-    .decl{
-      margin-top:24px;padding:10px 14px;
-      border-top:1.5px solid rgba(120,140,255,.15);
-      font-size:28.6px;color:#9CA3AF;line-height:1.8;
-    }
-    @media print{
-      body{background:#fff!important;padding-left:0!important}
-      .sec-hdr{background:#f7f7f5;border-left:3px solid #555}
-    }
+
+    /* 獨立保障卡片 */
+    .coverage-card { background: #fff; border: 1px solid #e8e8e8; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+    .cov-group-header { display: flex; align-items: center; padding: 8px 14px; border-bottom: 1px solid #f0f0f0; }
+    .cov-group-label { font-size: 22px; font-weight: 600; letter-spacing: 0.05em; }
+    .cov-item { display: flex; align-items: center; justify-content: space-between; padding: 9px 14px; border-bottom: 1px dashed #f5f5f5; flex-wrap: wrap; gap: 4px; }
+    .cov-item:last-child { border-bottom: none; }
+    .cov-item-label { font-size: 22px; color: #444; }
+    .cov-item-label.zero { color: #bbb; }
+    .cov-value-wrap { text-align: right; }
+    .cov-item-value { font-size: 24px; font-weight: 600; font-family: monospace; }
+    .cov-unit { font-size: 14px; color: #999; font-weight: normal; font-family: sans-serif; margin-left: 2px; }
+    .cov-breakdown { font-size: 14px; color: #aaa; margin-top: 2px; line-height: 1.2; }
+
+    /* 就醫情況 */
+    .medical-table { width:100%; border-collapse:collapse; }
+    .medical-table th { padding:8px 10px; text-align:center; font-size:22px; font-weight:500; border-bottom:1px solid #e8e8e8; }
+    .medical-table th:first-child { text-align:left; padding-left:14px; font-weight:400; color:#888; }
+    .medical-table td { padding:8px 10px; text-align:center; }
+    .medical-table td:first-child { text-align:left; padding-left:14px; font-weight:500; font-size:22px; color:#555; background:#fafafa; }
+    .nhi-badge { display:inline-flex; padding:4px 10px; border-radius:6px; background:#EAF3DE; }
+    .nhi-badge span { font-size:15px; font-weight:500; color:#27500A; }
+    .medical-input { width:112px; font-size:24px; padding:5px 8px; border:1px solid #e0e0e0; border-radius:5px; outline:none; text-align:right; font-family:inherit; }
+    .auto-hint { font-size:14px; color:#aaa; }
+
+    /* Modal */
+    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:200; align-items:flex-end; justify-content:center; }
+    .modal-overlay.active { display:flex; }
+    .modal { background:#fff; border-radius:16px 16px 0 0; padding:20px; width:100%; max-width:560px; max-height:80vh; overflow-y:auto; }
+    .modal-title { font-size:26px; font-weight:600; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; }
+    .modal-close { background:none; border:none; font-size:26px; color:#999; cursor:pointer; line-height:1; }
+    .modal-notice { font-size:14px; color:#5D4037; background:#FFF8E1; padding:8px 12px; border-radius:8px; margin-bottom:14px; line-height:1.6; }
+    .type-group-label { font-size:22px; font-weight:500; margin-bottom:6px; }
+    .type-tags { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+    .type-tag { display:flex; align-items:center; gap:4px; padding:5px 12px; border-radius:99px; cursor:pointer; }
+    .type-tag-dot { width:9px; height:9px; border-radius:50%; }
+    .type-tag-label { font-size:22px; }
+    .manual-badge { font-size:14px; color:#F5A623; font-weight:600; margin-left:2px; }
+
+    .loading { text-align:center; padding:40px; color:#bbb; font-size:22px; }
+    .spinner { display:inline-block; width:16px; height:16px; border:2px solid #e0e0e0; border-top-color:#378ADD; border-radius:50%; animation:spin 0.7s linear infinite; vertical-align:middle; }
+    @keyframes spin { to { transform:rotate(360deg); } }
   </style>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="nav.js"></script>
 </head>
 <body>
-<!-- 原始 JS 初始化需要的隱藏占位元素（移除選擇UI後補回，避免 null 錯誤）-->
-<div style="display:none">
-  <div id="HDR_TITLE"></div>
-  <div id="WM_HINT"></div>
-  <div id="PV_NOTE"></div>
-  <div id="PV_BLOCKS"></div>
-  <div id="BLKLIST"></div>
-  <div id="DONE_MSG"></div>
-  <div id="DONE_FILES"></div>
-  <div id="EX_ICON"></div>
-  <div id="EX_MSG"></div>
-  <div id="EX_SUB"></div>
-  <div id="PROG"></div>
-  <div id="PROG_PCT"></div>
-  <button id="B_BACK"></button>
-  <button id="B_BACK2"></button>
-  <button id="B_PREV"></button>
-  <button id="B_EXPORT"></button>
-  <button id="B_FINISH"></button>
-  <button id="B_TOGALL"></button>
+
+<div class="header-sub" id="header-sub"></div>
+<div class="member-tabs" id="member-tabs"></div>
+<div class="main">
+  <div id="loading" class="loading"><span class="spinner"></span> 載入中…</div>
+  <div id="content" style="display:none"></div>
 </div>
-<div class="report-wrap" id="REPORT">
-  <div class="loading" id="LOADING">
-    <span class="spin"></span>報表載入中，請稍候…
+
+<!-- 手動調整 Modal -->
+<div class="modal-overlay" id="edit-modal" onclick="handleModalOverlay(event)">
+  <div class="modal">
+    <div class="modal-title">
+      手動調整保障有無
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-notice">
+      系統依保單及附約清單自動判斷。若有誤可手動切換，再次點擊恢復自動判斷。<br/>
+      橘色「手動」標籤表示已覆蓋自動判斷。
+    </div>
+    <div id="modal-types"></div>
+    <button onclick="closeModal()" style="width:100%;padding:10px;background:#378ADD;color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:500;cursor:pointer;font-family:inherit;margin-top:8px">完成</button>
   </div>
 </div>
+
 <script>
+    // GAS_URL 已移至 nav.js 統一管理
 
-// ── 設定 ─────────────────────────────────────────────────
-const GAS="https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec";
-
-// ▼ 新增受益人模塊
-const BLOCKS=[
-  {key:"monthly",          label:"每月應繳保費",      icon:"📅",desc:"月曆式繳費分配"},
-  {key:"summary",          label:"保單彙總一覽",      icon:"📊",desc:"保單列表、保費結構、各項保障加總"},
-  {key:"savings_timeline", label:"儲蓄險現金流時間軸",icon:"📈",desc:"未來15年各被保險人現金流匯整"},
-  {key:"beneficiary",      label:"受益人與傳承",      icon:"👥",desc:"傳承規劃與保額對應關係"},
-];
-const FMTS=[
-  {key:"png_single",  type:"png",label:"PNG 一張長圖",desc:"所有區塊合併，適合 LINE 傳送"},
-  {key:"png_multiple",type:"png",label:"PNG 分張",    desc:"每個區塊各自一張"},
-  {key:"pdf_merge",   type:"pdf",label:"PDF 合併",    desc:"所有區塊合併為單一 PDF"},
-  {key:"pdf_pages",   type:"pdf",label:"PDF 分頁",    desc:"每個區塊各自一頁"},
-];
-const CC={"壽險保障":"#4A90D9","醫療保障":"#27AE8F","意外險":"#F5A623","重大疾病險":"#9B59B6","重大傷病險":"#8E44AD","特定傷病險":"#7D3C98","儲蓄險":"#E8638A","年金險":"#C0392B","投資型保險":"#95A5A6"};
-
-// ── 狀態 ─────────────────────────────────────────────────
-var sel={monthly:false,summary:false,savings_timeline:false,beneficiary:false};
-var fmt="png_single";
-var person={},policies=[],coverage={},savings=[];
-var pName="",pDate="";
-
-// ── 按鈕綁定 ─────────────────────────────────────────────
-document.getElementById("B_BACK").onclick    = function(){ window.location.href="family.html"; };
-document.getElementById("B_TOGALL").onclick  = doToggleAll;
-document.getElementById("B_PREV").onclick    = doShowPreview;
-document.getElementById("B_BACK2").onclick   = doShowSelect;
-document.getElementById("B_EXPORT").onclick  = doExport;
-document.getElementById("B_FINISH").onclick  = function(){ history.back(); };
-
-// ── 建立區塊清單 ──────────────────────────────────────────
-function buildBlocks(){
-  var c=document.getElementById("BLKLIST");
-  c.innerHTML="";
-  BLOCKS.forEach(function(b){
-    var d=document.createElement("div");
-    d.className="blk"+(sel[b.key]?" on":"");
-    d.innerHTML='<div class="chk">'+(sel[b.key]?"✓":"")+'</div><span style="font-size:52px;flex-shrink:0">'+b.icon+'</span><div style="flex:1"><div class="blk-lbl">'+b.label+'</div><div class="blk-desc">'+b.desc+'</div></div>';
-    d.onclick=(function(key){return function(){
-      sel[key]=!sel[key];
-      buildBlocks();
-      updateToggleBtn();
-      updatePrevBtn();
-    };})(b.key);
-    c.appendChild(d);
-  });
-}
-
-function buildFmts(){
-  ["png","pdf"].forEach(function(t){
-    var c=document.getElementById("FMT_"+t.toUpperCase());
-    c.innerHTML="";
-    FMTS.filter(function(f){return f.type===t;}).forEach(function(f){
-      var d=document.createElement("div");
-      var sc=fmt===f.key?(t==="png"?"spng":"spdf"):"";
-      d.className="fmt "+sc;
-      d.innerHTML='<div class="fmt-title">'+f.label+'</div><div class="fmt-desc">'+f.desc+'</div>';
-      d.onclick=(function(key,type){return function(){
-        fmt=key;
-        buildFmts();
-        var eb=document.getElementById("B_EXPORT");
-        eb.style.background=fmt.startsWith("pdf")?"#E74C3C":"#378ADD";
-        eb.textContent=fmt.startsWith("pdf")?"匯出 PDF":"下載圖片";
-      };})(f.key,t);
-      c.appendChild(d);
-    });
-  });
-}
-
-function updateToggleBtn(){
-  var all=BLOCKS.every(function(b){return sel[b.key];});
-  document.getElementById("B_TOGALL").textContent=all?"全部取消":"全部勾選";
-}
-
-function updatePrevBtn(){
-  var keys=BLOCKS.filter(function(b){return sel[b.key];});
-  var btn=document.getElementById("B_PREV");
-  if(keys.length===0){
-    btn.textContent="請至少勾選一個區塊";
-    btn.style.background="#ccc";
-    btn.disabled=true;
-  }else{
-    btn.textContent="預覽 "+keys.length+" 個區塊";
-    btn.style.background="#378ADD";
-    btn.disabled=false;
-  }
-}
-
-function doToggleAll(){
-  var all=BLOCKS.every(function(b){return sel[b.key];});
-  BLOCKS.forEach(function(b){sel[b.key]=!all;});
-  buildBlocks();
-  updateToggleBtn();
-  updatePrevBtn();
-}
-
-function goPage(id){
-  ["P_SEL","P_PREV","P_DOING","P_DONE"].forEach(function(p){
-    document.getElementById(p).className="pg"+(p===id?" act":"");
-  });
-}
-
-function doShowSelect(){
-  goPage("P_SEL");
-  document.getElementById("HDR_TITLE").textContent="匯出圖片";
-}
-
-function doShowPreview(){
-  if(document.getElementById("B_PREV").disabled) return;
-  if(!policies) { alert("資料仍在載入中，請稍後再試"); return; }
-  var selBlks=BLOCKS.filter(function(b){return sel[b.key];});
-  var isPdf=fmt.startsWith("pdf");
-  document.getElementById("HDR_TITLE").textContent="預覽確認";
-  document.getElementById("PV_NOTE").innerHTML='ℹ️ 以下為<strong>真實資料預覽</strong>，點「'+(isPdf?"匯出 PDF":"下載圖片")+'」後系統產生'+(isPdf?"PDF":"PNG")+'檔案。';
-  document.getElementById("WM_HINT").textContent='匯出圖片底部將自動加上「NBS 保單體檢 '+pName+' '+pDate+'」浮水印';
-  var eb=document.getElementById("B_EXPORT");
-  eb.style.background=isPdf?"#E74C3C":"#378ADD";
-  eb.textContent=isPdf?"匯出 PDF":"下載圖片";
-  var c=document.getElementById("PV_BLOCKS");
-  c.innerHTML="";
-  selBlks.forEach(function(b,i){
-    if(fmt!=="png_single"){
-      var tag=document.createElement("div");
-      tag.style.cssText="font-size:26px;color:#bbb;margin-bottom:3px";
-      tag.textContent="第 "+(i+1)+" "+(fmt.startsWith("pdf")?"頁":"張");
-      c.appendChild(tag);
-    }
-    var div=document.createElement("div");
-    div.className="pv-blk";
-    div.innerHTML='<div class="pv-hdr">'+b.icon+" "+b.label+'</div><div>'+renderBlock(b.key)+'</div>';
-    c.appendChild(div);
-  });
-  goPage("P_PREV");
-}
-
-// ── 現金流時間軸輔助函式 ─────────────────────────────────
-function fmtAmtEx(amt){if(amt>=10000)return(amt/10000).toFixed(1)+"萬";return amt.toLocaleString();}
-function isMonthlyEx(k){return k==="5";}
-function isYearlyDetailEx(k){return k==="6";}
-function getEndYearAt100Ex(memberId,policy){
-  var bd=(familyData&&familyData.members&&(familyData.members.find(function(m){return m.personId===memberId;})||{}).birthDate);
-  if(bd){var by=parseInt(bd.slice(0,4));if(!isNaN(by))return by+100;}
-  if(policy&&policy.startDate){var sy=parseInt(policy.startDate.slice(0,4));if(!isNaN(sy))return sy+80;}
-  return new Date().getFullYear()+50;
-}
-function calcPolicyFlowsEx(p,s,memberId,years){
-  var sw=p.startDate?parseInt(p.startDate.slice(0,4)):null;
-  var pw=p.payEndDate?parseInt(p.payEndDate.slice(0,4)):null;
-  var cw=p.covEndDate?parseInt(p.covEndDate.slice(0,4)):getEndYearAt100Ex(memberId,p);
-  if(!sw)return{};
-  var tk=s.type||"1",dfr=parseInt(s.duringFreqYr)||2,dsy=parseInt(s.duringStartYr)||1;
-  var da=parseFloat(s.duringAmt)||0,afr=parseInt(s.afterFreqYr)||1;
-  var asy=parseInt(s.afterStartYr!==undefined?s.afterStartYr:0),aa=parseFloat(s.afterAmt)||0;
-  var mo=isMonthlyEx(tk),yrd=isYearlyDetailEx(tk);
-  var ym={};
-  if(yrd&&s.yearlyAmts){s.yearlyAmts.forEach(function(r){var y=parseInt(r.yr),a=parseFloat(r.amt);if(!isNaN(y)&&!isNaN(a)&&a>0)ym[y]=(ym[y]||0)+a;});}
-  var er=(p.currency&&p.currency!=="TWD"&&parseFloat(s.exchangeRate))?parseFloat(s.exchangeRate):1;
-  var flows={};
-  years.forEach(function(yr){
-    if(yr>cw)return;
-    var fl=0,id=pw?(yr>=sw&&yr<pw):false,ia=pw?yr>=pw:yr>=sw;
-    if(yrd){fl=ym[yr]||0;}
-    else if(tk==="1"){if(pw&&yr===pw)fl=aa;}
-    else if(tk==="2"){
-      if(id&&da>0){var ft=sw+dsy-1,e=yr-ft;if(yr>=ft&&e%dfr===0)fl+=da;}
-      if(pw&&yr===pw)fl+=aa;
-    }else if(tk==="3"){if(ia&&aa>0){var b=(pw||sw)+asy,e2=yr-b;if(yr>=b&&e2%afr===0)fl=aa;}}
-    else if(tk==="4"){
-      if(id&&da>0){var ft2=sw+dsy-1,e3=yr-ft2;if(yr>=ft2&&e3%dfr===0)fl+=da;}
-      if(ia&&aa>0){var b2=(pw||sw)+asy,e4=yr-b2;if(yr>=b2&&e4%afr===0)fl+=aa;}
-    }else if(mo){if(ia&&aa>0)fl=aa*12;}
-    if(fl>0)flows[yr]=Math.round(fl*er);
-  });
-  return flows;
-}
-function renderSavingsTimeline(pdm3,fData,startYr,endYr){
-  var years=[];for(var y=startYr;y<=endYr;y++)years.push(y);
-  var groups=[],totalFlows={};
-  (fData.members||[]).filter(function(m){return m.role!=="beneficiary_only";}).forEach(function(m){
-    var p3=pdm3[m.personId];if(!p3)return;
-    var sp=(p3.policies||[]).filter(function(p){return["儲蓄險","年金險","儲蓄年金","投資型保險"].indexOf(p.category)>=0;});
-    if(!sp.length)return;
-    var pRows=[];
-    sp.forEach(function(p){
-      var s2=(p3.savings||[]).find(function(sv){return sv.policyId===p.id;})||{type:"1"};
-      var flows=calcPolicyFlowsEx(p,s2,m.personId,years);
-      Object.keys(flows).forEach(function(y2){totalFlows[y2]=(totalFlows[y2]||0)+flows[y2];});
-      pRows.push({policyNo:p.policyNo||p.id,itemName:p.itemName||"",category:p.category||"",flows:flows});
-    });
-    if(pRows.length)groups.push({memberName:m.name,policies:pRows});
-  });
-  if(!groups.length)return'<div style="padding:20px;text-align:center;color:#bbb;font-size:31.2px">尚無儲蓄保單設定領回資料</div>';
-  var maxTotal=Math.max.apply(null,Object.values(totalFlows).concat([1]));
-  var catBg={"儲蓄險":"#FBEAF0","年金險":"#FCEBEB","儲蓄年金":"#FBEAF0","投資型保險":"#f0f0f0"};
-  var catCo={"儲蓄險":"#72243E","年金險":"#791F1F","儲蓄年金":"#72243E","投資型保險":"#555"};
-  var yh=years.map(function(y3){return'<th style="background:#f7f7f5;padding:4px 5px;text-align:center;font-weight:500;color:#333;border-bottom:1px solid #ebebeb;border-right:1px solid #ebebeb;white-space:nowrap">'+y3+'<br><span style="font-size:20.8px;color:#666;font-weight:500">'+(y3-1911)+'年</span></th>';}).join("");
-  var gr=groups.map(function(g){
-    var pay=g.policies.filter(function(pr){return Object.keys(pr.flows).length===0;}).length;
-    var nr='<tr><td colspan="'+(years.length+1)+'" style="background:#f4f8fd;padding:6px 10px;font-size:28.6px;font-weight:600;border-top:2px solid #dde8f5">'+
-      g.memberName+'<span style="color:#777;font-weight:400;margin-left:6px;font-size:26px">'+g.policies.length+'張保單</span>'+
-      (pay?'<span style="color:#b07000;font-size:26px;margin-left:4px">（含'+pay+'張繳費中）</span>':'')+
-    '</td></tr>';
-    var pr2=g.policies.map(function(pr){
-      var cells=years.map(function(y4){
-        var amt=pr.flows[y4]||0;
-        if(!amt)return'<td style="text-align:center;color:#ccc;font-size:26px;border-right:1px solid #f5f5f5">—</td>';
-        var w=Math.max(18,Math.round((amt/maxTotal)*50));
-        return'<td style="text-align:center;border-right:1px solid #f5f5f5"><div style="height:20px;border-radius:3px;background:#E6F1FB;display:inline-flex;align-items:center;padding:0 4px;min-width:'+w+'px"><span style="font-size:28.6px;color:#0C447C;white-space:nowrap;font-weight:600">'+fmtAmtEx(amt)+'</span></div></td>';
-      }).join("");
-      var fc='<td style="padding:4px 4px 4px 10px;min-width:120px;border-right:2px solid #dde8f5">'+
-        '<div style="display:flex;align-items:center;gap:4px">'+
-          '<span style="font-size:23.4px;padding:1px 4px;border-radius:3px;background:'+(catBg[pr.category]||"#f0f0f0")+';color:'+(catCo[pr.category]||"#555")+'">'+(pr.category)+'</span>'+
-          '<span style="font-size:26px;font-weight:700;font-family:monospace;color:#1a1a1a">'+pr.policyNo+'</span>'+
-          (!Object.keys(pr.flows).length?'<span style="font-size:23.4px;color:#888">繳費中</span>':'')+
-        '</div>'+
-        (pr.itemName?'<div style="font-size:23.4px;color:#444;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:120px">'+pr.itemName+'</div>':'')+
-      '</td>';
-      return'<tr>'+fc+cells+'</tr>';
-    }).join("");
-    var mf={};g.policies.forEach(function(pr){Object.keys(pr.flows).forEach(function(y5){mf[y5]=(mf[y5]||0)+pr.flows[y5];});});
-    var sub='<tr style="background:#f0f6fc;font-weight:600;color:#0C447C;border-top:1px solid #dde8f5"><td style="padding-left:10px;border-right:2px solid #dde8f5">小計</td>'+
-      years.map(function(y6){var a=mf[y6]||0;return a?'<td style="text-align:center;font-size:28.6px">'+fmtAmtEx(a)+'</td>':'<td style="text-align:center;color:#ccc">—</td>';}).join("")+'</tr>';
-    return nr+pr2+sub;
-  }).join("");
-  var tot='<tr style="background:#e8f3fd;font-weight:600;color:#0C447C;border-top:2px solid #c5ddf5"><td style="padding-left:10px;border-right:2px solid #dde8f5">合計現金流</td>'+
-    years.map(function(y7){var a=totalFlows[y7]||0;return a?'<td style="text-align:center;font-size:28.6px">'+fmtAmtEx(a)+'</td>':'<td style="text-align:center">—</td>';}).join("")+'</tr>';
-  return'<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;overflow:hidden">'+
-    '<div style="padding:10px 14px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:10px">'+
-      '<span style="font-size:36.4px;font-weight:600">未來現金流時間軸</span>'+
-      '<span style="font-size:28.6px;color:#555;font-weight:500">'+startYr+'－'+endYr+'年・'+groups.length+'位被保險人</span>'+
-    '</div>'+
-    '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">'+
-    '<table style="width:100%;border-collapse:collapse;font-size:28.6px">'+
-    '<thead><tr><th style="background:#f7f7f5;padding:6px 10px;text-align:left;min-width:120px;border-bottom:1px solid #ebebeb;border-right:2px solid #dde8f5">被保險人/保單</th>'+yh+'</tr></thead>'+
-    '<tbody>'+gr+tot+'</tbody></table></div></div>';
-}
-
-
-// ── Summary 輔助函式（移植自 summary.html）──────────────
-function sumCovEx(keys, policies, coverage) {
-  var total = 0;
+// ── 輔助加總計算機 ─────────────────────────────────────────
+function sumCov(keys, policies, coverage) {
+  let total = 0;
   policies.forEach(p => {
     keys.forEach(k => {
       if (p.coverage && typeof p.coverage[k] === "number") {
@@ -334,18 +164,18 @@ function sumCovEx(keys, policies, coverage) {
 }
 
 // ── 保障群組與細項定義 (全新規劃) ─────────────────────────────────────────
-var GAP_GROUPS_EX = [
+const GAP_GROUPS = [
   { key:"family", label:"家庭責任", color:"#1565C0", items:[
     { key:"life_permanent", label:"終身壽險",    unit:"萬元",   color:"#1565C0" },
     { key:"life_term",      label:"定期壽險",    unit:"萬元",   color:"#1E88E5" },
     { key:"investment",     label:"投資型保險",  unit:"",       color:"#7B1FA2", isBool:true },
     { key:"savings",        label:"儲蓄險",      unit:"",       color:"#E91E8C", isBool:true },
   ]},
-  { key:"before", label:"評估確診", arrowLabel:"醫療前期", arrowColor:"#5BAD6F", color:"#E53935", items:[
+  { key:"before", label:"評估確診", color:"#E53935", items:[
     { key:"ci_special", label:"重大/特傷/重疾", unit:"萬元",   color:"#E53935" },
     { key:"cancer",     label:"初次罹患癌症",    unit:"萬元",   color:"#C62828" },
   ]},
-  { key:"during", label:"積極修復", arrowLabel:"醫療中期", arrowColor:"#378ADD", color:"#FF8F00", items:[
+  { key:"during", label:"積極修復", color:"#FF8F00", items:[
     { key:"hosp_real_room",  label:"實支病房費",        unit:"元/日",  color:"#E65100" },
     { key:"hosp_daily",      label:"住院日額+出院",      unit:"元/日",  color:"#F57C00" },
     { key:"surgery",         label:"手術險(最高)",      unit:"",       color:"#FF9800", isBool:true },
@@ -353,7 +183,7 @@ var GAP_GROUPS_EX = [
     { key:"acc_medical",     label:"意外醫療",          unit:"萬/次",  color:"#FFC107" },
     { key:"acc_hosp",        label:"意外住院",          unit:"元/日",  color:"#FFE082" },
   ]},
-  { key:"after",  label:"康復療養", arrowLabel:"醫療後期", arrowColor:"#E8638A", color:"#2E7D32", items:[
+  { key:"after", label:"康復療養", color:"#2E7D32", items:[
     { key:"ltc_disable",    label:"失能一次金",      unit:"萬元",    color:"#1B5E20" },
     { key:"ltc_support",    label:"失能扶助",        unit:"萬元/月", color:"#2E7D32" },
     { key:"ltc_care",       label:"長照",            unit:"萬元/月", color:"#43A047" },
@@ -364,7 +194,7 @@ var GAP_GROUPS_EX = [
 ];
 
 // 精準對應 coverage.html 的資料庫欄位
-var GAP_KEY_MAP_EX = {
+const GAP_KEY_MAP = {
   life_permanent:  { cats:["壽險保障"],          keys:["life_basic"] },
   life_term:       { cats:[],                   keys:["life_term"] },
   investment:      { cats:["投資型保險"],        keys:[] },
@@ -385,7 +215,7 @@ var GAP_KEY_MAP_EX = {
   waiver:          { cats:[],                   keys:["ltc_waiver"] },
 };
 
-var COVERAGE_TYPES = [
+const COVERAGE_TYPES = [
   { key:"life",       label:"壽險保障", group:"壽險", color:"#4A90D9", detect:(p,c)=>p.some(x=>x.category==="壽險保障") },
   { key:"acc_death",  label:"意外身故", group:"意外", color:"#F5A623", detect:(p,c)=>p.some(x=>x.category==="意外險") },
   { key:"acc_medical",label:"意外醫療", group:"意外", color:"#F08C00", detect:(p,c)=>Object.keys(c).some(k=>k.includes("acc_opd")) },
@@ -402,15 +232,15 @@ var COVERAGE_TYPES = [
   { key:"investment", label:"投資型",   group:"財務", color:"#95A5A6", detect:(p,c)=>p.some(x=>x.category==="投資型保險") },
 ];
 
-var GROUP_COLORS = { 壽險:"#4A90D9",意外:"#F5A623",醫療:"#27AE8F",重大:"#9B59B6",癌症:"#E74C3C",長照:"#27500A",財務:"#E8638A" };
+const GROUP_COLORS = { 壽險:"#4A90D9",意外:"#F5A623",醫療:"#27AE8F",重大:"#9B59B6",癌症:"#E74C3C",長照:"#27500A",財務:"#E8638A" };
 
-var CAT_COLORS = {
+const CAT_COLORS = {
   "壽險保障":"#4A90D9","醫療保障":"#27AE8F","意外險":"#F5A623",
   "重大疾病險":"#9B59B6","重大傷病險":"#8E44AD","特定傷病險":"#7D3C98",
   "儲蓄險":"#E8638A","年金險":"#C0392B","投資型保險":"#95A5A6",
 };
 
-var COVERAGE_GROUPS_EX = [
+const COVERAGE_GROUPS = [
   { label:"壽險保障", color:"#4A90D9", items:[
     { label:"壽險保障額度", keys:["life_basic", "life_term"], unit:"萬元" },
   ]},
@@ -491,21 +321,21 @@ var COVERAGE_GROUPS_EX = [
   ]},
 ];
 
-var currentUser    = null;
-var familyData     = null;
-var familyFileName = null;
-var personDataMap  = {};
-var currentPersonId = null;
-var overrides      = {};
-var medicalOverrides = {};
-var targets        = {};
+let currentUser    = null;
+let familyData     = null;
+let familyFileName = null;
+let personDataMap  = {};
+let currentPersonId = null;
+let overrides      = {};
+let medicalOverrides = {};
+let targets        = {};
 
 // 核心運算引擎：精準抓取資料庫數字
-function getItemCurrentEx(key, policies, coverage, covOverrides) {
-  var map = GAP_KEY_MAP_EX[key];
+function getItemCurrent(key, policies, coverage, covOverrides) {
+  const map = GAP_KEY_MAP[key];
   if(!map) return 0;
 
-  var manualKey = currentPersonId+"_"+key;
+  const manualKey = currentPersonId+"_"+key;
   if(covOverrides && covOverrides[manualKey] !== undefined) {
     return covOverrides[manualKey] ? 1 : 0;
   }
@@ -513,13 +343,13 @@ function getItemCurrentEx(key, policies, coverage, covOverrides) {
   if(["investment","savings","waiver"].includes(key)) {
     if(key==="investment") return policies.some(p=>p.category==="投資型保險")?1:0;
     if(key==="savings")    return policies.some(p=>["儲蓄險","年金險"].includes(p.category))?1:0;
-    if(key==="waiver")     return sumCovEx(["ltc_waiver"], policies, coverage) > 0 ? 1 : 0;
+    if(key==="waiver")     return sumCov(["ltc_waiver"], policies, coverage) > 0 ? 1 : 0;
     return 0;
   }
 
   if (["life_permanent", "life_term", "ci_special"].includes(key)) {
       let amt = 0;
-      var matchedPolicies = policies.filter(p => map.cats.includes(p.category));
+      const matchedPolicies = policies.filter(p => map.cats.includes(p.category));
       matchedPolicies.forEach(p => {
          if (p.insuredAmount) amt += parseFloat(p.insuredAmount) || 0;
       });
@@ -527,18 +357,19 @@ function getItemCurrentEx(key, policies, coverage, covOverrides) {
       return amt;
   }
 
-  var NO_FALLBACK_KEYS = [
-    "acc_medical","acc_hosp","hosp_real_room","hosp_daily",
-    "surgery","cancer_hosp","ltc_disable","ltc_support",
-    "ltc_care","cancer_hospice","cancer_death"
+  // 這些 key 是明細欄位，沒有填就應該是 0，不應該用保額填充
+  const NO_FALLBACK_KEYS = [
+    "acc_medical", "acc_hosp", "hosp_real_room", "hosp_daily",
+    "surgery", "cancer_hosp", "ltc_disable", "ltc_support",
+    "ltc_care", "cancer_hospice", "cancer_death"
   ];
-  if (NO_FALLBACK_KEYS.indexOf(key) !== -1) {
-    return sumCovEx(map.keys, policies, coverage);
+  if (NO_FALLBACK_KEYS.includes(key)) {
+    return sumCov(map.keys, policies, coverage);
   }
 
-  var amt = sumCovEx(map.keys, policies, coverage);
+  let amt = sumCov(map.keys, policies, coverage);
 
-  var matchedPolicies = policies.filter(p => map.cats.includes(p.category));
+  const matchedPolicies = policies.filter(p => map.cats.includes(p.category));
   if (amt === 0 && matchedPolicies.length > 0) {
       matchedPolicies.forEach(p => {
           if (p.insuredAmount) amt += parseFloat(p.insuredAmount) || 0;
@@ -549,19 +380,78 @@ function getItemCurrentEx(key, policies, coverage, covOverrides) {
   return amt;
 }
 
-function getItemStatusEx(key, policies, coverage, targets, covOverrides) {
-  var item = GAP_GROUPS_EX.flatMap(g=>g.items).find(i=>i.key===key);
-  var current = getItemCurrentEx(key, policies, coverage, covOverrides);
-  var target  = targets[key];
-  var isBool  = item?.isBool;
+function getItemStatus(key, policies, coverage, targets, covOverrides) {
+  const item = GAP_GROUPS.flatMap(g=>g.items).find(i=>i.key===key);
+  const current = getItemCurrent(key, policies, coverage, covOverrides);
+  const target  = targets[key];
+  const isBool  = item?.isBool;
   if(!current) return {status:"gap", current:0, target, pct:0};
   if(!target||isBool) return {status:"ok", current, target:null, pct:1};
   if(current>=target) return {status:"ok", current, target, pct:1};
   return {status:"insufficient", current, target, pct:current/target};
 }
 
+async function initPage(detail) {
+  currentUser       = detail.user;
+  familyData        = detail.familyData;
+  currentPersonId   = detail.currentPersonId;
+  familyFileName    = detail.familyFileName;
+
+  if (!currentUser || !familyData) {
+    document.getElementById("loading").innerHTML = "載入失敗：請重新登入";
+    return;
+  }
+
+  try {
+    const activeMembers = familyData.members.filter(m => m.role !== "beneficiary_only");
+    
+    const fetchPromises = activeMembers.map(m => {
+      const cacheKey = "nbs_person_" + m.personId;
+      const cachedData = sessionStorage.getItem(cacheKey);
+
+      if (cachedData) {
+        personDataMap[m.personId] = JSON.parse(cachedData);
+        return Promise.resolve();
+      } else {
+        return callGAS("readFile", {
+          email: currentUser.email,
+          fileType: "persons",
+          fileName: m.name + "_" + m.personId + ".json"
+        }).then(pr => {
+          if (pr.status === "ok") {
+            personDataMap[m.personId] = pr.content;
+            sessionStorage.setItem(cacheKey, JSON.stringify(pr.content));
+          }
+        }).catch(err => console.error("讀取 " + m.name + " 失敗", err));
+      }
+    });
+
+    await Promise.all(fetchPromises);
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("content").style.display = "block";
+    renderTabs();
+    renderContent();
+  } catch(err) {
+    console.error("summary.html init error", err);
+    document.getElementById("loading").innerHTML = "載入失敗：" + err.message;
+  }
+}
+
+// 支援兩種事件：nav.js 自行載入 或 family.html 先載入後通知
+window.addEventListener("nbs_nav_ready",     function(e) { initPage(e.detail); });
+window.addEventListener("nbs_family_loaded", function(e) {
+  if (familyData) return; // 已初始化
+  var u = JSON.parse(localStorage.getItem("nbs_user") || "{}");
+  initPage({
+    user:            u,
+    familyData:      e.detail.familyData,
+    currentPersonId: e.detail.familyData && e.detail.familyData.members && e.detail.familyData.members[0] && e.detail.familyData.members[0].personId,
+    familyFileName:  e.detail.familyFileName
+  });
+});
+
 function renderTabs() {
-  var members = familyData.members.filter(m=>m.role!=="beneficiary_only");
+  const members = familyData.members.filter(m=>m.role!=="beneficiary_only");
   document.getElementById("member-tabs").innerHTML = members.map(m=>`
     <div class="member-tab ${currentPersonId===m.personId?'active':''}" onclick="switchPerson('${m.personId}')">
       ${m.name}${getInsAge(m.personId)!==null?' '+getInsAge(m.personId)+'歲':''}
@@ -569,11 +459,11 @@ function renderTabs() {
 }
 
 function getInsAge(pid) {
-  var p=personDataMap[pid];
+  const p=personDataMap[pid];
   if(!p) return null;
-  var b=new Date(p.profile.birthDate), a=new Date(p.profile.analysisDate||new Date());
-  var y=a.getFullYear()-b.getFullYear();
-  var mo=(a-new Date(b.getFullYear()+y,b.getMonth(),b.getDate()))/(1000*60*60*24*30.4375);
+  const b=new Date(p.profile.birthDate), a=new Date(p.profile.analysisDate||new Date());
+  let y=a.getFullYear()-b.getFullYear();
+  const mo=(a-new Date(b.getFullYear()+y,b.getMonth(),b.getDate()))/(1000*60*60*24*30.4375);
   if(mo>=6)y++;
   return y;
 }
@@ -584,204 +474,15 @@ function switchPerson(pid) {
   renderContent();
 }
 
-// ── SVG 箭頭列（html2canvas 相容，不使用 clip-path+calc）────────────────
-function buildSvgArrows(phases) {
-  var W=600, H=40, tip=14;
-  var weights=[1,1.4,1], totalW=3.4;
-  var widths=weights.map(function(w){return w/totalW*W;});
-  var svg='<svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 '+W+' '+H+'" style="display:block;margin-bottom:16px">';
-  var x=0;
-  phases.forEach(function(ph,i){
-    var w=widths[i], x0=x, x1=x+w, pts;
-    if(i===0){
-      pts=x0+',0 '+(x1-tip)+',0 '+x1+','+(H/2)+' '+(x1-tip)+','+H+' '+x0+','+H;
-    } else if(i===2){
-      pts=x0+',0 '+x1+',0 '+x1+','+H+' '+x0+','+H+' '+(x0+tip)+','+(H/2);
-    } else {
-      pts=x0+',0 '+(x1-tip)+',0 '+x1+','+(H/2)+' '+(x1-tip)+','+H+' '+x0+','+H+' '+(x0+tip)+','+(H/2);
-    }
-    svg+='<polygon points="'+pts+'" fill="'+ph.color+'"/>';
-    var tx=i===0?x0+(w-tip)/2:i===2?x0+tip+(w-tip)/2:x0+tip+(w-tip*2)/2;
-    svg+='<text x="'+tx+'" y="'+(H/2+5)+'" text-anchor="middle" fill="#fff" font-size="13" font-weight="700" font-family="-apple-system,BlinkMacSystemFont,sans-serif">'+ph.label+'</text>';
-    x+=w;
-  });
-  svg+='</svg>';
-  return svg;
-}
+function renderContent() {
+  document.getElementById("loading").style.display="none";
+  document.getElementById("content").style.display="block";
+  const person  = personDataMap[currentPersonId];
+  const policies= person?.policies||[];
+  const active  = policies.filter(p=>p.status==="有效");
+  const totalTWD= active.reduce((s,p)=>s+(p.premiumTWD||0),0);
 
-function buildDonutChartEx(active, coverage, targets, covOverrides) {
-  var allItems = GAP_GROUPS_EX.flatMap(g=>g.items);
-  var n = allItems.length;
-  
-  var cx=300, cy=210, OR=135, IR=72;
-  var gapA=0.03, sliceA=(Math.PI*2-n*gapA)/n;
-
-  var angle=-Math.PI/2;
-  var paths="";
-  var labels=""; 
-
-  function renderLegend(g) {
-    var legendHtml = `<div style="font-size:31.2px;font-weight:500;color:${g.color};margin-bottom:8px;border-bottom:1px solid ${g.color}30;padding-bottom:4px">${g.label}</div>`;
-    
-    g.items.forEach(item => {
-      var {status, pct, current, target} = getItemStatusEx(item.key, active, coverage, targets, covOverrides);
-      var icon = status==="gap"?"❌":status==="insufficient"?"⚠️":"✅";
-      var dotColor = status==="gap"?"#e0e0e0":item.color;
-
-      var amtHtml = "";
-      if (item.isBool) {
-        amtHtml = current > 0 ? `<span style="color:#555;font-size:28.6px">有</span>` : `<span style="color:#bbb;font-size:28.6px">無</span>`;
-      } else {
-        if (current > 0 || target > 0) {
-          var displayVal = current > 0 ? current.toLocaleString() : "0";
-          if (target > 0) displayVal += ` / ${target.toLocaleString()}`;
-          
-          amtHtml = `<span style="color:${current>0?'#0C447C':'#888'};font-family:monospace;font-weight:600;font-size:31.2px">${displayVal}<span style="font-size:23.4px;color:#888;margin-left:3px;font-family:sans-serif">${item.unit}</span></span>`;
-        } else {
-          amtHtml = `<span style="color:#bbb;font-size:28.6px">0</span>`;
-        }
-      }
-
-      legendHtml += `<div style="display:flex;align-items:center;gap:6px;font-size:28.6px;margin-bottom:5px">
-        <div style="width:10px;height:10px;border-radius:2px;background:${dotColor};flex-shrink:0"></div>
-        <span style="color:${status==="gap"?"#bbb":"#444"};flex:1;white-space:nowrap">${item.label}</span>
-        ${amtHtml}
-        <span style="margin-left:4px">${icon}</span>
-      </div>`;
-    });
-    return legendHtml;
-  }
-
-  var legendFamily = renderLegend(GAP_GROUPS_EX[0]);
-  var legendBefore = renderLegend(GAP_GROUPS_EX[1]);
-  var legendDuring = renderLegend(GAP_GROUPS_EX[2]);
-  var legendAfter  = renderLegend(GAP_GROUPS_EX[3]);
-
-  allItems.forEach(item => {
-    var {status,pct} = getItemStatusEx(item.key, active, coverage, targets, covOverrides);
-    var start = angle+gapA/2;
-    var end   = angle+gapA/2+sliceA;
-    var filledEnd = start + sliceA*pct;
-    var midA  = start + sliceA/2; 
-    angle += sliceA+gapA;
-
-    var px=(r,a)=>cx+r*Math.cos(a), py=(r,a)=>cy+r*Math.sin(a);
-    var donut=(a1,a2,lg,r1,r2)=>`M${px(r1,a1)},${py(r1,a1)} A${r1},${r1} 0 ${lg} 1 ${px(r1,a2)},${py(r1,a2)} L${px(r2,a2)},${py(r2,a2)} A${r2},${r2} 0 ${lg} 0 ${px(r2,a1)},${py(r2,a1)} Z`;
-
-    paths += `<path d="${donut(start,end,sliceA>Math.PI?1:0,OR,IR)}" fill="#f0f0f0"/>`;
-    if(pct>0.01) paths += `<path d="${donut(start,filledEnd,sliceA*pct>Math.PI?1:0,OR,IR)}" fill="${item.color}"/>`;
-    if(status==="insufficient" && pct<0.99) {
-      var gapSize=sliceA*(1-pct);
-      paths += `<path d="${donut(filledEnd,end,gapSize>Math.PI?1:0,OR,IR)}" fill="none" stroke="${item.color}" stroke-width="2.5" stroke-dasharray="4 3" opacity="0.45"/>`;
-    }
-
-    var isRight = Math.cos(midA) >= 0; 
-    var x0 = px(OR, midA), y0 = py(OR, midA); 
-    var x1 = px(OR + 12, midA), y1 = py(OR + 12, midA); 
-    var x2 = x1 + (isRight ? 15 : -15), y2 = y1; 
-
-    var textAnchor = isRight ? "start" : "end";
-    var textX = x2 + (isRight ? 4 : -4);
-    var textColor = status === "gap" ? "#aaa" : "#555";
-    var fw = status === "ok" ? "500" : "400";
-    var prefix = status === "gap" ? "❌ " : status === "insufficient" ? "⚠️ " : "";
-
-    labels += `
-      <polyline points="${x0},${y0} ${x1},${y1} ${x2},${y2}" fill="none" stroke="${item.color}60" stroke-width="1.2"/>
-      <circle cx="${x0}" cy="${y0}" r="2" fill="${item.color}"/>
-      <text x="${textX}" y="${y2+4}" text-anchor="${textAnchor}" style="font-size:17.6px;fill:${textColor};font-weight:${fw};letter-spacing:0.03em">${prefix}${item.label}</text>
-    `;
-  });
-
-  var okN = allItems.filter(item=>getItemStatusEx(item.key,active,coverage,targets,covOverrides).status==="ok").length;
-  var gapN = allItems.filter(item=>getItemStatusEx(item.key,active,coverage,targets,covOverrides).status==="gap").length;
-  var insN = allItems.filter(item=>getItemStatusEx(item.key,active,coverage,targets,covOverrides).status==="insufficient").length;
-
-  return `<div style="display:flex;flex-direction:column;width:100%">
-    <div style="display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap;margin-bottom:20px;padding:0">
-      <svg viewBox="0 0 600 420" style="width:100%; max-width:660px; flex-shrink:0;">
-        ${paths}
-        ${labels}
-        <text x="${cx}" y="${cy-14}" text-anchor="middle" style="font-size:20.8px;fill:#888">✅ 達標</text>
-        <text x="${cx}" y="${cy+4}"  text-anchor="middle" style="font-size:36.4px;font-weight:bold;fill:#333">${okN}</text>
-        <text x="${cx}" y="${cy+20}" text-anchor="middle" style="font-size:20.8px;fill:#E74C3C">❌ 缺口 ${gapN}</text>
-        <text x="${cx}" y="${cy+34}" text-anchor="middle" style="font-size:20.8px;fill:#F5A623">⚠ 不足 ${insN}</text>
-      </svg>
-      <div style="min-width:170px;background:#fafafa;padding:12px 16px;border-radius:10px;border:1px solid #f0f0f0">
-        ${legendFamily}
-      </div>
-    </div>
-    
-    <div style="border-top:1px dashed #e8e8e8;padding-top:20px">
-      ${buildSvgArrows([
-        {label:GAP_GROUPS_EX[1].arrowLabel, color:"#4CAF86"},
-        {label:GAP_GROUPS_EX[2].arrowLabel, color:"#378ADD"},
-        {label:GAP_GROUPS_EX[3].arrowLabel, color:"#E87BAD"}
-      ])}
-      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:16px">
-        <div>${legendBefore}</div>
-        <div>${legendDuring}</div>
-        <div>${legendAfter}</div>
-      </div>
-    </div>
-  </div>`;
-}
-
-// ── 缺口／不足分析 ────────────────────────────────────────
-function buildGapAnalysisEx(active, coverage, targets, covOverrides) {
-  var allItems = GAP_GROUPS_EX.flatMap(g=>g.items);
-  var gaps = [], insufficients = [];
-  allItems.forEach(item => {
-    var s = getItemStatusEx(item.key, active, coverage, targets, covOverrides);
-    if(s.status==="gap") gaps.push({item, ...s});
-    if(s.status==="insufficient") insufficients.push({item, ...s});
-  });
-
-  var html = "";
-
-  if(insufficients.length) {
-    html += `<div style="font-size:28.6px;font-weight:500;color:#F5A623;margin-bottom:8px">⚠ 規劃不足</div>`;
-    insufficients.forEach(({item,current,target,pct}) => {
-      html += `<div style="margin-bottom:10px">
-        <div style="display:flex;justify-content:space-between;margin-bottom:3px">
-          <span style="font-size:31.2px;color:#555">${item.label}</span>
-          <div style="display:flex;gap:6px;align-items:center">
-            <span style="font-size:28.6px;color:#555;font-weight:500">${current.toLocaleString()}${item.unit}</span>
-            <span style="font-size:26px;color:#aaa">/ 目標 ${target?.toLocaleString()}${item.unit}</span>
-          </div>
-        </div>
-        <div style="height:7px;background:#f0f0f0;border-radius:99px;overflow:hidden">
-          <div style="height:100%;width:${Math.round(pct*100)}%;background:${item.color};border-radius:99px"></div>
-        </div>
-        <div style="font-size:28.6px;color:#E74C3C;margin-top:3px">尚不足 ${(target-current).toLocaleString()}${item.unit}（${Math.round(pct*100)}% 達成）</div>
-      </div>`;
-    });
-  }
-
-  if(gaps.length) {
-    html += `<div style="font-size:28.6px;font-weight:500;color:#E74C3C;margin-bottom:8px;margin-top:${insufficients.length?12:0}px">❌ 尚未規劃</div>`;
-    html += `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">`;
-    gaps.forEach(({item}) => {
-      html += `<span style="padding:3px 10px;background:#FCEBEB;border:1px solid #F0A8BF;border-radius:99px;font-size:31.2px;color:#791F1F">${item.label}</span>`;
-    });
-    html += `</div><div style="font-size:28.6px;color:#aaa">💡 可與保戶討論是否有需要規劃</div>`;
-  }
-
-  if(!insufficients.length && !gaps.length) {
-    html += `<div style="font-size:31.2px;color:#27AE8F;text-align:center;padding:12px 0">🎉 所有已設目標項目均達標！</div>`;
-  }
-
-  html += `<button onclick="openTargetModal()" style="width:100%;margin-top:10px;padding:8px;background:transparent;border:1px dashed #ddd;border-radius:8px;font-size:31.2px;color:#666;cursor:pointer;font-family:inherit">🎯 設定 / 修改目標保額</button>`;
-  return html;
-}
-
-// ── 目標設定 Modal ────────────────────────────────────────
-function openTargetModal() {
-  var person = personDataMap[currentPersonId];
-  var policies = person?.policies||[];
-  var active = policies.filter(p=>p.status==="有效");
-
-  var coverage = {};
+  const coverage = {};
   Object.entries(person?.coverage||{}).forEach(([k,v])=>{
     if(typeof v==="number") coverage[k]=(coverage[k]||0)+v;
     else coverage[k]=v;
@@ -793,47 +494,435 @@ function openTargetModal() {
     });
   });
 
-  var bodyHtml = `<div style="font-size:28.6px;color:#888;background:#f7f7f5;padding:8px 12px;border-radius:8px;margin-bottom:14px;line-height:1.6">
+  const covTypes = COVERAGE_TYPES.map(t=>{
+    const auto = t.detect(active,coverage);
+    const manual = overrides[currentPersonId+"_"+t.key];
+    return {...t, covered: manual!==undefined?manual:auto, autoDetected:auto, isManual:manual!==undefined};
+  });
+
+  let html = "";
+
+  // 1. 頂部摘要
+  html += `<div class="stat-row">
+    <div class="stat-card" style="background:#E6F1FB">
+      <div class="stat-label" style="color:#0C447C">年繳總保費</div>
+      <div class="stat-value" style="color:#0C447C">NT$ ${(totalTWD/10000).toFixed(1)}萬</div>
+    </div>
+    <div class="stat-card" style="background:#EAF3DE">
+      <div class="stat-label" style="color:#27500A">月均保費</div>
+      <div class="stat-value" style="color:#27500A">NT$ ${Math.round(totalTWD/12).toLocaleString()}</div>
+    </div>
+  </div>`;
+
+  // 2. 保單號碼一覽
+  html += `<div class="section-label">保單號碼一覽</div>`;
+  html += `<div class="policy-group-block">`;
+  const groups={};
+  policies.forEach(p=>{ const k=p.policyNo||p.id; if(!groups[k]) groups[k]=[]; groups[k].push(p); });
+  Object.entries(groups).forEach(([no,rows],gi)=>{
+    const groupTotal=rows.reduce((s,p)=>s+(p.premiumTWD||0),0);
+    html+=`<div style="border-top:${gi>0?'1px solid #f0f0f0':'none'}">
+      <div class="group-header">
+        <span class="policy-no-badge">${no}</span>
+        <span class="group-company">${rows[0].company || '未知'}</span>
+        <span class="group-total">年繳 NT$${groupTotal.toLocaleString()}</span>
+      </div>`;
+    rows.forEach(p=>{
+      const cc=CAT_COLORS[p.category]||"#999";
+      html+=`<div class="policy-row">
+        <span class="cat-badge" style="background:${cc}20;color:${cc}">${p.category}</span>
+        <span class="policy-name">${p.itemName||'—'}</span>
+        <span class="policy-prem">${(p.premiumTWD||0).toLocaleString()}</span>
+        <span class="status-badge status-${p.status||'有效'}">${p.status||'有效'}</span>
+      </div>`;
+    });
+    html+=`</div>`;
+  });
+  html+=`</div>`;
+
+  // 3. 保障覆蓋率環形圖
+  html += `<div class="section-label">保障覆蓋率<button class="small-btn" onclick="openModal()">✏️ 手動調整</button><button class="small-btn" style="margin-left:6px;border-color:#378ADD;color:#378ADD" onclick="openTargetModal()">🎯 設定目標</button></div>`;
+  html += `<div class="section-hint" style="display:flex;gap:10px;font-size:14px;color:#888;margin-bottom:8px;flex-wrap:wrap">
+    <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#27AE8F;margin-right:3px"></span>已規劃</span>
+    <span style="color:#F5A623"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#F5A623;opacity:.5;margin-right:3px;border:1.5px dashed #F5A623"></span>不足</span>
+    <span style="color:#bbb"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#e0e0e0;margin-right:3px"></span>缺口</span>
+  </div>`;
+  html += `<div class="pie-wrap">${buildDonutChart(active, coverage, targets, overrides)}</div>`;
+
+  // 4. 就醫情況
+  html+=`<div class="section-label">就醫情況</div>`;
+  html+=`<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;overflow:hidden;margin-bottom:16px">
+    <table class="medical-table">
+      <thead><tr>
+        <th></th>
+        <th style="color:#27AE8F">疾病</th>
+        <th style="color:#F5A623">意外</th>
+        <th style="color:#E74C3C">癌症</th>
+      </tr></thead>
+      <tbody>`;
+      
+  [["opd","門診"],["hosp","住院"]].forEach(([rk,rl],ri)=>{
+    html+=`<tr style="border-top:${ri>0?'1px solid #f0f0f0':'none'}">
+      <td>${rl}</td>`;
+    ["disease","accident","cancer"].forEach(ck=>{
+      if(rk==="opd"&&ck==="disease") {
+        html+=`<td><div class="nhi-badge"><span>健保</span></div></td>`;
+      } else {
+        const mk=rk+"_"+ck;
+        const manual=medicalOverrides[mk];
+        let auto=0;
+        let unitText = "";
+
+        const baseHosp = sumCov(["hosp_room", "hosp_ext_room", "daily_room_1_30", "hosp_ext_daily", "daily_discharge"], policies, coverage);
+
+        if(rk==="hosp") {
+          unitText = "元/日";
+          if(ck==="disease")  auto = baseHosp;
+          if(ck==="accident") auto = baseHosp + sumCov(["acc_hosp"], policies, coverage);
+          if(ck==="cancer")   auto = baseHosp + sumCov(["can_hosp", "can_discharge"], policies, coverage);
+        }
+        
+        if(rk==="opd") {
+          if(ck==="accident") { auto = sumCov(["acc_opd"], policies, coverage); unitText = "萬/次"; }
+          if(ck==="cancer")   { auto = sumCov(["can_opd"], policies, coverage); unitText = "元/次"; }
+        }
+
+        const val = manual !== undefined ? manual : (auto || "");
+        
+        html+=`<td>
+          <div style="display:flex;align-items:center;justify-content:center;gap:4px">
+            <input type="number" class="medical-input" value="${val}" placeholder="—" style="width:68px;"
+              onchange="medicalOverrides['${mk}']=this.value"
+              onfocus="this.style.borderColor='#378ADD'"
+              onblur="this.style.borderColor='#e0e0e0'" />
+            <span style="font-size:14px;color:#888;white-space:nowrap">${val ? unitText : ''}</span>
+          </div>
+          ${manual===undefined && auto>0 ? '<div class="auto-hint">自動加總</div>':''}
+        </td>`;
+      }
+    });
+    html+=`</tr>`;
+  });
+  html+=`</tbody></table>
+  <div style="font-size:14px;color:#bbb;margin-top:8px;margin-bottom:8px;padding-left:14px">
+    💡 疾病住院＝實支病房＋日額病房＋日額出院療養<br>
+    💡 意外住院＝疾病住院＋意外日額，癌症以此類推（可手動修改）
+  </div></div>`;
+
+  // 5. 各項保障加總
+  html += `<div class="section-label">各項保障加總</div>`;
+  html += `<div class="coverage-grid">`;
+
+  COVERAGE_GROUPS.forEach((g) => {
+    const safeClass = "card-" + g.label.replace(/[\s\(\)（）]/g, '');
+    html += `<div class="coverage-card ${safeClass}" style="border-top: 3px solid ${g.color};">
+      <div class="cov-group-header" style="background:${g.color}0D">
+        <span class="cov-group-label" style="color:${g.color}">${g.label}</span>
+      </div>
+      <div style="padding: 4px 0;">`;
+
+    g.items.forEach(item => {
+      // 判斷是否為最低～最高範圍型欄位
+      // coverage.html 存成 xxx_min / xxx_max，COVERAGE_GROUPS keys 用 xxx_max
+      const maxKey = item.keys.find(k => k.endsWith("_max"));
+      const minKey = maxKey ? maxKey.replace("_max", "_min") : null;
+      // 確認 _min 版本在 coverage 裡有值才視為 range
+      const minVal = minKey ? sumCov([minKey], policies, coverage) : 0;
+      const maxVal = maxKey ? sumCov([maxKey], policies, coverage) : 0;
+      const isRange = !!(maxKey && (minVal > 0 || maxVal > 0));
+
+      let total, displayVal;
+      if (isRange) {
+        total = maxVal;
+        displayVal = minVal.toLocaleString() + `<span style="color:#aaa;font-size:14px;margin:0 2px">～</span>` + maxVal.toLocaleString() + `<span class="cov-unit">${item.unit}</span>`;
+      } else {
+        total = sumCov(item.keys, policies, coverage);
+        displayVal = total > 0 ? total.toLocaleString() + `<span class="cov-unit">${item.unit}</span>` : null;
+      }
+
+      const breakdown = policies.map(p => {
+        const v = item.keys.reduce((s, k) => s + (coverage[p.id + "_" + k] || 0), 0);
+        return v > 0 ? { name: (p.company || "保險").substring(0,2), val: v } : null; 
+      }).filter(Boolean);
+
+      html += `<div class="cov-item" style="background:${total > 0 ? '#fff' : '#fafafa'};opacity:${total > 0 ? 1 : 0.6}">
+        <div class="cov-item-label ${total > 0 ? '' : 'zero'}">${item.label}</div>
+        <div class="cov-value-wrap">
+          <div class="cov-item-value" style="color:${total > 0 ? g.color : '#ccc'}">
+            ${displayVal || '—'}
+          </div>
+          ${breakdown.length > 1 ? `<div class="cov-breakdown">${breakdown.map(b => `${b.name}:${b.val.toLocaleString()}`).join(' ')}</div>` : ''}
+        </div>
+      </div>`;
+    });
+    html += `</div></div>`;
+  });
+  html += `</div>`;
+
+  // 6. 缺口／不足分析
+  html += `<div class="section-label" style="margin-top:16px">缺口 / 不足分析</div>`;
+  html += `<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:12px 14px;margin-bottom:16px">${buildGapAnalysis(active, coverage, targets, overrides)}</div>`;
+
+  document.getElementById("content").innerHTML = html;
+}
+
+// ── 環形圓餅圖與圖例 ────────────────────────────────────────────
+function buildDonutChart(active, coverage, targets, covOverrides) {
+  const allItems = GAP_GROUPS.flatMap(g=>g.items);
+  const n = allItems.length;
+  
+  const cx=220, cy=150, OR=100, IR=54;
+  const gapA=0.03, sliceA=(Math.PI*2-n*gapA)/n;
+
+  let angle=-Math.PI/2;
+  let paths="";
+  let labels=""; 
+
+  function renderLegend(g) {
+    let legendHtml = `<div style="font-size:17px;font-weight:500;color:${g.color};margin-bottom:8px;border-bottom:1px solid ${g.color}30;padding-bottom:4px">${g.label}</div>`;
+    
+    g.items.forEach(item => {
+      const {status, pct, current, target} = getItemStatus(item.key, active, coverage, targets, covOverrides);
+      const icon = status==="gap"?"❌":status==="insufficient"?"⚠️":"✅";
+      const dotColor = status==="gap"?"#e0e0e0":item.color;
+
+      let amtHtml = "";
+      if (item.isBool) {
+        amtHtml = current > 0 ? `<span style="color:#555;font-size:16px">有</span>` : `<span style="color:#bbb;font-size:16px">無</span>`;
+      } else {
+        if (current > 0 || target > 0) {
+          let displayVal = current > 0 ? current.toLocaleString() : "0";
+          if (target > 0) displayVal += ` / ${target.toLocaleString()}`;
+          
+          amtHtml = `<span style="color:${current>0?'#0C447C':'#888'};font-family:monospace;font-weight:600;font-size:16px">${displayVal}<span style="font-size:15px;color:#888;margin-left:3px;font-family:sans-serif">${item.unit}</span></span>`;
+        } else {
+          amtHtml = `<span style="color:#bbb;font-size:16px">0</span>`;
+        }
+      }
+
+      legendHtml += `<div style="display:flex;align-items:center;gap:6px;font-size:16px;margin-bottom:5px">
+        <div style="width:10px;height:10px;border-radius:2px;background:${dotColor};flex-shrink:0"></div>
+        <span style="color:${status==="gap"?"#bbb":"#444"};flex:1;white-space:nowrap">${item.label}</span>
+        ${amtHtml}
+        <span style="margin-left:4px">${icon}</span>
+      </div>`;
+    });
+    return legendHtml;
+  }
+
+  const legendFamily = renderLegend(GAP_GROUPS[0]);
+  const legendBefore = renderLegend(GAP_GROUPS[1]);
+  const legendDuring = renderLegend(GAP_GROUPS[2]);
+  const legendAfter  = renderLegend(GAP_GROUPS[3]);
+
+  allItems.forEach(item => {
+    const {status,pct} = getItemStatus(item.key, active, coverage, targets, covOverrides);
+    const start = angle+gapA/2;
+    const end   = angle+gapA/2+sliceA;
+    const filledEnd = start + sliceA*pct;
+    const midA  = start + sliceA/2; 
+    angle += sliceA+gapA;
+
+    const px=(r,a)=>cx+r*Math.cos(a), py=(r,a)=>cy+r*Math.sin(a);
+    const donut=(a1,a2,lg,r1,r2)=>`M${px(r1,a1)},${py(r1,a1)} A${r1},${r1} 0 ${lg} 1 ${px(r1,a2)},${py(r1,a2)} L${px(r2,a2)},${py(r2,a2)} A${r2},${r2} 0 ${lg} 0 ${px(r2,a1)},${py(r2,a1)} Z`;
+
+    paths += `<path d="${donut(start,end,sliceA>Math.PI?1:0,OR,IR)}" fill="#f0f0f0"/>`;
+    if(pct>0.01) paths += `<path d="${donut(start,filledEnd,sliceA*pct>Math.PI?1:0,OR,IR)}" fill="${item.color}"/>`;
+    if(status==="insufficient" && pct<0.99) {
+      const gapSize=sliceA*(1-pct);
+      paths += `<path d="${donut(filledEnd,end,gapSize>Math.PI?1:0,OR,IR)}" fill="none" stroke="${item.color}" stroke-width="2.5" stroke-dasharray="4 3" opacity="0.45"/>`;
+    }
+
+    const isRight = Math.cos(midA) >= 0; 
+    const x0 = px(OR, midA), y0 = py(OR, midA); 
+    const x1 = px(OR + 14, midA), y1 = py(OR + 14, midA); 
+    const x2 = x1 + (isRight ? 18 : -18), y2 = y1; 
+
+    const textAnchor = isRight ? "start" : "end";
+    const textX = x2 + (isRight ? 4 : -4);
+    const textColor = status === "gap" ? "#aaa" : "#555";
+    const fw = status === "ok" ? "500" : "400";
+    const prefix = status === "gap" ? "❌ " : status === "insufficient" ? "⚠️ " : "";
+
+    labels += `
+      <polyline points="${x0},${y0} ${x1},${y1} ${x2},${y2}" fill="none" stroke="${item.color}60" stroke-width="1.2"/>
+      <circle cx="${x0}" cy="${y0}" r="2" fill="${item.color}"/>
+      <text x="${textX}" y="${y2+4}" text-anchor="${textAnchor}" style="font-size:16px;fill:${textColor};font-weight:${fw};letter-spacing:0.03em">${prefix}${item.label}</text>
+    `;
+  });
+
+  const okN = allItems.filter(item=>getItemStatus(item.key,active,coverage,targets,covOverrides).status==="ok").length;
+  const gapN = allItems.filter(item=>getItemStatus(item.key,active,coverage,targets,covOverrides).status==="gap").length;
+  const insN = allItems.filter(item=>getItemStatus(item.key,active,coverage,targets,covOverrides).status==="insufficient").length;
+
+  return `<div style="display:flex;flex-direction:column;width:100%">
+    <div style="display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap;margin-bottom:20px;padding:0">
+      <svg viewBox="0 0 440 300" style="width:100%; max-width:480px; flex-shrink:0;">
+        ${paths}
+        ${labels}
+        <text x="${cx}" y="${cy-16}" text-anchor="middle" style="font-size:15px;fill:#888">✅ 達標</text>
+        <text x="${cx}" y="${cy+6}"  text-anchor="middle" style="font-size:18px;font-weight:bold;fill:#333">${okN}</text>
+        <text x="${cx}" y="${cy+24}" text-anchor="middle" style="font-size:15px;fill:#E74C3C">❌ 缺口 ${gapN}</text>
+        <text x="${cx}" y="${cy+40}" text-anchor="middle" style="font-size:15px;fill:#F5A623">⚠ 不足 ${insN}</text>
+      </svg>
+      <div style="min-width:170px;background:#fafafa;padding:12px 16px;border-radius:10px;border:1px solid #f0f0f0">
+        ${legendFamily}
+      </div>
+    </div>
+    
+    <div style="border-top:1px dashed #e8e8e8;padding-top:20px">
+      <!-- 箭頭指標列 -->
+      <div style="display:flex;align-items:stretch;margin-bottom:16px;font-size:20px;font-weight:600;letter-spacing:0.05em;height:46px">
+        <!-- 醫療前期 -->
+        <div style="
+          flex:1;
+          display:flex;align-items:center;justify-content:center;
+          background:#4CAF86;
+          color:#fff;
+          position:relative;
+          clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%);
+          padding-right:14px;
+        ">醫療前期</div>
+        <!-- 醫療中期 -->
+        <div style="
+          flex:1.4;
+          display:flex;align-items:center;justify-content:center;
+          background:#378ADD;
+          color:#fff;
+          position:relative;
+          clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%, 14px 50%);
+          margin-left:-1px;
+          padding: 0 14px;
+        ">醫療中期</div>
+        <!-- 醫療後期 -->
+        <div style="
+          flex:1;
+          display:flex;align-items:center;justify-content:center;
+          background:#E87BAD;
+          color:#fff;
+          position:relative;
+          clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 14px 50%);
+          margin-left:-1px;
+          padding-left:14px;
+        ">醫療後期</div>
+      </div>
+      <!-- 圖例內容 -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(130px, 1fr));gap:16px">
+        <div>${legendBefore}</div>
+        <div>${legendDuring}</div>
+        <div>${legendAfter}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── 缺口／不足分析 ────────────────────────────────────────
+function buildGapAnalysis(active, coverage, targets, covOverrides) {
+  const allItems = GAP_GROUPS.flatMap(g=>g.items);
+  const gaps = [], insufficients = [];
+  allItems.forEach(item => {
+    const s = getItemStatus(item.key, active, coverage, targets, covOverrides);
+    if(s.status==="gap") gaps.push({item, ...s});
+    if(s.status==="insufficient") insufficients.push({item, ...s});
+  });
+
+  let html = "";
+
+  if(insufficients.length) {
+    html += `<div style="font-size:22px;font-weight:500;color:#F5A623;margin-bottom:8px">⚠ 規劃不足</div>`;
+    insufficients.forEach(({item,current,target,pct}) => {
+      html += `<div style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px;flex-wrap:wrap;gap:4px">
+          <span style="font-size:22px;color:#555">${item.label}</span>
+          <div style="display:flex;gap:6px;align-items:center">
+            <span style="font-size:24px;color:#555;font-weight:500">${current.toLocaleString()}${item.unit}</span>
+            <span style="font-size:14px;color:#aaa">/ 目標 ${target?.toLocaleString()}${item.unit}</span>
+          </div>
+        </div>
+        <div style="height:7px;background:#f0f0f0;border-radius:99px;overflow:hidden">
+          <div style="height:100%;width:${Math.round(pct*100)}%;background:${item.color};border-radius:99px"></div>
+        </div>
+        <div style="font-size:16px;color:#E74C3C;margin-top:3px">尚不足 ${(target-current).toLocaleString()}${item.unit}（${Math.round(pct*100)}% 達成）</div>
+      </div>`;
+    });
+  }
+
+  if(gaps.length) {
+    html += `<div style="font-size:22px;font-weight:500;color:#E74C3C;margin-bottom:8px;margin-top:${insufficients.length?12:0}px">❌ 尚未規劃</div>`;
+    html += `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">`;
+    gaps.forEach(({item}) => {
+      html += `<span style="padding:4px 12px;background:#FCEBEB;border:1px solid #F0A8BF;border-radius:99px;font-size:16px;color:#791F1F">${item.label}</span>`;
+    });
+    html += `</div><div style="font-size:14px;color:#aaa">💡 可與保戶討論是否有需要規劃</div>`;
+  }
+
+  if(!insufficients.length && !gaps.length) {
+    html += `<div style="font-size:22px;color:#27AE8F;text-align:center;padding:12px 0">🎉 所有已設目標項目均達標！</div>`;
+  }
+
+  html += `<button onclick="openTargetModal()" style="width:100%;margin-top:10px;padding:8px;background:transparent;border:1px dashed #ddd;border-radius:8px;font-size:16px;color:#666;cursor:pointer;font-family:inherit">🎯 設定 / 修改目標保額</button>`;
+  return html;
+}
+
+// ── 目標設定 Modal ────────────────────────────────────────
+function openTargetModal() {
+  const person = personDataMap[currentPersonId];
+  const policies = person?.policies||[];
+  const active = policies.filter(p=>p.status==="有效");
+
+  const coverage = {};
+  Object.entries(person?.coverage||{}).forEach(([k,v])=>{
+    if(typeof v==="number") coverage[k]=(coverage[k]||0)+v;
+    else coverage[k]=v;
+  });
+  policies.forEach(p => {
+    Object.entries(p.coverage||{}).forEach(([k,v]) => {
+      if(typeof v === "number") coverage[k] = (coverage[k]||0)+v;
+      else coverage[k] = v;
+    });
+  });
+
+  let bodyHtml = `<div style="font-size:14px;color:#888;background:#f7f7f5;padding:8px 12px;border-radius:8px;margin-bottom:14px;line-height:1.6">
     設定後顯示「不足」；未設定的項目只顯示「有/無（缺口）」，不計算差額。
   </div>`;
 
-  GAP_GROUPS_EX.forEach(g => {
-    bodyHtml += `<div style="font-size:31.2px;font-weight:500;color:${g.color};padding:4px 10px;background:${g.color}15;border-radius:5px;margin-bottom:8px">${g.label}</div>`;
+  GAP_GROUPS.forEach(g => {
+    bodyHtml += `<div style="font-size:22px;font-weight:500;color:${g.color};padding:4px 10px;background:${g.color}15;border-radius:5px;margin-bottom:8px">${g.label}</div>`;
     g.items.filter(item=>!item.isBool).forEach(item => {
-      var current = getItemCurrentEx(item.key, active, coverage, overrides);
-      var tval = targets[item.key]||"";
+      const current = getItemCurrent(item.key, active, coverage, overrides);
+      const tval = targets[item.key]||"";
       bodyHtml += `<div style="margin-bottom:10px">
-        <div style="display:flex;justify-content:space-between;margin-bottom:3px">
-          <label style="font-size:33.8px;color:#333">${item.label}</label>
-          <span style="font-size:28.6px;color:#aaa">目前：${current.toLocaleString()||0} ${item.unit}</span>
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px;flex-wrap:wrap;gap:4px">
+          <label style="font-size:22px;color:#333">${item.label}</label>
+          <span style="font-size:14px;color:#aaa">目前：${current.toLocaleString()||0} ${item.unit}</span>
         </div>
         <div style="display:flex;align-items:center;border:1px solid #e0e0e0;border-radius:7px;overflow:hidden">
           <input type="number" id="target_${item.key}" value="${tval}" placeholder="不設定（只顯示有/無）"
-            style="flex:1;padding:8px 12px;font-size:33.8px;border:none;outline:none;font-family:inherit"/>
-          ${item.unit?`<span style="padding:0 10px;font-size:28.6px;color:#aaa;background:#fafafa;border-left:1px solid #f0f0f0">${item.unit}</span>`:""}
+            style="flex:1;padding:10px 12px;font-size:24px;border:none;outline:none;font-family:inherit"/>
+          ${item.unit?`<span style="padding:0 10px;font-size:14px;color:#aaa;background:#fafafa;border-left:1px solid #f0f0f0">${item.unit}</span>`:""}
         </div>
       </div>`;
     });
     bodyHtml += `<div style="margin-bottom:14px"></div>`;
   });
 
-  var existing = document.getElementById("target-modal-overlay");
+  const existing = document.getElementById("target-modal-overlay");
   if(existing) existing.remove();
 
-  var overlay = document.createElement("div");
+  const overlay = document.createElement("div");
   overlay.id = "target-modal-overlay";
   overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:300;display:flex;align-items:flex-end;justify-content:center";
   overlay.innerHTML = `<div style="background:#fff;border-radius:16px 16px 0 0;padding:20px;width:100%;max-width:560px;max-height:85vh;overflow-y:auto">
     <div style="display:flex;justify-content:space-between;margin-bottom:14px">
-      <span style="font-weight:500;font-size:39px">🎯 設定目標保額</span>
-      <button onclick="document.getElementById('target-modal-overlay')?.remove()" style="background:none;border:none;font-size:57.2px;color:#999;cursor:pointer;line-height:1">×</button>
+      <span style="font-weight:600;font-size:26px">🎯 設定目標保額</span>
+      <button onclick="document.getElementById('target-modal-overlay')?.remove()" style="background:none;border:none;font-size:26px;color:#999;cursor:pointer;line-height:1">×</button>
     </div>
     ${bodyHtml}
     <div style="display:flex;gap:8px;margin-top:8px">
       <button onclick="document.getElementById('target-modal-overlay')?.remove()"
-        style="flex:1;padding:10px;background:transparent;color:#666;border:1px solid #ddd;border-radius:8px;cursor:pointer;font-family:inherit">取消</button>
+        style="flex:1;padding:10px;background:transparent;color:#666;border:1px solid #ddd;border-radius:8px;cursor:pointer;font-family:inherit;font-size:16px">取消</button>
       <button onclick="saveTargets()"
-        style="flex:2;padding:10px;background:#378ADD;color:#fff;border:none;border-radius:8px;font-size:36.4px;font-weight:500;cursor:pointer;font-family:inherit">儲存目標</button>
+        style="flex:2;padding:10px;background:#378ADD;color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:500;cursor:pointer;font-family:inherit">儲存目標</button>
     </div>
   </div>`;
   overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
@@ -841,10 +930,10 @@ function openTargetModal() {
 }
 
 function saveTargets() {
-  GAP_GROUPS_EX.flatMap(g=>g.items.filter(i=>!i.isBool)).forEach(item => {
-    var el = document.getElementById("target_"+item.key);
+  GAP_GROUPS.flatMap(g=>g.items.filter(i=>!i.isBool)).forEach(item => {
+    const el = document.getElementById("target_"+item.key);
     if(el) {
-      var v = parseFloat(el.value);
+      const v = parseFloat(el.value);
       if(!isNaN(v) && v > 0) targets[item.key] = v;
       else delete targets[item.key];
     }
@@ -854,21 +943,21 @@ function saveTargets() {
 }
 
 function openModal() {
-  var person  = personDataMap[currentPersonId];
-  var policies= person?.policies||[];
-  var coverage= person?.coverage||{};
-  var active  = policies.filter(p=>p.status==="有效");
-  var covTypes= COVERAGE_TYPES.map(t=>{
-    var auto=t.detect(active,coverage);
-    var manual=overrides[currentPersonId+"_"+t.key];
+  const person  = personDataMap[currentPersonId];
+  const policies= person?.policies||[];
+  const coverage= person?.coverage||{};
+  const active  = policies.filter(p=>p.status==="有效");
+  const covTypes= COVERAGE_TYPES.map(t=>{
+    const auto=t.detect(active,coverage);
+    const manual=overrides[currentPersonId+"_"+t.key];
     return {...t,covered:manual!==undefined?manual:auto,autoDetected:auto,isManual:manual!==undefined};
   });
 
-  var groups=["壽險","意外","醫療","重大","癌症","長照","財務"];
-  var html="";
+  const groups=["壽險","意外","醫療","重大","癌症","長照","財務"];
+  let html="";
   groups.forEach(g=>{
-    var gTypes=covTypes.filter(t=>t.group===g);
-    var gc=GROUP_COLORS[g];
+    const gTypes=covTypes.filter(t=>t.group===g);
+    const gc=GROUP_COLORS[g];
     html+=`<div class="type-group-label" style="color:${gc}">${g}</div><div class="type-tags">`;
     gTypes.forEach(t=>{
       html+=`<div class="type-tag" id="tag_${t.key}" onclick="toggleOverride('${t.key}')"
@@ -885,13 +974,13 @@ function openModal() {
 }
 
 function toggleOverride(key) {
-  var fk=currentPersonId+"_"+key;
-  var person=personDataMap[currentPersonId];
-  var active=(person?.policies||[]).filter(p=>p.status==="有效");
-  var cov=person?.coverage||{};
-  var t=COVERAGE_TYPES.find(x=>x.key===key);
-  var auto=t?t.detect(active,cov):false;
-  var cur=overrides[fk];
+  const fk=currentPersonId+"_"+key;
+  const person=personDataMap[currentPersonId];
+  const active=(person?.policies||[]).filter(p=>p.status==="有效");
+  const cov=person?.coverage||{};
+  const t=COVERAGE_TYPES.find(x=>x.key===key);
+  const auto=t?t.detect(active,cov):false;
+  const cur=overrides[fk];
   if(cur===undefined) overrides[fk]=!auto;
   else delete overrides[fk];
   openModal();
@@ -913,786 +1002,8 @@ NBS_NAV.onMemberChange = function(pid) {
   currentPersonId = pid;
   if (typeof renderContent  === "function") renderContent();
 };
+NBS_NAV.init({ page: "summary" });
 
-// 支援兩種事件：nav.js 自行載入 或 family.html 先載入後通知
-window.addEventListener("nbs_family_loaded", function(e) {
-  if (typeof familyData !== "undefined" && familyData) return; // 已初始化
-  var u = JSON.parse(localStorage.getItem("nbs_user") || "{}");
-  window.dispatchEvent(new CustomEvent("nbs_nav_ready", {
-    detail: {
-      user:            u,
-      familyData:      e.detail.familyData,
-      currentPersonId: e.detail.familyData && e.detail.familyData.members &&
-                       e.detail.familyData.members[0] && e.detail.familyData.members[0].personId,
-      familyFileName:  e.detail.familyFileName
-    }
-  }));
-});
-NBS_NAV.init({ page: "export" });
-
-// ── 渲染各區塊 HTML ───────────────────────────────────────
-function renderBlock(key){
-  var active=policies.filter(function(p){return p.status==="有效";});
-
-  // ▼ 新版受益人與傳承模塊渲染
-  if(key==="beneficiary"){
-    var targetCats = ["壽險保障", "儲蓄險", "年金險", "投資型保險", "重大疾病險", "重大傷病險", "特定傷病險"];
-    var bp = policies.filter(function(p){ return targetCats.indexOf(p.category)>=0; });
-    
-    if(bp.length===0) return '<div style="padding:12px;color:#aaa;font-size:33.8px;text-align:center">此成員尚無具傳承或生存金意義之保單</div>';
-
-    var BENEF_RULES_EX = {
-      "壽險保障":   { death:"可設定", live:"不適用" },
-      "意外險":     { death:"可設定", live:"不適用" },
-      "醫療險":     { death:"鎖定本人", live:"不適用" },
-      "癌症醫療":   { death:"鎖定本人", live:"不適用" },
-      "重大疾病險": { death:"可設定", live:"可設定" },
-      "重大傷病險": { death:"鎖定本人", live:"鎖定本人" },
-      "特定傷病險": { death:"鎖定本人", live:"鎖定本人" },
-      "失能長照":   { death:"可設定", live:"鎖定本人" },
-      "儲蓄險":     { death:"可設定", live:"可設定" },
-      "年金險":     { death:"可設定", live:"鎖定本人" },
-      "投資型保險": { death:"可設定", live:"鎖定本人" }
-    };
-
-    var tblStyle = 'width:100%;border-collapse:collapse;font-size:33.8px;';
-    var thStyle  = 'padding:9px 10px;text-align:left;font-size:31.2px;font-weight:600;color:#888;border-bottom:2px solid #e0e0e0;white-space:nowrap;background:#f7f7f5;';
-    var tdStyle  = 'padding:9px 10px;vertical-align:middle;border-bottom:1px solid #f0f0f0;font-size:33.8px;';
-
-    var html = '<div style="padding:10px 12px;background:#fff;">';
-    html += '<table style="'+tblStyle+'">';
-    html += '<thead><tr>' +
-      '<th style="'+thStyle+'width:60px">險種類型</th>' +
-      '<th style="'+thStyle+'">要保人</th>' +
-      '<th style="'+thStyle+'">被保險人</th>' +
-      '<th style="'+thStyle+'">保單號碼</th>' +
-      '<th style="'+thStyle+'min-width:130px">商品名稱</th>' +
-      '<th style="'+thStyle+'">當年度保額</th>' +
-      '<th style="'+thStyle+'min-width:120px">身故受益人</th>' +
-      '<th style="'+thStyle+'min-width:120px">生存/滿期金受益人</th>' +
-    '</tr></thead><tbody>';
-
-    bp.forEach(function(p){
-      var amtText = p.insuredAmount ? p.insuredAmount + " " + (p.insuredAmountUnit || '萬元') : '—';
-      var cc = CC[p.category] || "#999";
-      var rule = BENEF_RULES_EX[p.category] || { death:"可設定", live:"可設定" };
-      var ownerName  = p.ownerName  || p.proposer || p.applicant || "—";
-      var insuredName = p.insuredName || "—";
-
-      // 身故受益人
-      var dStr = "未設定";
-      if(p.isRider) {
-        dStr = "同主約";
-      } else if(rule.death === "鎖定本人") {
-        dStr = "被保險人本人 🔒";
-      } else if(p.beneficiaryDeathText) {
-        dStr = p.beneficiaryDeathText;
-      } else if(p.beneficiaryDeathCustom && p.beneficiaryDeathCustom.length>0) {
-        dStr = p.beneficiaryDeathCustom.map(function(c){ return c.customName || "指定家人"; }).join("、");
-      }
-
-      // 生存與滿期金（優先讀取新版文字欄位，相容舊版）
-      var lStr = "無 / 不適用", mStr = "無 / 不適用";
-      if(p.beneficiaryLiveText) lStr = p.beneficiaryLiveText;
-      else if(p.beneficiaryLiveType === "self")  lStr = "被保險人本人";
-      else if(p.beneficiaryLiveType === "owner") lStr = ownerName + " (要保人)";
-      else if(p.beneficiaryLiveType === "other") lStr = p.beneficiaryLiveOther || "指定其他";
-
-      if(p.beneficiaryMaturityText) mStr = p.beneficiaryMaturityText;
-      else if(p.beneficiaryMaturityType === "self")  mStr = "被保險人本人";
-      else if(p.beneficiaryMaturityType === "owner") mStr = ownerName + " (要保人)";
-      else if(p.beneficiaryMaturityType === "other") mStr = p.beneficiaryMaturityOther || "指定其他";
-
-      if(p.category === "年金險" || p.category === "投資型保險" || rule.live === "鎖定本人") {
-        lStr = "被保險人本人 🔒";
-        mStr = "無 / 不適用";
-      }
-
-      // 生存/滿期金合併欄位
-      var liveDisplay = "";
-      if(rule.live === "不適用" || p.category === "壽險保障") {
-        liveDisplay = '<span style="color:#ccc">無 / 不適用</span>';
-      } else if(rule.live === "鎖定本人" || p.category === "年金險" || p.category === "投資型保險") {
-        liveDisplay = '<span style="font-size:28.6px;background:#f0f0f0;color:#888;padding:2px 6px;border-radius:4px">本人 🔒</span>';
-      } else {
-        var parts = [];
-        if(lStr && !lStr.includes("無")) parts.push('<div><span style="font-size:28.6px;color:#aaa">生存金：</span><span style="color:#333">'+lStr+'</span></div>');
-        if(mStr && !mStr.includes("無")) parts.push('<div><span style="font-size:28.6px;color:#aaa">滿期金：</span><span style="color:#333">'+mStr+'</span></div>');
-        liveDisplay = parts.length ? parts.join("") : '<span style="color:#ccc">無 / 不適用</span>';
-      }
-
-      var dColor = dStr === "未設定" ? "#ccc" : "#333";
-      var rowBg = '';
-
-      html += '<tr style="'+rowBg+'">' +
-        '<td style="'+tdStyle+'">' +
-          '<span style="font-size:28.6px;padding:2px 7px;border-radius:99px;background:'+cc+'15;color:'+cc+';white-space:nowrap;font-weight:500">'+( p.category||'—')+'</span>' +
-        '</td>' +
-        '<td style="'+tdStyle+'color:#555">'+ownerName+'</td>' +
-        '<td style="'+tdStyle+'color:#555">'+insuredName+'</td>' +
-        '<td style="'+tdStyle+'">' +
-          '<span style="font-size:28.6px;font-family:monospace;background:#E6F1FB;color:#0C447C;padding:2px 7px;border-radius:99px;white-space:nowrap">'+(p.policyNo||p.id)+'</span>' +
-        '</td>' +
-        '<td style="'+tdStyle+'font-weight:500">'+(p.itemName||'—')+'</td>' +
-        '<td style="'+tdStyle+'font-weight:600;color:#0C447C;font-family:monospace;white-space:nowrap">'+amtText+'</td>' +
-        '<td style="'+tdStyle+'color:'+dColor+';white-space:pre-wrap;line-height:1.5">'+dStr+'</td>' +
-        '<td style="'+tdStyle+'line-height:1.6">'+liveDisplay+'</td>' +
-      '</tr>';
-    });
-
-    html += '</tbody></table></div>';
-    return html;
-  }
-
-  // ── 其他原有模塊 ───────────────────────────────────────
-  if(key==="summary"){
-    var totalTWD=active.reduce(function(s,p){return s+(p.premiumTWD||0);},0);
-    var cov={};
-    policies.forEach(function(p){
-      Object.entries(p.coverage||{}).forEach(function(e){
-        if(typeof e[1]==="number") cov[e[0]]=(cov[e[0]]||0)+e[1]; else cov[e[0]]=e[1];
-      });
-    });
-    var html='<div style="padding:0">';
-
-    // ── 頂部統計 + 保單列表 ──
-    html+='<div style="padding:10px 12px">';
-    html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">'+
-      '<div style="padding:10px 12px;border-radius:10px;background:#E6F1FB"><div style="font-size:28.6px;color:#0C447C;margin-bottom:2px">年繳總保費</div><div style="font-size:46.8px;font-weight:500;color:#0C447C">NT$ '+(totalTWD/10000).toFixed(1)+'萬</div></div>'+
-      '<div style="padding:10px 12px;border-radius:10px;background:#EAF3DE"><div style="font-size:28.6px;color:#27500A;margin-bottom:2px">月均保費</div><div style="font-size:46.8px;font-weight:500;color:#27500A">NT$ '+Math.round(totalTWD/12).toLocaleString()+'</div></div>'+
-    '</div>';
-    html+='<div style="font-size:28.6px;font-weight:500;color:#999;margin-bottom:8px">保單號碼一覽</div>';
-    var grps={};
-    policies.forEach(function(p){var k=p.policyNo||p.id;if(!grps[k])grps[k]=[];grps[k].push(p);});
-    html+='<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;overflow:hidden">';
-    Object.entries(grps).forEach(function(entry,gi){
-      var no=entry[0],rows=entry[1];
-      var gt=rows.reduce(function(s,p){return s+(p.premiumTWD||0);},0);
-      html+='<div style="border-top:'+(gi>0?"1px solid #f0f0f0":"none")+'">'+
-        '<div style="display:flex;align-items:center;gap:8px;padding:7px 14px;background:#f7f7f5">'+
-          '<span style="font-family:monospace;font-size:31.2px;font-weight:500;background:#E6F1FB;color:#0C447C;padding:1px 8px;border-radius:99px">'+no+'</span>'+
-          '<span style="font-size:33.8px;font-weight:500">'+(rows[0].company||"")+'</span>'+
-          '<span style="font-size:31.2px;color:#999;margin-left:auto">年繳 NT$'+gt.toLocaleString()+'</span>'+
-        '</div>';
-      rows.forEach(function(p){
-        var cc=CC[p.category]||"#999";
-        var isMR=p.isMain!==false;
-        html+='<div style="display:grid;grid-template-columns:88px 1fr 72px 52px;align-items:center;padding:5px 14px;border-top:1px solid #f5f5f5">'+
-          '<span style="font-size:28.6px;padding:2px 6px;border-radius:99px;text-align:center;display:inline-block;background:'+cc+'20;color:'+cc+'">'+p.category+'</span>'+
-          '<span style="font-size:33.8px;padding-left:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+
-            (isMR?'<span style="font-size:23.4px;color:#fff;background:#378ADD;padding:1px 4px;border-radius:2px;margin-right:3px">主</span>':'<span style="font-size:23.4px;color:#888;background:#ebebeb;padding:1px 4px;border-radius:2px;margin-right:3px">附</span>')+
-            (p.itemName||"—")+
-          '</span>'+
-          '<span style="font-size:31.2px;font-weight:500;text-align:right">'+(p.premiumTWD||0).toLocaleString()+'</span>'+
-          '<span style="font-size:26px;padding:1px 5px;border-radius:99px;text-align:center;background:'+(p.status==="有效"?"#EAF3DE":"#f0f0f0")+';color:'+(p.status==="有效"?"#27500A":"#888")+'">'+(p.status||"有效")+'</span>'+
-        '</div>';
-      });
-      html+='</div>';
-    });
-    html+='</div>';
-
-    // ── 保障覆蓋率環形圖（含家庭責任圖例）──
-    html+='<div style="font-size:28.6px;font-weight:500;color:#999;margin-top:14px;margin-bottom:6px">保障覆蓋率</div>';
-    html+='<div style="display:flex;gap:10px;font-size:28.6px;color:#888;margin-bottom:8px;flex-wrap:wrap">'+
-      '<span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#27AE8F;margin-right:3px"></span>已規劃</span>'+
-      '<span style="color:#F5A623"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#F5A623;opacity:.5;margin-right:3px;border:1.5px dashed #F5A623"></span>不足</span>'+
-      '<span style="color:#bbb"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#e0e0e0;margin-right:3px"></span>缺口</span>'+
-    '</div>';
-    html+='<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:14px;margin-bottom:8px">'+buildDonutChartEx(active,cov,{},{})+'</div>';
-
-    html+='</div>';
-
-    // ── 第二頁：就醫情況 + 各項保障加總 ──
-    html+='<div style="page-break-before:always;padding:10px 12px">';
-    html+='<div style="font-size:28.6px;font-weight:500;color:#999;margin-bottom:8px">就醫情況</div>';
-    var baseHosp=sumCovEx(["hosp_room","hosp_ext_room","daily_room_1_30","hosp_ext_daily","daily_discharge"],policies,cov);
-    html+='<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;overflow:hidden;margin-bottom:14px">'+
-      '<table style="width:100%;border-collapse:collapse;font-size:31.2px">'+
-      '<thead><tr><th style="padding:7px 10px;text-align:left;font-weight:400;color:#888;font-size:28.6px"></th>'+
-        '<th style="padding:7px 10px;text-align:center;color:#27AE8F">疾病</th>'+
-        '<th style="padding:7px 10px;text-align:center;color:#F5A623">意外</th>'+
-        '<th style="padding:7px 10px;text-align:center;color:#E74C3C">癌症</th>'+
-      '</tr></thead><tbody>';
-    [["門診","opd"],["住院","hosp"]].forEach(function(rc,ri){
-      html+='<tr style="border-top:'+(ri>0?"1px solid #f0f0f0":"none")+'"><td style="padding:7px 10px;font-weight:500;color:#555;background:#fafafa">'+rc[0]+'</td>';
-      ["disease","accident","cancer"].forEach(function(ck){
-        if(rc[1]==="opd"&&ck==="disease"){html+='<td style="text-align:center;padding:7px 10px"><div style="display:inline-flex;padding:3px 10px;border-radius:6px;background:#EAF3DE"><span style="font-size:31.2px;font-weight:500;color:#27500A">健保</span></div></td>';}
-        else{
-          var val="—",unit="";
-          if(rc[1]==="hosp"){unit="元/日";if(ck==="disease")val=baseHosp||"—";else if(ck==="accident")val=(baseHosp+sumCovEx(["acc_hosp"],policies,cov))||"—";else val=(baseHosp+sumCovEx(["can_hosp","can_discharge"],policies,cov))||"—";}
-          if(rc[1]==="opd"){if(ck==="accident"){val=sumCovEx(["acc_opd"],policies,cov)||"—";unit="萬/次";}else if(ck==="cancer"){val=sumCovEx(["can_opd"],policies,cov)||"—";unit="元/次";}}
-          html+='<td style="text-align:center;padding:7px 10px"><span style="font-size:33.8px;font-weight:500;color:#333">'+val+'</span>'+(val!=="—"?'<span style="font-size:26px;color:#aaa;margin-left:2px">'+unit+'</span><div style="font-size:23.4px;color:#bbb">自動加總</div>':'')+' </td>';
-        }
-      });
-      html+='</tr>';
-    });
-    html+='</tbody></table><div style="font-size:28.6px;color:#bbb;padding:6px 14px">💡 疾病住院＝實支病房＋日額病房＋日額出院療養　　💡 意外住院＝疾病住院＋意外日額</div></div>';
-
-    // 各項保障加總（與 summary.html 相同的 span 寫法）
-    html+='<div style="font-size:28.6px;font-weight:500;color:#999;margin-bottom:8px">各項保障加總</div>';
-    // 日額型住院、癌症醫療各 span 2 rows；失能長照強制 column 2
-    var covStyles = {
-      '日額型住院':  'grid-row:span 2;',
-      '癌症醫療':    'grid-row:span 2;',
-      '失能長照':    'grid-column:2;',
-    };
-    html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-items:start">';
-    COVERAGE_GROUPS_EX.forEach(function(g){
-      var extraStyle = covStyles[g.label] || '';
-      html+='<div style="'+extraStyle+'background:#fff;border:1px solid #e8e8e8;border-radius:8px;overflow:hidden;border-top:3px solid '+g.color+'">'+
-        '<div style="display:flex;align-items:center;padding:7px 12px;background:'+g.color+'0D;border-bottom:1px solid #f0f0f0">'+
-          '<span style="font-size:31.2px;font-weight:600;letter-spacing:.04em;color:'+g.color+'">'+g.label+'</span>'+
-        '</div>';
-      g.items.forEach(function(item){
-        // 判斷是否為最低~最高範圍型（含 _max 且對應有 _min）
-        var maxKey = item.keys && item.keys.find(function(k){ return k.endsWith('_max'); });
-        var minKey = maxKey ? maxKey.replace('_max','_min') : null;
-        var minVal = minKey ? sumCovEx([minKey],policies,cov) : 0;
-        var maxVal = maxKey ? sumCovEx([maxKey],policies,cov) : 0;
-        var isRange = !!(maxKey && (minVal>0 || maxVal>0));
-        var total, displayVal;
-        if (isRange) {
-          total = maxVal;
-          displayVal = '<span style="font-size:28.6px;font-weight:600;font-family:monospace;color:'+g.color+'">'+
-            minVal.toLocaleString()+'<span style="color:#aaa;margin:0 2px">～</span>'+maxVal.toLocaleString()+
-            '<span style="font-size:23.4px;color:#999;margin-left:2px">'+item.unit+'</span></span>';
-        } else {
-          total = sumCovEx(item.keys,policies,cov);
-          displayVal = total>0
-            ? '<span style="font-size:33.8px;font-weight:600;font-family:monospace;color:'+g.color+'">'+total.toLocaleString()+'<span style="font-size:26px;color:#999;font-weight:normal;font-family:sans-serif;margin-left:2px">'+item.unit+'</span></span>'
-            : '<span style="color:#ddd">—</span>';
-        }
-        html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 12px;border-bottom:1px dashed #f5f5f5;opacity:'+(total>0?1:0.45)+'">'+
-          '<span style="font-size:28.6px;color:'+(total>0?"#444":"#bbb")+'">'+item.label+'</span>'+
-          displayVal+
-        '</div>';
-      });
-      html+='</div>';
-    });
-    html+='</div></div>';
-    html+='</div>';
-    return html;
-  }
-
-
-  if(key==="timeline"){
-    function sumKeyTL(k){ var t=0; policies.forEach(function(p){ var v=p.coverage&&p.coverage[k]; if(v&&typeof v==="number") t+=v; }); return t||null; }
-    function hasCatTL(cats){ return policies.some(function(p){ return cats.indexOf(p.category)>=0; }); }
-
-    // ── 大箭頭指引（綠→藍→粉）──
-    var phases=[
-      {l:"評估確診", c:"#5BAD6F", items:[
-        ["重大疾病",   hasCatTL(["重大疾病險"])?(sumKeyTL("can_first")||"有規劃"):null],
-        ["重大傷病",   hasCatTL(["重大傷病險"])?"有規劃":null],
-        ["特定傷病",   hasCatTL(["特定傷病險"])?"有規劃":null],
-        ["初次罹癌",   sumKeyTL("can_first")?(sumKeyTL("can_first")+"萬元"):null],
-      ]},
-      {l:"積極修復", c:"#378ADD", items:[
-        ["住院日額",   sumKeyTL("daily_room_1_30")?(sumKeyTL("daily_room_1_30")+"元/日"):hasCatTL(["醫療保障"])?"有規劃":null],
-        ["住院醫療（實支）", sumKeyTL("hosp_room")?(sumKeyTL("hosp_room")+"元/日"):null],
-        ["癌症住院",   sumKeyTL("can_hosp")?(sumKeyTL("can_hosp")+"元/日"):null],
-        ["意外醫療",   sumKeyTL("acc_opd")?(sumKeyTL("acc_opd")+"萬/次"):null],
-        ["意外住院",   sumKeyTL("acc_hosp")?(sumKeyTL("acc_hosp")+"元/日"):null],
-        ["標靶藥物",   sumKeyTL("can_target")?(sumKeyTL("can_target")+"萬元"):null],
-      ]},
-      {l:"康復療養", c:"#E8638A", items:[
-        ["長照每月",   sumKeyTL("ltc_monthly")?(sumKeyTL("ltc_monthly")+"萬/月"):null],
-        ["失能一次金", sumKeyTL("ltc_dis_amt")?(sumKeyTL("ltc_dis_amt")+"萬元"):null],
-        ["失能扶助",   (sumKeyTL("ltc_dis_life")||sumKeyTL("acc_support"))?((sumKeyTL("ltc_dis_life")||sumKeyTL("acc_support"))+"萬/月"):null],
-        ["癌症安寧",   sumKeyTL("can_hospice")?(sumKeyTL("can_hospice")+"萬元"):null],
-        ["癌症身故",   sumKeyTL("can_death")?(sumKeyTL("can_death")+"萬元"):null],
-      ]},
-    ];
-
-    // 大箭頭列（SVG，html2canvas 相容）
-    var arrows=buildSvgArrows([
-      {label:phases[0].l, color:phases[0].c},
-      {label:phases[1].l, color:phases[1].c},
-      {label:phases[2].l, color:phases[2].c}
-    ]);
-
-    // 資料欄
-    var cols=phases.map(function(ph){
-      var rows=ph.items.map(function(it){
-        var has=!!it[1];
-        return'<div style="display:flex;justify-content:space-between;align-items:center;font-size:31.2px;padding:5px 8px;margin-bottom:3px;border-radius:4px;background:'+(has?"#fff":"#f5f5f5")+'">'+
-          '<span style="color:'+(has?"#333":"#bbb")+'">'+it[0]+'</span>'+
-          '<span style="font-weight:600;color:'+(has?ph.c:"#ccc")+'">'+(it[1]||"未投保")+'</span>'+
-        '</div>';
-      }).join("");
-      return'<div style="border:1.5px solid '+ph.c+'40;border-radius:8px;overflow:hidden;height:100%">'+
-        '<div style="height:4px;background:'+ph.c+'"></div>'+
-        '<div style="padding:8px">'+rows+'</div>'+
-      '</div>';
-    }).join("");
-
-    // 缺口分析（保障覆蓋率彙整）
-    var cov2={};
-    policies.forEach(function(p){
-      Object.entries(p.coverage||{}).forEach(function(e){
-        if(typeof e[1]==="number") cov2[e[0]]=(cov2[e[0]]||0)+e[1]; else cov2[e[0]]=e[1];
-      });
-    });
-    var gapHtml=buildGapAnalysisEx(active,cov2,{},{});
-
-    return'<div style="padding:10px 12px">'+
-      arrows+
-      '<div style="display:grid;grid-template-columns:1fr 1.6fr 1fr;gap:8px;margin-bottom:14px">'+cols+'</div>'+
-      '<div style="font-size:28.6px;font-weight:500;color:#999;margin-bottom:8px">缺口 / 不足分析</div>'+
-      '<div style="background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:12px 14px">'+gapHtml+'</div>'+
-    '</div>';
-  }
-
-
-  if(key==="coverage"){
-    // 依保單分組顯示附約保障，與保單彙總同步
-    var pGroups={};
-    policies.forEach(function(p){
-      var k=p.policyNo||p.id;
-      if(!pGroups[k]) pGroups[k]={no:k,company:p.company||"",rows:[]};
-      pGroups[k].rows.push(p);
-    });
-    var covGroups=[
-      {label:"意外險",color:"#F5A623",fields:[
-        {k:"acc_opd",l:"門診醫療",u:"萬/次"},{k:"acc_hosp",l:"住院日額",u:"元/日"},
-        {k:"acc_icu",l:"加護病房",u:"元/日"},{k:"acc_special_max",l:"特定事故加倍",u:"萬元"},
-        {k:"acc_burn_max",l:"燒燙傷",u:"萬元"},{k:"acc_disable_max",l:"意外失能",u:"萬元"},
-        {k:"acc_work",l:"喪失工作能力",u:"萬/月"},{k:"acc_support",l:"失能扶助",u:"萬/月"},
-      ]},
-      {label:"住院醫療（實支）",color:"#27AE8F",fields:[
-        {k:"hosp_room",l:"病房費",u:"元/日"},{k:"hosp_surgery",l:"手術費",u:"元/次"},
-        {k:"hosp_misc",l:"醫療雜費",u:"元/次"},{k:"hosp_icu",l:"加護病房",u:"元/日"},
-        {k:"hosp_limit_per",l:"住院總限額",u:"元"},
-      ]},
-      {label:"日額型住院",color:"#1E8A72",fields:[
-        {k:"daily_room_1_30",l:"日額(1-30日)",u:"元/日"},{k:"daily_room_31",l:"日額(31日起)",u:"元/日"},
-        {k:"daily_icu",l:"加護病房",u:"元/日"},{k:"daily_discharge",l:"出院療養",u:"元/日"},
-      ]},
-      {label:"癌症醫療",color:"#E74C3C",fields:[
-        {k:"can_first",l:"初次罹患",u:"萬元"},{k:"can_hosp",l:"癌症住院",u:"元/日"},
-        {k:"can_target",l:"標靶藥物",u:"萬元"},
-      ]},
-      {label:"失能長照",color:"#27500A",fields:[
-        {k:"ltc_monthly",l:"長照每月",u:"萬/月"},{k:"ltc_dis_amt",l:"失能一次金",u:"萬元"},
-        {k:"ltc_dis_life",l:"失能扶助金",u:"萬/月"},
-      ]},
-    ];
-    var html="";
-    Object.values(pGroups).forEach(function(g){
-      var groupHtml="";
-      covGroups.forEach(function(cg){
-        var items=cg.fields.map(function(f){
-          var t=0;
-          g.rows.forEach(function(p){ var v=p.coverage&&p.coverage[f.k]; if(v&&typeof v==="number") t+=v; });
-          return t>0?'<span style="font-size:26px;margin-right:8px;color:#555">'+f.l+'：<strong>'+t.toLocaleString()+f.u+'</strong></span>':"";
-        }).filter(Boolean).join("");
-        if(items) groupHtml+='<div style="margin-bottom:5px"><span style="font-size:23.4px;font-weight:500;color:'+cg.color+';background:'+cg.color+'15;padding:1px 6px;border-radius:3px;margin-right:4px">'+cg.label+'</span><span style="line-height:2">'+items+'</span></div>';
-      });
-      if(!groupHtml) return;
-      html+='<div style="border:1px solid #e8e8e8;border-radius:7px;overflow:hidden;margin-bottom:8px">'+
-        '<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;background:#f7f7f5;border-bottom:1px solid #f0f0f0">'+
-          '<span style="font-family:monospace;font-size:26px;background:#E6F1FB;color:#0C447C;padding:1px 7px;border-radius:99px">'+g.no+'</span>'+
-          '<span style="font-size:26px;color:#555">'+g.company+'</span>'+
-        '</div>'+
-        '<div style="padding:8px 10px">'+groupHtml+'</div>'+
-      '</div>';
-    });
-    return'<div style="padding:10px 12px">'+(html||'<div style="color:#aaa;font-size:31.2px">尚無附約保障資料（請先至附約保障清單填寫）</div>')+'</div>';
-  }
-  if(key==="savings_timeline"){
-    var now2 = new Date().getFullYear();
-    var pdm2 = {};
-    var fmem2 = (familyData && familyData.members) || [];
-    fmem2.filter(function(m){ return m.role!=="beneficiary_only"; }).forEach(function(m){
-      var cached = sessionStorage.getItem("nbs_person_"+m.personId);
-      if(cached) pdm2[m.personId]=JSON.parse(cached);
-    });
-    return renderSavingsTimeline(pdm2, familyData, now2, now2+14);
-  }
-  if(key==="monthly"){
-    var now=new Date().getMonth();
-    var active2=policies.filter(function(p){return p.status==="有效";});
-    var cells=Array.from({length:12},function(_,mi){
-      var t=0;
-      active2.forEach(function(p){
-        var sm=new Date(p.startDate||"2020-01-01").getMonth(),pr=p.premiumTWD||0;
-        if(p.payMode==="月繳")t+=Math.round(pr/12);
-        else if(p.payMode==="季繳"&&(mi-sm+12)%3===0)t+=Math.round(pr/4);
-        else if(p.payMode==="半年繳"&&(mi-sm+12)%6===0)t+=Math.round(pr/2);
-        else if(p.payMode==="年繳"&&mi===sm%12)t+=pr;
-      });
-      return'<div style="padding:6px 4px;background:'+(mi===now?"#E6F1FB":"#f7f7f5")+';border-radius:6px;text-align:center;border:'+(mi===now?"1.5px solid #378ADD":"1px solid #e0e0e0")+'">'+
-        '<div style="font-size:28.6px;font-weight:500;color:'+(mi===now?"#0C447C":"#444")+'">'+(mi+1)+'月</div>'+
-        '<div style="font-size:36.4px;font-weight:600;color:'+(mi===now?"#0C447C":t>0?"#1a1a1a":"#bbb")+'">'+(t>0?(t>=10000?(t/10000).toFixed(1)+"萬":t.toLocaleString()):"—")+'</div>'+
-      '</div>';
-    }).join("");
-    return'<div style="padding:12px 14px"><div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px">'+cells+'</div></div>';
-  }
-
-  if(key==="policy"){
-    var tt=policies.filter(function(p){return p.status==="有效";}).reduce(function(s,p){return s+(p.premiumTWD||0);},0);
-    var groups={};
-    policies.forEach(function(p){
-      var k=p.policyNo||p.id;
-      if(!groups[k]) groups[k]=[];
-      groups[k].push(p);
-    });
-    var colHeader='<div style="display:grid;grid-template-columns:80px 1fr 80px 70px;gap:4px;font-size:23.4px;color:#aaa;padding:3px 8px;border-bottom:1px solid #e8e8e8;margin-bottom:4px;font-weight:500">'+
-      '<span>類別</span><span>保險項目名稱</span><span style="text-align:right">保額</span><span style="text-align:right">年繳保費</span></div>';
-
-    var groupHtml=Object.entries(groups).map(function(entry){
-      var no=entry[0], rows=entry[1];
-      var groupTotal=rows.reduce(function(s,p){return s+(p.premiumTWD||0);},0);
-      var rowsHtml=rows.map(function(p){
-        return'<div style="display:grid;grid-template-columns:80px 1fr 80px 70px;align-items:center;gap:4px;font-size:26px;padding:4px 8px;border-top:1px solid #f5f5f5">'+
-          '<span style="padding:1px 6px;border-radius:99px;background:'+(CC[p.category]||"#999")+'20;color:'+(CC[p.category]||"#555")+';text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+p.category+'</span>'+
-          '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#333">'+(p.itemName||"—")+'</span>'+
-          '<span style="text-align:right;color:#0C447C;font-weight:500">'+(p.insuredAmount?p.insuredAmount+(p.insuredAmountUnit||'萬元'):'—')+'</span>'+
-          '<span style="font-weight:500;text-align:right;color:#333">NT'+(p.premiumTWD||0).toLocaleString()+'</span>'+
-        '</div>';
-      }).join("");
-      return'<div style="border:1px solid #e8e8e8;border-radius:7px;overflow:hidden;margin-bottom:6px">'+
-        '<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 8px;background:#f7f7f5;border-bottom:1px solid #f0f0f0">'+
-          '<span style="font-family:monospace;font-size:26px;font-weight:500;background:#E6F1FB;color:#0C447C;padding:1px 7px;border-radius:99px">'+no+'</span>'+
-          '<span style="font-size:26px;color:#555;font-weight:500">'+rows[0].company+'</span>'+
-          '<span style="font-size:26px;color:#999">NT$'+groupTotal.toLocaleString()+'</span>'+
-        '</div>'+
-        rowsHtml+
-      '</div>';
-    }).join("");
-    return'<div style="padding:10px 12px">'+colHeader+groupHtml+'<div style="font-size:28.6px;font-weight:500;color:#27500A;text-align:right;padding-top:5px;border-top:1px solid #e8e8e8;margin-top:3px">年繳總計 NT$'+tt.toLocaleString()+'</div></div>';
-  }
-
-  return'<div style="padding:12px;color:#aaa;font-size:31.2px">建置中</div>';
-}
-
-// ── 匯出主流程 ────────────────────────────────────────────
-function doExport(){
-  var selBlks=BLOCKS.filter(function(b){return sel[b.key];});
-  var isPdf=fmt.startsWith("pdf");
-  goPage("P_DOING");
-  document.getElementById("EX_ICON").textContent=isPdf?"📄":"🖼️";
-  document.getElementById("EX_MSG").textContent=isPdf?"正在產生 PDF…":fmt==="png_single"?"正在合併圖片…":"正在產生圖片…";
-  document.getElementById("EX_SUB").textContent="共 "+selBlks.length+" 個區塊 "+(fmt==="png_single"?"一張 PNG":fmt==="png_multiple"?selBlks.length+"張 PNG":fmt==="pdf_merge"?"單一 PDF":selBlks.length+" 頁 PDF");
-  document.getElementById("PROG").style.background=isPdf?"#E74C3C":"#378ADD";
-  document.getElementById("PROG_PCT").style.color=isPdf?"#E74C3C":"#378ADD";
-
-  var div=document.createElement("div");
-  div.style.cssText="position:fixed;left:-9999px;top:0;width:1200px;background:#fff;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:36.4px;color:#1a1a1a";
-  document.body.appendChild(div);
-
-  var p=(isPdf?doExportPDF(selBlks,div):doExportPNG(selBlks,div));
-  p.then(function(){
-    document.body.removeChild(div);
-    showDone(selBlks);
-  }).catch(function(e){
-    document.body.removeChild(div);
-    alert("匯出失敗："+e.message);
-    doShowSelect();
-  });
-}
-
-function setP(v){
-  document.getElementById("PROG").style.width=v+"%";
-  document.getElementById("PROG_PCT").textContent=v+"%";
-}
-function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
-
-async function doExportPNG(blks,div){
-  var wm='<div style="padding:8px;background:#f7f7f5;text-align:center;font-size:28.6px;color:#aaa">NBS 保單體檢 '+pName+' '+pDate+'</div>';
-  if(fmt==="png_single"){
-    div.style.width="1200px";
-    div.innerHTML=blks.map(function(b){return'<div style="border-bottom:1px solid #f0f0f0">'+renderBlock(b.key)+'</div>';}).join("")+wm;
-    setP(30);await sleep(400);
-    var singleW=Math.max(div.scrollWidth,div.offsetWidth,800);
-    div.style.width=singleW+"px";
-    await sleep(100);
-    var c=await html2canvas(div,{scale:2,useCORS:true,backgroundColor:"#ffffff",
-      width:singleW,windowWidth:singleW});
-    div.style.width="1200px";
-    setP(80);await sleep(100);
-    var a=document.createElement("a");
-    a.download=pName+"_保單體檢_"+pDate+".png";
-    a.href=c.toDataURL("image/png");a.click();
-    setP(100);
-  }else{
-    for(var i=0;i<blks.length;i++){
-      div.style.width="1200px";
-      div.innerHTML=renderBlock(blks[i].key)+wm;
-      setP(Math.round(i/blks.length*90));await sleep(300);
-      var actualW=Math.max(div.scrollWidth,div.offsetWidth,800);
-      div.style.width=actualW+"px";
-      await sleep(100);
-      var c2=await html2canvas(div,{scale:2,useCORS:true,backgroundColor:"#ffffff",
-        width:actualW,windowWidth:actualW});
-      div.style.width="1200px";
-      var a2=document.createElement("a");
-      a2.download=pName+"_"+blks[i].label+"_"+pDate+".png";
-      a2.href=c2.toDataURL("image/png");a2.click();
-      await sleep(400);
-    }
-    setP(100);
-  }
-}
-
-async function doExportPDF(blks,div){
-  var J=window.jspdf.jsPDF;
-  var pdf=new J("l","mm","a4");  // 預設橫向，更適合寬表格
-  var wm='<div style="padding:8px;background:#f7f7f5;text-align:center;font-size:28.6px;color:#aaa">NBS 保單體檢 '+pName+' '+pDate+'</div>';
-  for(var i=0;i<blks.length;i++){
-    div.style.width="1200px";
-    div.innerHTML=renderBlock(blks[i].key)+wm;
-    setP(Math.round(i/blks.length*90));await sleep(300);
-    var actualW3=Math.max(div.scrollWidth,div.offsetWidth,800);
-    div.style.width=actualW3+"px";
-    await sleep(100);
-    var c=await html2canvas(div,{scale:2,useCORS:true,backgroundColor:"#ffffff",
-      width:actualW3,windowWidth:actualW3});
-    div.style.width="1200px";
-    if(i>0) pdf.addPage("a4","landscape");
-    var iw=277, ih=(c.height/c.width)*iw;
-    pdf.addImage(c.toDataURL("image/png"),"PNG",10,10,iw,Math.min(ih,190));
-  }
-  setP(95);
-  pdf.save(pName+"_保單體檢_"+pDate+".pdf");
-  setP(100);
-}
-
-function showDone(blks){
-  var isPdf=fmt.startsWith("pdf");
-  document.getElementById("DONE_MSG").textContent=(isPdf?"PDF":"圖片")+"已下載到您的裝置，可直接傳送給保戶";
-  var h='<div style="font-size:28.6px;color:#aaa;margin-bottom:6px">下載的檔案</div>';
-  if(fmt==="png_single")h+='<div class="fitem">🖼️ '+pName+'_保單體檢_'+pDate+'.png</div>';
-  else if(fmt==="png_multiple")h+=blks.map(function(b){return'<div class="fitem">🖼️ '+pName+'_'+b.label+'_'+pDate+'.png</div>';}).join("");
-  else h+='<div class="fitem">📄 '+pName+'_保單體檢_'+pDate+'.pdf'+(fmt==="pdf_pages"?" ("+blks.length+"頁)":"")+'</div>';
-  document.getElementById("DONE_FILES").innerHTML=h;
-  goPage("P_DONE");
-}
-
-// ── GAS 呼叫 ─────────────────────────────────────────────
-function gas(action,params){
-  if(action==="saveFile"){
-    return fetch(GAS,{
-      method:"POST",
-      headers:{"Content-Type":"text/plain"},
-      body:JSON.stringify(Object.assign({action:action},params)),
-    }).then(function(r){return r.json();});
-  }
-  var url=new URL(GAS);
-  url.searchParams.set("action",action);
-  Object.entries(params||{}).forEach(function(kv){
-    var k=kv[0],v=kv[1];
-    if(typeof v==="object")url.searchParams.set(k,encodeURIComponent(JSON.stringify(v)));
-    else if(v!==null&&v!==undefined)url.searchParams.set(k,v);
-  });
-  return fetch(url.toString()).then(function(r){return r.json();});
-}
-
-// ── 頁面載入後 ─────────────────────────────────────────
-window.addEventListener("nbs_nav_ready", async function(e) {
-  var currentUser   = e.detail.user;
-  familyData        = e.detail.familyData;
-  currentPersonId   = e.detail.currentPersonId;
-  familyFileName    = e.detail.familyFileName;
-
-  // 從 URL ?from= 參數預選對應區塊
-  var fromPage = new URLSearchParams(window.location.search).get("from") || "";
-  var PAGE_TO_BLOCK = {
-    "summary":     ["summary"],
-    "savings":     ["savings_timeline"],
-    "beneficiary": ["beneficiary"],
-    "family":      ["summary"],
-    "policy":      ["summary","monthly"],
-    "coverage":    ["summary"],
-  };
-  if (fromPage && PAGE_TO_BLOCK[fromPage]) {
-    PAGE_TO_BLOCK[fromPage].forEach(function(k){ sel[k]=true; });
-  }
-  buildBlocks();
-  buildFmts();
-  var btn=document.getElementById("B_PREV");
-  if(btn){btn.disabled=true;btn.textContent="資料載入中…";btn.style.background="#ccc";}
-
-  try {
-    var pdm = Object.assign({}, e.detail.personsData || {}); // 效能優化：優先用 nav.js 抓好的資料
-    var fmem = (familyData && familyData.members) || [];
-    var activeMembers = fmem.filter(function(m) { return m.role !== "beneficiary_only"; });
-    var missingMembers = activeMembers.filter(function(m) { return !pdm[m.personId]; });
-
-    var fetchPromises = missingMembers.map(function(mem) {
-      var cacheKey = "nbs_person_" + mem.personId;
-      var cachedData = sessionStorage.getItem(cacheKey);
-
-      if (cachedData) {
-        pdm[mem.personId] = JSON.parse(cachedData);
-        return Promise.resolve();
-      } else {
-        return gas("readFile", {
-          email: currentUser.email,
-          fileType: "persons",
-          fileName: mem.name + "_" + mem.personId + ".json"
-        }).then(function(pr) {
-          if (pr.status === "ok") {
-            pdm[mem.personId] = pr.content;
-            sessionStorage.setItem(cacheKey, JSON.stringify(pr.content));
-          }
-        }).catch(function(err) { console.error("讀取 " + mem.name + " 失敗", err); });
-      }
-    });
-
-    await Promise.all(fetchPromises);
-
-    person = pdm[currentPersonId] || {};
-    policies = person.policies || [];
-    coverage = person.coverage || {};
-    savings = person.savings || [];
-    pName = (person.profile && person.profile.name) || "—";
-    var ad = person.profile && person.profile.analysisDate;
-    if (ad) {
-      var d = new Date(ad);
-      pDate = (d.getFullYear() - 1911) + "年" + (d.getMonth() + 1) + "月" + d.getDate() + "日";
-    }
-  } catch (ex) { 
-    console.error("export load error", ex); 
-  }
-  updatePrevBtn();
-
-  // 通知 nav.js 更新側邊欄（nav.js 自己讀 Drive 可能失敗）
-  if (familyData) {
-    window.dispatchEvent(new CustomEvent("nbs_page_data_ready", {
-      detail: { familyData: familyData, currentPersonId: currentPersonId }
-    }));
-  }
-});
-
-// ── NBS 導覽 ──────────────────────────────────────────────
-if (typeof NBS_NAV !== "undefined") { 
-    NBS_NAV.onMemberChange = function(pid) {
-      currentPersonId = pid;
-      // 匯出頁面不需要即時更新內容，但可在這裡補上重新抓人名邏輯
-      var pdm_p = JSON.parse(sessionStorage.getItem("nbs_person_" + pid));
-      if(pdm_p) {
-        person = pdm_p;
-        policies = person.policies || [];
-        pName = (person.profile && person.profile.name) || "—";
-        updatePrevBtn();
-      }
-    };
-}
-
-
-// ══════════════════════════════════════════════════════════
-// 覆寫 nbs_nav_ready：不用選擇UI，直接渲染三段報表
-// ══════════════════════════════════════════════════════════
-(function() {
-  // 移除原本的 nbs_nav_ready（已在上方 JS 裡定義），
-  // 這裡用 once:true 重新綁定一個渲染版本
-  function extractPart(html, from, to) {
-    var i = html.indexOf(from);
-    if (i < 0) return "";
-    if (!to) return html.slice(i);
-    var j = html.indexOf(to, i);
-    return j > i ? html.slice(i, j) : html.slice(i);
-  }
-
-  // 移除舊的監聽器（無法直接移除，改用旗標避免雙重執行）
-  window.__summaryReady = false;
-  var _origListener = null;
-
-  window.addEventListener("nbs_nav_ready_summary", async function(e) {
-    if (window.__summaryReady) return;
-    window.__summaryReady = true;
-
-    familyData      = e.detail.familyData;
-    familyFileName  = e.detail.familyFileName;
-    currentPersonId = e.detail.currentPersonId;
-
-    if (!familyData) {
-      document.getElementById("REPORT").innerHTML =
-        '<div style="padding:40px;text-align:center;color:#bbb;font-size:40.6px">載入失敗</div>';
-      return;
-    }
-
-    // 全家所有成員保單合併
-    var pdm = Object.assign({}, e.detail.personsData || {});
-    var members = familyData.members || [];
-    var missingIds = members
-      .filter(function(m){ return m.role !== "beneficiary_only" && !pdm[m.personId]; })
-      .map(function(m){ return m.personId; });
-    if (missingIds.length > 0) {
-      await Promise.all(missingIds.map(function(pid){
-        var mem = members.find(function(m){return m.personId===pid;});
-        return NBS_NAV.callGAS("readFile",{
-          fileType:"persons", fileName: mem.name+"_"+pid+".json"
-        }).then(function(r){ if(r&&r.status==="ok"&&r.content) pdm[pid]=r.content; }).catch(function(){});
-      }));
-    }
-    personDataMap = pdm;
-
-    // 設定全局變數（供 renderBlock 使用）
-    var primary = members.find(function(m){return m.role==="primary";});
-    currentPersonId = primary ? primary.personId : (members[0]&&members[0].personId);
-    var p = pdm[currentPersonId] || {};
-    person   = p;
-    policies = [];
-    // 全家保單合併給 renderBlock 使用
-    Object.values(pdm).forEach(function(pd){
-      if(pd&&pd.policies) policies = policies.concat(pd.policies);
-    });
-    coverage = p.coverage || {};
-    savings  = p.savings  || [];
-    pName    = (p.profile&&p.profile.name) || "—";
-    var ad   = p.profile&&p.profile.analysisDate;
-    if(ad){ var dt=new Date(ad); pDate=(dt.getFullYear()-1911)+"年"+(dt.getMonth()+1)+"月"+dt.getDate()+"日"; }
-
-    var wrap = document.getElementById("REPORT");
-    wrap.innerHTML = "";
-
-    // ── 段1：保單彙總一覽表（圓餅圖+家庭責任+醫療前/中/後期）──
-    var tlHtml = "";
-    try { tlHtml = renderBlock("timeline"); } catch(ex){}
-    var smHtml = "";
-    try { smHtml = renderBlock("summary"); } catch(ex){}
-    var covHtml = extractPart(smHtml, "保障覆蓋率", "就醫情況");
-
-    var s1 = document.createElement("div");
-    s1.innerHTML =
-      '<div class="sec-hdr">📊 保單彙總一覽表</div>' +
-      '<div>' + (tlHtml||"") + '</div>' +
-      '<div style="margin-top:12px">' + (covHtml||"") + '</div>';
-    wrap.appendChild(s1);
-
-    // ── 段2：就醫情形 ──
-    var hospHtml = extractPart(smHtml, "就醫情況", "各項保障加總");
-    var s2 = document.createElement("div");
-    s2.innerHTML =
-      '<div class="sec-hdr">🏥 就醫情形</div>' +
-      '<div>' + (hospHtml||"") + '</div>';
-    wrap.appendChild(s2);
-
-    // ── 段3：保單明細一覽表（各項保障加總）──
-    var detailHtml = extractPart(smHtml, "各項保障加總");
-    var s3 = document.createElement("div");
-    s3.innerHTML =
-      '<div class="sec-hdr">🛡️ 保單明細一覽表</div>' +
-      '<div>' + (detailHtml||"") + '</div>';
-    wrap.appendChild(s3);
-
-    // ── 聲明 ──
-    var decl = document.createElement("div");
-    decl.className = "decl";
-    decl.innerHTML = "⚠️ 本報告彙總之資訊，旨在作為檢視與討論保障內容的參考藍圖；為守護您的權益，實際理賠給付項目與條件，仍須以各家保險公司之最新資料及正式保險契約條款為準。";
-    wrap.appendChild(decl);
-  });
-
-  // 攔截原本的 nbs_nav_ready，同步觸發自訂事件
-  window.addEventListener("nbs_nav_ready", function(e) {
-    window.dispatchEvent(new CustomEvent("nbs_nav_ready_summary", {detail: e.detail}));
-  });
-})();
-</script>
-</body>
-</html>
 </script>
 </body>
 </html>
