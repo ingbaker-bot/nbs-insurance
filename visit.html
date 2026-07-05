@@ -28,6 +28,9 @@
     .visit-date{font-size:17px;font-weight:600;color:#0C447C}
     .visit-type{font-size:14px;padding:2px 8px;border-radius:99px;background:#E6F1FB;color:#0C447C}
     .visit-preview{font-size:16px;color:#666;line-height:1.6;margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+    .visit-mini-lbl{font-size:14px;color:#aaa;margin-bottom:2px;margin-top:8px}
+    .visit-mini-lbl:first-child{margin-top:0}
+    .visit-concerns{font-size:16px;color:#666;line-height:1.6;margin-bottom:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
     .visit-actions-row{display:flex;gap:6px;flex-wrap:wrap}
     .action-chip{font-size:14px;padding:2px 8px;border-radius:99px;border:1px solid #e0e0e0;color:#888;display:flex;align-items:center;gap:4px}
     .action-chip.done{background:#E8F5E9;border-color:#C8E6C9;color:#2E7D32}
@@ -413,9 +416,10 @@ function renderVisits() {
     html += '<span class="visit-type">'+(v.type||"面談")+'</span>';
     if (v.attendees) html += '<span style="font-size:14px;color:#aaa;margin-left:auto">'+v.attendees+'</span>';
     html += '</div>';
-    if (v.summary) html += '<div class="visit-preview">'+v.summary+'</div>';
+    if (v.summary) html += '<div class="visit-mini-lbl">討論摘要</div><div class="visit-preview">'+v.summary+'</div>';
+    if (v.concerns) html += '<div class="visit-mini-lbl">客戶需求 / 疑慮</div><div class="visit-concerns">'+v.concerns+'</div>';
     if (pendingActions.length > 0) {
-      html += '<div class="visit-actions-row">';
+      html += '<div class="visit-mini-lbl">承諾事項</div><div class="visit-actions-row">';
       pendingActions.slice(0,3).forEach(function(a){
         var cls = (a.deadline && a.deadline < today) ? "action-chip overdue" : "action-chip pending";
         html += '<span class="'+cls+'">'+(a.who==="me"?"📋":"👤")+a.text+(a.deadline?" · "+formatDateShort(a.deadline):"")+'</span>';
@@ -423,7 +427,7 @@ function renderVisits() {
       if (pendingActions.length > 3) html += '<span class="action-chip">+' +(pendingActions.length-3)+ ' 項</span>';
       html += '</div>';
     }
-    if (v.nextDate) html += '<div style="margin-top:8px;font-size:14px;color:#378ADD">📆 下次：'+formatDateDisplay(v.nextDate)+(v.nextTopics?" · "+v.nextTopics:"")+'</div>';
+    if (v.nextDate) html += '<div class="visit-mini-lbl">下次拜訪</div><div style="font-size:14px;color:#378ADD">📆 '+formatDateDisplay(v.nextDate)+(v.nextTopics?" · "+v.nextTopics:"")+'</div>';
     html += '</div>';
   });
   html += '</div>';
