@@ -10,11 +10,11 @@
 
     .header { background:#fff; border-bottom:1px solid #eee; padding:12px 16px; display:flex; align-items:center; gap:10px; position:sticky; top:0; z-index:100; }
     .back-btn { background:none; border:none; font-size:26px; color:#999; cursor:pointer; padding:0; }
-    .header-title { font-size:28px; font-weight:600; flex:1; }
+    .header-title { font-size:18px; font-weight:600; flex:1; }
     .header-sub { font-size:14px; color:#bbb; }
 
     .member-tabs { display:flex; background:#fafafa; border-bottom:1px solid #eee; overflow-x:auto; padding:0 16px; }
-    .member-tab { padding:9px 14px; font-size:22px; cursor:pointer; white-space:nowrap; border-bottom:2px solid transparent; color:#888; }
+    .member-tab { padding:9px 14px; font-size:14px; cursor:pointer; white-space:nowrap; border-bottom:2px solid transparent; color:#888; }
     .member-tab.active { border-bottom-color:#378ADD; color:#378ADD; font-weight:500; }
 
     .main { 
@@ -30,23 +30,23 @@
 
     .stat-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px; }
     .stat-card { padding:10px 12px; border-radius:10px; }
-    .stat-label { font-size:22px; margin-bottom:2px; }
-    .stat-value { font-size:28px; font-weight:600; }
+    .stat-label { font-size:14px; margin-bottom:2px; }
+    .stat-value { font-size:19px; font-weight:600; }
 
-    .section-label { font-size:22px; font-weight:500; color:#999; margin-bottom:8px; letter-spacing:0.05em; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px; }
+    .section-label { font-size:14px; font-weight:500; color:#999; margin-bottom:8px; letter-spacing:0.05em; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px; }
     .small-btn { font-size:14px; padding:4px 12px; border:1px solid #ddd; border-radius:99px; background:transparent; color:#666; cursor:pointer; font-family:inherit; }
 
     /* 保單號碼一覽 */
     .policy-group-block { background:#fff; border:1px solid #e8e8e8; border-radius:10px; overflow:hidden; margin-bottom:16px; }
     .group-header { display:flex; align-items:center; gap:8px; padding:8px 14px; background:#f7f7f5; flex-wrap:wrap; }
-    .policy-no-badge { font-family:monospace; font-size:15px; font-weight:500; background:#E6F1FB; color:#0C447C; padding:1px 8px; border-radius:99px; }
-    .group-company { font-size:24px; font-weight:500; }
-    .group-total { font-size:22px; color:#999; margin-left:auto; }
+    .policy-no-badge { font-family:monospace; font-size:14px; font-weight:500; background:#E6F1FB; color:#0C447C; padding:1px 8px; border-radius:99px; }
+    .group-company { font-size:16px; font-weight:500; }
+    .group-total { font-size:14px; color:#999; margin-left:auto; }
     .policy-row { display:grid; grid-template-columns:minmax(96px,auto) 1fr minmax(220px,auto) minmax(70px,auto); align-items:center; gap:8px; padding:9px 14px; border-top:1px solid #f5f5f5; }
-    .cat-badge { font-size:15px; padding:2px 8px; border-radius:99px; text-align:center; display:inline-block; }
-    .policy-name { font-size:24px; padding-left:8px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .policy-prem { font-size:24px; font-weight:500; text-align:right; white-space:nowrap; }
-    .status-badge { font-size:15px; padding:1px 6px; border-radius:99px; text-align:center; }
+    .cat-badge { font-size:14px; padding:2px 8px; border-radius:99px; text-align:center; display:inline-block; }
+    .policy-name { font-size:17px; padding-left:8px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .policy-prem { font-size:17px; font-weight:500; text-align:right; white-space:nowrap; }
+    .status-badge { font-size:14px; padding:1px 6px; border-radius:99px; text-align:center; }
     .status-有效 { background:#EAF3DE; color:#27500A; }
     .status-停效 { background:#FCEBEB; color:#791F1F; }
 
@@ -54,7 +54,7 @@
     .pie-wrap { background:#fff; border:1px solid #e8e8e8; border-radius:10px; padding:14px; margin-bottom:16px; }
     .pie-container { display:flex; align-items:center; gap:16px; flex-wrap:wrap; justify-content:center; }
     .pie-legend { display:flex; flex-direction:column; gap:5px; }
-    .pie-legend-item { display:flex; align-items:center; gap:8px; font-size:16px; }
+    .pie-legend-item { display:flex; align-items:center; gap:8px; font-size:14px; }
     .pie-dot { width:12px; height:12px; border-radius:3px; flex-shrink:0; }
 
     /* 保障加總網格排版 */
@@ -70,24 +70,24 @@
     /* 獨立保障卡片 */
     .coverage-card { background: #fff; border: 1px solid #e8e8e8; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
     .cov-group-header { display: flex; align-items: center; padding: 8px 14px; border-bottom: 1px solid #f0f0f0; }
-    .cov-group-label { font-size: 22px; font-weight: 600; letter-spacing: 0.05em; }
+    .cov-group-label { font-size: 17px; font-weight: 600; letter-spacing: 0.05em; }
     .cov-item { display: flex; align-items: center; justify-content: space-between; padding: 9px 14px; border-bottom: 1px dashed #f5f5f5; flex-wrap: wrap; gap: 4px; }
     .cov-item:last-child { border-bottom: none; }
-    .cov-item-label { font-size: 22px; color: #444; }
+    .cov-item-label { font-size: 16px; color: #444; }
     .cov-item-label.zero { color: #bbb; }
     .cov-value-wrap { text-align: right; }
-    .cov-item-value { font-size: 24px; font-weight: 600; font-family: monospace; }
+    .cov-item-value { font-size: 17px; font-weight: 600; font-family: monospace; }
     .cov-unit { font-size: 14px; color: #999; font-weight: normal; font-family: sans-serif; margin-left: 2px; }
     .cov-breakdown { font-size: 14px; color: #aaa; margin-top: 2px; line-height: 1.2; }
 
     /* 就醫情況 */
     .medical-table { width:100%; border-collapse:collapse; }
-    .medical-table th { padding:8px 10px; text-align:center; font-size:22px; font-weight:500; border-bottom:1px solid #e8e8e8; }
+    .medical-table th { padding:8px 10px; text-align:center; font-size:14px; font-weight:500; border-bottom:1px solid #e8e8e8; }
     .medical-table th:first-child { text-align:left; padding-left:14px; font-weight:400; color:#888; }
     .medical-table td { padding:8px 10px; text-align:center; }
-    .medical-table td:first-child { text-align:left; padding-left:14px; font-weight:500; font-size:22px; color:#555; background:#fafafa; }
+    .medical-table td:first-child { text-align:left; padding-left:14px; font-weight:500; font-size:16px; color:#555; background:#fafafa; }
     .nhi-badge { display:inline-flex; padding:4px 10px; border-radius:6px; background:#EAF3DE; }
-    .nhi-badge span { font-size:15px; font-weight:500; color:#27500A; }
+    .nhi-badge span { font-size:14px; font-weight:500; color:#27500A; }
     .medical-input { width:150px; font-size:16px; padding:5px 8px; border:1px solid #e0e0e0; border-radius:5px; outline:none; text-align:right; font-family:inherit; }
     .auto-hint { font-size:14px; color:#aaa; }
 
@@ -95,17 +95,17 @@
     .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:200; align-items:flex-end; justify-content:center; }
     .modal-overlay.active { display:flex; }
     .modal { background:#fff; border-radius:16px 16px 0 0; padding:20px; width:100%; max-width:560px; max-height:80vh; overflow-y:auto; }
-    .modal-title { font-size:26px; font-weight:600; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; }
+    .modal-title { font-size:19px; font-weight:600; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between; }
     .modal-close { background:none; border:none; font-size:26px; color:#999; cursor:pointer; line-height:1; }
     .modal-notice { font-size:14px; color:#5D4037; background:#FFF8E1; padding:8px 12px; border-radius:8px; margin-bottom:14px; line-height:1.6; }
-    .type-group-label { font-size:22px; font-weight:500; margin-bottom:6px; }
+    .type-group-label { font-size:14px; font-weight:500; margin-bottom:6px; }
     .type-tags { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
     .type-tag { display:flex; align-items:center; gap:4px; padding:5px 12px; border-radius:99px; cursor:pointer; }
     .type-tag-dot { width:9px; height:9px; border-radius:50%; }
-    .type-tag-label { font-size:22px; }
+    .type-tag-label { font-size:16px; }
     .manual-badge { font-size:14px; color:#F5A623; font-weight:600; margin-left:2px; }
 
-    .loading { text-align:center; padding:40px; color:#bbb; font-size:22px; }
+    .loading { text-align:center; padding:40px; color:#bbb; font-size:14px; }
     .spinner { display:inline-block; width:16px; height:16px; border:2px solid #e0e0e0; border-top-color:#378ADD; border-radius:50%; animation:spin 0.7s linear infinite; vertical-align:middle; }
     @keyframes spin { to { transform:rotate(360deg); } }
   </style>
@@ -692,19 +692,19 @@ function buildDonutChart(active, coverage, targets, covOverrides) {
 
       let amtHtml = "";
       if (item.isBool) {
-        amtHtml = current > 0 ? `<span style="color:#555;font-size:16px">有</span>` : `<span style="color:#bbb;font-size:16px">無</span>`;
+        amtHtml = current > 0 ? `<span style="color:#555;font-size:14px">有</span>` : `<span style="color:#bbb;font-size:14px">無</span>`;
       } else {
         if (current > 0 || target > 0) {
           let displayVal = current > 0 ? current.toLocaleString() : "0";
           if (target > 0) displayVal += ` / ${target.toLocaleString()}`;
           
-          amtHtml = `<span style="color:${current>0?'#0C447C':'#888'};font-family:monospace;font-weight:600;font-size:16px">${displayVal}<span style="font-size:15px;color:#888;margin-left:3px;font-family:sans-serif">${item.unit}</span></span>`;
+          amtHtml = `<span style="color:${current>0?'#0C447C':'#888'};font-family:monospace;font-weight:600;font-size:16px">${displayVal}<span style="font-size:14px;color:#888;margin-left:3px;font-family:sans-serif">${item.unit}</span></span>`;
         } else {
-          amtHtml = `<span style="color:#bbb;font-size:16px">0</span>`;
+          amtHtml = `<span style="color:#bbb;font-size:14px">0</span>`;
         }
       }
 
-      legendHtml += `<div style="display:flex;align-items:center;gap:6px;font-size:16px;margin-bottom:5px">
+      legendHtml += `<div style="display:flex;align-items:center;gap:6px;font-size:14px;margin-bottom:5px">
         <div style="width:10px;height:10px;border-radius:2px;background:${dotColor};flex-shrink:0"></div>
         <span style="color:${status==="gap"?"#bbb":"#444"};flex:1;white-space:nowrap">${item.label}</span>
         ${amtHtml}
@@ -751,7 +751,7 @@ function buildDonutChart(active, coverage, targets, covOverrides) {
     labels += `
       <polyline points="${x0},${y0} ${x1},${y1} ${x2},${y2}" fill="none" stroke="${item.color}60" stroke-width="1.2"/>
       <circle cx="${x0}" cy="${y0}" r="2" fill="${item.color}"/>
-      <text x="${textX}" y="${y2+4}" text-anchor="${textAnchor}" style="font-size:16px;fill:${textColor};font-weight:${fw};letter-spacing:0.03em">${prefix}${item.label}</text>
+      <text x="${textX}" y="${y2+4}" text-anchor="${textAnchor}" style="font-size:14px;fill:${textColor};font-weight:${fw};letter-spacing:0.03em">${prefix}${item.label}</text>
     `;
   });
 
@@ -764,10 +764,10 @@ function buildDonutChart(active, coverage, targets, covOverrides) {
       <svg viewBox="0 0 440 300" style="width:100%; max-width:480px; flex-shrink:0;">
         ${paths}
         ${labels}
-        <text x="${cx}" y="${cy-16}" text-anchor="middle" style="font-size:15px;fill:#888">✅ 達標</text>
-        <text x="${cx}" y="${cy+6}"  text-anchor="middle" style="font-size:18px;font-weight:bold;fill:#333">${okN}</text>
-        <text x="${cx}" y="${cy+24}" text-anchor="middle" style="font-size:15px;fill:#E74C3C">❌ 缺口 ${gapN}</text>
-        <text x="${cx}" y="${cy+40}" text-anchor="middle" style="font-size:15px;fill:#F5A623">⚠ 不足 ${insN}</text>
+        <text x="${cx}" y="${cy-16}" text-anchor="middle" style="font-size:14px;fill:#888">✅ 達標</text>
+        <text x="${cx}" y="${cy+6}"  text-anchor="middle" style="font-size:19px;font-weight:bold;fill:#333">${okN}</text>
+        <text x="${cx}" y="${cy+24}" text-anchor="middle" style="font-size:14px;fill:#E74C3C">❌ 缺口 ${gapN}</text>
+        <text x="${cx}" y="${cy+40}" text-anchor="middle" style="font-size:14px;fill:#F5A623">⚠ 不足 ${insN}</text>
       </svg>
       <div style="min-width:170px;background:#fafafa;padding:12px 16px;border-radius:10px;border:1px solid #f0f0f0">
         ${legendFamily}
@@ -776,7 +776,7 @@ function buildDonutChart(active, coverage, targets, covOverrides) {
     
     <div style="border-top:1px dashed #e8e8e8;padding-top:20px">
       <!-- 箭頭指標列 -->
-      <div style="display:flex;align-items:stretch;margin-bottom:16px;font-size:20px;font-weight:600;letter-spacing:0.05em;height:46px">
+      <div style="display:flex;align-items:stretch;margin-bottom:16px;font-size:17px;font-weight:600;letter-spacing:0.05em;height:46px">
         <!-- 醫療前期 -->
         <div style="
           flex:1;
@@ -833,35 +833,35 @@ function buildGapAnalysis(active, coverage, targets, covOverrides) {
   let html = "";
 
   if(insufficients.length) {
-    html += `<div style="font-size:22px;font-weight:500;color:#F5A623;margin-bottom:8px">⚠ 規劃不足</div>`;
+    html += `<div style="font-size:17px;font-weight:500;color:#F5A623;margin-bottom:8px">⚠ 規劃不足</div>`;
     insufficients.forEach(({item,current,target,pct}) => {
       html += `<div style="margin-bottom:10px">
         <div style="display:flex;justify-content:space-between;margin-bottom:3px;flex-wrap:wrap;gap:4px">
-          <span style="font-size:22px;color:#555">${item.label}</span>
+          <span style="font-size:16px;color:#555">${item.label}</span>
           <div style="display:flex;gap:6px;align-items:center">
-            <span style="font-size:24px;color:#555;font-weight:500">${current.toLocaleString()}${item.unit}</span>
+            <span style="font-size:17px;color:#555;font-weight:500">${current.toLocaleString()}${item.unit}</span>
             <span style="font-size:14px;color:#aaa">/ 目標 ${target?.toLocaleString()}${item.unit}</span>
           </div>
         </div>
         <div style="height:7px;background:#f0f0f0;border-radius:99px;overflow:hidden">
           <div style="height:100%;width:${Math.round(pct*100)}%;background:${item.color};border-radius:99px"></div>
         </div>
-        <div style="font-size:16px;color:#E74C3C;margin-top:3px">尚不足 ${(target-current).toLocaleString()}${item.unit}（${Math.round(pct*100)}% 達成）</div>
+        <div style="font-size:14px;color:#E74C3C;margin-top:3px">尚不足 ${(target-current).toLocaleString()}${item.unit}（${Math.round(pct*100)}% 達成）</div>
       </div>`;
     });
   }
 
   if(gaps.length) {
-    html += `<div style="font-size:22px;font-weight:500;color:#E74C3C;margin-bottom:8px;margin-top:${insufficients.length?12:0}px">❌ 尚未規劃</div>`;
+    html += `<div style="font-size:17px;font-weight:500;color:#E74C3C;margin-bottom:8px;margin-top:${insufficients.length?12:0}px">❌ 尚未規劃</div>`;
     html += `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">`;
     gaps.forEach(({item}) => {
-      html += `<span style="padding:4px 12px;background:#FCEBEB;border:1px solid #F0A8BF;border-radius:99px;font-size:16px;color:#791F1F">${item.label}</span>`;
+      html += `<span style="padding:4px 12px;background:#FCEBEB;border:1px solid #F0A8BF;border-radius:99px;font-size:14px;color:#791F1F">${item.label}</span>`;
     });
     html += `</div><div style="font-size:14px;color:#aaa">💡 可與保戶討論是否有需要規劃</div>`;
   }
 
   if(!insufficients.length && !gaps.length) {
-    html += `<div style="font-size:22px;color:#27AE8F;text-align:center;padding:12px 0">🎉 所有已設目標項目均達標！</div>`;
+    html += `<div style="font-size:17px;color:#27AE8F;text-align:center;padding:12px 0">🎉 所有已設目標項目均達標！</div>`;
   }
 
   html += `<button onclick="openTargetModal()" style="width:100%;margin-top:10px;padding:8px;background:transparent;border:1px dashed #ddd;border-radius:8px;font-size:16px;color:#666;cursor:pointer;font-family:inherit">🎯 設定 / 修改目標保額</button>`;
@@ -891,18 +891,18 @@ function openTargetModal() {
   </div>`;
 
   GAP_GROUPS.forEach(g => {
-    bodyHtml += `<div style="font-size:22px;font-weight:500;color:${g.color};padding:4px 10px;background:${g.color}15;border-radius:5px;margin-bottom:8px">${g.label}</div>`;
+    bodyHtml += `<div style="font-size:17px;font-weight:500;color:${g.color};padding:4px 10px;background:${g.color}15;border-radius:5px;margin-bottom:8px">${g.label}</div>`;
     g.items.filter(item=>!item.isBool).forEach(item => {
       const current = getItemCurrent(item.key, active, coverage, overrides);
       const tval = targets[item.key]||"";
       bodyHtml += `<div style="margin-bottom:10px">
         <div style="display:flex;justify-content:space-between;margin-bottom:3px;flex-wrap:wrap;gap:4px">
-          <label style="font-size:22px;color:#333">${item.label}</label>
+          <label style="font-size:16px;color:#333">${item.label}</label>
           <span style="font-size:14px;color:#aaa">目前：${current.toLocaleString()||0} ${item.unit}</span>
         </div>
         <div style="display:flex;align-items:center;border:1px solid #e0e0e0;border-radius:7px;overflow:hidden">
           <input type="number" id="target_${item.key}" value="${tval}" placeholder="不設定（只顯示有/無）"
-            style="flex:1;padding:10px 12px;font-size:24px;border:none;outline:none;font-family:inherit"/>
+            style="flex:1;padding:10px 12px;font-size:17px;border:none;outline:none;font-family:inherit"/>
           ${item.unit?`<span style="padding:0 10px;font-size:14px;color:#aaa;background:#fafafa;border-left:1px solid #f0f0f0">${item.unit}</span>`:""}
         </div>
       </div>`;
@@ -918,7 +918,7 @@ function openTargetModal() {
   overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:300;display:flex;align-items:flex-end;justify-content:center";
   overlay.innerHTML = `<div style="background:#fff;border-radius:16px 16px 0 0;padding:20px;width:100%;max-width:560px;max-height:85vh;overflow-y:auto">
     <div style="display:flex;justify-content:space-between;margin-bottom:14px">
-      <span style="font-weight:600;font-size:26px">🎯 設定目標保額</span>
+      <span style="font-weight:600;font-size:19px">🎯 設定目標保額</span>
       <button onclick="document.getElementById('target-modal-overlay')?.remove()" style="background:none;border:none;font-size:26px;color:#999;cursor:pointer;line-height:1">×</button>
     </div>
     ${bodyHtml}
