@@ -486,9 +486,14 @@
 
 <!-- 保險項目名稱 + 保單狀態 -->
     <div class="grid-2">
-    <div class="field">
+    <div class="field" style="position: relative;">
       <label>保險項目名稱</label>
-      <input type="text" id="f-item" placeholder="如：AD&D意外身故及殘廢保險附約" />
+      <!-- 加入 autocomplete="off" 防止瀏覽器原生的歷史紀錄干擾，並綁定 oninput 觸發過濾 -->
+      <input type="text" id="f-item" placeholder="如：AD&D意外身故及殘廢保險附約" 
+             oninput="filterFubonProducts(this.value)" 
+             onfocus="filterFubonProducts(this.value)" autocomplete="off" />
+      <!-- 動態商品選單容器 (預設隱藏) -->
+      <div id="product-list" style="display:none; position: absolute; left:0; right:0; max-height:200px; overflow-y:auto; border:1px solid #e0e0e0; border-radius:7px; background:#fff; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 4px;"></div>
     </div>
     <div class="field">
       <label>繳費方式</label>
@@ -597,7 +602,10 @@ let personDataMap  = {};
 let currentTab     = "all";  // "all" or personId
 let editingPolicy  = null;   // null=新增, object=編輯中的保單
 let editingPersonId = null;
-
+// ── 新增：富邦商品庫專用快取變數 ──
+let cachedFubonProducts = []; 
+let isFubonProductsLoading = false;
+  
 // ── 初始化 ────────────────────────────────────────────────
 window.addEventListener("nbs_nav_ready", async function(e) {
   currentUser       = e.detail.user;  // 賦值給全域變數
@@ -974,15 +982,119 @@ function pickCompany(name) {
   document.getElementById("f-company-search").value = name;
   document.getElementById("f-company").value = name;
   document.getElementById("company-list").style.display = "none";
+  
+  // 【新增邏輯】如果是富邦人壽，啟動背景預載入
+  if (name === "富邦人壽") {
+    // 每次點選都檢查，如果快取是空的才載入，避免重複呼叫 API
+    if (cachedFubonProducts.length === 0) {
+      preloadFubonProducts();
+    }
+  }
+}
+  
+// ═══════════════════════════════════════════════════════
+//  富邦人壽商品庫：預載入與模糊搜尋邏輯
+// ═══════════════════════════════════════════════════════
+
+// 1. 預載入函式 (向 API1 請求資料)
+async function preloadFubonProducts() {
+  if (isFubonProductsLoading) return;
+  isFubonProductsLoading = true;
+  
+  const itemInput = document.getElementById("f-item");
+  itemInput.placeholder = "商品庫載入中，請稍候...";
+  
+  try {
+    // 呼叫 API1，action 指定為 getFubonProducts
+    const response = await callGAS("getFubonProducts", {});
+    
+    if (response && response.status === "ok" && response.data) {
+      cachedFubonProducts = response.data;
+      itemInput.placeholder = "輸入關鍵字搜尋，如：樂溢 或 XTY";
+    } else {
+      console.warn("載入富邦商品失敗或回傳格式不符", response);
+      itemInput.placeholder = "載入失敗，請直接輸入商品全名";
+    }
+  } catch (err) {
+    console.error("API 請求錯誤", err);
+    itemInput.placeholder = "請直接輸入商品全名";
+  } finally {
+    isFubonProductsLoading = false;
+  }
 }
 
+// 2. 當使用者在保險項目名稱輸入文字時觸發 (記憶體高速檢索)
+function filterFubonProducts(q) {
+  const company = document.getElementById("f-company").value || document.getElementById("f-company-search").value.trim();
+  const list = document.getElementById("product-list");
+  
+  // 限制條件：只有選取「富邦人壽」且有輸入文字時才作動
+  if (company !== "富邦人壽" || !q.trim()) {
+    list.style.display = "none";
+    return;
+  }
+
+  // 防呆：如果打字太快，資料還在下載
+  if (isFubonProductsLoading) {
+    list.innerHTML = `<div style="padding:10px 12px; font-size: 14px; color:#378ADD; text-align:left;">商品庫正在下載中，請稍候幾秒...</div>`;
+    list.style.display = "block";
+    return;
+  }
+
+  // 防呆：如果下載失敗或還沒開始下載
+  if (cachedFubonProducts.length === 0) {
+     return; // 靜默返回，讓使用者自己打字
+  }
+
+  // 將輸入的關鍵字依空格拆分 (例如輸入 "安泰 LPL")
+  const keywords = q.toLowerCase().split(/\s+/).filter(k => k.length > 0);
+  
+  // 從本地快取陣列中過濾 (毫秒級運算)
+  const filtered = cachedFubonProducts.filter(product => {
+    const productNameLower = product.toLowerCase();
+    // 必須符合每一個拆分後的關鍵字 (AND 邏輯)
+    return keywords.every(kw => productNameLower.includes(kw));
+  });
+
+  // 渲染下拉選單
+  if (filtered.length > 0) {
+    list.style.display = "block";
+    list.innerHTML = filtered.map(prod => `
+      <div onclick="pickFubonProduct('${prod}')" 
+           style="padding:10px 12px; font-size: 16px; cursor:pointer; border-bottom:1px solid #f5f5f5; text-align:left;"
+           onmouseover="this.style.background='#f5f5f5'" 
+           onmouseout="this.style.background=''">
+        ${prod}
+      </div>
+    `).join("");
+  } else {
+    list.innerHTML = `<div style="padding:10px 12px; font-size: 14px; color:#aaa; text-align:left;">找不到相關商品，請檢查關鍵字或手動輸入</div>`;
+    list.style.display = "block";
+  }
+}
+
+// 3. 當使用者點選選單中的商品時
+function pickFubonProduct(name) {
+  document.getElementById("f-item").value = name;
+  document.getElementById("product-list").style.display = "none";
+}
+
+// 4. 修改原本「點擊外面隱藏選單」的監聽器，把新的 product-list 也包進去
 document.addEventListener("click", e => {
+  // 原本公司列表的隱藏邏輯
   const wrap = document.querySelector(".search-wrap");
   if (wrap && !wrap.contains(e.target)) {
     document.getElementById("company-list").style.display = "none";
   }
+  
+  // 新增：保險商品列表的隱藏邏輯
+  const itemInput = document.getElementById("f-item");
+  const list = document.getElementById("product-list");
+  if (itemInput && !itemInput.contains(e.target) && list && !list.contains(e.target)) {
+    list.style.display = "none";
+  }
 });
-
+  
 // ── 日期快速解析 ──────────────────────────────────────────
 function parseDate(inputId, hintId) {
   const val = document.getElementById(inputId).value.replace(/\D/g,"");
