@@ -145,6 +145,7 @@
     .pr-badge-cell  { width: 56px; text-align: center; }
     .pr-cat-cell    { width: 92px; }
     .pr-name-cell   { flex: 1; min-width: 0; padding: 0 10px; }
+    .pr-insured-cell { width: 108px; text-align: right; }
     /* pr-fx-cell 已整合進名稱欄，不再獨立使用 */
     .pr-amount-cell { width: 160px; text-align: right; }
     .pr-status-cell { width: 96px; text-align: center; }
@@ -763,11 +764,10 @@ function renderPolicies() {
         ? `<span style="font-size: 14px;font-weight:700;color:#fff;background:linear-gradient(90deg,#3B82F6,#7C3AED);padding:2px 6px;border-radius:5px;white-space:nowrap">主約</span>`
         : `<span style="font-size: 14px;font-weight:600;color:#6B7280;background:#F3F4F6;padding:2px 6px;border-radius:5px;white-space:nowrap">附約</span>`;
 
-      // 商品名稱 + 保額（同一行，保額緊跟在名稱後）
-      // 保額（單純顯示，不帶外幣資訊）
+      // 保額（獨立欄位，右對齊，跟保費/狀態欄一致風格）
       const insuredStr = p.insuredAmount
-        ? `<span style="color:#3B82F6;font-size: 16px;font-weight:500;margin-left:8px;white-space:nowrap">保額 ${p.insuredAmount} ${p.insuredAmountUnit||'萬元'}</span>`
-        : '';
+        ? `<span style="color:#3B82F6;font-size: 15px;font-weight:500;white-space:nowrap">${p.insuredAmount} ${p.insuredAmountUnit||'萬元'}</span>`
+        : '<span style="color:#D1D5DB">—</span>';
 
       const fxCell = '';
 
@@ -776,9 +776,8 @@ function renderPolicies() {
         <div class="pr-cell pr-cat-cell"><span class="cat-badge ${catClass}">${p.category||'—'}</span></div>
         <div class="pr-cell pr-name-cell" style="display:flex;align-items:center;min-width:0">
           <span style="font-size: 17px;font-weight:600;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.itemName||'—'}</span>
-          ${insuredStr}
         </div>
-        ${fxCell}
+        <div class="pr-cell pr-insured-cell">${insuredStr}</div>
         <div class="pr-cell pr-amount-cell" style="text-align:right;line-height:1.25">
           ${isFx
             ? `<div class="pr-amount">NT$${(p.premiumTWD||0).toLocaleString()}</div><div style="font-size:12px;color:#9CA3AF;font-weight:400">(${(p.premiumOrig||0).toLocaleString()} ${p.currency})</div>`
