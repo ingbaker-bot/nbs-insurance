@@ -599,10 +599,10 @@ function renderContent() {
         
         html+=`<td>
           <div style="display:flex;align-items:center;justify-content:center;gap:4px">
-            <input type="number" class="medical-input" value="${val}" placeholder="—" style="width:68px;"
-              onchange="medicalOverrides['${mk}']=this.value"
+            <input type="text" inputmode="numeric" class="medical-input" value="${val?Number(val).toLocaleString():''}" placeholder="—" style="width:68px;"
+              onchange="medicalOverrides['${mk}']=this.value.replace(/,/g,'')"
               onfocus="this.style.borderColor='#378ADD'"
-              onblur="this.style.borderColor='#e0e0e0'" />
+              onblur="this.style.borderColor='#e0e0e0'; const raw=this.value.replace(/,/g,''); this.value=raw?Number(raw).toLocaleString():'';" />
             <span style="font-size:14px;color:#888;white-space:nowrap">${val ? unitText : ''}</span>
           </div>
           ${manual===undefined && auto>0 ? '<div class="auto-hint">自動加總</div>':''}
