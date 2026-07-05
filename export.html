@@ -223,7 +223,7 @@ function doShowPreview(){
   var isPdf=fmt.startsWith("pdf");
   document.getElementById("HDR_TITLE").textContent="預覽確認";
   document.getElementById("PV_NOTE").innerHTML='ℹ️ 以下為<strong>真實資料預覽</strong>，點「'+(isPdf?"匯出 PDF":"下載圖片")+'」後系統產生'+(isPdf?"PDF":"PNG")+'檔案。';
-  document.getElementById("WM_HINT").textContent='匯出圖片底部將自動加上「NBS 雲端保單體檢 '+pName+' '+pDate+'」浮水印';
+  document.getElementById("WM_HINT").textContent='匯出圖片底部將自動加上「NBS 雲端保單體檢 '+pName+' '+pDate+'」';
   var eb=document.getElementById("B_EXPORT");
   eb.style.background=isPdf?"#E74C3C":"#378ADD";
   eb.textContent=isPdf?"匯出 PDF":"下載圖片";
@@ -1037,6 +1037,7 @@ function renderBlock(key){
     '</tr></thead><tbody>';
 
     // 依保單號分組，同一保單號內主約排最前，附約依序在後
+    // 判斷規則與 policy.html 一致：isMain===true 者為主約；若整組都沒標記，第一筆視為主約
     var pdGroups=[], pdGroupMap={};
     policies.forEach(function(p){
       var k=p.policyNo||p.id;
@@ -1045,14 +1046,16 @@ function renderBlock(key){
     });
     var pdSorted=[];
     pdGroups.forEach(function(g){
-      var main=g.rows.filter(function(p){return !p.isRider;});
-      var riders=g.rows.filter(function(p){return !!p.isRider;});
-      pdSorted=pdSorted.concat(main,riders);
+      var mainPol = g.rows.find(function(p){return p.isMain===true;}) || g.rows[0];
+      var riders = g.rows.filter(function(p){return p!==mainPol;});
+      mainPol._isMainRow = true;
+      riders.forEach(function(r){ r._isMainRow = false; });
+      pdSorted = pdSorted.concat([mainPol], riders);
     });
 
     pdSorted.forEach(function(p){
       var cc=CC[p.category]||"#999";
-      var isMR=!p.isRider;
+      var isMR=!!p._isMainRow;
       var amtText = p.insuredAmount ? p.insuredAmount + " " + (p.insuredAmountUnit || '萬元') : '—';
       var rule = BENEF_RULES_PD[p.category] || { death:"可設定", live:"可設定" };
       var ownerName  = p.ownerName  || p.proposer || p.applicant || "—";
@@ -1065,7 +1068,7 @@ function renderBlock(key){
 
       // 身故受益人
       var dStr = "";
-      if(p.isRider) { dStr = "同主約"; }
+      if(!isMR) { dStr = "同主約"; }
       else if(rule.death === "鎖定本人") { dStr = "被保險人本人 🔒"; }
       else if(p.beneficiaryDeathText) { dStr = p.beneficiaryDeathText; }
       else if(p.beneficiaryDeathCustom && p.beneficiaryDeathCustom.length>0) {
