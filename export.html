@@ -223,7 +223,7 @@ function doShowPreview(){
   var isPdf=fmt.startsWith("pdf");
   document.getElementById("HDR_TITLE").textContent="預覽確認";
   document.getElementById("PV_NOTE").innerHTML='ℹ️ 以下為<strong>真實資料預覽</strong>，點「'+(isPdf?"匯出 PDF":"下載圖片")+'」後系統產生'+(isPdf?"PDF":"PNG")+'檔案。';
-  document.getElementById("WM_HINT").textContent='匯出圖片底部將自動加上「NBS 雲端保單體檢 '+pName+' '+pDate+'」';
+  document.getElementById("WM_HINT").textContent='匯出圖片底部將自動加上「NBS 雲端保單體檢 '+pName+' '+pDate+'」浮水印';
   var eb=document.getElementById("B_EXPORT");
   eb.style.background=isPdf?"#E74C3C":"#378ADD";
   eb.textContent=isPdf?"匯出 PDF":"下載圖片";
@@ -1068,8 +1068,7 @@ function renderBlock(key){
 
       // 身故受益人
       var dStr = "";
-      if(!isMR) { dStr = "同主約"; }
-      else if(rule.death === "鎖定本人") { dStr = "被保險人本人 🔒"; }
+      if(rule.death === "鎖定本人") { dStr = "被保險人本人 🔒"; }
       else if(p.beneficiaryDeathText) { dStr = p.beneficiaryDeathText; }
       else if(p.beneficiaryDeathCustom && p.beneficiaryDeathCustom.length>0) {
         dStr = p.beneficiaryDeathCustom.map(function(c){ return c.customName || "指定家人"; }).join("、");
