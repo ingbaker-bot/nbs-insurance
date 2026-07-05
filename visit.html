@@ -238,6 +238,7 @@ var visits = [];
 var currentActions = [];
 var editingVisitId = null;
 var visitFolderId = null;
+var currentMemberId = null;
 var AGENT_EMAIL = ""; // 由 nav_ready 帶入，不需手動填寫
 
 // ── Nav Ready ────────────────────────────────────────────────
@@ -333,6 +334,12 @@ async function loadVisits() {
       visits = Object.values(driveMap).sort(function(a,b){ return b.date.localeCompare(a.date); });
       localStorage.setItem("visits_" + familyId, JSON.stringify(visits));
       renderVisits();
+    } else {
+      // API 有回應，但格式不符預期（例如 status 非 ok、visits 非陣列）
+      // 不視為連線失敗，但務必跳出讀取中狀態，改用本機快取顯示
+      console.warn("listVisits 回應格式不符預期：", result);
+      renderVisits();
+      showToast("⚠️ 讀取雲端資料異常，顯示本機快取");
     }
   } catch(e) {
     // Drive 連線失敗 → 繼續用 localStorage
@@ -380,9 +387,9 @@ async function deleteVisit() {
 function renderTabs() {
   var el = document.getElementById("member-tabs");
   if (!el) return;
-  if (!members.length) { el.style.display = "none"; return; }
-  el.innerHTML = members.map(function(m){
-    return '<button class="member-tab'+(m.personId===currentMemberId?" active":"")+'" onclick="switchMember(\''+m.personId+'\')">'+m.name+'</button>';
+  if (!familyMembers.length) { el.style.display = "none"; return; }
+  el.innerHTML = familyMembers.map(function(m){
+    return '<button class="member-tab'+(m.id===currentMemberId?" active":"")+'" onclick="switchMember(\''+m.id+'\')">'+m.name+'</button>';
   }).join("");
 }
 function switchMember(pid) {
