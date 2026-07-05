@@ -1,0 +1,1281 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NBS - 保險繳費輸入</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f3;
+      min-height: 100vh;
+      color: #1a1a1a;
+    }
+
+    /* Header */
+    .header {
+      background: #fff;
+      border-bottom: 1px solid #eee;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .back-btn { background:none; border:none; font-size: 33px; color:#999; cursor:pointer; padding:0; line-height:1; }
+    .header-title { font-size: 22.5px; font-weight:500; flex:1; }
+    .header-sub { font-size: 16.5px; color:#bbb; }
+
+    /* 成員 Tab */
+    .member-tabs {
+      display: flex;
+      background: #fafafa;
+      border-bottom: 1px solid #eee;
+      overflow-x: auto;
+      padding: 0 16px;
+    }
+    .member-tab {
+      padding: 9px 14px;
+      font-size: 18px;
+      cursor: pointer;
+      white-space: nowrap;
+      border-bottom: 2px solid transparent;
+      color: #888;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .member-tab.active {
+      border-bottom-color: #378ADD;
+      color: #378ADD;
+      font-weight: 500;
+    }
+    .tab-count {
+      font-size: 15px;
+      padding: 0 5px;
+      border-radius: 99px;
+      background: #f0f0f0;
+      color: #aaa;
+    }
+    .member-tab.active .tab-count {
+      background: #E6F1FB;
+      color: #0C447C;
+    }
+
+    /* 主內容 */
+    .main { 
+  padding: 16px 24px; /* 電腦版左右留白稍微加大，視覺更舒適 */
+  max-width: 1200px;  /* 將原本的 560px 放大，讓大螢幕可以滿版展開 */
+  margin: 0 auto;
+  width: 100%;        /* 確保絕對不會超出手機螢幕邊界 */
+}
+
+/* 針對手機版自動微調邊距，保持原本的緊湊感 */
+@media (max-width: 768px) {
+  .main { padding: 16px; }
+}
+
+    /* 統計卡片 */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .stat-card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+    .stat-label { font-size: 16.5px; color: #999; margin-bottom: 2px; }
+    .stat-value { font-size: 24px; font-weight: 500; }
+
+    /* 保單群組 */
+    .policy-group {
+      background: #fff;
+      border: 1px solid #e8e8e8;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+    .group-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 14px;
+      background: #f7f7f5;
+      border-bottom: 1px solid #e8e8e8;
+      flex-wrap: wrap;
+    }
+    .policy-no-badge {
+      font-size: 16.5px;
+      font-weight: 500;
+      background: #E6F1FB;
+      color: #0C447C;
+      padding: 2px 8px;
+      border-radius: 99px;
+      font-family: monospace;
+    }
+    .group-company { font-size: 19.5px; font-weight: 500; }
+    .group-member-badge {
+      font-size: 16.5px;
+      padding: 1px 7px;
+      background: #EAF3DE;
+      color: #27500A;
+      border-radius: 99px;
+    }
+    .group-total { font-size: 18px; color: #999; margin-left: auto; }
+
+    /* 保單列 */
+    .policy-row {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      border-top: 1px solid rgba(120,140,255,.08);
+      cursor: pointer;
+      transition: background .15s;
+      padding: 10px 0;
+    }
+    .policy-row:hover { background: rgba(59,130,246,.03); }
+
+    .pr-cell { padding: 0 8px; font-size: 21px; overflow: hidden; flex-shrink: 0; }
+    .pr-badge-cell  { width: 40px; text-align: center; }
+    .pr-cat-cell    { width: 88px; }
+    .pr-name-cell   { flex: 1; min-width: 0; padding: 0 10px; }
+    /* pr-fx-cell 已整合進名稱欄，不再獨立使用 */
+    .pr-amount-cell { width: 180px; text-align: right; }
+    .pr-status-cell { width: 72px; text-align: center; }
+    .pr-chevron     { width: 24px; text-align: center; color: #D1D5DB; font-size: 24px; }
+
+    .cat-badge {
+      font-size: 18px;
+      padding: 2px 7px;
+      border-radius: 99px;
+      white-space: nowrap;
+      display: inline-block;
+    }
+    .cat-壽險保障      { background:#E6F1FB; color:#0C447C; }
+    .cat-醫療保障      { background:#E1F5EE; color:#085041; }
+    .cat-意外險        { background:#FAEEDA; color:#633806; }
+    .cat-重大疾病險    { background:#EEEDFE; color:#3C3489; }
+    .cat-重大傷病險    { background:#EEEDFE; color:#3C3489; }
+    .cat-特定傷病險    { background:#EEEDFE; color:#3C3489; }
+    .cat-儲蓄險        { background:#FBEAF0; color:#72243E; }
+    .cat-年金險        { background:#FCEBEB; color:#791F1F; }
+    .cat-投資型保險    { background:#f0f0f0; color:#555; }
+
+    .status-badge {
+      font-size: 18px;
+      padding: 2px 8px;
+      border-radius: 99px;
+      white-space: nowrap;
+      text-align: center;
+      display: inline-block;
+    }
+    .status-有效    { background:#EAF3DE; color:#27500A; }
+    .status-停效    { background:#FCEBEB; color:#791F1F; }
+    .status-減額繳清 { background:#FAEEDA; color:#633806; }
+    .status-繳費期滿 { background:#E6F1FB; color:#0C447C; } /* 藍色：完成階段任務 */
+    .status-自動墊繳 { background:#FFF4E5; color:#D84315; } /* 橘色：需特別提醒與注意 */
+    .status-展期     { background:#EEEDFE; color:#3C3489; } /* 紫色：契約結構變更 */
+    .status-緩繳     { background:#FFF4E5; color:#D84315; } /* 橘色：需特別提醒與注意 */
+
+    .pr-amount { font-size: 21px; font-weight: 600; text-align: right; color: #111827; }
+    .pr-chevron { color: #ccc; font-size: 24px; text-align: center; }
+
+    /* 新增附約 */
+    .add-rider-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 14px;
+      border-top: 1px solid #f0f0f0;
+      font-size: 18px;
+      color: #999;
+      cursor: pointer;
+      background: transparent;
+      width: 100%;
+      border: none;
+      border-top: 1px solid #f0f0f0;
+      font-family: inherit;
+      text-align: left;
+    }
+    .add-rider-btn:hover { background: #fafafa; }
+
+    /* 新增主約按鈕 */
+    .add-main-btn {
+      width: 100%;
+      padding: 11px;
+      background: #378ADD;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 21px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      margin-top: 4px;
+    }
+    .add-main-btn:hover { background: #2970c0; }
+
+    /* 空狀態 */
+    .empty-state {
+      text-align: center;
+      padding: 32px 20px;
+      color: #bbb;
+      font-size: 19.5px;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 200;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+      background: #fff;
+      border-radius: 16px 16px 0 0;
+      padding: 20px;
+      width: 100%;
+      max-width: 560px;
+      max-height: 92vh;
+      overflow-y: auto;
+    }
+    .modal-title {
+      font-size: 22.5px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-close { background:none; border:none; font-size: 33px; color:#999; cursor:pointer; line-height:1; }
+
+    /* 表單 */
+    .field { margin-bottom: 13px; }
+    .field label { display:block; font-size: 18px; color:#666; margin-bottom:3px; }
+    .field input, .field select {
+      width: 100%;
+      padding: 8px 10px;
+      font-size: 21px;
+      border: 1px solid #e0e0e0;
+      border-radius: 7px;
+      outline: none;
+      font-family: inherit;
+      background: #fff;
+    }
+    .field input:focus, .field select:focus { border-color: #378ADD; }
+    .field .hint { font-size: 16.5px; color: #0C447C; margin-top: 3px; }
+    .field .dim  { font-size: 16.5px; color: #aaa; margin-top: 3px; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+    /* 被保人選擇 */
+    .member-selector {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .member-sel-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+    .member-sel-item.active {
+      border-color: #378ADD;
+      background: #E6F1FB;
+    }
+    .member-sel-avatar {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #f0f0f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16.5px;
+      font-weight: 500;
+      color: #666;
+    }
+    .member-sel-item.active .member-sel-avatar {
+      background: #378ADD;
+      color: #fff;
+    }
+    .member-sel-name { font-size: 19.5px; font-weight: 500; }
+    .member-sel-rel  { font-size: 15px; color: #aaa; }
+
+    /* 年繳台幣顯示 */
+    .twd-display {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: #E6F1FB;
+      border-radius: 8px;
+      margin-bottom: 13px;
+    }
+    .twd-label { font-size: 18px; color: #378ADD; }
+    .twd-value { font-size: 27px; font-weight: 500; color: #0C447C; flex: 1; }
+    .twd-calc  { font-size: 16.5px; color: #378ADD; }
+
+    /* 按鈕列 */
+    .btn-row { display: flex; gap: 8px; margin-top: 16px; }
+    .btn-primary {
+      flex: 2; padding: 10px;
+      background: #378ADD; color: #fff;
+      border: none; border-radius: 8px;
+      font-size: 21px; font-weight: 500;
+      cursor: pointer; font-family: inherit;
+    }
+    .btn-primary:disabled { background: #ccc; cursor: default; }
+    .btn-secondary {
+      flex: 1; padding: 10px;
+      background: transparent; color: #666;
+      border: 1px solid #e0e0e0; border-radius: 8px;
+      font-size: 19.5px; cursor: pointer; font-family: inherit;
+    }
+    .btn-danger {
+      padding: 10px 14px;
+      background: transparent; color: #e74c3c;
+      border: 1px solid #fcc; border-radius: 8px;
+      font-size: 18px; cursor: pointer; font-family: inherit;
+    }
+
+    /* spinner */
+    .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid #e0e0e0;
+      border-top-color: #378ADD;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* 搜尋框 */
+    .search-wrap { position: relative; margin-bottom: 12px; }
+    .search-wrap input {
+      width: 100%;
+      padding: 8px 10px 8px 32px;
+      font-size: 19.5px;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      outline: none;
+      background: #fff;
+      font-family: inherit;
+    }
+    .search-wrap input:focus { border-color: #378ADD; }
+    .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #bbb; pointer-events: none; }
+
+    /* 附約區塊預設隱藏 */
+    .rider-row { display: none; background: #f9f9f9; padding-left: 30px; border-top: 1px solid #eee; }
+    /* 展開按鈕樣式 */
+    .expand-icon { font-size: 21px; color: #378ADD; cursor: pointer; transition: transform 0.2s; }
+    .expand-icon.open { transform: rotate(90deg); }
+  </style>
+  <script src="nav.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+<div style="display:none" id="header-sub"></div>
+
+
+<!-- 成員 Tab -->
+<!-- 主內容 -->
+<div class="member-tabs" id="member-tabs"></div>
+<div class="main">
+  <div id="loading" style="text-align:center;padding:40px;color:#bbb;font-size: 20px"><span class="spinner"></span> 載入中…</div>
+  <div id="content" style="display:none">
+  <div class="stats-row" id="stats-row"></div>
+  <div id="policy-list"></div>
+  <button class="add-main-btn" onclick="openForm('new', null, null)">＋ 新增主約保單</button>
+  </div><!-- /content -->
+</div><!-- /main wrapper -->
+
+<!-- 表單 Modal -->
+<div class="modal-overlay" id="form-modal" onclick="handleOverlayClick(event)">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="form-title">新增保單</span>
+      <button class="modal-close" onclick="closeForm()">×</button>
+    </div>
+
+    <!-- 被保人 -->
+    <div class="field">
+      <label>被保險人</label>
+      <div class="member-selector" id="member-selector"></div>
+    </div>
+
+    <!-- 保單號碼 + 類別 -->
+    <div class="grid-3">
+      <div class="field">
+        <label>保單號碼 <span style="color:#e74c3c">*</span></label>
+        <input type="text" id="f-policyno" placeholder="如 L123456789" />
+      </div>
+    <div class="field">
+        <label>類別 <span style="color:#e74c3c">*</span></label>
+        <select id="f-cat">
+          <option value="">請選擇</option>
+          <option>壽險保障</option>
+          <option>醫療保障</option>
+          <option>意外險</option>
+          <option>重大疾病險</option>
+          <option>重大傷病險</option>
+          <option>特定傷病險</option>
+          <option>儲蓄險</option>
+          <option>年金險</option>
+          <option>投資型保險</option>
+        </select>
+     </div>
+      <div class="field">
+      <label>保險公司 <span style="color:#e74c3c">*</span></label>
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="f-company-search" placeholder="輸入關鍵字搜尋…"
+               oninput="filterCompany(this.value)" onfocus="showCompanyList()" />
+      </div>
+      <div id="company-list" style="display:none; max-height:140px; overflow-y:auto; border:1px solid #e0e0e0; border-radius:7px; background:#fff; margin-top:-4px;"></div>
+      <input type="hidden" id="f-company" />
+    </div>
+    </div>
+
+    <!-- 要保人 + 保單狀態 -->
+    <div class="grid-3">
+      <div class="field">
+        <label>要保人</label>
+        <select id="f-owner">
+          <!-- 動態填入：由 buildOwnerOptions() 產生 -->
+        </select>
+      </div>
+      <div class="field">
+        <label>保單屬性</label>
+        <select id="f-ismain">
+          <option value="true">主約</option>
+          <option value="false">附約</option>
+        </select>
+      </div>
+      <div class="field">
+  	<label>保單狀態</label>
+  	<select id="f-status">
+    	  <option value="有效">有效</option>
+    	  <option value="繳費期滿">繳費期滿</option>
+    	  <option value="自動墊繳">自動墊繳</option>
+    	  <option value="展期">展期</option>
+    	  <option value="緩繳">緩繳</option>
+    	  <option value="停效">停效</option>
+    	  <option value="減額繳清">減額繳清</option>
+  	</select>
+      </div>
+    </div>
+
+<!-- 保險項目名稱 + 保單狀態 -->
+    <div class="grid-2">
+    <div class="field">
+      <label>保險項目名稱</label>
+      <input type="text" id="f-item" placeholder="如：AD&D意外身故及殘廢保險附約" />
+    </div>
+    <div class="field">
+      <label>繳費方式</label>
+      <select id="f-paymode">
+        <option>月繳</option>
+        <option>季繳</option>
+        <option>半年繳</option>
+        <option selected>年繳</option>
+        <option>躉繳</option>
+      </select>
+    </div>
+ </div>
+      
+    <!-- 保險金額 -->
+    <div class="field">
+      <label>保險金額／計畫</label>
+      <div style="display:flex;gap:8px;align-items:flex-start">
+        <input type="text" id="f-amount" placeholder="如 300 / 高額型4 / 計劃3" style="flex:1;padding:8px 10px;font-size: 21px;border:1px solid #e0e0e0;border-radius:7px;outline:none;font-family:inherit" />
+        <select id="f-amount-unit" onchange="toggleAmountCustom()" style="width:90px;padding:8px 8px;font-size: 20px;border:1px solid #e0e0e0;border-radius:7px;outline:none;font-family:inherit;background:#fff">
+          <option value="萬元">萬元</option>
+          <option value="元">元</option>
+          <option value="計劃">計劃</option>
+          <option value="型">型</option>
+          <option value="份">份</option>
+          <option value="custom">自訂…</option>
+        </select>
+      </div>
+      <input type="text" id="f-amount-unit-custom" placeholder="請輸入單位名稱" style="display:none;margin-top:6px;width:100%;padding:8px 10px;font-size: 20px;border:1px solid #378ADD;border-radius:7px;outline:none;font-family:inherit" />
+    </div>
+
+    <!-- 起始日 + 繳費期滿日 + 保障期滿日 -->
+    <div class="grid-3">
+      <div class="field">
+        <label>保單起始日</label>
+        <input type="text" id="f-start" placeholder="如 1100516" oninput="parseDate('f-start','f-start-hint')" />
+        <div class="hint" id="f-start-hint"></div>
+      </div>
+      <div class="field">
+        <label>繳費期滿日</label>
+        <input type="text" id="f-payend" placeholder="如 1300516" oninput="parseDate('f-payend','f-payend-hint')" />
+        <div class="hint" id="f-payend-hint"></div>
+      </div>
+      <div class="field">
+        <label>保障期滿日</label>
+        <input type="text" id="f-covend" placeholder="終身可留空" oninput="parseDate('f-covend','f-covend-hint')" />
+        <div class="hint" id="f-covend-hint"></div>
+      </div>
+    </div>
+
+    <!-- 幣別 + 保費 + 匯率 -->
+    <div class="grid-3">
+      <div class="field">
+        <label>幣別</label>
+        <select id="f-currency" onchange="toggleFx()">
+          <option>TWD</option>
+          <option>USD</option>
+          <option>AUD</option>
+          <option>JPY</option>
+          <option>EUR</option>
+          <option>GBP</option>
+        </select>
+      </div>
+      <div class="field">
+        <label id="premium-label">年繳保費（TWD）</label>
+        <input type="number" id="f-premium" placeholder="如 32000" oninput="calcTWD()" />
+      </div>
+      <div class="field" id="fx-field">
+        <label>匯率</label>
+        <input type="number" id="f-rate" placeholder="—" oninput="calcTWD()" />
+      </div>
+    </div>
+
+    <!-- 年繳台幣自動換算 -->
+    <div class="twd-display" id="twd-display" style="display:none">
+      <span class="twd-label">年繳台幣</span>
+      <span class="twd-value" id="twd-value">—</span>
+      <span class="twd-calc" id="twd-calc"></span>
+    </div>
+
+    <!-- 驗證提示 -->
+    <div id="form-error" style="font-size: 18px; color:#e74c3c; margin-bottom:8px; display:none;"></div>
+
+    <!-- 按鈕 -->
+    <div class="btn-row">
+      <button class="btn-danger" id="delete-btn" style="display:none" onclick="deletePolicy()">刪除</button>
+      <button class="btn-secondary" onclick="closeForm()">取消</button>
+      <button class="btn-primary" id="save-btn" onclick="savePolicy()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const GAS_URL = "https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec";
+
+const COMPANIES = [
+  "富邦人壽","國泰人壽","南山人壽","新光人壽","中國人壽","台灣人壽",
+  "三商美邦人壽","遠雄人壽","全球人壽","保誠人壽","宏泰人壽","第一金人壽",
+  "合作金庫人壽","臺銀人壽","元大人壽","康健人壽","安聯人壽","友邦人壽",
+  "法國巴黎人壽","宏利人壽","skyway人壽",
+];
+
+let currentUser   = null;
+let familyData    = null;
+let familyFileName = null;
+let personDataMap  = {};
+let currentTab     = "all";  // "all" or personId
+let editingPolicy  = null;   // null=新增, object=編輯中的保單
+let editingPersonId = null;
+
+// ── 初始化 ────────────────────────────────────────────────
+window.addEventListener("nbs_nav_ready", async function(e) {
+  currentUser       = e.detail.user;  // 賦值給全域變數
+  familyData        = e.detail.familyData;
+  currentPersonId   = e.detail.currentPersonId;
+  familyFileName    = e.detail.familyFileName;
+
+  if (!currentUser) {
+    document.getElementById("loading").innerHTML = "載入失敗：請重新登入";
+    return;
+  }
+  if (!familyData) {
+    // 家庭資料尚未建立，顯示空白頁面
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("content").style.display = "block";
+    return;
+  }
+
+  try {
+    // 效能優化：nav.js 現在已經用 readFamilyBundle 把家庭+成員資料
+    // 一起抓好了，這裡優先直接借用 e.detail.personsData，不再自己
+    // 重複對每個成員各打一次 readFile。只有「缺資料」的成員才補抓
+    // （例如 nav.js 走到舊版降級邏輯時的保護）。
+    const activeMembers = familyData.members.filter(m => m.role !== "beneficiary_only");
+    personDataMap = Object.assign({}, e.detail.personsData || {});
+
+    const missingMembers = activeMembers.filter(m => !personDataMap[m.personId]);
+    if (missingMembers.length) {
+      const fetchPromises = missingMembers.map(m => {
+        return callGAS("readFile", {
+          email: currentUser.email,
+          fileType: "persons",
+          fileName: m.name + "_" + m.personId + ".json"
+        }).then(pr => {
+          if (pr.status === "ok" && pr.content) personDataMap[m.personId] = pr.content;
+        }).catch(err => console.error("讀取 " + m.name + " 失敗", err));
+      });
+      await Promise.all(fetchPromises);
+    }
+
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("content").style.display = "block";
+    renderTabs();
+    renderPolicies();
+  } catch(err) {
+    console.error("policy.html init error", err);
+    document.getElementById("loading").innerHTML = "載入失敗：" + err.message;
+  }
+});
+
+// ── 成員 Tab ──────────────────────────────────────────────
+function renderTabs() {
+  const members = familyData.members.filter(m => m.role !== "beneficiary_only");
+  const allCount = members.reduce((s, m) => s + (personDataMap[m.personId]?.policies?.length || 0), 0);
+
+  let html = `<div class="member-tab ${currentTab==='all'?'active':''}" onclick="switchTab('all')">
+    全家 <span class="tab-count">${allCount}</span></div>`;
+
+  members.forEach(m => {
+    const count = personDataMap[m.personId]?.policies?.length || 0;
+    html += `<div class="member-tab ${currentTab===m.personId?'active':''}" onclick="switchTab('${m.personId}')">
+      ${m.name} <span class="tab-count">${count}</span></div>`;
+  });
+
+  document.getElementById("member-tabs").innerHTML = html;
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  renderTabs();
+  renderPolicies();
+}
+
+// ── 渲染保單列表 ──────────────────────────────────────────
+// ── 新增：附約摺疊切換函數 ──────────────────────────────────────────
+function toggleRiders(safeId) {
+  const container = document.getElementById("riders-" + safeId);
+  const icon = document.getElementById("icon-" + safeId);
+  if (container.style.display === "none") {
+    container.style.display = "block";
+    if (icon) icon.style.transform = "rotate(90deg)";
+  } else {
+    container.style.display = "none";
+    if (icon) icon.style.transform = "rotate(0deg)";
+  }
+}
+
+// ── 替換：重新渲染保單列表 ──────────────────────────────────────────
+// ── 替換：重新渲染保單列表 (加入主/附約數量統計) ──────────────────────────
+function renderPolicies() {
+  const members = familyData.members.filter(m => m.role !== "beneficiary_only");
+
+  // 1. 蒐集要顯示的保單
+  let allPolicies = [];
+  members.forEach(m => {
+    const policies = personDataMap[m.personId]?.policies || [];
+    policies.forEach(p => allPolicies.push({ ...p, _memberId: m.personId, _memberName: m.name }));
+  });
+
+  const filtered = currentTab === "all" ? allPolicies : allPolicies.filter(p => p._memberId === currentTab);
+
+  if (filtered.length === 0) {
+    document.getElementById("stats-row").innerHTML = `
+      <div class="stat-card"><div class="stat-label">${currentTab==='all'?'全家保單':'本人保單'}</div><div class="stat-value">0 筆</div></div>
+      <div class="stat-card"><div class="stat-label">年繳總保費</div><div class="stat-value">NT$ 0</div></div>
+      <div class="stat-card"><div class="stat-label">月均保費</div><div class="stat-value">0</div></div>`;
+    document.getElementById("policy-list").innerHTML =
+      '<div class="empty-state">尚無保單，點下方「新增主約保單」開始輸入</div>';
+    return;
+  }
+
+  // 2. 依保單號碼分組 (提早執行，以便計算主附約數量)
+  const groups = {};
+  filtered.forEach(p => {
+    const key = p.policyNo || p.id;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(p);
+  });
+
+  // 3. 計算統計數據：群組數=主約數，剩餘=附約數
+  const mainCount = Object.keys(groups).length;
+  const riderCount = filtered.length - mainCount;
+  const totalTWD = filtered.filter(p => p.status === "有效").reduce((s, p) => s + (p.premiumTWD || 0), 0);
+
+  // 4. 渲染統計卡片 (修改筆數顯示方式)
+  document.getElementById("stats-row").innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">${currentTab==='all'?'全家保單':'本人保單'}</div>
+      <div class="stat-value" style="font-size: 21px; color:#0C447C;">${mainCount}主 / ${riderCount}附</div>
+    </div>
+    <div class="stat-card"><div class="stat-label">年繳總保費</div><div class="stat-value">NT$ ${(totalTWD/10000).toFixed(1)}萬</div></div>
+    <div class="stat-card"><div class="stat-label">月均保費</div><div class="stat-value">${Math.round(totalTWD/12).toLocaleString()}</div></div>`;
+
+  // 5. 渲染保單列表 (維持主附約摺疊邏輯)
+  let html = "";
+  Object.entries(groups).forEach(([policyNo, rows]) => {
+    const groupTotal = rows.reduce((s,p) => s+(p.premiumTWD||0), 0);
+    const member = familyData.members.find(m => m.personId === rows[0]._memberId);
+
+    // 判斷主約與附約
+    let mainPol = rows.find(p => p.isMain === true);
+    if (!mainPol) mainPol = rows[0]; // 向下相容舊資料
+    const riders = rows.filter(p => p !== mainPol);
+
+    // 產生安全 ID 用於 DOM 操作
+    const safeId = policyNo.replace(/[^a-zA-Z0-9]/g, '') + "_" + Math.random().toString(36).substr(2, 5);
+
+    // 渲染群組標題 (點擊可展開/收合附約)
+    html += `<div class="policy-group">
+      <div class="group-header" onclick="toggleRiders('${safeId}')" style="cursor:pointer; display:flex; align-items:center;">
+        <span class="expand-icon" id="icon-${safeId}" style="margin-right:8px; font-size: 18px; transition:transform 0.2s; color:#999;">▶</span>
+        <span class="policy-no-badge">${policyNo}</span>
+        <span class="group-company" style="margin-left:8px;">${rows[0].company||'—'}</span>
+        ${currentTab==='all' && member ? `<span class="group-member-badge" style="margin-left:8px;">${member.name}</span>` : ''}
+        <span class="group-total">年繳 NT${groupTotal.toLocaleString()}</span>
+      </div>`;
+
+    // 單列渲染輔助函數
+    const renderRow = (p, isMainNode) => {
+      const catClass = "cat-" + (p.category||"");
+      const statusClass = "status-" + (p.status||"有效");
+      const isFx = p.currency && p.currency !== "TWD";
+      const badge = isMainNode
+        ? `<span style="font-size: 18px;font-weight:700;color:#fff;background:linear-gradient(90deg,#3B82F6,#7C3AED);padding:2px 6px;border-radius:5px;white-space:nowrap">主約</span>`
+        : `<span style="font-size: 18px;font-weight:600;color:#6B7280;background:#F3F4F6;padding:2px 6px;border-radius:5px;white-space:nowrap">附約</span>`;
+
+      // 商品名稱 + 保額（同一行，保額緊跟在名稱後）
+      // 保額（單純顯示，不帶外幣資訊）
+      const insuredStr = p.insuredAmount
+        ? `<span style="color:#3B82F6;font-size: 20px;font-weight:500;margin-left:8px;white-space:nowrap">保額 ${p.insuredAmount} ${p.insuredAmountUnit||'萬元'}</span>`
+        : '';
+
+      const fxCell = '';
+
+      return `<div class="policy-row" onclick="event.stopPropagation(); openForm('edit','${p._memberId}','${p.id}')">
+        <div class="pr-cell pr-badge-cell">${badge}</div>
+        <div class="pr-cell pr-cat-cell"><span class="cat-badge ${catClass}">${p.category||'—'}</span></div>
+        <div class="pr-cell pr-name-cell" style="display:flex;align-items:center;min-width:0">
+          <span style="font-size: 21px;font-weight:600;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.itemName||'—'}</span>
+          ${insuredStr}
+        </div>
+        ${fxCell}
+        <div class="pr-cell pr-amount-cell pr-amount" style="text-align:right;white-space:nowrap">
+          ${isFx
+            ? `NT$${(p.premiumTWD||0).toLocaleString()} <span style="font-size: 16px;color:#9CA3AF;font-weight:400">(${(p.premiumOrig||0).toLocaleString()} ${p.currency})</span>`
+            : (p.premiumTWD||0).toLocaleString()
+          }
+        </div>
+        <div class="pr-cell pr-status-cell"><span class="status-badge ${statusClass}">${p.status||'有效'}</span></div>
+        <div class="pr-chevron">›</div>
+      </div>`;
+    };
+
+    // 渲染主約
+    html += renderRow(mainPol, true);
+
+    // 渲染附約區塊
+    html += `<div class="riders-container" id="riders-${safeId}" style="display:block; background:#fafafa; border-top:1px solid #f0f0f0;">`;
+    // 箭頭預設向下
+    setTimeout(function(){ var ic=document.getElementById("icon-"+safeId); if(ic) ic.style.transform="rotate(90deg)"; }, 0);
+    riders.forEach(r => {
+      html += renderRow(r, false);
+    });
+    html += `<button class="add-rider-btn" onclick="event.stopPropagation(); openForm('rider','${rows[0]._memberId}','${policyNo}')"
+      style="background:#EBF4FF; color:#378ADD; border:1.5px dashed #378ADD; font-weight:500; padding:10px;">
+      ＋ 新增附約（保單號碼：${policyNo}）</button>`;
+    html += `</div></div>`;
+  });
+
+  document.getElementById("policy-list").innerHTML = html;
+}// ── 表單開啟 ─────────────────────────────────────────────
+// ── 要保人選單：從家庭成員動態建立 ──────────────────────────
+function buildOwnerOptions(selectedName) {
+  const sel = document.getElementById("f-owner");
+  if (!sel) return;
+  // 收集所有成員（含受益人身份的人，要保人不限）
+  const members = familyData ? familyData.members : [];
+  let html = "";
+  members.forEach(m => {
+    const relation = m.relation || m.role || "";
+    const label    = m.name + (relation ? "（" + relation + "）" : "");
+    const selected = (m.name === selectedName) ? " selected" : "";
+    html += `<option value="${m.name}"${selected}>${label}</option>`;
+  });
+  // 若 selectedName 不在成員名單（舊資料），加一個保留選項
+  if (selectedName && !members.find(m => m.name === selectedName)) {
+    html = `<option value="${selectedName}" selected>${selectedName}（舊資料）</option>` + html;
+  }
+  sel.innerHTML = html;
+}
+
+function openForm(mode, memberId, policyIdOrNo) {
+  editingPolicy = null;
+  editingPersonId = memberId || (currentTab !== "all" ? currentTab : (familyData && familyData.members ? familyData.members.find(m=>m.role==="primary")?.personId : null));
+
+  // 重置表單
+  ["f-policyno","f-item","f-start","f-payend","f-covend","f-premium","f-rate"].forEach(id => {
+    document.getElementById(id).value = "";
+  });
+  ["f-start-hint","f-payend-hint","f-covend-hint"].forEach(id => {
+    document.getElementById(id).textContent = "";
+  });
+  document.getElementById("f-cat").value = "";
+  document.getElementById("f-company-search").value = "";
+  document.getElementById("f-company").value = "";
+  // 要保人：預設為當前被保險人
+  const currentMember = familyData && familyData.members.find(m => m.personId === memberId);
+  buildOwnerOptions(currentMember ? currentMember.name : "");
+  document.getElementById("f-status").value = "有效";
+  document.getElementById("f-paymode").value = "年繳";
+  document.getElementById("f-currency").value = "TWD";
+  document.getElementById("f-amount").value = "";
+  document.getElementById("f-amount-unit").value = "萬元";
+  document.getElementById("f-amount-unit-custom").style.display = "none";
+  document.getElementById("f-amount-unit-custom").value = "";
+  document.getElementById("twd-display").style.display = "none";
+  document.getElementById("form-error").style.display = "none";
+  document.getElementById("delete-btn").style.display = "none";
+  document.getElementById("company-list").style.display = "none";
+  document.getElementById("f-ismain").value = "true";
+  toggleFx();
+
+  // 渲染被保人選擇
+  renderMemberSelector(editingPersonId);
+
+  if (mode === "edit") {
+    // 找到要編輯的保單
+    const person = personDataMap[memberId];
+    const policy = person?.policies?.find(p => p.id === policyIdOrNo);
+    if (!policy) return;
+
+    editingPolicy = policy;
+    document.getElementById("form-title").textContent = "編輯保單";
+    document.getElementById("delete-btn").style.display = "block";
+
+    document.getElementById("f-policyno").value  = policy.policyNo || "";
+    document.getElementById("f-cat").value       = policy.category || "";
+    document.getElementById("f-company-search").value = policy.company || "";
+    document.getElementById("f-company").value   = policy.company || "";
+    buildOwnerOptions(policy.owner || "");
+    document.getElementById("f-status").value    = policy.status || "有效";
+    document.getElementById("f-item").value      = policy.itemName || "";
+    document.getElementById("f-amount").value = policy.insuredAmount || "";
+    document.getElementById("f-ismain").value = (policy.isMain !== false) ? "true" : "false";
+    var savedUnit = policy.insuredAmountUnit || "萬元";
+    var unitOptions = ["萬元","元","計劃","型","份"];
+    var unitSel = document.getElementById("f-amount-unit");
+    var customEl = document.getElementById("f-amount-unit-custom");
+    if (unitOptions.includes(savedUnit)) {
+      unitSel.value = savedUnit;
+      customEl.style.display = "none";
+    } else {
+      unitSel.value = "custom";
+      customEl.value = savedUnit;
+      customEl.style.display = "block";
+    }
+    document.getElementById("f-start").value     = policy.startDateRaw || "";
+    document.getElementById("f-payend").value    = policy.payEndRaw || "";
+    document.getElementById("f-covend").value    = policy.covEndRaw || "";
+    document.getElementById("f-paymode").value   = policy.payMode || "年繳";
+    document.getElementById("f-currency").value  = policy.currency || "TWD";
+    document.getElementById("f-premium").value   = policy.premiumOrig || "";
+    document.getElementById("f-rate").value      = policy.exchangeRate || "";
+
+    if (policy.startDateRaw)  parseDate("f-start","f-start-hint");
+    if (policy.payEndRaw)     parseDate("f-payend","f-payend-hint");
+    if (policy.covEndRaw)     parseDate("f-covend","f-covend-hint");
+    toggleFx();
+    calcTWD();
+
+  } else if (mode === "rider") {
+    document.getElementById("form-title").textContent = "新增附約（保單號碼：" + policyIdOrNo + "）";
+    document.getElementById("f-policyno").value = policyIdOrNo;
+    document.getElementById("f-ismain").value = "false";
+
+    // 自動帶入主約的保險公司
+    const riderPerson = personDataMap[editingPersonId];
+    const masterPols = (riderPerson?.policies || []).filter(p => p.policyNo === policyIdOrNo);
+    if (masterPols.length > 0) {
+      const masterCompany = masterPols[0].company || "";
+      document.getElementById("f-company-search").value = masterCompany;
+      document.getElementById("f-company").value = masterCompany;
+    }
+  } else {
+    document.getElementById("form-title").textContent = "新增主約保單";
+  }
+
+  document.getElementById("form-modal").classList.add("active");
+}
+
+function closeForm() {
+  document.getElementById("form-modal").classList.remove("active");
+  document.getElementById("company-list").style.display = "none";
+}
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById("form-modal")) closeForm();
+}
+
+// ── 被保人選擇渲染 ────────────────────────────────────────
+function renderMemberSelector(selectedId) {
+  const members = familyData.members.filter(m => m.role !== "beneficiary_only");
+  const html = members.map(m => `
+    <div class="member-sel-item ${editingPersonId === m.personId ? 'active' : ''}"
+         onclick="selectFormMember('${m.personId}')">
+      <div class="member-sel-avatar">${m.name[0]}</div>
+      <div>
+        <div class="member-sel-name">${m.name}</div>
+        <div class="member-sel-rel">${m.relation || ''}</div>
+      </div>
+    </div>`).join("");
+  document.getElementById("member-selector").innerHTML = html;
+}
+
+function selectFormMember(personId) {
+  editingPersonId = personId;
+  renderMemberSelector(personId);
+}
+
+// ── 保險公司搜尋 ──────────────────────────────────────────
+function showCompanyList() {
+  filterCompany(document.getElementById("f-company-search").value);
+}
+
+function filterCompany(q) {
+  const filtered = q ? COMPANIES.filter(c => c.includes(q)) : COMPANIES;
+  const list = document.getElementById("company-list");
+  list.style.display = "block";
+  list.innerHTML = filtered.map(c =>
+    `<div onclick="pickCompany('${c}')" style="padding:8px 12px;font-size: 20px;cursor:pointer;border-bottom:1px solid #f5f5f5;"
+     onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background=''">${c}</div>`
+  ).join("") || `<div style="padding:8px 12px;font-size: 18px;color:#aaa">找不到結果</div>`;
+}
+
+function pickCompany(name) {
+  document.getElementById("f-company-search").value = name;
+  document.getElementById("f-company").value = name;
+  document.getElementById("company-list").style.display = "none";
+}
+
+document.addEventListener("click", e => {
+  const wrap = document.querySelector(".search-wrap");
+  if (wrap && !wrap.contains(e.target)) {
+    document.getElementById("company-list").style.display = "none";
+  }
+});
+
+// ── 日期快速解析 ──────────────────────────────────────────
+function parseDate(inputId, hintId) {
+  const val = document.getElementById(inputId).value.replace(/\D/g,"");
+  const hint = document.getElementById(hintId);
+  if (!val) { hint.textContent = ""; return; }
+  if (val.length === 7) {
+    const y=parseInt(val.slice(0,3)), m=parseInt(val.slice(3,5)), d=parseInt(val.slice(5,7));
+    if (m>=1&&m<=12&&d>=1&&d<=31) { hint.textContent = y+"年"+m+"月"+d+"日"; return; }
+  }
+  if (val.length === 6) {
+    const y=parseInt(val.slice(0,2)), m=parseInt(val.slice(2,4)), d=parseInt(val.slice(4,6));
+    if (m>=1&&m<=12&&d>=1&&d<=31) { hint.textContent = y+"年"+m+"月"+d+"日"; return; }
+  }
+  hint.textContent = "";
+}
+
+// 日期字串轉西元
+function rocToWestern(raw) {
+  if (!raw) return null;
+  const d = raw.replace(/\D/g,"");
+  if (d.length === 7) return (parseInt(d.slice(0,3))+1911) + "-" + d.slice(3,5) + "-" + d.slice(5,7);
+  if (d.length === 6) return (parseInt(d.slice(0,2))+1911) + "-" + d.slice(2,4) + "-" + d.slice(4,6);
+  return null;
+}
+
+// ── 保額單位自訂切換 ─────────────────────────────────────
+function toggleAmountCustom() {
+  var unit = document.getElementById("f-amount-unit").value;
+  var customEl = document.getElementById("f-amount-unit-custom");
+  if (unit === "custom") {
+    customEl.style.display = "block";
+    customEl.focus();
+  } else {
+    customEl.style.display = "none";
+  }
+}
+
+// ── 幣別切換 ─────────────────────────────────────────────
+function toggleFx() {
+  const currency = document.getElementById("f-currency").value;
+  const fxField = document.getElementById("fx-field");
+  const label = document.getElementById("premium-label");
+  label.textContent = `年繳保費（${currency}）`;
+  if (currency === "TWD") {
+    fxField.style.opacity = "0.4";
+    fxField.style.pointerEvents = "none";
+    document.getElementById("f-rate").value = "";
+  } else {
+    fxField.style.opacity = "1";
+    fxField.style.pointerEvents = "auto";
+  }
+  calcTWD();
+}
+
+// ── 年繳台幣換算 ──────────────────────────────────────────
+function calcTWD() {
+  const currency = document.getElementById("f-currency").value;
+  const premium  = parseFloat(document.getElementById("f-premium").value) || 0;
+  const rate     = parseFloat(document.getElementById("f-rate").value) || 0;
+  const display  = document.getElementById("twd-display");
+  const valEl    = document.getElementById("twd-value");
+  const calcEl   = document.getElementById("twd-calc");
+
+  if (!premium) { display.style.display = "none"; return; }
+  display.style.display = "flex";
+
+  if (currency === "TWD") {
+    valEl.textContent = "NT$ " + premium.toLocaleString();
+    calcEl.textContent = "";
+  } else {
+    if (!rate) { valEl.textContent = "請填入匯率"; calcEl.textContent = ""; return; }
+    const twd = Math.round(premium * rate);
+    valEl.textContent = "NT$ " + twd.toLocaleString();
+    calcEl.textContent = premium.toLocaleString() + " " + currency + " × " + rate;
+  }
+}
+
+// ── 儲存保單 ─────────────────────────────────────────────
+async function savePolicy() {
+  const policyNo = document.getElementById("f-policyno").value.trim();
+  const cat      = document.getElementById("f-cat").value;
+  const company  = document.getElementById("f-company").value || document.getElementById("f-company-search").value.trim();
+  const item     = document.getElementById("f-item").value.trim();
+
+  const _currency = document.getElementById("f-currency").value;
+  const _rate     = parseFloat(document.getElementById("f-rate").value) || 0;
+  if (!policyNo || !cat || !company) {
+    const err = document.getElementById("form-error");
+    err.textContent = "請填寫保單號碼、類別、保險公司";
+    err.style.display = "block";
+    return;
+  }
+  // 外幣保單：匯率必填，避免台幣換算為 0 或錯誤值
+  if (_currency !== "TWD" && !_rate) {
+    const err = document.getElementById("form-error");
+    err.textContent = "外幣保單請填寫匯率（如 USD 填 31.5），否則台幣年繳無法正確計算";
+    err.style.display = "block";
+    document.getElementById("f-rate").focus();
+    return;
+  }
+
+  document.getElementById("form-error").style.display = "none";
+  const btn = document.getElementById("save-btn");
+  btn.disabled = true;
+  btn.textContent = "儲存中…";
+
+  const currency = document.getElementById("f-currency").value;
+  const premium  = parseFloat(document.getElementById("f-premium").value) || 0;
+  const rate     = parseFloat(document.getElementById("f-rate").value) || null;
+  const premiumTWD = currency === "TWD" ? premium : (rate ? Math.round(premium * rate) : 0);
+
+  const startRaw  = document.getElementById("f-start").value.trim();
+  const payEndRaw = document.getElementById("f-payend").value.trim();
+  const covEndRaw = document.getElementById("f-covend").value.trim();
+
+  const policy = {
+    id:          editingPolicy ? editingPolicy.id : "pol_" + Date.now(),
+    isMain:      document.getElementById("f-ismain").value === "true",
+    policyNo,
+    category:    cat,
+    company,
+    owner:       document.getElementById("f-owner").value,
+    itemName:    item,
+    insuredAmount:     document.getElementById("f-amount").value.trim() || null,
+    insuredAmountUnit: (function(){
+      var u = document.getElementById("f-amount-unit").value;
+      if (u === "custom") return document.getElementById("f-amount-unit-custom").value.trim() || "萬元";
+      return u;
+    })(),
+    startDateRaw:  startRaw,
+    payEndRaw,
+    covEndRaw,
+    startDate:   rocToWestern(startRaw),
+    payEndDate:  rocToWestern(payEndRaw),
+    covEndDate:  rocToWestern(covEndRaw),
+    payMode:     document.getElementById("f-paymode").value,
+    currency,
+    exchangeRate: rate,
+    premiumOrig: premium,
+    premiumTWD,
+    status:      document.getElementById("f-status").value,
+    updatedAt:   new Date().toISOString(),
+  };
+
+  try {
+    const person = personDataMap[editingPersonId];
+    if (!person) throw new Error("找不到被保人資料");
+
+    if (editingPolicy) {
+      // 編輯：替換
+      const idx = person.policies.findIndex(p => p.id === editingPolicy.id);
+      if (idx >= 0) person.policies[idx] = policy;
+      else person.policies.push(policy);
+    } else {
+      // 新增
+      person.policies.push(policy);
+    }
+
+    person.updatedAt = new Date().toISOString();
+
+    const member = familyData.members.find(m => m.personId === editingPersonId);
+    const saveResult = await callGAS("saveFile", {
+      email: currentUser.email,
+      fileType: "persons",
+      fileId: editingPersonId,
+      fileName: member.name + "_" + editingPersonId + ".json",
+      content: person,
+    });
+
+    // ── 明確檢查回傳值，GAS 回傳 error 時要報錯 ──
+    if (!saveResult || saveResult.status === "error") {
+      throw new Error(
+        (saveResult && saveResult.message) ||
+        "Google Drive 寫入失敗，請確認網路連線後再試"
+      );
+    }
+
+    // 確實寫入成功後才清快取與關閉表單
+    if (window.NBS_NAV && typeof NBS_NAV.invalidateBundleCache === 'function') {
+      NBS_NAV.invalidateBundleCache();
+    } else {
+      const _fn = localStorage.getItem('nbs_current_family');
+      if (_fn) sessionStorage.removeItem('nbs_bundle_' + _fn);
+    }
+
+    closeForm();
+    renderTabs();
+    renderPolicies();
+
+    // 若是新增主約，詢問是否繼續新增附約
+    if (!editingPolicy && policy.isMain) {
+      const savedPolicyNo = policy.policyNo;
+      const savedMemberId = editingPersonId;
+      setTimeout(function() {
+        if (confirm("主約已儲存！\n\n是否立即在「" + savedPolicyNo + "」下新增附約？")) {
+          openForm("rider", savedMemberId, savedPolicyNo);
+        }
+      }, 150);
+    }
+
+  } catch(e) {
+    const errEl = document.getElementById("form-error");
+    errEl.textContent = "⚠️ " + (e.message || "儲存失敗，請重試");
+    errEl.style.display = "block";
+    errEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    console.error("[savePolicy]", e);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "儲存";
+  }
+}
+
+// ── 刪除保單 ─────────────────────────────────────────────
+async function deletePolicy() {
+  if (!editingPolicy || !confirm("確定要刪除這筆保單？")) return;
+
+  try {
+    const person = personDataMap[editingPersonId];
+    person.policies = person.policies.filter(p => p.id !== editingPolicy.id);
+    person.updatedAt = new Date().toISOString();
+
+    const member = familyData.members.find(m => m.personId === editingPersonId);
+    const delResult = await callGAS("saveFile", {
+      email: currentUser.email,
+      fileType: "persons",
+      fileId: editingPersonId,
+      fileName: member.name + "_" + editingPersonId + ".json",
+      content: person,
+    });
+
+    if (!delResult || delResult.status === "error") {
+      throw new Error(
+        (delResult && delResult.message) ||
+        "Google Drive 寫入失敗，請確認網路連線後再試"
+      );
+    }
+
+    if (window.NBS_NAV && typeof NBS_NAV.invalidateBundleCache === 'function') {
+      NBS_NAV.invalidateBundleCache();
+    } else {
+      const _fn = localStorage.getItem('nbs_current_family');
+      if (_fn) sessionStorage.removeItem('nbs_bundle_' + _fn);
+    }
+
+    closeForm();
+    renderTabs();
+    renderPolicies();
+  } catch(e) {
+    alert("刪除失敗：" + e.message);
+  }
+}
+
+// ── 工具函式 ──────────────────────────────────────────────
+function toRoc(dateStr) {
+  if (!dateStr) return "—";
+  const d = new Date(dateStr);
+  if (isNaN(d)) return "—";
+  return (d.getFullYear()-1911)+"年"+(d.getMonth()+1)+"月"+d.getDate()+"日";
+}
+
+function goBack() { window.location.href = "family.html"; }
+
+function callGAS(action, params) {
+  if (window.NBS_NAV && typeof NBS_NAV.callGAS === 'function') {
+    return NBS_NAV.callGAS(action, params);
+  }
+  return Promise.reject(new Error('nav.js 未載入'));
+}
+
+
+// ── NBS 導覽 ──────────────────────────────────────────────
+NBS_NAV.onMemberChange = function(pid) {
+  currentPersonId = pid;
+  if (typeof renderTabs === "function") renderTabs();
+  if (typeof renderPolicies === "function") renderPolicies();
+};
+
+// 支援兩種事件：nav.js 自行載入 或 family.html 先載入後通知
+window.addEventListener("nbs_family_loaded", function(e) {
+  if (typeof familyData !== "undefined" && familyData) return; // 已初始化
+  var u = JSON.parse(localStorage.getItem("nbs_user") || "{}");
+  window.dispatchEvent(new CustomEvent("nbs_nav_ready", {
+    detail: {
+      user:            u,
+      familyData:      e.detail.familyData,
+      currentPersonId: e.detail.familyData && e.detail.familyData.members &&
+                       e.detail.familyData.members[0] && e.detail.familyData.members[0].personId,
+      familyFileName:  e.detail.familyFileName
+    }
+  }));
+});
+NBS_NAV.init({ page: "policy" });
+</script>
+</body>
+</html>
