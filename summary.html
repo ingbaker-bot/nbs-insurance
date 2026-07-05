@@ -42,10 +42,10 @@
     .policy-no-badge { font-family:monospace; font-size:15px; font-weight:500; background:#E6F1FB; color:#0C447C; padding:1px 8px; border-radius:99px; }
     .group-company { font-size:24px; font-weight:500; }
     .group-total { font-size:22px; color:#999; margin-left:auto; }
-    .policy-row { display:grid; grid-template-columns:minmax(96px,auto) 1fr minmax(96px,auto) minmax(70px,auto); align-items:center; gap:8px; padding:9px 14px; border-top:1px solid #f5f5f5; }
+    .policy-row { display:grid; grid-template-columns:minmax(96px,auto) 1fr minmax(220px,auto) minmax(70px,auto); align-items:center; gap:8px; padding:9px 14px; border-top:1px solid #f5f5f5; }
     .cat-badge { font-size:15px; padding:2px 8px; border-radius:99px; text-align:center; display:inline-block; }
     .policy-name { font-size:24px; padding-left:8px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    .policy-prem { font-size:24px; font-weight:500; text-align:right; }
+    .policy-prem { font-size:24px; font-weight:500; text-align:right; white-space:nowrap; }
     .status-badge { font-size:15px; padding:1px 6px; border-radius:99px; text-align:center; }
     .status-有效 { background:#EAF3DE; color:#27500A; }
     .status-停效 { background:#FCEBEB; color:#791F1F; }
@@ -529,10 +529,14 @@ function renderContent() {
       </div>`;
     rows.forEach(p=>{
       const cc=CAT_COLORS[p.category]||"#999";
+      const isFx = p.currency && p.currency !== "TWD";
+      const premDisplay = isFx
+        ? `NT$${(p.premiumTWD||0).toLocaleString()} <span style="font-size:14px;color:#9CA3AF;font-weight:400">(${p.currency} ${(p.premiumOrig||0).toLocaleString()})</span>`
+        : `${(p.premiumTWD||0).toLocaleString()}`;
       html+=`<div class="policy-row">
         <span class="cat-badge" style="background:${cc}20;color:${cc}">${p.category}</span>
         <span class="policy-name">${p.itemName||'—'}</span>
-        <span class="policy-prem">${(p.premiumTWD||0).toLocaleString()}</span>
+        <span class="policy-prem">${premDisplay}</span>
         <span class="status-badge status-${p.status||'有效'}">${p.status||'有效'}</span>
       </div>`;
     });
