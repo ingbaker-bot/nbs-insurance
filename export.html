@@ -32,6 +32,11 @@
     .fmt.spng .fmt-title{color:#0C447C}
     .fmt.spdf .fmt-title{color:#791F1F}
     .fmt-desc{font-size:14px;color:#aaa;line-height:1.5}
+    .fmt-section-hdr{display:flex;align-items:center;gap:8px;font-size:17px;font-weight:500;color:#555;margin-top:14px;padding:8px 4px;cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,0);border-radius:8px}
+    .fmt-section-hdr:hover{background:#f7f7f5}
+    .fmt-hdr-sel{font-size:14px;font-weight:500;padding:2px 10px;border-radius:99px;background:#F0F7FF;color:#0C447C;white-space:nowrap}
+    .fmt-section-hdr.is-pdf .fmt-hdr-sel{background:#FEF5F8;color:#791F1F}
+    .fmt-chevron{font-size:14px;color:#bbb;transition:transform .15s;width:16px;text-align:center}
     .pbtn{width:100%;padding:12px;color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:500;cursor:pointer;font-family:inherit;display:block;-webkit-tap-highlight-color:rgba(0,0,0,0)}
     .pbtn:disabled{background:#ccc!important;cursor:default}
     .sbtn{padding:10px;background:#fff;color:#666;border:1px solid #ddd;border-radius:8px;font-size:16px;cursor:pointer;font-family:inherit;flex:1;-webkit-tap-highlight-color:rgba(0,0,0,0)}
@@ -62,9 +67,17 @@
       <button id="B_TOGALL" style="font-size:14px;padding:3px 12px;border:1px solid #ddd;border-radius:99px;background:#fff;color:#666;cursor:pointer;font-family:inherit">全部取消</button>
     </div>
     <div id="BLKLIST"></div>
-    <div style="font-size:17px;font-weight:500;color:#555;margin-top:14px;margin-bottom:6px">🖼️ 圖檔（PNG）</div>
+    <div class="fmt-section-hdr" id="FMT_HDR_png" onclick="toggleFmtSection('png')">
+      <span style="flex:1">🖼️ 圖檔（PNG）</span>
+      <span class="fmt-hdr-sel" id="FMT_SEL_png"></span>
+      <span class="fmt-chevron" id="FMT_CHEV_png">▾</span>
+    </div>
     <div class="fmt-grid" id="FMT_PNG"></div>
-    <div style="font-size:17px;font-weight:500;color:#555;margin-top:10px;margin-bottom:6px">📄 文件（PDF）</div>
+    <div class="fmt-section-hdr is-pdf" id="FMT_HDR_pdf" onclick="toggleFmtSection('pdf')">
+      <span style="flex:1">📄 文件（PDF）</span>
+      <span class="fmt-hdr-sel" id="FMT_SEL_pdf"></span>
+      <span class="fmt-chevron" id="FMT_CHEV_pdf">▾</span>
+    </div>
     <div class="fmt-grid" id="FMT_PDF"></div>
     <button class="pbtn" id="B_PREV" style="background:#378ADD;margin-top:20px">預覽區塊</button>
   </div>
@@ -128,6 +141,7 @@ const CC={"壽險保障":"#4A90D9","醫療保障":"#27AE8F","意外險":"#F5A623
 // ── 狀態 ─────────────────────────────────────────────────
 var sel={premium_detail:false,summary:false,policy_detail:false,savings_timeline:false};
 var fmt="png_single";
+var fmtOpen="png"; // 手風琴目前展開的區塊，預設展開 PNG
 var person={},policies=[],coverage={},savings=[];
 var pName="",pDate="";
 
@@ -175,6 +189,29 @@ function buildFmts(){
       };})(f.key,t);
       c.appendChild(d);
     });
+  });
+  renderFmtSections();
+}
+
+// ── PNG／PDF 手風琴收合 ──────────────────────────────────
+function toggleFmtSection(type){
+  fmtOpen = (fmtOpen===type) ? null : type;
+  renderFmtSections();
+}
+
+function renderFmtSections(){
+  ["png","pdf"].forEach(function(t){
+    var isOpen = fmtOpen===t;
+    document.getElementById("FMT_"+t.toUpperCase()).style.display = isOpen ? "grid" : "none";
+    document.getElementById("FMT_CHEV_"+t).textContent = isOpen ? "▾" : "▸";
+    var selEl = document.getElementById("FMT_SEL_"+t);
+    var cur = FMTS.find(function(f){return f.key===fmt && f.type===t;});
+    if(!isOpen && cur){
+      selEl.textContent = cur.label;
+      selEl.style.display = "inline-block";
+    } else {
+      selEl.style.display = "none";
+    }
   });
 }
 
