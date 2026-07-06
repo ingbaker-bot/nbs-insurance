@@ -748,7 +748,12 @@ function renderPolicies() {
   // 3. 計算統計數據：群組數=主約數，剩餘=附約數
   const mainCount = Object.keys(groups).length;
   const riderCount = filtered.length - mainCount;
-  const totalTWD = filtered.filter(p => p.status === "有效").reduce((s, p) => s + (p.premiumTWD || 0), 0);
+  const totalTWD = filtered.filter(p => p.status === "有效")
+  .reduce((s, p) => {
+    // 強制轉為數字，如果轉不了就視為 0
+    const val = Number(p.premiumTWD) || 0; 
+    return s + val;
+  }, 0);
 
   // 4. 渲染統計卡片 (修改筆數顯示方式)
   document.getElementById("stats-row").innerHTML = `
