@@ -1450,6 +1450,9 @@ function callGAS(action, params) {
 // ═══════════════════════════════════════════════════════
 //  PDF 上傳、萃取文字、並自動呼叫 API1 AI 解析
 // ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
+//  未來 PDF 終極版：支援多檔案疊加、主附約整批合併、自動存檔
+// ═══════════════════════════════════════════════════════
 async function handlePDFUpload() {
   const fileInput = document.getElementById('pdf-upload');
   const msgEl = document.getElementById("ai-parse-msg");
@@ -1463,7 +1466,7 @@ async function handlePDFUpload() {
 
   const file = fileInput.files[0];
   btn.disabled = true;
-  btn.textContent = "📄 正在讀取 PDF 內容...";
+  btn.textContent = "📄 正在本機萃取 PDF 文字...";
   msgEl.style.display = "none";
 
   try {
@@ -1479,56 +1482,119 @@ async function handlePDFUpload() {
       fullText += pageText + "\n";
     }
 
-    // 2. 直接呼叫原本 API1 的 AI 解析函數
-    btn.textContent = "🤖 讀取成功！正在呼叫 AI 分析...";
+    btn.textContent = "🤖 文字萃取成功！正在呼叫 AI 進行多檔欄位縫合...";
     
-    // 這裡直接對接你 API1 的 handleParsePolicyText
+    // 2. 呼叫 API1 進行智慧陣列解析 (使用新版 Schema 映射 Prompt)
     const response = await callGAS("parsePolicyText", { text: fullText });
 
-    // 在 policy.html 的 handlePDFUpload 中，找到這段並擴充
-    if (response && response.status === "ok" && response.data) {
-      const data = response.data;
-      // 自動填表
-      if (data.policyNo) document.getElementById("f-policyno").value = data.policyNo;
-      if (data.company) {
-        document.getElementById("f-company").value = data.company;
-        document.getElementById("f-company-search").value = data.company;
-      }
-      if (data.itemName) document.getElementById("f-item").value = data.itemName;
-      if (data.category) document.getElementById("f-cat").value = data.category;
-      if (data.amount) document.getElementById("f-amount").value = data.amount;
-      if (data.payMode) document.getElementById("f-paymode").value = data.payMode;
-      if (data.status) document.getElementById("f-status").value = data.status;
-      
-      // 🌟 新增：日期與保費的映射
-      if (data.startDate) {
-        document.getElementById("f-start").value = data.startDate;
-        parseDate('f-start','f-start-hint'); // 觸發日期格式檢查
-      }
-      if (data.payEndDate) {
-        document.getElementById("f-payend").value = data.payEndDate;
-        parseDate('f-payend','f-payend-hint');
-      }
-      if (data.covEndDate) {
-        document.getElementById("f-covend").value = data.covEndDate;
-        if (data.covEndDate !== '終身') parseDate('f-covend','f-covend-hint');
-      }
-      if (data.premium) {
-        document.getElementById("f-premium").value = data.premium;
-        calcTWD(); // 觸發保費換算
-      }
-      
-      btn.textContent = "✅ 分析完成！";
-      btn.style.background = "#27AE8F";
-    } else {
-      throw new Error(response.message || "AI 解析回傳異常");
+    if (!response || response.status !== "ok" || !response.data) {
+      throw new Error(response.message || "AI 解析回傳異常或格式不符");
     }
+
+    // 🌟 3. 核心智慧疊加邏輯 (Upsert)
+    const aiPolicies = response.data; // 這是 AI 回傳的保單/附約陣列
+    const person = personDataMap[editingPersonId || currentPersonId];
+    if (!person) throw new Error("找不到目前被保險人資料空間");
+    if (!person.policies) person.policies = [];
+
+    let updateCount = 0;
+    let insertCount = 0;
+
+    aiPolicies.forEach(aiPol => {
+      // 檢查雲端資料庫是否已有相同的「保單號碼 + 項目名稱」
+      const existingIdx = person.policies.findIndex(p => 
+        p.policyNo === aiPol.policyNo && p.itemName === aiPol.itemName
+      );
+
+      if (existingIdx >= 0) {
+        // A. 找到重複資料：進行欄位智慧融合 (Merge)
+        const oldPol = person.policies[existingIdx];
+        
+        // 合併 coverage 給付細項明細
+        const mergedCoverage = Object.assign({}, oldPol.coverage || {}, aiPol.coverage || {});
+        
+        // 用非空的新資料覆蓋舊欄位，保留原本已有的欄位
+        person.policies[existingIdx] = {
+          ...oldPol,
+          id: oldPol.id, // 保留原識別碼
+          isMain: aiPol.isMain !== null ? aiPol.isMain : oldPol.isMain,
+          category: aiPol.category || oldPol.category,
+          amount: aiPol.amount || oldPol.amount,
+          payMode: aiPol.payMode || oldPol.payMode,
+          status: aiPol.status || oldPol.status,
+          startDateRaw: aiPol.startDate || oldPol.startDateRaw,
+          payEndRaw: aiPol.payEndDate || oldPol.payEndRaw,
+          covEndRaw: aiPol.covEndDate || oldPol.covEndRaw,
+          premiumOrig: aiPol.premium || oldPol.premiumOrig,
+          premiumTWD: aiPol.premium ? aiPol.premium : oldPol.premiumTWD, // 暫以台幣1:1計算
+          coverage: mergedCoverage,
+          updatedAt: new Date().toISOString()
+        };
+        updateCount++;
+      } else {
+        // B. 沒找到資料：建立全新識別碼並存入 (Insert)
+        person.policies.push({
+          id: "pol_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
+          isMain: aiPol.isMain,
+          policyNo: aiPol.policyNo,
+          company: aiPol.company || "富邦人壽",
+          itemName: aiPol.itemName,
+          category: aiPol.category,
+          insuredAmount: aiPol.amount,
+          payMode: aiPol.payMode || "年繳",
+          status: aiPol.status || "有效",
+          startDateRaw: aiPol.startDate,
+          payEndRaw: aiPol.payEndDate,
+          covEndRaw: aiPol.covEndDate,
+          premiumOrig: aiPol.premium,
+          premiumTWD: aiPol.premium || 0,
+          currency: "TWD",
+          coverage: aiPol.coverage || {},
+          updatedAt: new Date().toISOString()
+        });
+        insertCount++;
+      }
+    });
+
+    // 4. 自動落地存檔至雲端 Drive
+    btn.textContent = "💾 疊加成功！正在自動同步至雲端硬碟...";
+    person.updatedAt = new Date().toISOString();
+    
+    const member = familyData.members.find(m => m.personId === (editingPersonId || currentPersonId));
+    const saveResult = await callGAS("saveFile", {
+      email: currentUser.email,
+      fileType: "persons",
+      fileId: (editingPersonId || currentPersonId),
+      fileName: member.name + "_" + (editingPersonId || currentPersonId) + ".json",
+      content: person,
+    });
+
+    if (!saveResult || saveResult.status === "error") throw new Error("雲端硬碟寫入失敗");
+
+    // 5. 成功後清除快取、關閉 Modal 並重新渲染主頁面
+    if (window.NBS_NAV && typeof NBS_NAV.invalidateBundleCache === 'function') {
+      NBS_NAV.invalidateBundleCache();
+    }
+    
+    btn.textContent = `✅ 存檔成功！新增 ${insertCount} 筆 / 更新 ${updateCount} 筆`;
+    btn.style.background = "#27AE8F";
+    
+    setTimeout(() => {
+      closeForm();
+      renderTabs();
+      renderPolicies();
+      // 還原按鈕
+      btn.textContent = "✨ 上傳並自動分析填表";
+      btn.style.background = "#378ADD";
+      btn.disabled = false;
+    }, 1500);
 
   } catch (error) {
     console.error("解析流程錯誤：", error);
-    msgEl.textContent = "❌ 解析失敗：" + error.message;
+    msgEl.textContent = "❌ 處理失敗：" + error.message;
     msgEl.style.display = "block";
     btn.textContent = "✨ 重新上傳並自動分析";
+    btn.style.background = "#378ADD";
     btn.disabled = false;
   }
 }
