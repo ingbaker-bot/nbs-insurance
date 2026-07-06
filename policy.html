@@ -1502,8 +1502,9 @@ async function handlePDFUpload() {
     let updateCount = 0;
     let insertCount = 0;
 
+    // ... 在 handlePDFUpload 的 aiPolicies.forEach 迴圈中 ...
+
     aiPolicies.forEach(aiPol => {
-      // 檢查雲端資料庫是否已有相同的「保單號碼 + 項目名稱」
       const existingIdx = person.policies.findIndex(p => 
         p.policyNo === aiPol.policyNo && p.itemName === aiPol.itemName
       );
@@ -1511,24 +1512,23 @@ async function handlePDFUpload() {
       if (existingIdx >= 0) {
         // A. 找到重複資料：進行欄位智慧融合 (Merge)
         const oldPol = person.policies[existingIdx];
-        
-        // 合併 coverage 給付細項明細
         const mergedCoverage = Object.assign({}, oldPol.coverage || {}, aiPol.coverage || {});
         
-        // 用非空的新資料覆蓋舊欄位，保留原本已有的欄位
         person.policies[existingIdx] = {
           ...oldPol,
-          id: oldPol.id, // 保留原識別碼
+          id: oldPol.id, 
           isMain: aiPol.isMain !== null ? aiPol.isMain : oldPol.isMain,
           category: aiPol.category || oldPol.category,
           amount: aiPol.amount || oldPol.amount,
+          // 👇 新增這行：處理單位
+          insuredAmountUnit: aiPol.amountUnit || oldPol.insuredAmountUnit || "萬元", 
           payMode: aiPol.payMode || oldPol.payMode,
           status: aiPol.status || oldPol.status,
           startDateRaw: aiPol.startDate || oldPol.startDateRaw,
           payEndRaw: aiPol.payEndDate || oldPol.payEndRaw,
           covEndRaw: aiPol.covEndDate || oldPol.covEndRaw,
-          premiumOrig: aiPol.premium || oldPol.premiumOrig,
-          premiumTWD: aiPol.premium ? aiPol.premium : oldPol.premiumTWD, // 暫以台幣1:1計算
+          premiumOrig: aiPol.premium !== null ? aiPol.premium : oldPol.premiumOrig,
+          premiumTWD: aiPol.premium !== null ? aiPol.premium : oldPol.premiumTWD,
           coverage: mergedCoverage,
           updatedAt: new Date().toISOString()
         };
@@ -1543,6 +1543,8 @@ async function handlePDFUpload() {
           itemName: aiPol.itemName,
           category: aiPol.category,
           insuredAmount: aiPol.amount,
+          // 👇 新增這行：處理單位
+          insuredAmountUnit: aiPol.amountUnit || "萬元", 
           payMode: aiPol.payMode || "年繳",
           status: aiPol.status || "有效",
           startDateRaw: aiPol.startDate,
