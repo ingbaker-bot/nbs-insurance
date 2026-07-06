@@ -391,6 +391,12 @@
   </style>
   <script src="nav.js"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+<script>
+  // 設定 pdf.js 的 worker 路徑
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+</script>
+  
 </head>
 <body>
 <div style="display:none" id="header-sub"></div>
@@ -416,16 +422,18 @@
       <button class="modal-close" onclick="closeForm()">×</button>
     </div>
   <!-- 🌟 新增：AI 解析輸入區塊 -->
-    <div class="field" id="ai-parse-section" style="background: #F3F8FF; padding: 12px; border-radius: 8px; border: 1px dashed #378ADD; margin-bottom: 16px;">
-      <label style="color: #0C447C; font-weight: 500;">🤖 AI 智慧解析 (測試版)</label>
-      <textarea id="ai-raw-text" rows="3" placeholder="請將保單 PDF 內的文字複製貼上於此..." 
-                style="width: 100%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 6px; outline: none; font-family: inherit; resize: vertical; margin-bottom: 8px;"></textarea>
-      <button type="button" id="ai-parse-btn" onclick="analyzePolicyText()" 
-              style="width: 100%; padding: 8px; background: #378ADD; color: #fff; border: none; border-radius: 6px; font-size: 15px; cursor: pointer;">
-        ✨ 執行分析並自動填表
-      </button>
-      <div id="ai-parse-msg" style="font-size: 13px; color: #e74c3c; margin-top: 6px; display: none;"></div>
-    </div>
+    <div class="field" style="background: #F3F8FF; padding: 12px; border-radius: 8px; border: 1px dashed #378ADD; margin-bottom: 16px;">
+  <label style="color: #0C447C; font-weight: 500;">🤖 AI 智慧解析 (支援 PDF 上傳)</label>
+  
+  <!-- 本機檔案上傳按鈕 -->
+  <input type="file" id="pdf-upload" accept="application/pdf" style="margin-bottom: 8px;" />
+  
+  <button type="button" id="ai-parse-btn" onclick="handlePDFUpload()" 
+          style="width: 100%; padding: 8px; background: #378ADD; color: #fff; border: none; border-radius: 6px; font-size: 15px; cursor: pointer;">
+    ✨ 上傳並自動分析填表
+  </button>
+  <div id="ai-parse-msg" style="font-size: 13px; color: #e74c3c; margin-top: 6px; display: none;"></div>
+</div>
     
     <!-- 被保人 -->
     <div class="field">
@@ -1438,6 +1446,52 @@ function callGAS(action, params) {
   return Promise.reject(new Error('nav.js 未載入'));
 }
 
+async function handlePDFUpload() {
+  const fileInput = document.getElementById('pdf-upload');
+  const msgEl = document.getElementById("ai-parse-msg");
+  const btn = document.getElementById("ai-parse-btn");
+
+  if (fileInput.files.length === 0) {
+    msgEl.textContent = "請先選擇一份 PDF 保單檔案！";
+    msgEl.style.display = "block";
+    return;
+  }
+
+  const file = fileInput.files[0];
+  btn.disabled = true;
+  btn.textContent = "📄 正在讀取 PDF 內容...";
+  btn.style.background = "#f39c12";
+  msgEl.style.display = "none";
+
+  try {
+    // 1. 讀取本機 PDF 檔案轉換為 ArrayBuffer
+    const arrayBuffer = await file.arrayBuffer();
+    
+    // 2. 使用 pdf.js 載入文件
+    const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+    let fullText = "";
+
+    // 3. 逐頁抽出純文字
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      const page = await pdf.getPage(pageNum);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items.map(item => item.str).join(" ");
+      fullText += pageText + "\n";
+    }
+
+    // 4. 讀取成功！將抽出來的文字送給我們之前寫好的 AI 分析函式
+    btn.textContent = "🤖 PDF 讀取成功！正在呼叫 AI 進行分析...";
+    await executeAIAnalysis(fullText); // 呼叫之前對接 GAS 的邏輯
+
+  } catch (error) {
+    console.error("PDF 解析失敗：", error);
+    msgEl.textContent = "❌ PDF 讀取失敗，請確認檔案格式是否正確。";
+    msgEl.style.display = "block";
+    btn.textContent = "✨ 重新上傳並自動分析";
+    btn.style.background = "#378ADD";
+    btn.disabled = false;
+  }
+}
 
 // ── NBS 導覽 ──────────────────────────────────────────────
 NBS_NAV.onMemberChange = function(pid) {
