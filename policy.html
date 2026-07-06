@@ -1447,6 +1447,9 @@ function callGAS(action, params) {
   return Promise.reject(new Error('nav.js 未載入'));
 }
 
+// ═══════════════════════════════════════════════════════
+//  PDF 上傳、萃取文字、並自動呼叫 API1 AI 解析
+// ═══════════════════════════════════════════════════════
 async function handlePDFUpload() {
   const fileInput = document.getElementById('pdf-upload');
   const msgEl = document.getElementById("ai-parse-msg");
@@ -1461,18 +1464,14 @@ async function handlePDFUpload() {
   const file = fileInput.files[0];
   btn.disabled = true;
   btn.textContent = "📄 正在讀取 PDF 內容...";
-  btn.style.background = "#f39c12";
   msgEl.style.display = "none";
 
   try {
-    // 1. 讀取本機 PDF 檔案轉換為 ArrayBuffer
+    // 1. 使用 pdf.js 讀取本機 PDF
     const arrayBuffer = await file.arrayBuffer();
-    
-    // 2. 使用 pdf.js 載入文件
     const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
     let fullText = "";
 
-    // 3. 逐頁抽出純文字
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
       const page = await pdf.getPage(pageNum);
       const textContent = await page.getTextContent();
@@ -1480,16 +1479,35 @@ async function handlePDFUpload() {
       fullText += pageText + "\n";
     }
 
-    // 4. 讀取成功！將抽出來的文字送給我們之前寫好的 AI 分析函式
-    btn.textContent = "🤖 PDF 讀取成功！正在呼叫 AI 進行分析...";
-    await executeAIAnalysis(fullText); // 呼叫之前對接 GAS 的邏輯
+    // 2. 直接呼叫原本 API1 的 AI 解析函數
+    btn.textContent = "🤖 讀取成功！正在呼叫 AI 分析...";
+    
+    // 這裡直接對接你 API1 的 handleParsePolicyText
+    const response = await callGAS("parsePolicyText", { text: fullText });
+
+    if (response && response.status === "ok" && response.data) {
+      const data = response.data;
+      // 自動填表
+      if (data.policyNo) document.getElementById("f-policyno").value = data.policyNo;
+      if (data.company) {
+        document.getElementById("f-company").value = data.company;
+        document.getElementById("f-company-search").value = data.company;
+      }
+      if (data.itemName) document.getElementById("f-item").value = data.itemName;
+      if (data.category) document.getElementById("f-cat").value = data.category;
+      if (data.amount) document.getElementById("f-amount").value = data.amount;
+      
+      btn.textContent = "✅ 分析完成！";
+      btn.style.background = "#27AE8F";
+    } else {
+      throw new Error(response.message || "AI 解析回傳異常");
+    }
 
   } catch (error) {
-    console.error("PDF 解析失敗：", error);
-    msgEl.textContent = "❌ PDF 讀取失敗，請確認檔案格式是否正確。";
+    console.error("解析流程錯誤：", error);
+    msgEl.textContent = "❌ 解析失敗：" + error.message;
     msgEl.style.display = "block";
     btn.textContent = "✨ 重新上傳並自動分析";
-    btn.style.background = "#378ADD";
     btn.disabled = false;
   }
 }
