@@ -390,11 +390,12 @@
     .expand-icon.open { transform: rotate(90deg); }
   </style>
   <script src="nav.js"></script>
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+<!-- 這裡引入 PDF.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <script>
-  // 設定 pdf.js 的 worker 路徑
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+</script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </script>
   
 </head>
