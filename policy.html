@@ -1529,6 +1529,9 @@ async function handlePDFUpload() {
           covEndRaw: aiPol.covEndDate || oldPol.covEndRaw,
           premiumOrig: aiPol.premium !== null ? aiPol.premium : oldPol.premiumOrig,
           premiumTWD: aiPol.premium !== null ? aiPol.premium : oldPol.premiumTWD,
+          beneficiaryDeathText: aiPol.beneficiaryDeathText || oldPol.beneficiaryDeathText,
+          beneficiaryLiveText: aiPol.beneficiaryLiveText || oldPol.beneficiaryLiveText,
+          beneficiaryMaturityText: aiPol.beneficiaryMaturityText || oldPol.beneficiaryMaturityText,
           coverage: mergedCoverage,
           updatedAt: new Date().toISOString()
         };
