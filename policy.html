@@ -1486,7 +1486,9 @@ async function handlePDFUpload() {
     
     // 2. 呼叫 API1 進行智慧陣列解析 (使用新版 Schema 映射 Prompt)
     const response = await callGAS("parsePolicyText", { text: fullText });
-
+    console.log("PDF 萃取出的純文字：", fullText);
+    console.log("AI 回傳的原始 JSON：", response);
+    
     if (!response || response.status !== "ok" || !response.data) {
       throw new Error(response.message || "AI 解析回傳異常或格式不符");
     }
