@@ -1258,8 +1258,8 @@ async function savePolicy() {
     payMode:     document.getElementById("f-paymode").value,
     currency,
     exchangeRate: rate,
-    premiumOrig: premium,
-    premiumTWD,
+    premiumOrig: Number(premium) || 0, 
+    premiumTWD:  Number(premiumTWD) || 0,
     status:      document.getElementById("f-status").value,
     updatedAt:   new Date().toISOString(),
   };
