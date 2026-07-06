@@ -1485,6 +1485,7 @@ async function handlePDFUpload() {
     // 這裡直接對接你 API1 的 handleParsePolicyText
     const response = await callGAS("parsePolicyText", { text: fullText });
 
+    // 在 policy.html 的 handlePDFUpload 中，找到這段並擴充
     if (response && response.status === "ok" && response.data) {
       const data = response.data;
       // 自動填表
@@ -1496,6 +1497,26 @@ async function handlePDFUpload() {
       if (data.itemName) document.getElementById("f-item").value = data.itemName;
       if (data.category) document.getElementById("f-cat").value = data.category;
       if (data.amount) document.getElementById("f-amount").value = data.amount;
+      if (data.payMode) document.getElementById("f-paymode").value = data.payMode;
+      if (data.status) document.getElementById("f-status").value = data.status;
+      
+      // 🌟 新增：日期與保費的映射
+      if (data.startDate) {
+        document.getElementById("f-start").value = data.startDate;
+        parseDate('f-start','f-start-hint'); // 觸發日期格式檢查
+      }
+      if (data.payEndDate) {
+        document.getElementById("f-payend").value = data.payEndDate;
+        parseDate('f-payend','f-payend-hint');
+      }
+      if (data.covEndDate) {
+        document.getElementById("f-covend").value = data.covEndDate;
+        if (data.covEndDate !== '終身') parseDate('f-covend','f-covend-hint');
+      }
+      if (data.premium) {
+        document.getElementById("f-premium").value = data.premium;
+        calcTWD(); // 觸發保費換算
+      }
       
       btn.textContent = "✅ 分析完成！";
       btn.style.background = "#27AE8F";
