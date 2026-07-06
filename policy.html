@@ -1512,6 +1512,17 @@ async function handlePDFUpload() {
       if (existingIdx >= 0) {
         // A. 找到重複資料：進行欄位智慧融合 (Merge)
         const oldPol = person.policies[existingIdx];
+        // --- ⬇️ 這裡加入受益人格式轉換 ---
+    if (aiPol.beneficiary) {
+        if (aiPol.beneficiary.death && Array.isArray(aiPol.beneficiary.death)) {
+            // 將陣列轉為 benef.html 可讀的格式
+            const deathText = aiPol.beneficiary.death
+                .map(b => `${b.rank ? b.rank+'：' : ''}${b.name}(${b.relation})`)
+                .join('\n');
+            oldPol.beneficiaryDeathText = deathText; // 直接更新到舊物件
+        }
+        // 若有生存金或滿期金，也比照辦理...
+    }
         const mergedCoverage = Object.assign({}, oldPol.coverage || {}, aiPol.coverage || {});
         
         person.policies[existingIdx] = {
