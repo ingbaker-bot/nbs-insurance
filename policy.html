@@ -415,7 +415,18 @@
       <span id="form-title">新增保單</span>
       <button class="modal-close" onclick="closeForm()">×</button>
     </div>
-
+  <!-- 🌟 新增：AI 解析輸入區塊 -->
+    <div class="field" id="ai-parse-section" style="background: #F3F8FF; padding: 12px; border-radius: 8px; border: 1px dashed #378ADD; margin-bottom: 16px;">
+      <label style="color: #0C447C; font-weight: 500;">🤖 AI 智慧解析 (測試版)</label>
+      <textarea id="ai-raw-text" rows="3" placeholder="請將保單 PDF 內的文字複製貼上於此..." 
+                style="width: 100%; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 6px; outline: none; font-family: inherit; resize: vertical; margin-bottom: 8px;"></textarea>
+      <button type="button" id="ai-parse-btn" onclick="analyzePolicyText()" 
+              style="width: 100%; padding: 8px; background: #378ADD; color: #fff; border: none; border-radius: 6px; font-size: 15px; cursor: pointer;">
+        ✨ 執行分析並自動填表
+      </button>
+      <div id="ai-parse-msg" style="font-size: 13px; color: #e74c3c; margin-top: 6px; display: none;"></div>
+    </div>
+    
     <!-- 被保人 -->
     <div class="field">
       <label>被保險人</label>
@@ -1307,6 +1318,69 @@ async function savePolicy() {
   }
 }
 
+// ═══════════════════════════════════════════════════════
+//  AI 文字解析與自動填表邏輯
+// ═══════════════════════════════════════════════════════
+async function analyzePolicyText() {
+  const rawText = document.getElementById("ai-raw-text").value.trim();
+  const msgEl = document.getElementById("ai-parse-msg");
+  const btn = document.getElementById("ai-parse-btn");
+
+  if (!rawText) {
+    msgEl.textContent = "請先貼上保單文字！";
+    msgEl.style.display = "block";
+    return;
+  }
+
+  // UI 狀態：處理中
+  msgEl.style.display = "none";
+  btn.disabled = true;
+  btn.textContent = "⏳ AI 正在深度解析中，請稍候...";
+  btn.style.background = "#ccc";
+
+  try {
+    // 呼叫 API1 進行解析
+    const response = await callGAS("parsePolicyText", { text: rawText });
+
+    if (response && response.status === "ok" && response.data) {
+      const data = response.data;
+      
+      // 成功後，開始自動填入下方表單
+      if (data.policyNo) document.getElementById("f-policyno").value = data.policyNo;
+      if (data.company) {
+        document.getElementById("f-company").value = data.company;
+        document.getElementById("f-company-search").value = data.company;
+      }
+      if (data.itemName) document.getElementById("f-item").value = data.itemName;
+      if (data.category) document.getElementById("f-cat").value = data.category;
+      if (data.amount) document.getElementById("f-amount").value = data.amount;
+      if (data.payMode) document.getElementById("f-paymode").value = data.payMode;
+      if (data.status) document.getElementById("f-status").value = data.status;
+
+      // UX 優化：變更按鈕顏色提示成功
+      btn.textContent = "✅ 分析完成！請檢查下方欄位";
+      btn.style.background = "#27AE8F";
+      
+      // 3秒後恢復按鈕原狀
+      setTimeout(() => {
+        btn.textContent = "✨ 執行分析並自動填表";
+        btn.style.background = "#378ADD";
+        btn.disabled = false;
+      }, 3000);
+
+    } else {
+      throw new Error(response.message || "解析回傳格式異常");
+    }
+  } catch (err) {
+    console.error("AI 分析失敗", err);
+    msgEl.textContent = "❌ 解析失敗：" + err.message;
+    msgEl.style.display = "block";
+    btn.textContent = "✨ 重新執行分析";
+    btn.style.background = "#378ADD";
+    btn.disabled = false;
+  }
+}
+  
 // ── 刪除保單 ─────────────────────────────────────────────
 async function deletePolicy() {
   if (!editingPolicy || !confirm("確定要刪除這筆保單？")) return;
