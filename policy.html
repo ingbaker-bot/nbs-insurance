@@ -1463,29 +1463,38 @@ async function handlePDFUpload() {
   const msgEl = document.getElementById("ai-parse-msg");
   const btn = document.getElementById("ai-parse-btn");
 
-  if (fileInput.files.length === 0) {
-    msgEl.textContent = "請先選擇一份 PDF 保單檔案！";
-    msgEl.style.display = "block";
-    return;
-  }
-
   const file = fileInput.files[0];
   btn.disabled = true;
-  btn.textContent = "📄 正在本機萃取 PDF 文字...";
   msgEl.style.display = "none";
 
   try {
-    // 1. 使用 pdf.js 讀取本機 PDF
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
-    let fullText = "";
+    let aiResponse;
 
-    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-      const page = await pdf.getPage(pageNum);
-      const textContent = await page.getTextContent();
-      const pageText = textContent.items.map(item => item.str).join(" ");
-      fullText += pageText + "\n";
+    // --- 【新增：判斷並執行解析】 ---
+    if (file.type.startsWith("image/")) {
+      btn.textContent = "🖼️ 正在處理影像...";
+      // 轉為 Base64
+      const base64Data = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.readAsDataURL(file);
+      });
+      // 呼叫 API1 新增的圖片解析端點
+      aiResponse = await callGAS("parsePolicyImage", { image: base64Data });
+    } else {
+      btn.textContent = "📄 正在本機萃取 PDF 文字...";
+      // 原有的 PDF 解析
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+      let fullText = "";
+      for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        const textContent = await page.getTextContent();
+        fullText += textContent.items.map(item => item.str).join(" ") + "\n";
+      }
+      aiResponse = await callGAS("parsePolicyText", { text: fullText });
     }
+    // --- 【結束】 ---
 
     btn.textContent = "🤖 文字萃取成功！正在呼叫 AI 進行多檔欄位縫合...";
     
