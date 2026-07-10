@@ -427,7 +427,7 @@
   <label style="color: #0C447C; font-weight: 500;">🤖 AI 智慧解析 (支援 PDF 上傳)</label>
   
   <!-- 本機檔案上傳按鈕 -->
-  <input type="file" id="pdf-upload" accept="application/pdf" style="margin-bottom: 8px;" />
+  <input type="file" id="pdf-upload" accept="application/pdf, image/*" style="margin-bottom: 8px;" />
   
   <button type="button" id="ai-parse-btn" onclick="handlePDFUpload()" 
           style="width: 100%; padding: 8px; background: #378ADD; color: #fff; border: none; border-radius: 6px; font-size: 15px; cursor: pointer;">
@@ -1460,30 +1460,33 @@ function callGAS(action, params) {
 // ═══════════════════════════════════════════════════════
 async function handlePDFUpload() {
   const fileInput = document.getElementById('pdf-upload');
-  const msgEl = document.getElementById("ai-parse-msg");
-  const btn = document.getElementById("ai-parse-btn");
-
   const file = fileInput.files[0];
+  if (!file) return;
+
+  const btn = document.getElementById("ai-parse-btn");
+  const msgEl = document.getElementById("msg"); // 假設你有這個顯示訊息的 ID
   btn.disabled = true;
-  msgEl.style.display = "none";
 
   try {
     let aiResponse;
 
-    // --- 【新增：判斷並執行解析】 ---
+    // --- 【修改區塊：增加判斷】 ---
     if (file.type.startsWith("image/")) {
       btn.textContent = "🖼️ 正在處理影像...";
-      // 轉為 Base64
+      
+      // 將圖片轉為 Base64
       const base64Data = await new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result.split(',')[1]);
         reader.readAsDataURL(file);
       });
-      // 呼叫 API1 新增的圖片解析端點
+
+      // 呼叫 API1 (你需要確保 GAS 後端已經新增 parsePolicyImage 端點)
       aiResponse = await callGAS("parsePolicyImage", { image: base64Data });
+      
     } else {
       btn.textContent = "📄 正在本機萃取 PDF 文字...";
-      // 原有的 PDF 解析
+      // 原有的 PDF 解析邏輯
       const arrayBuffer = await file.arrayBuffer();
       const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
       let fullText = "";
@@ -1502,6 +1505,7 @@ async function handlePDFUpload() {
     const response = await callGAS("parsePolicyText", { text: fullText });
     console.log("PDF 萃取出的純文字：", fullText);
     console.log("AI 回傳的原始 JSON：", response);
+    console.log("AI 解析結果：", aiResponse);
     
     if (!response || response.status !== "ok" || !response.data) {
       throw new Error(response.message || "AI 解析回傳異常或格式不符");
@@ -1622,12 +1626,11 @@ async function handlePDFUpload() {
     }, 1500);
 
   } catch (error) {
-    console.error("解析流程錯誤：", error);
-    msgEl.textContent = "❌ 處理失敗：" + error.message;
-    msgEl.style.display = "block";
-    btn.textContent = "✨ 重新上傳並自動分析";
-    btn.style.background = "#378ADD";
+    console.error("解析失敗：", error);
+    alert("處理失敗：" + error.message);
+  } finally {
     btn.disabled = false;
+    btn.textContent = "✨ 上傳並自動分析填表";
   }
 }
 
