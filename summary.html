@@ -164,7 +164,7 @@ function sumCov(keys, policies, coverage) {
 }
 
 // ── 保障群組與細項定義 (全新規劃) ─────────────────────────────────────────
-const GAP_GROUPS = [
+var GAP_GROUPS = [
   { key:"family", label:"家庭責任", color:"#1565C0", items:[
     { key:"life_permanent", label:"終身壽險",    unit:"萬元",   color:"#1565C0" },
     { key:"life_term",      label:"定期壽險",    unit:"萬元",   color:"#1E88E5" },
@@ -194,7 +194,7 @@ const GAP_GROUPS = [
 ];
 
 // 精準對應 coverage.html 的資料庫欄位
-const GAP_KEY_MAP = {
+var GAP_KEY_MAP = {
   life_permanent:  { cats:["壽險保障"],          keys:["life_basic"] },
   life_term:       { cats:[],                   keys:["life_term"] },
   investment:      { cats:["投資型保險"],        keys:[] },
@@ -215,7 +215,7 @@ const GAP_KEY_MAP = {
   waiver:          { cats:[],                   keys:["ltc_waiver"] },
 };
 
-const COVERAGE_TYPES = [
+var COVERAGE_TYPES = [
   { key:"life",       label:"壽險保障", group:"壽險", color:"#4A90D9", detect:(p,c)=>p.some(x=>x.category==="壽險保障") },
   { key:"acc_death",  label:"意外身故", group:"意外", color:"#F5A623", detect:(p,c)=>p.some(x=>x.category==="意外險") },
   { key:"acc_medical",label:"意外醫療", group:"意外", color:"#F08C00", detect:(p,c)=>Object.keys(c).some(k=>k.includes("acc_opd")) },
@@ -232,15 +232,15 @@ const COVERAGE_TYPES = [
   { key:"investment", label:"投資型",   group:"財務", color:"#95A5A6", detect:(p,c)=>p.some(x=>x.category==="投資型保險") },
 ];
 
-const GROUP_COLORS = { 壽險:"#4A90D9",意外:"#F5A623",醫療:"#27AE8F",重大:"#9B59B6",癌症:"#E74C3C",長照:"#27500A",財務:"#E8638A" };
+var GROUP_COLORS = { 壽險:"#4A90D9",意外:"#F5A623",醫療:"#27AE8F",重大:"#9B59B6",癌症:"#E74C3C",長照:"#27500A",財務:"#E8638A" };
 
-const CAT_COLORS = {
+var CAT_COLORS = {
   "壽險保障":"#4A90D9","醫療保障":"#27AE8F","意外險":"#F5A623",
   "重大疾病險":"#9B59B6","重大傷病險":"#8E44AD","特定傷病險":"#7D3C98",
   "儲蓄險":"#E8638A","年金險":"#C0392B","投資型保險":"#95A5A6",
 };
 
-const COVERAGE_GROUPS = [
+var COVERAGE_GROUPS = [
   { label:"壽險保障", color:"#4A90D9", items:[
     { label:"壽險保障額度", keys:["life_basic", "life_term"], unit:"萬元" },
   ]},
@@ -321,14 +321,14 @@ const COVERAGE_GROUPS = [
   ]},
 ];
 
-let currentUser    = null;
-let familyData     = null;
-let familyFileName = null;
-let personDataMap  = {};
-let currentPersonId = null;
-let overrides      = {};
-let medicalOverrides = {};
-let targets        = {};
+var currentUser    = null;
+var familyData     = null;
+var familyFileName = null;
+var personDataMap  = {};
+var currentPersonId = null;
+var overrides      = {};
+var medicalOverrides = {};
+var targets        = {};
 
 // 核心運算引擎：精準抓取資料庫數字
 function getItemCurrent(key, policies, coverage, covOverrides) {

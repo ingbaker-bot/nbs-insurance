@@ -1,7 +1,13 @@
 /**
- * NBS 導覽系統 nav.js v5
+ * NBS 導覽系統 nav.js v6
  * 架構：所有 Drive 操作透過 GAS API1 轉發到業務員自己的 Shell GAS
  * 業務員資料完全存在自己的 Drive，管理員無法存取
+ *
+ * v6 變更（向下相容，未刪除任何 v5 行為）：
+ * - 新增 initShell()/setActivePage()/reannounce()，供 SPA shell.html 使用
+ * - _go()/_back()/_goFamily() 改為偵測 window.NBSRouter 是否存在：
+ *   有 → 前端路由換頁（不整頁刷新）；沒有 → 維持原本整頁導航
+ *   舊的 8 支獨立 .html 檔案沒有引入 router.js，因此行為完全不變
  */
 (function(global) {
   "use strict";
@@ -79,6 +85,37 @@
       } else {
         _setup(opts);
       }
+    },
+
+    // ── SPA Shell 專用進入點（v6 新增）──────────────────────
+    // 與 init() 不同：只在 shell 頁面呼叫「一次」，負責注入樣式、
+    // 建立側欄 DOM、載入家庭資料。之後切換內容頁一律呼叫
+    // setActivePage()，不會重新跑這裡的邏輯。
+    initShell: function() {
+      _injectStyles();
+      _insertNav();
+
+      var savedUser = localStorage.getItem("nbs_user");
+      if (!savedUser) { window.location.href = "index.html"; return; }
+      _user = JSON.parse(savedUser);
+
+      _loadData({});
+    },
+
+    // SPA 路由切換內容頁後呼叫：只更新側欄高亮狀態，不重抓資料、
+    // 不重建側欄 DOM（成本極低，純字串 re-render 一次側欄/底部 tab）。
+    setActivePage: function(key) {
+      _page = key || "";
+      _renderSidebar();
+      _renderBottomTab();
+    },
+
+    // 讓 SPA 路由在換頁、重新執行該頁 <script> 後，
+    // 補發一次 nbs_nav_ready，讓該頁重新註冊的監聽器能拿到現有資料
+    // （資料本身沿用 shell 已載入的記憶體內容，不會重打 GAS）。
+    reannounce: function() {
+      var fn = localStorage.getItem("nbs_current_family");
+      _finishLoad(fn, !_family);
     },
 
     getCurrentPersonId:    function() { return _personId; },
@@ -564,10 +601,20 @@
     _renderAll();
     if (typeof NBS_NAV.onMemberChange === "function") NBS_NAV.onMemberChange(id);
   };
-  global.NBS_NAV._go    = function(href) { window.location.href = href; };
-  global.NBS_NAV._print = function() { window.print(); };
-  global.NBS_NAV._back     = function() { window.location.href = "main.html"; };
-  global.NBS_NAV._goFamily  = function() { window.location.href = "family.html"; };
+  // 統一導航：若頁面上有載入 router.js（SPA shell 模式）就走前端路由，
+  // 不整頁刷新；沒有 router.js（舊的獨立 .html 頁面直接開啟）則維持
+  // 原本 window.location.href 整頁導航，行為完全不變。
+  function _navigate(href) {
+    if (global.NBSRouter && typeof global.NBSRouter.navigate === "function") {
+      global.NBSRouter.navigate(href);
+    } else {
+      window.location.href = href;
+    }
+  }
+  global.NBS_NAV._go       = function(href) { _navigate(href); };
+  global.NBS_NAV._print    = function() { window.print(); };
+  global.NBS_NAV._back     = function() { _navigate("main.html"); };
+  global.NBS_NAV._goFamily = function() { _navigate("family.html"); };
 
   // ==========================================
   // 9. 工具函式

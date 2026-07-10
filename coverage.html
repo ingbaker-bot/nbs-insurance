@@ -104,7 +104,7 @@
     // GAS_URL 已移至 nav.js 統一管理
 
 // ── 群組定義 ──────────────────────────────────────────────
-const GROUPS=[
+var GROUPS=[
   {key:"accident",label:"意外險",icon:"⚡",color:"#633806",bg:"#FAEEDA",type:"accident"},
   {key:"hospitalize",label:"住院醫療（實支實付）",icon:"🏥",color:"#085041",bg:"#E1F5EE",type:"hospitalize"},
   {key:"daily",label:"日額型住院",icon:"📅",color:"#0C447C",bg:"#E6F1FB",type:"daily"},
@@ -149,9 +149,9 @@ const GROUPS=[
   ]},
 ];
 
-let currentUser=null,familyData=null,familyFileName=null;
-let personDataMap={},currentPersonId=null,currentPolicyId=null;
-let openGroups={},dirty=false,viewMode="list";
+var currentUser=null,familyData=null,familyFileName=null;
+var personDataMap={},currentPersonId=null,currentPolicyId=null;
+var openGroups={},dirty=false,viewMode="list";
 
 // ── 初始化 ────────────────────────────────────────────────
 window.addEventListener("nbs_nav_ready", async function(e) {
@@ -679,7 +679,7 @@ NBS_NAV.init({ page: "coverage" });
 
 // ── 自動儲存 (防抖 Debounce) 邏輯 ─────────────────────────
 // ── 自動儲存 (防抖 Debounce) 邏輯 ─────────────────────────
-let autoSaveTimer = null;
+var autoSaveTimer = null;
 
 document.addEventListener('input', function(e) {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
