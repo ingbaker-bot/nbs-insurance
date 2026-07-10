@@ -1289,13 +1289,12 @@ async function savePolicy() {
       content: person,
     });
 
-    // ── 明確檢查回傳值，GAS 回傳 error 時要報錯 ──
     if (!saveResult || saveResult.status === "error") {
-      throw new Error(
-        (saveResult && saveResult.message) ||
-        "Google Drive 寫入失敗，請確認網路連線後再試"
-      );
+      throw new Error((saveResult && saveResult.message) || "Google Drive 寫入失敗");
     }
+
+    // 🌟 新增這行：強制將最新資料寫回網頁本機暫存
+    sessionStorage.setItem("nbs_person_" + editingPersonId, JSON.stringify(person));
 
     // 確實寫入成功後才清快取與關閉表單
     if (window.NBS_NAV && typeof NBS_NAV.invalidateBundleCache === 'function') {
@@ -1584,7 +1583,8 @@ async function handlePDFUpload() {
     });
 
     if (!saveResult || saveResult.status === "error") throw new Error("雲端硬碟寫入失敗");
-
+    // 🌟 新增這行：強制將最新資料寫回網頁本機暫存，讓其他頁面讀得到！
+    sessionStorage.setItem("nbs_person_" + (editingPersonId || currentPersonId), JSON.stringify(person));
     if (window.NBS_NAV && typeof NBS_NAV.invalidateBundleCache === 'function') {
       NBS_NAV.invalidateBundleCache();
     }
