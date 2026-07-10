@@ -1297,12 +1297,21 @@ async function savePolicy() {
     sessionStorage.setItem("nbs_person_" + editingPersonId, JSON.stringify(person));
 
     // 確實寫入成功後才清快取與關閉表單
-    if (window.NBS_NAV && typeof NBS_NAV.invalidateBundleCache === 'function') {
-      NBS_NAV.invalidateBundleCache();
-    } else {
-      const _fn = localStorage.getItem('nbs_current_family');
-      if (_fn) sessionStorage.removeItem('nbs_bundle_' + _fn);
+    // 🌟 終極快取同步機制：不要清除快取，而是「直接把最新資料塞進全域 Bundle 裡」
+    const _fn = localStorage.getItem('nbs_current_family');
+    if (_fn) {
+      let bundleStr = sessionStorage.getItem('nbs_bundle_' + _fn);
+      if (bundleStr) {
+        try {
+          let bundle = JSON.parse(bundleStr);
+          if (!bundle.persons) bundle.persons = {};
+          // 將最新存檔的 person 覆蓋進 bundle 中
+          bundle.persons[editingPersonId || currentPersonId] = person;
+          sessionStorage.setItem('nbs_bundle_' + _fn, JSON.stringify(bundle));
+        } catch(e) { console.error("Bundle 更新失敗", e); }
+      }
     }
+    // (已移除 invalidateBundleCache，避免觸發 Drive 舊資料重抓)
 
     closeForm();
     renderTabs();
