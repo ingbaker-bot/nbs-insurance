@@ -328,7 +328,11 @@
   function _insertNav() {
     var sidebar = document.createElement("div");
     sidebar.id = "nbs-sidebar";
-    sidebar.innerHTML = '<div style="padding:20px;color:rgba(255,255,255,0.3);font-size:12px">連線同步中...</div>';
+    sidebar.innerHTML =
+      '<div class="nbs-logo">' +
+        '<img src="https://i.ibb.co/FkVkNhhd/NBS-4F3.jpg" class="nbs-logo-img" onerror="this.style.display=\'none\'"/>' +
+      '</div>' +
+      '<div style="padding:14px 16px;color:#9CA3AF;font-size:12px">連線同步中…</div>';
     document.body.insertBefore(sidebar, document.body.firstChild);
 
     var tab = document.createElement("div");
