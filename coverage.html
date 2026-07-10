@@ -187,6 +187,7 @@ window.addEventListener("nbs_nav_ready", async function(e) {
 
     document.getElementById("loading").style.display = "none";
     document.getElementById("content").style.display = "block";
+    renderTabs();
     showListView();
   } catch(err) {
     console.error("coverage.html init error", err);
