@@ -37,10 +37,11 @@
     //    其餘項目點擊仍會整頁導航（正常、預期中的行為，等 Phase 2 逐步加入白名單）。
     NBS_NAV.initShell();
 
-    // 進來 shell 後的預設畫面：先固定進「保單彙總」做試點驗證
+    // 進來 shell 後的預設畫面：先進「家庭總覽」（family.html），
+    // 跟舊架構「main.html 選完家庭 → family.html」的概念一致
     window.addEventListener("nbs_nav_ready", function boot() {
       window.removeEventListener("nbs_nav_ready", boot);
-      NBSRouter.navigate("summary.html", { skipPush: true });
+      NBSRouter.navigate("family.html", { skipPush: true });
     });
   </script>
 

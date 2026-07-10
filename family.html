@@ -583,12 +583,12 @@
     // ── 設定 ─────────────────────────────────────────────────
     // GAS_URL 已移至 nav.js 統一管理
 
-    let currentUser   = null;
-    let familyData    = null;
-    let familyFileName = null;
-    let personDataMap = {};      // personId → personData
-    let selectedPersonId = null;
-    let _navDataReceived = false;
+    var currentUser   = null;
+    var familyData    = null;
+    var familyFileName = null;
+    var personDataMap = {};      // personId → personData
+    var selectedPersonId = null;
+    var _navDataReceived = false;
 
     // ── 效能優化：不再自己重複呼叫一次 readFamilyBundle，
     //    改成直接「借用」nav.js 已經抓好的資料（nav.js 也已經改用
@@ -640,21 +640,29 @@
     window.addEventListener("nbs_nav_ready", function(e) { _handleNavReady(e.detail); });
 
     // ── 動態載入文字設定 ──
-    const familyLoadingMessages = [
+    var familyLoadingMessages = [
       "保單資料庫安全連線中...",
       "正在載入家庭成員清單...",
       "精算各項保障額度與明細...",
       "即將為您呈現專屬報告..."
     ];
-    let familyMsgIndex = 0;
-    const familyLoadingTimer = setInterval(() => {
+    var familyMsgIndex = 0;
+    var familyLoadingTimer = setInterval(() => {
       familyMsgIndex = (familyMsgIndex + 1) % familyLoadingMessages.length;
       const textEl = document.getElementById("family-loading-text");
       if (textEl) textEl.textContent = familyLoadingMessages[familyMsgIndex];
     }, 1500);
     
     // ── 初始化 ────────────────────────────────────────────────
-    window.onload = function() {
+    // 原本用 window.onload = function(){...}，但瀏覽器的 load 事件
+    // 只會在「整份文件真正載入」時觸發一次；在 SPA shell 底下，這支
+    // script 是被 router 在 shell 早就 load 完成後才重新執行，
+    // window.onload 這時候再指定新的處理函式也不會被呼叫到——等於
+    // 這一整段登入驗證、家庭檔名檢查、20 秒逾時保護，在 SPA 模式下
+    // 會被靜默略過。改成立即執行的函式：因為這段 <script> 本來就在
+    // body 尾端、DOM 已經解析完成才會執行到這裡，不論是「獨立整頁
+    // 開啟」或「SPA 重新執行」，效果都跟原本一致，不會有任何行為差異。
+    (function() {
       // 驗證登入
       const saved = localStorage.getItem("nbs_user");
       if (!saved) { window.location.href = "index.html"; return; }
@@ -675,7 +683,7 @@
             '<div style="color:#e74c3c">載入逾時，請重新整理頁面</div>';
         }
       }, 20000);
-    };
+    })();
 
     // ── 渲染頁面 ──────────────────────────────────────────────
     function renderPage() {
@@ -984,7 +992,13 @@
         visit:       "visit.html",
       };
       if (pages[module]) {
-        window.location.href = pages[module];
+        // 跟 nav.js 的 _go() 一樣：SPA shell 底下走前端路由，
+        // 獨立開啟這支頁面時維持原本整頁導航，兩者並存
+        if (window.NBSRouter && typeof window.NBSRouter.navigate === "function") {
+          window.NBSRouter.navigate(pages[module]);
+        } else {
+          window.location.href = pages[module];
+        }
       } else {
         alert("模組「" + module + "」建置中…");
       }
