@@ -110,9 +110,9 @@
   </div>
 
   <script>
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec";
+    var   GAS_URL = "https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec";
     
-    const BENEF_RULES = {
+    var   BENEF_RULES = {
       "壽險保障":   { death:"可設定", live:"不適用" },
       "意外險":     { death:"可設定", live:"不適用" },
       "醫療險":     { death:"可設定", live:"不適用" },
@@ -126,8 +126,8 @@
       "投資型保險": { death:"可設定", live:"可設定" }
     };
 
-    let currentUser = null, familyData = null, personDataMap = {};
-    let currentPersonId = null, editPolicyId = null;
+    var currentUser = null, familyData = null, personDataMap = {};
+    var currentPersonId = null, editPolicyId = null;
 
     // ── 初始化：完美對接 NBS 導覽列 ──
     window.addEventListener("nbs_nav_ready", async function(e) {
