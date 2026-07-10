@@ -1468,25 +1468,23 @@ async function handlePDFUpload() {
   btn.disabled = true;
 
   try {
-    let aiResponse;
+    let aiResponse; // 統一接收 AI 回傳結果
 
-    // --- 【修改區塊：增加判斷】 ---
+    // 1. 判斷並執行對應解析
     if (file.type.startsWith("image/")) {
-      btn.textContent = "🖼️ 正在處理影像...";
+      btn.textContent = "🖼️ 正在透過視覺模型處理影像...";
       
-      // 將圖片轉為 Base64
       const base64Data = await new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result.split(',')[1]);
         reader.readAsDataURL(file);
       });
 
-      // 呼叫 API1 (你需要確保 GAS 後端已經新增 parsePolicyImage 端點)
+      // 呼叫圖片解析 API
       aiResponse = await callGAS("parsePolicyImage", { image: base64Data });
       
     } else {
       btn.textContent = "📄 正在本機萃取 PDF 文字...";
-      // 原有的 PDF 解析邏輯
       const arrayBuffer = await file.arrayBuffer();
       const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
       let fullText = "";
@@ -1495,21 +1493,21 @@ async function handlePDFUpload() {
         const textContent = await page.getTextContent();
         fullText += textContent.items.map(item => item.str).join(" ") + "\n";
       }
+      btn.textContent = "🤖 文字萃取成功！正在呼叫 AI...";
       aiResponse = await callGAS("parsePolicyText", { text: fullText });
     }
-    // --- 【結束】 ---
 
-    btn.textContent = "🤖 文字萃取成功！正在呼叫 AI 進行多檔欄位縫合...";
-    
-    // 2. 呼叫 API1 進行智慧陣列解析 (使用新版 Schema 映射 Prompt)
-    const response = await callGAS("parsePolicyText", { text: fullText });
-    console.log("PDF 萃取出的純文字：", fullText);
-    console.log("AI 回傳的原始 JSON：", response);
     console.log("AI 解析結果：", aiResponse);
-    
-    if (!response || response.status !== "ok" || !response.data) {
-      throw new Error(response.message || "AI 解析回傳異常或格式不符");
+
+    if (!aiResponse || aiResponse.status !== "ok" || !aiResponse.data) {
+      throw new Error(aiResponse.message || "AI 解析回傳異常或格式不符");
     }
+
+    // 🌟 2. 核心智慧疊加邏輯 (Upsert)
+    const aiPolicies = aiResponse.data; // 直接使用正確回傳的陣列
+    const person = personDataMap[editingPersonId || currentPersonId];
+    if (!person) throw new Error("找不到目前被保險人資料空間");
+    if (!person.policies) person.policies = [];
 
     // 🌟 3. 核心智慧疊加邏輯 (Upsert)
     const aiPolicies = response.data; // 這是 AI 回傳的保單/附約陣列
