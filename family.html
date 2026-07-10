@@ -6,21 +6,37 @@
   <title>NBS 雲端保單體檢 - 家庭詳細</title>
 
   <script>
-    (function(){
-      // 清除舊快取，但保留登入資訊與 token，避免重新觸發 OAuth 授權
-      const keepUser    = localStorage.getItem("nbs_user");
-      const keepFam     = localStorage.getItem("nbs_current_family");
-      const keepPerson  = localStorage.getItem("nbs_current_person");
-      const keepToken   = localStorage.getItem("nbs_access_token");
-      const keepExpiry  = localStorage.getItem("nbs_token_expiry");
-      localStorage.clear();
-      sessionStorage.clear();
-      if (keepUser)   localStorage.setItem("nbs_user",           keepUser);
-      if (keepFam)    localStorage.setItem("nbs_current_family",  keepFam);
-      if (keepPerson) localStorage.setItem("nbs_current_person",  keepPerson);
-      if (keepToken)  localStorage.setItem("nbs_access_token",    keepToken);
-      if (keepExpiry) localStorage.setItem("nbs_token_expiry",    keepExpiry);
-    })();
+    // 加上 window 層級旗標：這段清快取邏輯的本意是「每次真正整頁載入
+    // family.html 時，清掉舊快取但保留登入/家庭指標」。但在 SPA shell
+    // 底下，這支 <script> 可能在同一個瀏覽器分頁裡被反覆重新執行
+    // （例如每次點側欄「家庭保單首頁」），如果沒有防護，會變成每次都
+    // 把剛建立好的資料快取（包含其他頁面依賴的 sessionStorage 內容）
+    // 整個清空重來，導致其他頁面抓不到資料。
+    //
+    // 用 window.__nbsFamilyCacheCleared 當一次性旗標：只要瀏覽器分頁
+    // 沒有真正重新整理過（window 物件還是同一個），這段邏輯就只會執行
+    // 一次。如果使用者真的透過 main.html 切換到不同家庭（會觸發真正
+    // 整頁重新載入，window 物件整個重置），旗標會自動消失，清快取邏輯
+    // 會照常再執行一次——跟原本設計的意圖一致，只是不會在 SPA 裡被
+    // 同一支頁面反覆掛載時重複觸發。
+    if (!window.__nbsFamilyCacheCleared) {
+      window.__nbsFamilyCacheCleared = true;
+      (function(){
+        // 清除舊快取，但保留登入資訊與 token，避免重新觸發 OAuth 授權
+        const keepUser    = localStorage.getItem("nbs_user");
+        const keepFam     = localStorage.getItem("nbs_current_family");
+        const keepPerson  = localStorage.getItem("nbs_current_person");
+        const keepToken   = localStorage.getItem("nbs_access_token");
+        const keepExpiry  = localStorage.getItem("nbs_token_expiry");
+        localStorage.clear();
+        sessionStorage.clear();
+        if (keepUser)   localStorage.setItem("nbs_user",           keepUser);
+        if (keepFam)    localStorage.setItem("nbs_current_family",  keepFam);
+        if (keepPerson) localStorage.setItem("nbs_current_person",  keepPerson);
+        if (keepToken)  localStorage.setItem("nbs_access_token",    keepToken);
+        if (keepExpiry) localStorage.setItem("nbs_token_expiry",    keepExpiry);
+      })();
+    }
   </script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
