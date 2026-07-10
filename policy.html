@@ -606,25 +606,25 @@
 </div>
 
 <script>
-const GAS_URL = "https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec";
+var GAS_URL = "https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec";
 
-const COMPANIES = [
+var COMPANIES = [
   "富邦人壽","國泰人壽","南山人壽","新光人壽","中國人壽","台灣人壽",
   "三商美邦人壽","遠雄人壽","全球人壽","保誠人壽","宏泰人壽","第一金人壽",
   "合作金庫人壽","臺銀人壽","元大人壽","康健人壽","安聯人壽","友邦人壽",
   "法國巴黎人壽","宏利人壽","skyway人壽",
 ];
 
-let currentUser   = null;
-let familyData    = null;
-let familyFileName = null;
-let personDataMap  = {};
-let currentTab     = "all";  // "all" or personId
-let editingPolicy  = null;   // null=新增, object=編輯中的保單
-let editingPersonId = null;
+var currentUser   = null;
+var familyData    = null;
+var familyFileName = null;
+var personDataMap  = {};
+var currentTab     = "all";  // "all" or personId
+var editingPolicy  = null;   // null=新增, object=編輯中的保單
+var editingPersonId = null;
 // ── 新增：富邦商品庫專用快取變數 ──
-let cachedFubonProducts = []; 
-let isFubonProductsLoading = false;
+var cachedFubonProducts = []; 
+var isFubonProductsLoading = false;
   
 // ── 初始化 ────────────────────────────────────────────────
 window.addEventListener("nbs_nav_ready", async function(e) {
