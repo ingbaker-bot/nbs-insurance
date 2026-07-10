@@ -190,22 +190,22 @@
 
 <script>
     // GAS_URL 已移至 nav.js 統一管理
-let currentUser = null, familyData = null, personDataMap = {}, currentPersonId = null;
-let settings = {}; // { [policyId]: settingObj }
-let currentPageTab = "settings";
+var currentUser = null, familyData = null, personDataMap = {}, currentPersonId = null;
+var settings = {}; // { [policyId]: settingObj }
+var currentPageTab = "settings";
 
 
 // ── 領回類型 ──────────────────────────────────────────────
-const TYPES_BASE = [
+var TYPES_BASE = [
   { key:"1", title:"期滿領整筆",           desc:"保單期滿一次全額領回" },
   { key:"2", title:"繳費期間領＋期滿整筆", desc:"繳費中定期領回，期滿再領整筆" },
   { key:"3", title:"期間不領＋期滿領",     desc:"繳費期間不動，期滿統一領回" },
   { key:"4", title:"期間領＋期滿領",       desc:"期間定期領回，期滿再領" },
 ];
-const TYPE_SAVINGS_EXTRA = { key:"5", title:"月領生存金",  desc:"每月固定領取生存保險金" };
-const TYPE_INVEST_EXTRA  = { key:"5", title:"月月配息",    desc:"每月依帳戶價值配息" };
+var TYPE_SAVINGS_EXTRA = { key:"5", title:"月領生存金",  desc:"每月固定領取生存保險金" };
+var TYPE_INVEST_EXTRA  = { key:"5", title:"月月配息",    desc:"每月依帳戶價值配息" };
 // 類型 6：逐年遞增生存金
-const TYPE_YEARLY_DETAIL = { key:"6", title:"逐年領回明細（分紅／還本型）", desc:"含生存金及紅利，依試算表逐年填入" };
+var TYPE_YEARLY_DETAIL = { key:"6", title:"逐年領回明細（分紅／還本型）", desc:"含生存金及紅利，依試算表逐年填入" };
 
 function getTypes(category) {
   const extra = category === "投資型保險" ? TYPE_INVEST_EXTRA : TYPE_SAVINGS_EXTRA;
@@ -908,7 +908,7 @@ function fmtAmt(amt) {
 }
 
 // 外幣格式：顯示原幣符號
-const CUR_SYMBOL = { USD:"$", EUR:"€", JPY:"¥", CNY:"¥", TWD:"" };
+var CUR_SYMBOL = { USD:"$", EUR:"€", JPY:"¥", CNY:"¥", TWD:"" };
 function fmtForeign(amt, cur) {
   const sym = CUR_SYMBOL[cur] || cur + " ";
   if (cur === "JPY") return sym + Math.round(amt).toLocaleString();

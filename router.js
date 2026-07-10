@@ -1,5 +1,12 @@
 /**
- * NBS SPA 前端路由 router.js v1（Phase 1 試點：僅 summary / coverage 兩頁）
+ * NBS SPA 前端路由 router.js v2
+ * Phase 1：summary / coverage
+ * Phase 2：+ savings（本次新增）
+ *
+ * v2 變更：新增「監聽器自動清除」機制 —— 每次換頁前，會把上一頁
+ * 的 script 在執行期間對 window 註冊的 addEventListener 全部移除，
+ * 避免使用者反覆切換同一頁時，nbs_nav_ready 等事件的監聽器不斷疊加
+ * （疊加後會造成同一份資料被重複渲染，甚至重複觸發 GAS 呼叫）。
  *
  * 設計原則：
  * - 完全不修改既有 8 支獨立 .html 檔案內容，直接 fetch 現有檔案本身，
@@ -8,30 +15,37 @@
  *   舊的獨立 .html 頁面沒有引入 router.js，nav.js 會自動退回整頁導航，
  *   兩種模式並存、互不影響。
  *
- * 已知限制（Phase 1 誠實揭露，Phase 2 逐頁遷移時會處理）：
- * - 換頁時會移除上一頁注入的 <script> 節點，避免程式碼疊加、
- *   避免變數重複宣告報錯，但「已經註冊出去的」setInterval / 
- *   window.addEventListener 等，理論上仍可能殘留在記憶體中執行。
- *   因此 Phase 1 只先開放風險最低的 summary / coverage 兩頁試點，
- *   尚未大量使用 setInterval 或全域監聽的頁面才會被排進來。
+ * 已知限制（Phase 1 誠實揭露，尚未完全解決）：
+ * - v2 已處理 window.addEventListener 的疊加問題。
+ * - 若某頁使用 setInterval/setTimeout 排程尚未觸發就切走，計時器本身
+ *   仍會在背景跑完，屆時可能操作到已經被替換掉的 DOM（安全但可能出現
+ *   Console 警告）。目前排進白名單的頁面都沒有這類用法，之後排到有
+ *   計時器的頁面（如 export.html）會在遷移時個別處理。
  */
 (function(global) {
   "use strict";
 
   var CONTENT_ID = "nbs-app-content";
-  var PILOT_PAGES = ["summary.html", "coverage.html"]; // Phase 1 試點白名單
+  var PILOT_PAGES = ["summary.html", "coverage.html", "savings.html"]; // Phase 2 白名單
 
-  var _current = { key: null, scriptEls: [] };
+  var _current = { key: null, scriptEls: [], listeners: [] };
 
   function _keyFromHref(href) {
     return href.split("/").pop().split("?")[0].split("#")[0];
+  }
+
+  function _removeTrackedListeners() {
+    _current.listeners.forEach(function(l) {
+      try { window.removeEventListener(l.type, l.fn, l.opts); } catch (e) {}
+    });
+    _current.listeners = [];
   }
 
   function navigate(href, opts) {
     opts = opts || {};
     var key = _keyFromHref(href);
 
-    // 不在試點白名單內的頁面，暫時維持整頁導航（Phase 2 逐頁加入白名單）
+    // 不在試點白名單內的頁面，暫時維持整頁導航（依序逐頁加入白名單）
     if (PILOT_PAGES.indexOf(key) === -1) {
       window.location.href = href;
       return;
@@ -52,11 +66,14 @@
   function _mount(key, href, html, opts) {
     var doc = new DOMParser().parseFromString(html, "text/html");
 
-    // 1) 清掉上一頁注入的 <script>，避免程式碼疊加
+    // 1) 清掉上一頁注入的 <script> 節點
     _current.scriptEls.forEach(function(s) {
       if (s.parentNode) s.parentNode.removeChild(s);
     });
     _current.scriptEls = [];
+
+    // 1b) 清掉上一頁在 window 上註冊的監聽器（v2 新增）
+    _removeTrackedListeners();
 
     // 2) 清掉上一頁注入的 <style>，換上這一頁的 <style>
     document.querySelectorAll("style[data-nbs-page-style]").forEach(function(s) { s.remove(); });
@@ -87,7 +104,16 @@
     }
     window.scrollTo(0, 0);
 
-    // 5) 依原順序重新執行這一頁的 <script>（外部 src 的略過，shell 已載入過）
+    // 5) 監聽 addEventListener，把這一頁 script 執行期間註冊的監聽器記下來，
+    //    下次換頁時才能精準清掉（v2 新增）
+    var captured = [];
+    var origAdd = window.addEventListener;
+    window.addEventListener = function(type, fn, opts2) {
+      captured.push({ type: type, fn: fn, opts: opts2 });
+      return origAdd.call(window, type, fn, opts2);
+    };
+
+    // 6) 依原順序重新執行這一頁的 <script>（外部 src 的略過，shell 已載入過）
     scriptNodes.forEach(function(s) {
       if (s.src) return;
       var el = document.createElement("script");
@@ -96,7 +122,11 @@
       _current.scriptEls.push(el);
     });
 
-    // 6) 補發一次資料就緒事件，讓剛執行的頁面 script 能拿到現有家庭/成員資料
+    // 還原 addEventListener，記錄本頁註冊的監聽器
+    window.addEventListener = origAdd;
+    _current.listeners = captured;
+
+    // 7) 補發一次資料就緒事件，讓剛執行的頁面 script 能拿到現有家庭/成員資料
     setTimeout(function() {
       if (global.NBS_NAV && typeof global.NBS_NAV.reannounce === "function") {
         global.NBS_NAV.reannounce();
@@ -115,3 +145,4 @@
   global.NBSRouter = { navigate: navigate };
 
 })(window);
+

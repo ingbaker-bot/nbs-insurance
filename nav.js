@@ -78,8 +78,27 @@
   // 3. 公開 API
   // ==========================================
   global.NBS_NAV = {
+    // 每支獨立頁面尾端都會呼叫 NBS_NAV.init({page:"xxx"})，這是既有
+    // 8 支頁面共通的既有寫法，完全不用改。
+    //
+    // 重要修正（Phase 2 發現，回溯修正 Phase 1）：
+    // 在 SPA shell（router.js 存在）底下，這支頁面的 <script> 會被
+    // router 重新執行一次，代表 init() 也會被重新呼叫一次。如果直接
+    // 照舊跑 _setup()，會再呼叫一次 _insertNav()，等於在 DOM 裡多插入
+    // 一組一模一樣、位置完全重疊的側欄/底部 tab/mobile header/成員
+    // modal —— 因為 CSS 是 position:fixed 且內容相同，兩組會完全疊在
+    // 一起，肉眼幾乎看不出來，但 DOM 節點數會隨著換頁次數一直增加，
+    // 且哪一組實際接收點擊事件會變得不可預期。
+    //
+    // 修法：偵測到 window.NBSRouter 存在（代表現在跑在 SPA shell 底
+    // 下），就只同步「目前頁面」讓側欄高亮正確，不重建 DOM、不重載
+    // 資料（shell 已經在 initShell() 時做過一次）。
     init: function(opts) {
       _page = opts.page || "";
+      if (global.NBSRouter) {
+        NBS_NAV.setActivePage(_page);
+        return;
+      }
       if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", function() { _setup(opts); });
       } else {
