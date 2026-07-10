@@ -13,6 +13,9 @@
     .back{background:none;border:none;font-size:26px;color:#999;cursor:pointer;padding:0}
     .hdr-title{font-size:18px;font-weight:500;flex:1}
     .hdr-sub{font-size:14px;color:#bbb}
+    .member-tabs{display:flex;background:#fafafa;border-bottom:1px solid #eee;overflow-x:auto;padding:0 16px}
+    .member-tab{padding:9px 14px;font-size:14px;cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;color:#888}
+    .member-tab.active{border-bottom-color:#378ADD;color:#378ADD;font-weight:500}
     /* 選項頁保持窄版（手機友好），預覽頁用獨立 class */
     .wrap{padding:16px;max-width:560px;margin:0 auto}
     .wrap-preview{padding:16px;max-width:1200px;margin:0 auto}
@@ -60,6 +63,7 @@
 <div style="display:none" id="HDR_SUB"></div>
 <button style="display:none" id="B_BACK"></button>
 <div style="display:none" id="HDR_TITLE"></div>
+<div class="member-tabs" id="member-tabs"></div>
 
 <div class="pg act" id="P_SEL">
   <div class="wrap">
@@ -121,22 +125,22 @@
 
 <script>
 // ── 設定 ─────────────────────────────────────────────────
-const GAS="https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec";
+var   GAS="https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec";
 
 // ▼ 四大匯出區塊（重新拆分）
-const BLOCKS=[
+var   BLOCKS=[
   {key:"premium_detail",   label:"保險繳費明細一覽表", icon:"📅",desc:"年繳/月均統計、月曆、保單與受益人整合表"},
   {key:"summary",          label:"保單彙總一覽表",     icon:"📊",desc:"保障覆蓋率、家庭責任、醫療階段、就醫情況"},
   {key:"policy_detail",    label:"保單明細一覽表",     icon:"📋",desc:"各項保障加總明細"},
   {key:"savings_timeline", label:"儲蓄險現金流時間軸", icon:"📈",desc:"未來15年各被保險人現金流匯整"},
 ];
-const FMTS=[
+var   FMTS=[
   {key:"png_single",  type:"png",label:"PNG 一張長圖",desc:"所有區塊合併，適合 LINE 傳送"},
   {key:"png_multiple",type:"png",label:"PNG 分張",    desc:"每個區塊各自一張"},
   {key:"pdf_merge",   type:"pdf",label:"PDF 合併",    desc:"所有區塊合併為單一 PDF"},
   {key:"pdf_pages",   type:"pdf",label:"PDF 分頁",    desc:"每個區塊各自一頁"},
 ];
-const CC={"壽險保障":"#4A90D9","醫療保障":"#27AE8F","意外險":"#F5A623","重大疾病險":"#9B59B6","重大傷病險":"#8E44AD","特定傷病險":"#7D3C98","儲蓄險":"#E8638A","年金險":"#C0392B","投資型保險":"#95A5A6"};
+var   CC={"壽險保障":"#4A90D9","醫療保障":"#27AE8F","意外險":"#F5A623","重大疾病險":"#9B59B6","重大傷病險":"#8E44AD","特定傷病險":"#7D3C98","儲蓄險":"#E8638A","年金險":"#C0392B","投資型保險":"#95A5A6"};
 
 // ── 狀態 ─────────────────────────────────────────────────
 var sel={premium_detail:false,summary:false,policy_detail:false,savings_timeline:false};
@@ -653,9 +657,27 @@ function getInsAge(pid) {
 }
 
 function switchPerson(pid) {
-  currentPersonId=pid;
+  currentPersonId = pid;
+  var p = personDataMap[pid];
+  if (!p) {
+    // 保底：優先用已載入的 personDataMap，沒有的話跟 onMemberChange
+    // 一樣退回讀 sessionStorage 快取
+    try { p = JSON.parse(sessionStorage.getItem("nbs_person_" + pid)); } catch (e) {}
+  }
+  if (p) {
+    person = p;
+    policies = person.policies || [];
+    coverage = person.coverage || {};
+    savings = person.savings || [];
+    pName = (person.profile && person.profile.name) || "—";
+    var ad = person.profile && person.profile.analysisDate;
+    if (ad) {
+      var d = new Date(ad);
+      pDate = (d.getFullYear() - 1911) + "年" + (d.getMonth() + 1) + "月" + d.getDate() + "日";
+    }
+  }
   renderTabs();
-  renderContent();
+  updatePrevBtn();
 }
 
 // ── SVG 箭頭列（html2canvas 相容，不使用 clip-path+calc）────────────────
@@ -845,133 +867,20 @@ function buildGapAnalysisEx(active, coverage, targets, covOverrides) {
     html += `<div style="font-size:17px;color:#27AE8F;text-align:center;padding:12px 0">🎉 所有已設目標項目均達標！</div>`;
   }
 
-  html += `<button onclick="openTargetModal()" style="width:100%;margin-top:10px;padding:8px;background:transparent;border:1px dashed #ddd;border-radius:8px;font-size:16px;color:#666;cursor:pointer;font-family:inherit">🎯 設定 / 修改目標保額</button>`;
   return html;
 }
 
-// ── 目標設定 Modal ────────────────────────────────────────
-function openTargetModal() {
-  var person = personDataMap[currentPersonId];
-  var policies = person?.policies||[];
-  var active = policies.filter(p=>p.status==="有效");
-
-  var coverage = {};
-  Object.entries(person?.coverage||{}).forEach(([k,v])=>{
-    if(typeof v==="number") coverage[k]=(coverage[k]||0)+v;
-    else coverage[k]=v;
-  });
-  policies.forEach(p => {
-    Object.entries(p.coverage||{}).forEach(([k,v]) => {
-      if(typeof v === "number") coverage[k] = (coverage[k]||0)+v;
-      else coverage[k] = v;
-    });
-  });
-
-  var bodyHtml = `<div style="font-size:14px;color:#888;background:#f7f7f5;padding:8px 12px;border-radius:8px;margin-bottom:14px;line-height:1.6">
-    設定後顯示「不足」；未設定的項目只顯示「有/無（缺口）」，不計算差額。
-  </div>`;
-
-  GAP_GROUPS_EX.forEach(g => {
-    bodyHtml += `<div style="font-size:17px;font-weight:500;color:${g.color};padding:4px 10px;background:${g.color}15;border-radius:5px;margin-bottom:8px">${g.label}</div>`;
-    g.items.filter(item=>!item.isBool).forEach(item => {
-      var current = getItemCurrentEx(item.key, active, coverage, overrides);
-      var tval = targets[item.key]||"";
-      bodyHtml += `<div style="margin-bottom:10px">
-        <div style="display:flex;justify-content:space-between;margin-bottom:3px">
-          <label style="font-size:16px;color:#333">${item.label}</label>
-          <span style="font-size:14px;color:#aaa">目前：${current.toLocaleString()||0} ${item.unit}</span>
-        </div>
-        <div style="display:flex;align-items:center;border:1px solid #e0e0e0;border-radius:7px;overflow:hidden">
-          <input type="number" id="target_${item.key}" value="${tval}" placeholder="不設定（只顯示有/無）"
-            style="flex:1;padding:8px 12px;font-size:17px;border:none;outline:none;font-family:inherit"/>
-          ${item.unit?`<span style="padding:0 10px;font-size:14px;color:#aaa;background:#fafafa;border-left:1px solid #f0f0f0">${item.unit}</span>`:""}
-        </div>
-      </div>`;
-    });
-    bodyHtml += `<div style="margin-bottom:14px"></div>`;
-  });
-
-  var existing = document.getElementById("target-modal-overlay");
-  if(existing) existing.remove();
-
-  var overlay = document.createElement("div");
-  overlay.id = "target-modal-overlay";
-  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:300;display:flex;align-items:flex-end;justify-content:center";
-  overlay.innerHTML = `<div style="background:#fff;border-radius:16px 16px 0 0;padding:20px;width:100%;max-width:560px;max-height:85vh;overflow-y:auto">
-    <div style="display:flex;justify-content:space-between;margin-bottom:14px">
-      <span style="font-weight:500;font-size:19px">🎯 設定目標保額</span>
-      <button onclick="document.getElementById('target-modal-overlay')?.remove()" style="background:none;border:none;font-size:26px;color:#999;cursor:pointer;line-height:1">×</button>
-    </div>
-    ${bodyHtml}
-    <div style="display:flex;gap:8px;margin-top:8px">
-      <button onclick="document.getElementById('target-modal-overlay')?.remove()"
-        style="flex:1;padding:10px;background:transparent;color:#666;border:1px solid #ddd;border-radius:8px;cursor:pointer;font-family:inherit">取消</button>
-      <button onclick="saveTargets()"
-        style="flex:2;padding:10px;background:#378ADD;color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:500;cursor:pointer;font-family:inherit">儲存目標</button>
-    </div>
-  </div>`;
-  overlay.onclick = e => { if(e.target===overlay) overlay.remove(); };
-  document.body.appendChild(overlay);
-}
-
-function saveTargets() {
-  GAP_GROUPS_EX.flatMap(g=>g.items.filter(i=>!i.isBool)).forEach(item => {
-    var el = document.getElementById("target_"+item.key);
-    if(el) {
-      var v = parseFloat(el.value);
-      if(!isNaN(v) && v > 0) targets[item.key] = v;
-      else delete targets[item.key];
-    }
-  });
-  document.getElementById("target-modal-overlay")?.remove();
-  renderContent();
-}
-
-function openModal() {
-  var person  = personDataMap[currentPersonId];
-  var policies= person?.policies||[];
-  var coverage= person?.coverage||{};
-  var active  = policies.filter(p=>p.status==="有效");
-  var covTypes= COVERAGE_TYPES.map(t=>{
-    var auto=t.detect(active,coverage);
-    var manual=overrides[currentPersonId+"_"+t.key];
-    return {...t,covered:manual!==undefined?manual:auto,autoDetected:auto,isManual:manual!==undefined};
-  });
-
-  var groups=["壽險","意外","醫療","重大","癌症","長照","財務"];
-  var html="";
-  groups.forEach(g=>{
-    var gTypes=covTypes.filter(t=>t.group===g);
-    var gc=GROUP_COLORS[g];
-    html+=`<div class="type-group-label" style="color:${gc}">${g}</div><div class="type-tags">`;
-    gTypes.forEach(t=>{
-      html+=`<div class="type-tag" id="tag_${t.key}" onclick="toggleOverride('${t.key}')"
-        style="background:${t.covered?t.color+'18':'#f5f5f5'};border:1.5px ${t.covered?'solid':'dashed'} ${t.covered?t.color:'#ddd'}">
-        <div class="type-tag-dot" style="background:${t.covered?t.color:'transparent'};border:${t.covered?'none':'1.5px solid #ccc'}"></div>
-        <span class="type-tag-label" style="color:${t.covered?'#333':'#bbb'};font-weight:${t.covered?500:400}">${t.label}</span>
-        ${t.isManual?'<span class="manual-badge">手動</span>':''}
-      </div>`;
-    });
-    html+=`</div>`;
-  });
-  document.getElementById("modal-types").innerHTML=html;
-  document.getElementById("edit-modal").classList.add("active");
-}
-
-function toggleOverride(key) {
-  var fk=currentPersonId+"_"+key;
-  var person=personDataMap[currentPersonId];
-  var active=(person?.policies||[]).filter(p=>p.status==="有效");
-  var cov=person?.coverage||{};
-  var t=COVERAGE_TYPES.find(x=>x.key===key);
-  var auto=t?t.detect(active,cov):false;
-  var cur=overrides[fk];
-  if(cur===undefined) overrides[fk]=!auto;
-  else delete overrides[fk];
-  openModal();
-}
-function closeModal() { document.getElementById("edit-modal").classList.remove("active"); renderContent(); }
-function handleModalOverlay(e) { if(e.target===document.getElementById("edit-modal")) closeModal(); }
+// 註：原本這裡有一段「目標設定 Modal」「手動調整保障有無 Modal」的
+// 複製程式碼（openTargetModal/saveTargets/openModal/toggleOverride/
+// closeModal/handleModalOverlay），已於這次整理移除：
+// - openModal/toggleOverride/closeModal/handleModalOverlay 依賴的
+//   #edit-modal、#modal-types 容器在 export.html 畫面裡並不存在，
+//   屬於無法觸及、觸及就會報錯的死碼。
+// - openTargetModal/saveTargets 雖然本身可以動（自己動態建立彈窗），
+//   但「設定目標保額」這個功能設計上屬於 summary.html（那邊行為完整、
+//   看得到即時反映），搬到匯出頁只會讓人誤以為可以在這裡編輯資料，
+//   且調整的內容不會被保存，因此一併移除，匯出頁維持「只做匯出選擇」
+//   的單純定位。
 
 function goBack() { window.location.href="family.html"; }
 
@@ -1449,6 +1358,7 @@ window.addEventListener("nbs_nav_ready", async function(e) {
 
     await Promise.all(fetchPromises);
 
+    personDataMap = pdm;
     person = pdm[currentPersonId] || {};
     policies = person.policies || [];
     coverage = person.coverage || {};
@@ -1462,6 +1372,7 @@ window.addEventListener("nbs_nav_ready", async function(e) {
   } catch (ex) { 
     console.error("export load error", ex); 
   }
+  renderTabs();
   updatePrevBtn();
 
   // 通知 nav.js 更新側邊欄（nav.js 自己讀 Drive 可能失敗）
@@ -1475,15 +1386,7 @@ window.addEventListener("nbs_nav_ready", async function(e) {
 // ── NBS 導覽 ──────────────────────────────────────────────
 if (typeof NBS_NAV !== "undefined") { 
     NBS_NAV.onMemberChange = function(pid) {
-      currentPersonId = pid;
-      // 匯出頁面不需要即時更新內容，但可在這裡補上重新抓人名邏輯
-      var pdm_p = JSON.parse(sessionStorage.getItem("nbs_person_" + pid));
-      if(pdm_p) {
-        person = pdm_p;
-        policies = person.policies || [];
-        pName = (person.profile && person.profile.name) || "—";
-        updatePrevBtn();
-      }
+      switchPerson(pid);
     };
 }
 

@@ -1,7 +1,8 @@
 /**
  * NBS SPA 前端路由 router.js v5
  * Phase 1：summary / coverage
- * Phase 2：+ savings, + beneficiary, + hospital, + policy, + visit, + family（本次新增）
+ * Phase 2：+ savings, + beneficiary, + hospital, + policy, + visit, + family
+ * Phase 2 收尾：+ export（本次新增，並清理死碼）
  *
  * v2：新增「監聽器自動清除」（window.addEventListener 疊加問題）
  * v4：新增「計時器自動清除」（setTimeout/setInterval 疊加問題）
@@ -41,7 +42,7 @@
   "use strict";
 
   var CONTENT_ID = "nbs-app-content";
-  var PILOT_PAGES = ["summary.html", "coverage.html", "savings.html", "beneficiary.html", "hospital.html", "policy.html", "visit.html", "family.html"];
+  var PILOT_PAGES = ["summary.html", "coverage.html", "savings.html", "beneficiary.html", "hospital.html", "policy.html", "visit.html", "family.html", "export.html"];
 
   var _current = { key: null, scriptEls: [], listeners: [], timers: [] };
   var _loadedExternalSrcs = null;
