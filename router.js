@@ -1,7 +1,7 @@
 /**
- * NBS SPA 前端路由 router.js v2
+ * NBS SPA 前端路由 router.js v3
  * Phase 1：summary / coverage
- * Phase 2：+ savings（本次新增）
+ * Phase 2：+ savings, + beneficiary（本次新增）
  *
  * v2 變更：新增「監聽器自動清除」機制 —— 每次換頁前，會把上一頁
  * 的 script 在執行期間對 window 註冊的 addEventListener 全部移除，
@@ -26,7 +26,7 @@
   "use strict";
 
   var CONTENT_ID = "nbs-app-content";
-  var PILOT_PAGES = ["summary.html", "coverage.html", "savings.html"]; // Phase 2 白名單
+  var PILOT_PAGES = ["summary.html", "coverage.html", "savings.html", "beneficiary.html"]; // Phase 2 白名單
 
   var _current = { key: null, scriptEls: [], listeners: [] };
 
