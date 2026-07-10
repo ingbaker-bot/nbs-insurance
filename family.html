@@ -1060,8 +1060,7 @@ function callGAS(action, params) {
   
 // ── NBS 導覽 ──────────────────────────────────────────────
 NBS_NAV.onMemberChange = function(pid) {
-  selectedPersonId = pid;
-  renderMemberCard();
+  selectMember(pid);
 };
 NBS_NAV.init({ page: "family" });
 </script>

@@ -892,11 +892,6 @@ function callGAS(action, params) {
   return Promise.reject(new Error('nav.js 未載入，請重新整理頁面'));
 }
 
-NBS_NAV.onMemberChange = function(pid) {
-  currentPersonId = pid;
-  if (typeof renderContent  === "function") renderContent();
-};
-
 // 支援兩種事件：nav.js 自行載入 或 family.html 先載入後通知
 window.addEventListener("nbs_family_loaded", function(e) {
   if (typeof familyData !== "undefined" && familyData) return; // 已初始化
