@@ -1464,25 +1464,22 @@ async function handlePDFUpload() {
   if (!file) return;
 
   const btn = document.getElementById("ai-parse-btn");
-  const msgEl = document.getElementById("msg"); // 假設你有這個顯示訊息的 ID
+  const msgEl = document.getElementById("ai-parse-msg"); 
   btn.disabled = true;
+  msgEl.style.display = "none";
 
   try {
-    let aiResponse; // 統一接收 AI 回傳結果
+    let aiResponse;
 
     // 1. 判斷並執行對應解析
     if (file.type.startsWith("image/")) {
       btn.textContent = "🖼️ 正在透過視覺模型處理影像...";
-      
       const base64Data = await new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result.split(',')[1]);
         reader.readAsDataURL(file);
       });
-
-      // 呼叫圖片解析 API
       aiResponse = await callGAS("parsePolicyImage", { image: base64Data });
-      
     } else {
       btn.textContent = "📄 正在本機萃取 PDF 文字...";
       const arrayBuffer = await file.arrayBuffer();
@@ -1493,6 +1490,7 @@ async function handlePDFUpload() {
         const textContent = await page.getTextContent();
         fullText += textContent.items.map(item => item.str).join(" ") + "\n";
       }
+      console.log("PDF 萃取出的純文字：", fullText); // 移到這裡才安全
       btn.textContent = "🤖 文字萃取成功！正在呼叫 AI...";
       aiResponse = await callGAS("parsePolicyText", { text: fullText });
     }
@@ -1500,17 +1498,11 @@ async function handlePDFUpload() {
     console.log("AI 解析結果：", aiResponse);
 
     if (!aiResponse || aiResponse.status !== "ok" || !aiResponse.data) {
-      throw new Error(aiResponse.message || "AI 解析回傳異常或格式不符");
+      throw new Error((aiResponse && aiResponse.message) || "AI 解析回傳異常");
     }
 
     // 🌟 2. 核心智慧疊加邏輯 (Upsert)
-    const aiPolicies = aiResponse.data; // 直接使用正確回傳的陣列
-    const person = personDataMap[editingPersonId || currentPersonId];
-    if (!person) throw new Error("找不到目前被保險人資料空間");
-    if (!person.policies) person.policies = [];
-
-    // 🌟 3. 核心智慧疊加邏輯 (Upsert)
-    const aiPolicies = response.data; // 這是 AI 回傳的保單/附約陣列
+    const aiPolicies = aiResponse.data;
     const person = personDataMap[editingPersonId || currentPersonId];
     if (!person) throw new Error("找不到目前被保險人資料空間");
     if (!person.policies) person.policies = [];
@@ -1518,27 +1510,18 @@ async function handlePDFUpload() {
     let updateCount = 0;
     let insertCount = 0;
 
-    // ... 在 handlePDFUpload 的 aiPolicies.forEach 迴圈中 ...
-
     aiPolicies.forEach(aiPol => {
       const existingIdx = person.policies.findIndex(p => 
         p.policyNo === aiPol.policyNo && p.itemName === aiPol.itemName
       );
 
       if (existingIdx >= 0) {
-        // A. 找到重複資料：進行欄位智慧融合 (Merge)
         const oldPol = person.policies[existingIdx];
-        // --- ⬇️ 這裡加入受益人格式轉換 ---
-    if (aiPol.beneficiary) {
-        if (aiPol.beneficiary.death && Array.isArray(aiPol.beneficiary.death)) {
-            // 將陣列轉為 benef.html 可讀的格式
-            const deathText = aiPol.beneficiary.death
-                .map(b => `${b.rank ? b.rank+'：' : ''}${b.name}(${b.relation})`)
-                .join('\n');
-            oldPol.beneficiaryDeathText = deathText; // 直接更新到舊物件
+        if (aiPol.beneficiary && aiPol.beneficiary.death && Array.isArray(aiPol.beneficiary.death)) {
+          oldPol.beneficiaryDeathText = aiPol.beneficiary.death
+            .map(b => `${b.rank ? b.rank+'：' : ''}${b.name}(${b.relation})`)
+            .join('\n');
         }
-        // 若有生存金或滿期金，也比照辦理...
-    }
         const mergedCoverage = Object.assign({}, oldPol.coverage || {}, aiPol.coverage || {});
         
         person.policies[existingIdx] = {
@@ -1547,7 +1530,6 @@ async function handlePDFUpload() {
           isMain: aiPol.isMain !== null ? aiPol.isMain : oldPol.isMain,
           category: aiPol.category || oldPol.category,
           amount: aiPol.amount || oldPol.amount,
-          // 👇 新增這行：處理單位
           insuredAmountUnit: aiPol.amountUnit || oldPol.insuredAmountUnit || "萬元", 
           payMode: aiPol.payMode || oldPol.payMode,
           status: aiPol.status || oldPol.status,
@@ -1564,7 +1546,6 @@ async function handlePDFUpload() {
         };
         updateCount++;
       } else {
-        // B. 沒找到資料：建立全新識別碼並存入 (Insert)
         person.policies.push({
           id: "pol_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
           isMain: aiPol.isMain,
@@ -1573,7 +1554,6 @@ async function handlePDFUpload() {
           itemName: aiPol.itemName,
           category: aiPol.category,
           insuredAmount: aiPol.amount,
-          // 👇 新增這行：處理單位
           insuredAmountUnit: aiPol.amountUnit || "萬元", 
           payMode: aiPol.payMode || "年繳",
           status: aiPol.status || "有效",
@@ -1605,7 +1585,6 @@ async function handlePDFUpload() {
 
     if (!saveResult || saveResult.status === "error") throw new Error("雲端硬碟寫入失敗");
 
-    // 5. 成功後清除快取、關閉 Modal 並重新渲染主頁面
     if (window.NBS_NAV && typeof NBS_NAV.invalidateBundleCache === 'function') {
       NBS_NAV.invalidateBundleCache();
     }
@@ -1617,7 +1596,6 @@ async function handlePDFUpload() {
       closeForm();
       renderTabs();
       renderPolicies();
-      // 還原按鈕
       btn.textContent = "✨ 上傳並自動分析填表";
       btn.style.background = "#378ADD";
       btn.disabled = false;
@@ -1625,13 +1603,13 @@ async function handlePDFUpload() {
 
   } catch (error) {
     console.error("解析失敗：", error);
-    alert("處理失敗：" + error.message);
-  } finally {
+    msgEl.textContent = "❌ 處理失敗：" + error.message;
+    msgEl.style.display = "block";
+    btn.textContent = "✨ 重新上傳並自動分析";
+    btn.style.background = "#378ADD";
     btn.disabled = false;
-    btn.textContent = "✨ 上傳並自動分析填表";
   }
 }
-
 // ── NBS 導覽 ──────────────────────────────────────────────
 NBS_NAV.onMemberChange = function(pid) {
   currentPersonId = pid;
