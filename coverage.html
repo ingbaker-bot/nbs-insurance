@@ -148,12 +148,24 @@ var GROUPS=[
     {key:"can_hospice",label:"安寧照護",unit:"萬元"},
     {key:"can_death",label:"癌症身故",unit:"萬元"},
   ]},
+  // 重大：涵蓋「重大疾病險／重大傷病險／特定傷病險」三種保單類別。
+  // 這三者在實務保單設計上高度重疊，因此合併成一個分類頁籤。
+  // 注意：確診「一次性給付金額」不在這裡填——那個數字已經由保單本身
+  // 的「保額」欄位（policy.html 新增保單時填的 insuredAmount）正確
+  // 提供給 summary.html/export.html 的缺口分析使用，不需要在這裡
+  // 重複輸入一次，避免使用者兩邊各填一次造成混淆或兜不起來。
+  // 這裡只放「確診後續」的按月/按年扶助金——這是原本唯一缺乏合理
+  // 填寫位置的部分。ltc_life/ltc_yr/ltc_mo 沿用原本在「失能長照」
+  // 分類的欄位 key 不變，只是改到這裡顯示，既有保單填過的資料完全
+  // 不受影響、照樣讀得到。
+  {key:"ci",label:"重大",icon:"🚨",color:"#9B59B6",bg:"#F3E8FA",fields:[
+    {key:"ltc_life",label:"生活扶助金（每月）",unit:"萬元/月"},
+    {key:"ltc_yr",label:"特定傷病保險金（每年）",unit:"萬元/年"},
+    {key:"ltc_mo",label:"特定傷病保險金（每月）",unit:"萬元/月"},
+  ]},
   {key:"ltc",label:"失能長照",icon:"🤝",color:"#27500A",bg:"#EAF3DE",fields:[
     {key:"ltc_care",label:"長照／長看關懷保險金",unit:"萬元"},
     {key:"ltc_monthly",label:"長期照護療養（每月）",unit:"萬元"},
-    {key:"ltc_life",label:"生活扶助／重大傷病（每月）",unit:"萬元"},
-    {key:"ltc_yr",label:"特定傷病保險金（每年）",unit:"萬元/年"},
-    {key:"ltc_mo",label:"特定傷病保險金（每月）",unit:"萬元/月"},
     {key:"ltc_dis_amt",label:"失能（殘廢）保險金",unit:"萬元"},
     {key:"ltc_dis_life",label:"失能（殘廢）生活扶助金",unit:"萬元"},
     {key:"ltc_waiver",label:"保費豁免",unit:"",type:"checkbox"},
