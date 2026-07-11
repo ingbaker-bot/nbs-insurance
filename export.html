@@ -8,67 +8,76 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
+    :root{
+      --primary:#6366f1; --primary-dark:#4f46e5; --primary-light:#eef2ff;
+      --accent-pdf:#f43f5e; --accent-pdf-light:#fff1f2;
+      --bg:#f8fafc; --surface:#ffffff; --text:#1e293b; --text-muted:#64748b;
+      --border:#e2e8f0; --success:#10b981; --success-light:#ecfdf5;
+    }
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f5f3;min-height:100vh;color:#1a1a1a}
-    .hdr{background:#fff;border-bottom:1px solid #eee;padding:12px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100}
-    .back{background:none;border:none;font-size:26px;color:#999;cursor:pointer;padding:0}
-    .hdr-title{font-size:18px;font-weight:500;flex:1}
-    .hdr-sub{font-size:14px;color:#bbb}
-    .member-tabs{display:flex;background:#fafafa;border-bottom:1px solid #eee;overflow-x:auto;padding:0 16px}
-    .member-tab{padding:9px 14px;font-size:14px;cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;color:#888}
-    .member-tab.active{border-bottom-color:#378ADD;color:#378ADD;font-weight:500}
+    body{font-family:'PingFang TC',-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);min-height:100vh;color:var(--text);padding-bottom:96px}
+    .hdr{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100}
+    .back{background:none;border:none;font-size:26px;color:var(--text-muted);cursor:pointer;padding:0}
+    .hdr-title{font-size:18px;font-weight:700;flex:1}
+    .hdr-sub{font-size:14px;color:var(--text-muted)}
+    .member-tabs{display:flex;gap:8px;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;padding:14px 16px}
+    .member-tab{padding:8px 18px;border-radius:99px;background:#f1f5f9;cursor:pointer;white-space:nowrap;color:var(--text-muted);font-weight:600;font-size:14px;transition:.2s}
+    .member-tab.active{background:var(--primary);color:#fff;box-shadow:0 4px 10px -2px rgba(99,102,241,.5)}
     /* 選項頁保持窄版（手機友好），預覽頁用獨立 class */
-    .wrap{padding:16px;max-width:560px;margin:0 auto}
-    .wrap-preview{padding:16px;max-width:1200px;margin:0 auto}
-    .sec-lbl{font-size:14px;font-weight:500;color:#999;margin-bottom:8px;letter-spacing:.05em;display:flex;align-items:center;justify-content:space-between}
-    .blk{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid #e8e8e8;border-radius:10px;cursor:pointer;background:#fff;margin-bottom:8px;-webkit-tap-highlight-color:rgba(0,0,0,0)}
-    .blk.on{border:1.5px solid #378ADD;background:#F0F7FF}
-    .chk{width:20px;height:20px;border-radius:5px;border:1.5px solid #ddd;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;color:#fff}
-    .blk.on .chk{background:#378ADD;border:none}
-    .blk-lbl{font-size:17px;font-weight:500;color:#333}
-    .blk.on .blk-lbl{color:#0C447C}
-    .blk-desc{font-size:14px;color:#aaa;margin-top:1px}
-    .fmt-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px}
-    .fmt{padding:10px 12px;border:1px solid #e8e8e8;border-radius:10px;cursor:pointer;background:#fff;-webkit-tap-highlight-color:rgba(0,0,0,0)}
-    .fmt.spng{border:1.5px solid #378ADD;background:#F0F7FF}
-    .fmt.spdf{border:1.5px solid #E74C3C;background:#FEF5F8}
-    .fmt-title{font-size:17px;font-weight:500;color:#333;margin-bottom:2px}
-    .fmt.spng .fmt-title{color:#0C447C}
-    .fmt.spdf .fmt-title{color:#791F1F}
-    .fmt-desc{font-size:14px;color:#aaa;line-height:1.5}
-    .fmt-section-hdr{display:flex;align-items:center;gap:8px;font-size:17px;font-weight:500;color:#555;margin-top:14px;padding:8px 4px;cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,0);border-radius:8px}
-    .fmt-section-hdr:hover{background:#f7f7f5}
-    .fmt-hdr-sel{font-size:14px;font-weight:500;padding:2px 10px;border-radius:99px;background:#F0F7FF;color:#0C447C;white-space:nowrap}
-    .fmt-section-hdr.is-pdf .fmt-hdr-sel{background:#FEF5F8;color:#791F1F}
+    .wrap{padding:20px;max-width:560px;margin:0 auto}
+    .wrap-preview{padding:20px;max-width:1200px;margin:0 auto}
+    .sec-lbl{font-size:14px;font-weight:700;color:var(--text-muted);margin-bottom:12px;letter-spacing:.05em;display:flex;align-items:center;justify-content:space-between}
+    .blk{display:flex;align-items:center;gap:14px;padding:16px 18px;border:2px solid transparent;border-radius:20px;cursor:pointer;background:var(--surface);margin-bottom:12px;box-shadow:0 4px 6px -1px rgba(0,0,0,.06);-webkit-tap-highlight-color:rgba(0,0,0,0);transition:.15s}
+    .blk.on{border-color:var(--primary);background:var(--primary-light)}
+    .chk{width:24px;height:24px;border-radius:8px;border:1.5px solid #d8dce6;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;color:#fff;background:#fff;transition:.15s}
+    .blk.on .chk{background:var(--primary);border-color:var(--primary)}
+    .blk-lbl{font-size:17px;font-weight:700;color:var(--text)}
+    .blk.on .blk-lbl{color:var(--primary-dark)}
+    .blk-desc{font-size:13px;color:var(--text-muted);margin-top:2px}
+    .fmt-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px}
+    .fmt{padding:14px 14px;border:2px solid transparent;border-radius:16px;cursor:pointer;background:var(--surface);box-shadow:0 4px 6px -1px rgba(0,0,0,.06);-webkit-tap-highlight-color:rgba(0,0,0,0);transition:.15s}
+    .fmt.spng{border-color:var(--primary);background:var(--primary-light)}
+    .fmt.spdf{border-color:var(--accent-pdf);background:var(--accent-pdf-light)}
+    .fmt-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:2px}
+    .fmt.spng .fmt-title{color:var(--primary-dark)}
+    .fmt.spdf .fmt-title{color:var(--accent-pdf)}
+    .fmt-desc{font-size:13px;color:var(--text-muted);line-height:1.5}
+    .fmt-section-hdr{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:700;color:var(--text);margin-top:18px;padding:10px 6px;cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,0);border-radius:10px}
+    .fmt-section-hdr:hover{background:#eef1f6}
+    .fmt-hdr-sel{font-size:13px;font-weight:700;padding:3px 12px;border-radius:99px;background:var(--primary-light);color:var(--primary-dark);white-space:nowrap}
+    .fmt-section-hdr.is-pdf .fmt-hdr-sel{background:var(--accent-pdf-light);color:var(--accent-pdf)}
     .fmt-chevron{font-size:14px;color:#bbb;transition:transform .15s;width:16px;text-align:center}
-    .pbtn{width:100%;padding:12px;color:#fff;border:none;border-radius:8px;font-size:16px;font-weight:500;cursor:pointer;font-family:inherit;display:block;-webkit-tap-highlight-color:rgba(0,0,0,0)}
-    .pbtn:disabled{background:#ccc!important;cursor:default}
-    .sbtn{padding:10px;background:#fff;color:#666;border:1px solid #ddd;border-radius:8px;font-size:16px;cursor:pointer;font-family:inherit;flex:1;-webkit-tap-highlight-color:rgba(0,0,0,0)}
-    .brow{display:flex;gap:8px;margin-top:16px}
+    .pbtn{width:100%;padding:16px;color:#fff;border:none;border-radius:16px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;display:block;box-shadow:0 10px 15px -5px rgba(99,102,241,.4);-webkit-tap-highlight-color:rgba(0,0,0,0)}
+    .pbtn:disabled{background:#cbd2e0!important;box-shadow:none;cursor:default}
+    .sbtn{padding:16px;background:#eef1f6;color:var(--text-muted);border:none;border-radius:16px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;flex:1;-webkit-tap-highlight-color:rgba(0,0,0,0)}
+    .brow{display:flex;gap:10px;position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--border);padding:12px 20px calc(12px + env(safe-area-inset-bottom));z-index:90;box-shadow:0 -4px 12px rgba(0,0,0,.04)}
+    .brow > .pbtn, .brow > .sbtn{margin-top:0}
+    .brow-inner{max-width:560px;margin:0 auto;display:flex;gap:10px;width:100%}
     .pg{display:none}
     .pg.act{display:block}
-    .pv-note{padding:10px 12px;background:#E6F1FB;border-radius:8px;margin-bottom:12px;font-size:14px;color:#0C447C;line-height:1.7}
-    .pv-blk{border:1px solid #e8e8e8;border-radius:8px;overflow:hidden;margin-bottom:8px}
+    .pv-note{padding:12px 14px;background:var(--primary-light);border-radius:14px;margin-bottom:14px;font-size:14px;color:var(--primary-dark);line-height:1.7}
+    .pv-blk{border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:12px;box-shadow:0 4px 6px -1px rgba(0,0,0,.05)}
     .pv-hdr{padding:8px 12px;background:#f7f7f5;border-bottom:1px solid #f0f0f0;font-size:15px;font-weight:600;color:#444}
-    .prog-wrap{background:#f0f0f0;border-radius:99px;height:8px;overflow:hidden;max-width:280px;margin:0 auto 8px}
+    .prog-wrap{background:#eef1f6;border-radius:99px;height:10px;overflow:hidden;max-width:280px;margin:0 auto 8px}
     .prog-bar{height:100%;border-radius:99px;transition:width .2s}
-    .flist{padding:12px 14px;background:#f7f7f5;border-radius:8px;margin-bottom:20px}
-    .fitem{font-size:16px;color:#333;display:flex;align-items:center;gap:6px;margin-bottom:4px}
-    .spin{display:inline-block;width:16px;height:16px;border:2px solid #e0e0e0;border-top-color:#378ADD;border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle}
+    .flist{padding:14px 16px;background:#f8fafc;border-radius:16px;margin-bottom:24px;border:1px solid var(--border)}
+    .fitem{font-size:15px;color:var(--text);display:flex;align-items:center;gap:6px;margin-bottom:4px}
+    .spin{display:inline-block;width:16px;height:16px;border:2px solid #e0e0e0;border-top-color:var(--primary);border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle}
     @keyframes sp{to{transform:rotate(360deg)}}
-    .ex-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:400;align-items:center;justify-content:center;padding:20px}
+    .ex-modal-overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:400;align-items:center;justify-content:center;padding:20px}
     .ex-modal-overlay.active{display:flex}
-    .ex-modal-card{background:#fff;border-radius:18px;padding:24px;width:100%;max-width:420px;box-shadow:0 12px 40px rgba(0,0,0,.2)}
-    .ex-modal-title{font-size:19px;font-weight:700;color:#1a1a2e;margin-bottom:4px}
-    .ex-modal-sub{font-size:13px;color:#9aa0ac;margin-bottom:16px}
+    .ex-modal-card{background:var(--surface);border-radius:24px;padding:26px;width:100%;max-width:420px;box-shadow:0 20px 40px -8px rgba(0,0,0,.25)}
+    .ex-modal-title{font-size:19px;font-weight:700;color:var(--text);margin-bottom:4px}
+    .ex-modal-sub{font-size:13px;color:var(--text-muted);margin-bottom:18px}
     .ex-modal-field{margin-bottom:14px}
-    .ex-modal-field label{display:block;font-size:13px;color:#666;margin-bottom:6px;font-weight:500}
-    .ex-modal-input{width:100%;padding:13px 14px;border:1.5px solid #1a1a2e;border-radius:12px;font-size:16px;font-family:inherit;outline:none;box-sizing:border-box}
+    .ex-modal-field label{display:block;font-size:13px;color:var(--text-muted);margin-bottom:6px;font-weight:600}
+    .ex-modal-input{width:100%;padding:13px 14px;border:1.5px solid var(--border);border-radius:14px;font-size:16px;font-family:inherit;outline:none;box-sizing:border-box;transition:.15s}
+    .ex-modal-input:focus{border-color:var(--primary)}
     .ex-modal-input::placeholder{color:#c3c7ce}
-    .ex-modal-btns{display:flex;gap:10px;margin-top:18px}
-    .ex-modal-btn{flex:1;padding:13px;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;border:none;font-family:inherit}
-    .ex-modal-btn.cancel{background:#f0f1f3;color:#666}
-    .ex-modal-btn.save{background:#27AE60;color:#fff}
+    .ex-modal-btns{display:flex;gap:10px;margin-top:20px}
+    .ex-modal-btn{flex:1;padding:14px;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;border:none;font-family:inherit}
+    .ex-modal-btn.cancel{background:#eef1f6;color:var(--text-muted)}
+    .ex-modal-btn.save{background:var(--primary);color:#fff;box-shadow:0 6px 14px -4px rgba(99,102,241,.5)}
   </style>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="nav.js"></script>
@@ -78,15 +87,15 @@
 <button style="display:none" id="B_BACK"></button>
 <div style="display:none" id="HDR_TITLE"></div>
 <div class="member-tabs" id="member-tabs"></div>
-<div id="export-settings-row" style="display:flex;gap:8px;padding:8px 16px;background:#fafafa;border-bottom:1px solid #eee">
-  <button onclick="openNicknameModal()" style="font-size:14px;padding:5px 12px;border:1px solid #ddd;border-radius:99px;background:#fff;color:#666;cursor:pointer;font-family:inherit">✏️ 稱呼設定</button>
-  <button onclick="openAgentInfoModal()" style="font-size:14px;padding:5px 12px;border:1px solid #ddd;border-radius:99px;background:#fff;color:#666;cursor:pointer;font-family:inherit">⚙️ 業務員資訊</button>
+<div id="export-settings-row" style="display:flex;gap:8px;padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--border)">
+  <button onclick="openNicknameModal()" style="font-size:13px;font-weight:600;padding:6px 14px;border:none;border-radius:99px;background:var(--primary-light);color:var(--primary-dark);cursor:pointer;font-family:inherit">✏️ 稱呼設定</button>
+  <button onclick="openAgentInfoModal()" style="font-size:13px;font-weight:600;padding:6px 14px;border:none;border-radius:99px;background:var(--primary-light);color:var(--primary-dark);cursor:pointer;font-family:inherit">⚙️ 業務員資訊</button>
 </div>
 
 <div class="pg act" id="P_SEL">
   <div class="wrap">
     <div class="sec-lbl">選擇匯出區塊
-      <button id="B_TOGALL" style="font-size:14px;padding:3px 12px;border:1px solid #ddd;border-radius:99px;background:#fff;color:#666;cursor:pointer;font-family:inherit">全部取消</button>
+      <button id="B_TOGALL" style="font-size:13px;font-weight:600;padding:5px 14px;border:none;border-radius:99px;background:#eef1f6;color:var(--text-muted);cursor:pointer;font-family:inherit">全部取消</button>
     </div>
     <div id="BLKLIST"></div>
     <div class="fmt-section-hdr" id="FMT_HDR_png" onclick="toggleFmtSection('png')">
@@ -101,7 +110,11 @@
       <span class="fmt-chevron" id="FMT_CHEV_pdf">▾</span>
     </div>
     <div class="fmt-grid" id="FMT_PDF"></div>
-    <button class="pbtn" id="B_PREV" style="background:#378ADD;margin-top:20px">預覽區塊</button>
+    <div class="brow">
+      <div class="brow-inner">
+        <button class="pbtn" id="B_PREV" style="background:var(--primary)">預覽區塊</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -112,9 +125,11 @@
     <div style="padding:8px 12px;background:#f7f7f5;border-radius:8px;font-size:14px;color:#aaa;margin-bottom:12px">
       💡 <span id="WM_HINT"></span>
     </div>
-    <div class="brow" style="max-width:560px;margin:0 auto">
-      <button class="sbtn" id="B_BACK2">返回修改</button>
-      <button class="pbtn" id="B_EXPORT" style="background:#378ADD;flex:2;margin-top:0">下載圖片</button>
+    <div class="brow">
+      <div class="brow-inner">
+        <button class="sbtn" id="B_BACK2">返回修改</button>
+        <button class="pbtn" id="B_EXPORT" style="background:var(--primary);flex:2">下載圖片</button>
+      </div>
     </div>
   </div>
 </div>
@@ -124,8 +139,8 @@
     <div style="font-size:72px;margin-bottom:16px" id="EX_ICON">🖼️</div>
     <div style="font-weight:500;font-size:18px;margin-bottom:8px" id="EX_MSG">正在產生圖片…</div>
     <div style="font-size:14px;color:#999;margin-bottom:24px" id="EX_SUB"></div>
-    <div class="prog-wrap"><div class="prog-bar" id="PROG" style="width:0%;background:#378ADD"></div></div>
-    <div style="font-size:19px;font-weight:500;margin-top:8px;color:#378ADD" id="PROG_PCT">0%</div>
+    <div class="prog-wrap"><div class="prog-bar" id="PROG" style="width:0%;background:var(--primary)"></div></div>
+    <div style="font-size:19px;font-weight:500;margin-top:8px;color:var(--primary)" id="PROG_PCT">0%</div>
   </div>
 </div>
 
@@ -136,8 +151,10 @@
     <div style="font-size:14px;color:#999;line-height:1.8;margin-bottom:20px" id="DONE_MSG"></div>
     <div class="flist" id="DONE_FILES"></div>
     <div class="brow">
-      <button class="sbtn" id="B_DONE_PREV" style="flex:1">回前一頁</button>
-      <button class="pbtn" id="B_FINISH" style="background:#378ADD;margin-top:0;flex:1;width:auto">回家庭首頁</button>
+      <div class="brow-inner">
+        <button class="sbtn" id="B_DONE_PREV" style="flex:1">回前一頁</button>
+        <button class="pbtn" id="B_FINISH" style="background:var(--primary);flex:1;width:auto">回家庭首頁</button>
+      </div>
     </div>
   </div>
 </div>
@@ -216,7 +233,7 @@ function buildFmts(){
         fmt=key;
         buildFmts();
         var eb=document.getElementById("B_EXPORT");
-        eb.style.background=fmt.startsWith("pdf")?"#E74C3C":"#378ADD";
+        eb.style.background=fmt.startsWith("pdf")?"var(--accent-pdf)":"var(--primary)";
         eb.textContent=fmt.startsWith("pdf")?"匯出 PDF":"下載圖片";
       };})(f.key,t);
       c.appendChild(d);
@@ -261,7 +278,7 @@ function updatePrevBtn(){
     btn.disabled=true;
   }else{
     btn.textContent="預覽 "+keys.length+" 個區塊";
-    btn.style.background="#378ADD";
+    btn.style.background="var(--primary)";
     btn.disabled=false;
   }
 }
@@ -294,7 +311,7 @@ function doShowPreview(){
   document.getElementById("PV_NOTE").innerHTML='ℹ️ 以下為<strong>真實資料預覽</strong>，點「'+(isPdf?"匯出 PDF":"下載圖片")+'」後系統產生'+(isPdf?"PDF":"PNG")+'檔案。';
   document.getElementById("WM_HINT").textContent='匯出圖片底部將自動加上「'+getWatermarkText()+'」浮水印';
   var eb=document.getElementById("B_EXPORT");
-  eb.style.background=isPdf?"#E74C3C":"#378ADD";
+  eb.style.background=isPdf?"var(--accent-pdf)":"var(--primary)";
   eb.textContent=isPdf?"匯出 PDF":"下載圖片";
   var c=document.getElementById("PV_BLOCKS");
   c.innerHTML="";
@@ -1345,8 +1362,8 @@ function doExport(){
   document.getElementById("EX_ICON").textContent=isPdf?"📄":"🖼️";
   document.getElementById("EX_MSG").textContent=isPdf?"正在產生 PDF…":fmt==="png_single"?"正在合併圖片…":"正在產生圖片…";
   document.getElementById("EX_SUB").textContent="共 "+selBlks.length+" 個區塊 "+(fmt==="png_single"?"一張 PNG":fmt==="png_multiple"?selBlks.length+"張 PNG":fmt==="pdf_merge"?"單一 PDF":selBlks.length+" 頁 PDF");
-  document.getElementById("PROG").style.background=isPdf?"#E74C3C":"#378ADD";
-  document.getElementById("PROG_PCT").style.color=isPdf?"#E74C3C":"#378ADD";
+  document.getElementById("PROG").style.background=isPdf?"var(--accent-pdf)":"var(--primary)";
+  document.getElementById("PROG_PCT").style.color=isPdf?"var(--accent-pdf)":"var(--primary)";
 
   var div=document.createElement("div");
   div.style.cssText="position:fixed;left:-9999px;top:0;width:1200px;background:#fff;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;color:#1a1a1a";
