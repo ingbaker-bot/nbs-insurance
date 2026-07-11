@@ -36,14 +36,21 @@
     //    _go() 偵測到 window.NBSRouter 存在，會走前端路由；
     //    目前試點白名單只有 summary.html / coverage.html，
     //    其餘項目點擊仍會整頁導航（正常、預期中的行為，等 Phase 2 逐步加入白名單）。
-    NBS_NAV.initShell();
-
-    // 進來 shell 後的預設畫面：先進「家庭總覽」（family.html），
-    // 跟舊架構「main.html 選完家庭 → family.html」的概念一致
+    // 重要：監聽器一定要在呼叫 initShell() 之前註冊！
+    // initShell() 內部如果 sessionStorage 已經有快取資料，會同步、
+    // 立即觸發 nbs_nav_ready（不會等到下一個事件循環），如果監聽器
+    // 註冊的順序寫在 initShell() 後面，就會錯過這個同步觸發的事件，
+    // 導致側欄資料正常顯示、但畫面卡在「連線同步中…」永遠不會跳轉
+    // 到家庭總覽（因為背景靜默更新資料時，刻意不會再觸發第二次
+    // nbs_nav_ready，所以事件錯過一次就再也等不到了）。
     window.addEventListener("nbs_nav_ready", function boot() {
       window.removeEventListener("nbs_nav_ready", boot);
       NBSRouter.navigate("family.html", { skipPush: true });
     });
+
+    // 進來 shell 後的預設畫面：先進「家庭總覽」（family.html），
+    // 跟舊架構「main.html 選完家庭 → family.html」的概念一致
+    NBS_NAV.initShell();
   </script>
 
 </body>
