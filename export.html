@@ -1345,9 +1345,22 @@ function renderBlock(key){
     });
     var html='<div style="padding:14px 12px">';
     html+='<div style="font-size:15px;font-weight:800;color:#444;margin-bottom:12px">各項保障加總</div>';
-    html+='<div style="column-count:4;column-gap:12px">';
-    COVERAGE_GROUPS_EX.forEach(function(g){
-      html += '<div style="break-inside:avoid;margin-bottom:12px">'+buildStatGroupCard(g, policies, cov3)+'</div>';
+    // 五欄，依指定分組（不是自動順排，是手動指定哪幾類放同一欄）
+    var columnMap = [
+      ["壽險/重大保障(終身/定期)", "意外險"],
+      ["住院醫療 (實支實付)"],
+      ["日額型住院"],
+      ["定額手術", "失能長照"],
+      ["癌症醫療"],
+    ];
+    html+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;align-items:start">';
+    columnMap.forEach(function(labels){
+      html+='<div style="display:flex;flex-direction:column;gap:12px">';
+      labels.forEach(function(label){
+        var g = COVERAGE_GROUPS_EX.find(function(x){ return x.label===label; });
+        if (g) html += buildStatGroupCard(g, policies, cov3);
+      });
+      html+='</div>';
     });
     html+='</div></div>';
     return html;
