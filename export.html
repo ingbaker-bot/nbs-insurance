@@ -8,30 +8,15 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
-    :root {
-      --primary: #6366F1;
-      --bg-color: #F1F5F9;
-      --card-bg: #FFFFFF;
-      --text-main: #1E293B;
-      --text-muted: #64748B;
-    }
-    body { font-family: 'Quicksand', 'Noto Sans TC', sans-serif; background: var(--bg-color); color: var(--text-main); line-height: 1.5; }
+    :root { --primary: #6366F1; --bg-color: #F1F5F9; --card-bg: #FFFFFF; --text-main: #1E293B; --text-muted: #64748B; }
+    body { font-family: 'Quicksand', 'Noto Sans TC', sans-serif; background: var(--bg-color); color: var(--text-main); margin: 0; padding: 0; }
     .wrap { max-width: 600px; margin: 0 auto; padding: 20px; }
     .info-card { background: var(--card-bg); border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 16px; border: 1px solid #E2E8F0; cursor: pointer; transition: 0.2s; }
-    .info-card:hover { transform: translateY(-2px); border-color: var(--primary); }
-    .policy-item { border-left: 6px solid var(--primary); background: #FFFFFF; padding: 20px; border-radius: 0 16px 16px 0; margin-bottom: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
-    .policy-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px; }
-    .policy-name { font-size: 18px; font-weight: 800; color: #1E293B; }
-    .policy-tag { font-size: 12px; padding: 4px 12px; border-radius: 99px; background: #EEF2FF; color: var(--primary); font-weight: 700; }
-    .policy-details { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 14px; }
-    .data-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #F8FAFC; }
-    .data-label { color: var(--text-muted); font-weight: 500; }
-    .data-value { font-weight: 700; color: #1E293B; }
-    .btn { cursor: pointer; border-radius: 14px; font-weight: 700; transition: 0.2s; border: none; font-family: inherit; }
-    .btn-primary { background: var(--primary); color: white; padding: 18px; width: 100%; font-size: 16px; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2); }
-    .member-tabs{display:flex;background:#FFFFFF;overflow-x:auto;padding:12px 16px;gap:8px;border-bottom:1px solid #F1F5F9;}
-    .member-tab{padding:10px 20px;font-size:15px;font-weight:700;cursor:pointer;border-radius:99px;background:#F1F5F9;color:#64748B;transition:0.2s;white-space:nowrap;}
-    .member-tab.active{background:var(--primary);color:#FFFFFF;}
+    .info-card:hover { border-color: var(--primary); }
+    .btn { cursor: pointer; border-radius: 14px; font-weight: 700; transition: 0.2s; border: none; padding: 18px; width: 100%; font-size: 16px; background: var(--primary); color: white; }
+    .member-tabs { display: flex; background: #FFFFFF; padding: 12px 16px; gap: 8px; border-bottom: 1px solid #F1F5F9; overflow-x: auto; }
+    .member-tab { padding: 10px 20px; font-weight: 700; cursor: pointer; border-radius: 99px; background: #F1F5F9; color: #64748B; white-space: nowrap; }
+    .member-tab.active { background: var(--primary); color: #FFFFFF; }
     .pg { display: none; }
     .pg.act { display: block; }
   </style>
@@ -44,14 +29,14 @@
 <div class="pg act" id="P_SEL">
   <div class="wrap">
     <div id="BLKLIST"></div>
-    <button class="btn btn-primary" id="B_PREV">預覽與匯出</button>
+    <button class="btn" id="B_PREV">預覽與匯出</button>
   </div>
 </div>
 
 <div class="pg" id="P_PREV">
   <div class="wrap" id="PV_BLOCKS"></div>
   <div class="wrap">
-    <button class="btn btn-primary" id="B_EXPORT">下載圖片</button>
+    <button class="btn" id="B_EXPORT">下載圖片</button>
   </div>
 </div>
 
@@ -63,78 +48,55 @@ var BLOCKS=[
   {key:"savings_timeline", label:"現金流", icon:"📈"},
 ];
 var sel={premium_detail:false,summary:false,policy_detail:false,savings_timeline:false};
-var policies=[], coverage={}, familyData={members:[]};
 
-function renderBlock(key){
-  if(key === "policy_detail") {
-    var html = '<div style="font-size:20px; font-weight:800; margin-bottom:20px; color:#1E293B;">保障明細總覽</div>';
-    policies.forEach(p => {
-      html += `
-        <div class="policy-item">
-          <div class="policy-header">
-            <div class="policy-name">${p.itemName}</div>
-            <div class="policy-tag">${p.category}</div>
-          </div>
-          <div class="policy-details">
-            <div class="data-row"><span class="data-label">保單號</span><span class="data-value">${p.policyNo}</span></div>
-            <div class="data-row"><span class="data-label">保額</span><span class="data-value">${p.insuredAmount} ${p.insuredAmountUnit}</span></div>
-            <div class="data-row"><span class="data-label">狀態</span><span class="data-value">${p.status}</span></div>
-            <div class="data-row"><span class="data-label">住院</span><span class="data-value">${(p.coverage && p.coverage.hosp_room) || "—"}</span></div>
-          </div>
-        </div>`;
+function initUI() {
+    buildBlocks();
+    document.getElementById("B_PREV").onclick = function() {
+        document.getElementById("P_SEL").classList.remove("act");
+        document.getElementById("P_PREV").classList.add("act");
+        renderPreview();
+    };
+    document.getElementById("B_EXPORT").onclick = function() {
+        alert("準備匯出圖片...");
+    };
+}
+
+function buildBlocks() {
+    var c = document.getElementById("BLKLIST");
+    c.innerHTML = "";
+    BLOCKS.forEach(b => {
+        var div = document.createElement("div");
+        div.className = "info-card";
+        div.innerHTML = `<div style="font-size:24px;">${b.icon}</div><div>${b.label}</div><small>${sel[b.key] ? '✅ 已勾選' : '⬜ 未選取'}</small>`;
+        div.onclick = () => { sel[b.key] = !sel[b.key]; buildBlocks(); };
+        c.appendChild(div);
     });
-    return html;
-  }
-  return `<div class="info-card">內容區塊: ${key} 預覽中...</div>`;
 }
 
-function buildBlocks(){
-  var c=document.getElementById("BLKLIST");
-  c.innerHTML = "";
-  BLOCKS.forEach(b => {
-    c.innerHTML += `<div class="info-card" onclick="toggleSel('${b.key}')">
-        <div style="font-size:24px; margin-bottom:8px;">${b.icon}</div>
-        <div style="font-weight:700; color:#1E293B;">${b.label}</div>
-        <div style="font-size:12px; color:var(--text-muted);">狀態: ${sel[b.key] ? "已選取" : "未選取"}</div>
-    </div>`;
-  });
-}
-
-function toggleSel(k) { sel[k]=!sel[k]; buildBlocks(); }
-
-function switchPerson(pid) {
-    // 這裡放入您原本切換人員的邏輯
-    console.log("切換至成員:", pid);
-    document.querySelectorAll('.member-tab').forEach(t => t.classList.remove('active'));
-    document.querySelector(`[data-id="${pid}"]`)?.classList.add('active');
-}
-
-window.addEventListener("nbs_nav_ready", async function(e) {
-  familyData = e.detail.familyData;
-  var container = document.getElementById("member-tabs");
-  familyData.members.forEach(m => {
-      var div = document.createElement("div");
-      div.className = "member-tab";
-      div.innerText = m.name;
-      div.dataset.id = m.id;
-      div.onclick = () => { if(typeof switchPerson === 'function') switchPerson(m.id); };
-      container.appendChild(div);
-  });
-  buildBlocks();
-});
-
-// 按鈕事件綁定
-document.getElementById("B_PREV").onclick = function() {
-    document.getElementById("P_SEL").classList.remove("act");
-    document.getElementById("P_PREV").classList.add("act");
+function renderPreview() {
     var pv = document.getElementById("PV_BLOCKS");
-    pv.innerHTML = "";
-    Object.keys(sel).forEach(k => { if(sel[k]) pv.innerHTML += renderBlock(k); });
-};
+    pv.innerHTML = "<h3>預覽結果</h3>";
+    Object.keys(sel).forEach(k => { if(sel[k]) pv.innerHTML += `<div class="info-card">區塊: ${k}</div>`; });
+}
 
-document.getElementById("B_EXPORT").onclick = function() {
-    alert("執行下載圖片功能...");
-};
+// 監聽 nav.js 的資料載入
+window.addEventListener("nbs_nav_ready", function(e) {
+    var container = document.getElementById("member-tabs");
+    e.detail.familyData.members.forEach(m => {
+        var div = document.createElement("div");
+        div.className = "member-tab";
+        div.innerText = m.name;
+        div.dataset.id = m.id;
+        div.onclick = () => {
+            document.querySelectorAll('.member-tab').forEach(t => t.classList.remove('active'));
+            div.classList.add('active');
+            // 呼叫您原本的切換邏輯
+            if(typeof NBS_NAV !== 'undefined') NBS_NAV.switchPerson(m.id);
+        };
+        container.appendChild(div);
+    });
+    initUI();
+});
 </script>
 </body>
 </html>
