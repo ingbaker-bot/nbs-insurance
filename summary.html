@@ -142,6 +142,19 @@
     // GAS_URL 已移至 nav.js 統一管理
 
 // ── 輔助加總計算機 ─────────────────────────────────────────
+// 保額單位換算成「萬元」。policy.html 的保額單位選項除了「萬元」「元」
+// 這兩種可以換算的貨幣單位，還有「計劃/型/份/自訂」這類非金額單位
+// （例如投資型保單常用「型」），這些無法換算成金額，回傳 null，
+// 呼叫端應該把這種情況當作「金額不明」處理，不要當成 0 或亂算。
+function convertToWan(amount, unit) {
+  const n = parseFloat(amount);
+  if (isNaN(n)) return null;
+  const u = unit || "萬元";
+  if (u === "萬元") return n;
+  if (u === "元") return n / 10000;
+  return null; // 計劃/型/份/自訂等非金額單位，無法換算
+}
+
 function sumCov(keys, policies, coverage) {
   let total = 0;
   policies.forEach(p => {
@@ -348,12 +361,28 @@ function getItemCurrent(key, policies, coverage, covOverrides) {
     return 0;
   }
 
-  if (["life_permanent", "life_term", "ci_special"].includes(key)) {
+  if (["life_permanent", "life_term"].includes(key)) {
       let amt = 0;
       const matchedPolicies = policies.filter(p => map.cats.includes(p.category));
       matchedPolicies.forEach(p => {
-         if (p.insuredAmount) amt += parseFloat(p.insuredAmount) || 0;
+         const w = convertToWan(p.insuredAmount, p.insuredAmountUnit);
+         if (w !== null) amt += w;
       });
+      if (amt === 0 && matchedPolicies.length > 0) return 1; 
+      return amt;
+  }
+
+  if (key === "ci_special") {
+      const matchedPolicies = policies.filter(p => map.cats.includes(p.category));
+      // 優先加總 coverage.html「重大」分類填的三個一次金欄位
+      let amt = sumCov(["ci_major_lump","ci_catastrophic_lump","ci_specific_lump"], matchedPolicies, coverage);
+      if (amt === 0) {
+        // 都沒填，退回用保單保額（相容還沒細分填寫的舊保單），含單位換算
+        matchedPolicies.forEach(p => {
+           const w = convertToWan(p.insuredAmount, p.insuredAmountUnit);
+           if (w !== null) amt += w;
+        });
+      }
       if (amt === 0 && matchedPolicies.length > 0) return 1; 
       return amt;
   }
@@ -373,7 +402,8 @@ function getItemCurrent(key, policies, coverage, covOverrides) {
   const matchedPolicies = policies.filter(p => map.cats.includes(p.category));
   if (amt === 0 && matchedPolicies.length > 0) {
       matchedPolicies.forEach(p => {
-          if (p.insuredAmount) amt += parseFloat(p.insuredAmount) || 0;
+          const w = convertToWan(p.insuredAmount, p.insuredAmountUnit);
+          if (w !== null) amt += w;
       });
       if (amt === 0) return 1; 
   }

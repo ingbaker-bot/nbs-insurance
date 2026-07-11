@@ -390,6 +390,16 @@ function renderSavingsTimeline(pdm3,fData,startYr,endYr){
 
 
 // ── Summary 輔助函式（移植自 summary.html）──────────────
+// 保額單位換算成「萬元」，同 summary.html 的 convertToWan
+function convertToWanEx(amount, unit) {
+  var n = parseFloat(amount);
+  if (isNaN(n)) return null;
+  var u = unit || "萬元";
+  if (u === "萬元") return n;
+  if (u === "元") return n / 10000;
+  return null;
+}
+
 function sumCovEx(keys, policies, coverage) {
   var total = 0;
   policies.forEach(p => {
@@ -596,12 +606,26 @@ function getItemCurrentEx(key, policies, coverage, covOverrides) {
     return 0;
   }
 
-  if (["life_permanent", "life_term", "ci_special"].includes(key)) {
+  if (["life_permanent", "life_term"].includes(key)) {
       let amt = 0;
       var matchedPolicies = policies.filter(p => map.cats.includes(p.category));
       matchedPolicies.forEach(p => {
-         if (p.insuredAmount) amt += parseFloat(p.insuredAmount) || 0;
+         var w = convertToWanEx(p.insuredAmount, p.insuredAmountUnit);
+         if (w !== null) amt += w;
       });
+      if (amt === 0 && matchedPolicies.length > 0) return 1; 
+      return amt;
+  }
+
+  if (key === "ci_special") {
+      var matchedPolicies = policies.filter(p => map.cats.includes(p.category));
+      var amt = sumCovEx(["ci_major_lump","ci_catastrophic_lump","ci_specific_lump"], matchedPolicies, coverage);
+      if (amt === 0) {
+        matchedPolicies.forEach(p => {
+           var w = convertToWanEx(p.insuredAmount, p.insuredAmountUnit);
+           if (w !== null) amt += w;
+        });
+      }
       if (amt === 0 && matchedPolicies.length > 0) return 1; 
       return amt;
   }
@@ -620,7 +644,8 @@ function getItemCurrentEx(key, policies, coverage, covOverrides) {
   var matchedPolicies = policies.filter(p => map.cats.includes(p.category));
   if (amt === 0 && matchedPolicies.length > 0) {
       matchedPolicies.forEach(p => {
-          if (p.insuredAmount) amt += parseFloat(p.insuredAmount) || 0;
+          var w = convertToWanEx(p.insuredAmount, p.insuredAmountUnit);
+          if (w !== null) amt += w;
       });
       if (amt === 0) return 1; 
   }
