@@ -572,7 +572,6 @@ var GAP_KEY_MAP_EX = {
   waiver:          { cats:[],                   keys:["ltc_waiver"] },
 };
 
-// 恢復原始的屬性定義
 var COVERAGE_TYPES = [
   { key:"life",       label:"壽險保障", group:"壽險", color:"#4A90D9", detect:(p,c)=>p.some(x=>x.category==="壽險保障") },
   { key:"acc_death",  label:"意外身故", group:"意外", color:"#F5A623", detect:(p,c)=>p.some(x=>x.category==="意外險") },
@@ -1023,6 +1022,20 @@ function renderBlock(key){
       pdSorted = pdSorted.concat([mainPol], riders);
     });
 
+    var BENEF_RULES_PD = {
+      "壽險保障":   { death:"可設定", live:"不適用" },
+      "意外險":     { death:"可設定", live:"不適用" },
+      "醫療險":     { death:"可設定", live:"不適用" },
+      "癌症醫療":   { death:"可設定", live:"不適用" },
+      "重大疾病險": { death:"可設定", live:"可設定" }, 
+      "重大傷病險": { death:"可設定", live:"可設定" }, 
+      "特定傷病險": { death:"可設定", live:"可設定" }, 
+      "失能長照":   { death:"可設定", live:"可設定" },
+      "儲蓄險":     { death:"可設定", live:"可設定" },
+      "年金險":     { death:"可設定", live:"可設定" },
+      "投資型保險": { death:"可設定", live:"可設定" }
+    };
+
     pdSorted.forEach(function(p){
       var cc=CC[p.category]||"#94A3B8";
       var isMR=!!p._isMainRow;
@@ -1033,21 +1046,45 @@ function renderBlock(key){
         ? (p.premiumTWD||0).toLocaleString()+' <div style="font-size:12px;color:#94A3B8;font-weight:600;margin-top:2px">USD '+(p.premiumOrig||0).toLocaleString()+'</div>'
         : (p.premiumTWD||0).toLocaleString();
 
-      var dStr = p.beneficiaryDeathText || (p.beneficiaryDeathCustom && p.beneficiaryDeathCustom.map(c=>c.customName||"指定家人").join("、")) || "";
-      var lStr = p.beneficiaryLiveText || (p.beneficiaryLiveType==="self"?"被保險人本人":p.beneficiaryLiveType==="owner"?"要保人":(p.beneficiaryLiveOther||"指定其他"));
-      var mStr = p.beneficiaryMaturityText || (p.beneficiaryMaturityType==="self"?"被保險人本人":p.beneficiaryMaturityType==="owner"?"要保人":(p.beneficiaryMaturityOther||"指定其他"));
+      var rule = BENEF_RULES_PD[p.category] || { death:"可設定", live:"可設定" };
+      var ownerName  = p.ownerName  || p.proposer || p.applicant || "—";
+
+      // 身故受益人 (精準恢復原始邏輯)
+      var dStr = "";
+      if(rule.death === "鎖定本人") { dStr = "被保險人本人 🔒"; }
+      else if(p.beneficiaryDeathText) { dStr = p.beneficiaryDeathText; }
+      else if(p.beneficiaryDeathCustom && p.beneficiaryDeathCustom.length>0) {
+        dStr = p.beneficiaryDeathCustom.map(function(c){ return c.customName || "指定家人"; }).join("、");
+      }
+
+      // 生存/滿期受益人 (精準恢復原始邏輯，避免 undefined 變指定其他)
+      var lStr = "", mStr = "";
+      if(p.beneficiaryLiveText) lStr = p.beneficiaryLiveText;
+      else if(p.beneficiaryLiveType === "self")  lStr = "被保險人本人";
+      else if(p.beneficiaryLiveType === "owner") lStr = ownerName + " (要保人)";
+      else if(p.beneficiaryLiveType === "other") lStr = p.beneficiaryLiveOther || "指定其他";
+
+      if(p.beneficiaryMaturityText) mStr = p.beneficiaryMaturityText;
+      else if(p.beneficiaryMaturityType === "self")  mStr = "被保險人本人";
+      else if(p.beneficiaryMaturityType === "owner") mStr = ownerName + " (要保人)";
+      else if(p.beneficiaryMaturityType === "other") mStr = p.beneficiaryMaturityOther || "指定其他";
       
-      if(p.category==="年金險"||p.category==="投資型保險") { lStr="被保險人本人 🔒"; mStr=""; }
+      if(p.category === "年金險" || p.category === "投資型保險" || rule.live === "鎖定本人") {
+        lStr = "被保險人本人 🔒"; mStr = "";
+      }
 
       var dDisplay = dStr ? `<span style="color:#334155;font-weight:600">${dStr}</span>` : `<span style="color:#CBD5E1">—</span>`;
+      
       var liveDisplay = "";
-      if(p.category==="壽險保障") liveDisplay = '<span style="color:#CBD5E1">—</span>';
-      else if(lStr==="被保險人本人 🔒") liveDisplay = '<span style="font-size:13px;background:#F1F5F9;color:#64748B;padding:4px 8px;border-radius:6px;font-weight:600">本人 🔒</span>';
-      else {
+      if(rule.live === "不適用" || p.category === "壽險保障") {
+        liveDisplay = '<span style="color:#CBD5E1">—</span>';
+      } else if(rule.live === "鎖定本人" || p.category === "年金險" || p.category === "投資型保險") {
+        liveDisplay = '<span style="font-size:13px;background:#F1F5F9;color:#64748B;padding:4px 8px;border-radius:6px;font-weight:600">本人 🔒</span>';
+      } else {
         var partsPD = [];
         if(lStr) partsPD.push('<div style="margin-bottom:2px"><span style="font-size:12px;color:#94A3B8;background:#F1F5F9;padding:2px 4px;border-radius:4px;margin-right:4px">生</span><span style="color:#334155;font-weight:600">'+lStr+'</span></div>');
         if(mStr) partsPD.push('<div><span style="font-size:12px;color:#94A3B8;background:#F1F5F9;padding:2px 4px;border-radius:4px;margin-right:4px">滿</span><span style="color:#334155;font-weight:600">'+mStr+'</span></div>');
-        liveDisplay = partsPD.join("");
+        liveDisplay = partsPD.length > 0 ? partsPD.join("") : '<span style="color:#CBD5E1">—</span>';
       }
 
       htmlPD += '<tr>'+
@@ -1326,6 +1363,11 @@ window.addEventListener("nbs_family_loaded", function(e) {
   }));
 });
 
+// 必須保證跟舊版一模一樣的同步掛載時機
+if (typeof NBS_NAV !== "undefined" && typeof NBS_NAV.init === "function") {
+    NBS_NAV.init({ page: "export" });
+}
+
 window.addEventListener("nbs_nav_ready", async function(e) {
   currentUser       = e.detail.user;
   familyData        = e.detail.familyData;
@@ -1387,16 +1429,7 @@ window.addEventListener("nbs_nav_ready", async function(e) {
 
 if (typeof NBS_NAV !== "undefined") { 
     NBS_NAV.onMemberChange = function(pid) { switchPerson(pid); };
-    // 恢復最重要的 Nav 啟動掛載點
-    if (NBS_NAV.init) NBS_NAV.init({ page: "export" });
 }
-
-// 萬一 nav.js 還沒載入好，備用的保險啟動掛載點
-setTimeout(function() {
-    if (typeof NBS_NAV !== "undefined" && NBS_NAV.init && !document.querySelector('.nbs-sidebar')) {
-        NBS_NAV.init({ page: "export" });
-    }
-}, 500);
 
 </script>
 
