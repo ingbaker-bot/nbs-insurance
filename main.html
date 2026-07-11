@@ -566,11 +566,13 @@
       renderFamilies(filtered, true);         // 搜尋中：顯示全部結果
     }
 
-    // ── 開啟家庭（暫時 alert，之後跳到 family.html）─────────
+    // ── 開啟家庭：導向 SPA shell（自動落地到家庭總覽），
+    // 讓選完家庭之後的整個操作流程都在 shell.html 底下進行，
+    // 側欄不會每次切換頁面都重新載入 ─────────────────────
     function openFamily(fileName, familyName) {
       localStorage.setItem("nbs_current_family", fileName);
       localStorage.setItem("nbs_current_family_name", familyName);
-      window.location.href = "family.html";
+      window.location.href = "shell.html";
     }
 
     // ── 新增家庭 Modal ────────────────────────────────────────
