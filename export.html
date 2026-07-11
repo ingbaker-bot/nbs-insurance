@@ -119,7 +119,8 @@
     <div style="font-size:14px;color:#999;line-height:1.8;margin-bottom:20px" id="DONE_MSG"></div>
     <div class="flist" id="DONE_FILES"></div>
     <div class="brow">
-      <button class="pbtn" id="B_FINISH" style="background:#378ADD;margin-top:0">← 返回</button>
+      <button class="sbtn" id="B_DONE_PREV" style="flex:1">回前一頁</button>
+      <button class="pbtn" id="B_FINISH" style="background:#378ADD;margin-top:0;flex:1;width:auto">回家庭首頁</button>
     </div>
   </div>
 </div>
@@ -165,6 +166,7 @@ document.getElementById("B_PREV").onclick    = doShowPreview;
 document.getElementById("B_BACK2").onclick   = doShowSelect;
 document.getElementById("B_EXPORT").onclick  = doExport;
 document.getElementById("B_FINISH").onclick  = _goFamily;
+document.getElementById("B_DONE_PREV").onclick = doShowSelect;
 
 // ── 建立區塊清單 ──────────────────────────────────────────
 function buildBlocks(){
