@@ -63,6 +63,7 @@
     .qbtn.on-acc{border-color:#633806;background:#FAEEDA;color:#633806}
     .qbtn.on-hosp{border-color:#085041;background:#E1F5EE;color:#085041}
     .qbtn.on-daily{border-color:#0C447C;background:#E6F1FB;color:#0C447C}
+    .qbtn.on-cancer{border-color:#791F1F;background:#FCEBEB;color:#791F1F}
     /* 分隔標題 */
     .sub-title{font-size:14px;font-weight:500;color:#378ADD;background:#E6F1FB;padding:4px 10px;border-radius:5px;margin:10px 0 8px;grid-column:1/-1}
     .sub-title.orange{color:#633806;background:#FAEEDA}
@@ -131,7 +132,9 @@ var GROUPS=[
     // 👇 2. 新增：健康增值保險金，使用勾選框 (checkbox)
     {key:"health_bonus",label:"健康增值保險金 (無理賠回饋)",unit:"",type:"checkbox"},
   ]},
-  {key:"cancer",label:"癌症醫療",icon:"🎗️",color:"#791F1F",bg:"#FCEBEB",fields:[
+  {key:"cancer",label:"癌症醫療",icon:"🎗️",color:"#791F1F",bg:"#FCEBEB",type:"cancer",fields:[
+    {key:"can_period_type",label:"保障期間類型",unit:""},
+    {key:"can_period",label:"保障期間",unit:""},
     {key:"can_low",label:"低侵襲性／特定癌症",unit:"元"},
     {key:"can_first",label:"初次罹患癌症（一次）",unit:"萬元"},
     {key:"can_surgery",label:"癌症手術醫療保險金",unit:"萬元/次"},
@@ -466,6 +469,7 @@ function renderGroupBody(g,cov,policyId){
   if(g.type==="accident") return renderAccident(cov,policyId);
   if(g.type==="hospitalize") return renderHospitalize(cov,policyId);
   if(g.type==="daily") return renderDaily(cov,policyId);
+  if(g.type==="cancer") return renderCancer(cov,policyId);
   // 一般群組
   let html='<div class="group-body"><div class="fields-grid">';
   (g.fields||[]).forEach(f=>{
@@ -625,6 +629,46 @@ function renderDaily(cov,pid){
     </div>
     ${limitType==="帳戶制"?`<div class="field field-full"><label>帳戶金額</label><div class="input-unit"><input type="number" id="cov_daily_limit" placeholder="如 120" value="${cov.daily_limit||''}" oninput="markDirty()"/><span class="unit">萬元</span></div></div>`:""}
     ${limitType==="倍數型"?`<div class="field field-full"><label>給付倍數</label><div class="input-unit"><input type="number" id="cov_daily_limit_times" placeholder="如 1000" value="${cov.daily_limit_times||''}" oninput="markDirty()"/><span class="unit">倍</span></div></div><div class="note blue">如：住院日額 × 1000倍</div>`:""}
+  </div></div>`;
+}
+
+// ── 癌症醫療 ──────────────────────────────────────────────
+function renderCancer(cov,pid){
+  const periodType=cov.can_period_type||"終身";
+  const period=cov.can_period||"";
+  return `<div class="group-body"><div class="fields-grid">
+    <div class="field field-full">
+      <label>保障期間</label>
+      <div class="type-row" style="margin-bottom:6px">
+        ${["歲","年","終身"].map(t=>`<button class="qbtn ${periodType===t?'on-cancer':''}" onclick="setVal('can_period_type','${t}','${pid}')">${t}</button>`).join("")}
+      </div>
+      ${periodType==="終身"?'<div class="note blue">終身保障</div>':`
+      <div class="quick-btns">
+        ${periodType==="歲"?[70,75,80,85].map(a=>`<button class="qbtn ${period==a?'on-cancer':''}" onclick="setVal('can_period',${a},'${pid}')">${a}歲</button>`).join(""):
+          [10,15,20,30].map(a=>`<button class="qbtn ${period==a?'on-cancer':''}" onclick="setVal('can_period',${a},'${pid}')">${a}年</button>`).join("")}
+        <input type="number" id="cov_can_period_custom" placeholder="${periodType==='歲'?'自填歲':'自填年'}" value="${period}"
+          style="width:72px;padding:4px 7px;font-size:14px;border:1px solid #ddd;border-radius:99px;outline:none;font-family:inherit"
+          oninput="setVal('can_period',this.value,'${pid}');markDirty()"/>
+      </div>`}
+    </div>
+    <div class="field"><label>低侵襲性／特定癌症</label><div class="input-unit"><input type="number" id="cov_can_low" placeholder="—" value="${cov.can_low||''}" oninput="markDirty()"/><span class="unit">元</span></div></div>
+    <div class="field"><label>初次罹患癌症（一次）</label><div class="input-unit"><input type="number" id="cov_can_first" placeholder="—" value="${cov.can_first||''}" oninput="markDirty()"/><span class="unit">萬元</span></div></div>
+    <div class="field"><label>癌症手術醫療保險金</label><div class="input-unit"><input type="number" id="cov_can_surgery" placeholder="—" value="${cov.can_surgery||''}" oninput="markDirty()"/><span class="unit">萬元/次</span></div></div>
+    <div class="field"><label>癌症住院醫療</label><div class="input-unit"><input type="number" id="cov_can_hosp" placeholder="—" value="${cov.can_hosp||''}" oninput="markDirty()"/><span class="unit">元/日</span></div></div>
+    <div class="field"><label>出院療養</label><div class="input-unit"><input type="number" id="cov_can_discharge" placeholder="—" value="${cov.can_discharge||''}" oninput="markDirty()"/><span class="unit">元/日</span></div></div>
+    <div class="field"><label>癌症門診醫療</label><div class="input-unit"><input type="number" id="cov_can_opd" placeholder="—" value="${cov.can_opd||''}" oninput="markDirty()"/><span class="unit">元/次</span></div></div>
+    <div class="field"><label>癌症質子治療</label><div class="input-unit"><input type="number" id="cov_can_proton" placeholder="—" value="${cov.can_proton||''}" oninput="markDirty()"/><span class="unit">萬元/次</span></div></div>
+    <div class="field"><label>放射線治療</label><div class="input-unit"><input type="number" id="cov_can_radiation" placeholder="—" value="${cov.can_radiation||''}" oninput="markDirty()"/><span class="unit">元/日</span></div></div>
+    <div class="field"><label>癌症基因檢測</label><div class="input-unit"><input type="number" id="cov_can_gene" placeholder="—" value="${cov.can_gene||''}" oninput="markDirty()"/><span class="unit">萬元</span></div></div>
+    <div class="field"><label>化學治療</label><div class="input-unit"><input type="number" id="cov_can_chemo" placeholder="—" value="${cov.can_chemo||''}" oninput="markDirty()"/><span class="unit">元/日</span></div></div>
+    <div class="field"><label>標靶藥物治療</label><div class="input-unit"><input type="number" id="cov_can_target" placeholder="—" value="${cov.can_target||''}" oninput="markDirty()"/><span class="unit">萬元</span></div></div>
+    <div class="field"><label>達文西手術</label><div class="input-unit"><input type="number" id="cov_can_davinci" placeholder="—" value="${cov.can_davinci||''}" oninput="markDirty()"/><span class="unit">萬元</span></div></div>
+    <div class="field"><label>義乳重建手術</label><div class="input-unit"><input type="number" id="cov_can_breast" placeholder="—" value="${cov.can_breast||''}" oninput="markDirty()"/><span class="unit">萬元</span></div></div>
+    <div class="field"><label>自體免疫細胞治療</label><div class="input-unit"><input type="number" id="cov_can_immune" placeholder="—" value="${cov.can_immune||''}" oninput="markDirty()"/><span class="unit">萬元</span></div></div>
+    <div class="field"><label>骨髓／幹細胞移植</label><div class="input-unit"><input type="number" id="cov_can_marrow" placeholder="—" value="${cov.can_marrow||''}" oninput="markDirty()"/><span class="unit">萬元</span></div></div>
+    <div class="field"><label>癌症給付總限額</label><div class="input-unit"><input type="number" id="cov_can_total" placeholder="—" value="${cov.can_total||''}" oninput="markDirty()"/><span class="unit">萬元</span></div></div>
+    <div class="field"><label>安寧照護</label><div class="input-unit"><input type="number" id="cov_can_hospice" placeholder="—" value="${cov.can_hospice||''}" oninput="markDirty()"/><span class="unit">萬元</span></div></div>
+    <div class="field"><label>癌症身故</label><div class="input-unit"><input type="number" id="cov_can_death" placeholder="—" value="${cov.can_death||''}" oninput="markDirty()"/><span class="unit">萬元</span></div></div>
   </div></div>`;
 }
 

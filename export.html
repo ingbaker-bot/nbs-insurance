@@ -848,32 +848,39 @@ function lifeRemainYearsEx(pols, cats) {
 // - 有規劃的項目：大數字、彩色，一眼看出金額。
 // - 沒規劃的項目：不用死板的「—」，改用淡灰色圓角「缺口」標籤，
 //   用現代 App 常見的狀態標籤語言，取代 Excel 式的破折號。
-// 產生分組標題旁的「定期/終身」標示：依分組對應的保單類別，
-// 檢查底下保單有沒有終身（保障截止日空白）、定期（有填保障截止日）
-// 的保單，混合的話兩種都會顯示，定期會加註剩餘年期
-function getTermBadge(cats, policies) {
-  if (!cats || !cats.length) return "";
-  var matched = policies.filter(function(p){ return cats.indexOf(p.category) !== -1; });
+// 產生分組標題旁的「定期/終身」標示：不同分類在 coverage.html 裡，
+// 各自有自己的保障期間欄位（意外險=acc_age、住院醫療=hosp_age、
+// 日額型住院=daily_period_type+daily_period、癌症醫療=can_period_type+
+// can_period），這裡對應讀取正確的欄位，不是保單本身的保障截止日。
+// 定額手術、失能長照目前在 coverage.html 沒有保障期間欄位，回傳空字串。
+var TERM_BADGE_FIELD_MAP = {
+  "意外險":              { ageKey:"acc_age" },
+  "住院醫療 (實支實付)": { ageKey:"hosp_age" },
+  "日額型住院":          { typeKey:"daily_period_type", valKey:"daily_period" },
+  "癌症醫療":            { typeKey:"can_period_type", valKey:"can_period" },
+};
+function getTermBadge(g, policies) {
+  var conf = TERM_BADGE_FIELD_MAP[g.label];
+  if (!conf || !g.cats || !g.cats.length) return "";
+  var matched = policies.filter(function(p){ return g.cats.indexOf(p.category) !== -1; });
   if (!matched.length) return "";
-  var hasWhole = false, hasTerm = false, minYears = null;
-  var base = (person.profile && person.profile.analysisDate) ? new Date(person.profile.analysisDate) : new Date();
+
+  var labels = [];
   matched.forEach(function(p){
-    var endRaw = p.covEndDate || p.covEndRaw;
-    if (endRaw) {
-      hasTerm = true;
-      var end = new Date(endRaw);
-      if (!isNaN(end)) {
-        var yrs = Math.max(0, Math.round((end - base) / (365.25*24*3600*1000)));
-        if (minYears === null || yrs < minYears) minYears = yrs;
-      }
+    var cv = p.coverage || {};
+    var text;
+    if (conf.ageKey) {
+      var v = cv[conf.ageKey];
+      text = (!v || v === "終身") ? "終身" : "保障至"+v+"歲";
     } else {
-      hasWhole = true;
+      var t = cv[conf.typeKey] || "終身";
+      if (t === "終身") text = "終身";
+      else if (t === "歲") text = "保障至"+(cv[conf.valKey]||"—")+"歲";
+      else text = "保障"+(cv[conf.valKey]||"—")+"年";
     }
+    if (labels.indexOf(text) === -1) labels.push(text);
   });
-  if (hasWhole && hasTerm) return "終身＋定期" + (minYears!==null ? "(剩"+minYears+"年)" : "");
-  if (hasWhole) return "終身";
-  if (hasTerm) return "定期" + (minYears!==null ? "(剩"+minYears+"年)" : "");
-  return "";
+  return labels.join("／");
 }
 
 function buildStatGroupCard(g, policies, cov3) {
@@ -903,7 +910,7 @@ function buildStatGroupCard(g, policies, cov3) {
   var rowsHtml = filled.map(function(x){ return statRowHtml(x, g.color); }).join("")
                + empty.map(function(x){ return statRowHtml(x, g.color); }).join("");
 
-  var termBadge = getTermBadge(g.cats, policies);
+  var termBadge = getTermBadge(g, policies);
 
   return '<div style="background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04)">'+
     '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 14px;background:linear-gradient(135deg,'+g.color+'26,'+g.color+'0A)">'+
@@ -1247,85 +1254,91 @@ function renderBlock(key){
       if(!pdGroupMap[k]){ pdGroupMap[k]={key:k,rows:[]}; pdGroups.push(pdGroupMap[k]); }
       pdGroupMap[k].rows.push(p);
     });
-
-    htmlPD+='<div style="column-count:2;column-gap:14px">';
+    var pdSorted=[];
     pdGroups.forEach(function(grp){
       var mainPol = grp.rows.find(function(p){return p.isMain===true;}) || grp.rows[0];
       var riders = grp.rows.filter(function(p){return p!==mainPol;});
-      var ordered = [mainPol].concat(riders);
-      var groupTotalPrem = grp.rows.reduce(function(s,p){return s+(p.premiumTWD||0);},0);
-
-      htmlPD += '<div style="break-inside:avoid;margin-bottom:14px;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04)">';
-      htmlPD += '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:linear-gradient(135deg,#EEF4FF,#F7F5FF)">'+
-        '<div><span style="font-family:monospace;font-size:12px;font-weight:700;color:#3B82F6;background:#fff;padding:3px 9px;border-radius:99px">'+grp.key+'</span>'+
-        '<span style="font-size:14px;font-weight:800;color:#374151;margin-left:8px">'+(mainPol.company||'—')+'</span></div>'+
-        '<span style="font-size:13px;font-weight:700;color:#6b7280">年繳 NT$'+groupTotalPrem.toLocaleString()+'</span>'+
-      '</div>';
-
-      ordered.forEach(function(p){
-        var cc=CC[p.category]||"#999";
-        var isMR = p===mainPol;
-        var amtText = p.insuredAmount ? p.insuredAmount + " " + (p.insuredAmountUnit || '萬元') : '—';
-        var rule = BENEF_RULES_PD[p.category] || { death:"可設定", live:"可設定" };
-        var ownerName  = p.ownerName  || p.proposer || p.applicant || "—";
-
-        var isFxPD = p.currency && p.currency !== "TWD";
-        var premDisplayPD = isFxPD
-          ? 'NT$'+(p.premiumTWD||0).toLocaleString()+' <span style="font-size:11px;color:#9CA3AF;font-weight:400">(USD '+(p.premiumOrig||0).toLocaleString()+')</span>'
-          : 'NT$'+(p.premiumTWD||0).toLocaleString();
-
-        var dStr = "";
-        if(rule.death === "鎖定本人") { dStr = "被保險人本人 🔒"; }
-        else if(p.beneficiaryDeathText) { dStr = p.beneficiaryDeathText; }
-        else if(p.beneficiaryDeathCustom && p.beneficiaryDeathCustom.length>0) {
-          dStr = p.beneficiaryDeathCustom.map(function(c){ return c.customName || "指定家人"; }).join("、");
-        }
-
-        var lStr = "", mStr = "";
-        if(p.beneficiaryLiveText) lStr = p.beneficiaryLiveText;
-        else if(p.beneficiaryLiveType === "self")  lStr = "被保險人本人";
-        else if(p.beneficiaryLiveType === "owner") lStr = ownerName + " (要保人)";
-        else if(p.beneficiaryLiveType === "other") lStr = p.beneficiaryLiveOther || "指定其他";
-        if(p.beneficiaryMaturityText) mStr = p.beneficiaryMaturityText;
-        else if(p.beneficiaryMaturityType === "self")  mStr = "被保險人本人";
-        else if(p.beneficiaryMaturityType === "owner") mStr = ownerName + " (要保人)";
-        else if(p.beneficiaryMaturityType === "other") mStr = p.beneficiaryMaturityOther || "指定其他";
-        if(p.category === "年金險" || p.category === "投資型保險" || rule.live === "鎖定本人") {
-          lStr = "被保險人本人 🔒"; mStr = "";
-        }
-        var liveDisplay = "";
-        if(rule.live === "不適用" || p.category === "壽險保障") {
-          liveDisplay = "";
-        } else if(rule.live === "鎖定本人" || p.category === "年金險" || p.category === "投資型保險") {
-          liveDisplay = '<span style="font-size:11px;background:#f0f0f0;color:#888;padding:2px 6px;border-radius:4px">本人 🔒</span>';
-        } else {
-          var partsPD = [];
-          if(lStr) partsPD.push('生存金：'+lStr);
-          if(mStr) partsPD.push('滿期金：'+mStr);
-          liveDisplay = partsPD.length ? '<span style="font-size:11px;color:#9aa0ac">'+partsPD.join('　')+'</span>' : '';
-        }
-
-        htmlPD += '<div style="padding:11px 16px;border-top:1px solid #f2f2f4">'+
-          '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px">'+
-            (isMR
-              ? '<span style="font-size:11px;color:#fff;background:#378ADD;padding:2px 8px;border-radius:99px;font-weight:700">主</span>'
-              : '<span style="font-size:11px;color:#888;background:#ebebeb;padding:2px 8px;border-radius:99px;font-weight:700">附</span>')+
-            '<span style="font-size:11px;padding:2px 8px;border-radius:99px;background:'+cc+'1A;color:'+cc+';font-weight:700">'+(p.category||'—')+'</span>'+
-            '<span style="font-size:11px;padding:2px 6px;border-radius:99px;background:'+(isPolicyActiveEx(p)?"#EAF3DE":"#f0f0f0")+';color:'+(isPolicyActiveEx(p)?"#27500A":"#888")+'">'+(p.status||"有效")+'</span>'+
-          '</div>'+
-          '<div style="font-size:14px;font-weight:700;color:#1f2937;margin-bottom:6px">'+(p.itemName||'—')+'</div>'+
-          '<div style="display:flex;gap:16px;flex-wrap:wrap;font-size:13px">'+
-            '<span style="color:#0C447C;font-weight:700;font-variant-numeric:tabular-nums">保額 '+amtText+'</span>'+
-            '<span style="color:#374151;font-weight:700;font-variant-numeric:tabular-nums">保費 '+premDisplayPD+'</span>'+
-          '</div>'+
-          (dStr ? '<div style="font-size:11px;color:#9aa0ac;margin-top:4px">身故受益人：'+dStr+'</div>' : '')+
-          (liveDisplay ? '<div style="margin-top:2px">'+liveDisplay+'</div>' : '')+
-        '</div>';
-      });
-
-      htmlPD += '</div>';
+      mainPol._isMainRow = true;
+      riders.forEach(function(r){ r._isMainRow = false; });
+      pdSorted = pdSorted.concat([mainPol], riders);
     });
-    htmlPD += '</div></div>';
+
+    var thStylePD = 'padding:9px 10px;text-align:left;font-size:12px;font-weight:800;color:#9aa0ac;border-bottom:2px solid #eef0f3;white-space:nowrap;background:#f7f8fa;';
+    var tdStylePD = 'padding:9px 10px;vertical-align:middle;border-bottom:1px solid #f2f2f4;font-size:14px;';
+
+    htmlPD += '<div style="background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04)">';
+    htmlPD += '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">';
+    htmlPD += '<thead><tr>'+
+      '<th style="'+thStylePD+'">主/附約</th>'+
+      '<th style="'+thStylePD+'">險種</th>'+
+      '<th style="'+thStylePD+'">保單號</th>'+
+      '<th style="'+thStylePD+'min-width:120px">商品名</th>'+
+      '<th style="'+thStylePD+'text-align:right">保額</th>'+
+      '<th style="'+thStylePD+'text-align:right">保費</th>'+
+      '<th style="'+thStylePD+'">狀態</th>'+
+      '<th style="'+thStylePD+'min-width:110px">身故受益人</th>'+
+      '<th style="'+thStylePD+'min-width:110px">生存/滿期受益人</th>'+
+    '</tr></thead><tbody>';
+
+    pdSorted.forEach(function(p){
+      var cc=CC[p.category]||"#999";
+      var isMR=!!p._isMainRow;
+      var amtText = p.insuredAmount ? p.insuredAmount + " " + (p.insuredAmountUnit || '萬元') : '—';
+      var rule = BENEF_RULES_PD[p.category] || { death:"可設定", live:"可設定" };
+      var ownerName  = p.ownerName  || p.proposer || p.applicant || "—";
+
+      var isFxPD = p.currency && p.currency !== "TWD";
+      var premDisplayPD = isFxPD
+        ? 'NT$'+(p.premiumTWD||0).toLocaleString()+' <span style="font-size:11px;color:#9CA3AF;font-weight:400">(USD '+(p.premiumOrig||0).toLocaleString()+')</span>'
+        : 'NT$'+(p.premiumTWD||0).toLocaleString();
+
+      var dStr = "";
+      if(rule.death === "鎖定本人") { dStr = "被保險人本人 🔒"; }
+      else if(p.beneficiaryDeathText) { dStr = p.beneficiaryDeathText; }
+      else if(p.beneficiaryDeathCustom && p.beneficiaryDeathCustom.length>0) {
+        dStr = p.beneficiaryDeathCustom.map(function(c){ return c.customName || "指定家人"; }).join("、");
+      }
+
+      var lStr = "", mStr = "";
+      if(p.beneficiaryLiveText) lStr = p.beneficiaryLiveText;
+      else if(p.beneficiaryLiveType === "self")  lStr = "被保險人本人";
+      else if(p.beneficiaryLiveType === "owner") lStr = ownerName + " (要保人)";
+      else if(p.beneficiaryLiveType === "other") lStr = p.beneficiaryLiveOther || "指定其他";
+      if(p.beneficiaryMaturityText) mStr = p.beneficiaryMaturityText;
+      else if(p.beneficiaryMaturityType === "self")  mStr = "被保險人本人";
+      else if(p.beneficiaryMaturityType === "owner") mStr = ownerName + " (要保人)";
+      else if(p.beneficiaryMaturityType === "other") mStr = p.beneficiaryMaturityOther || "指定其他";
+      if(p.category === "年金險" || p.category === "投資型保險" || rule.live === "鎖定本人") {
+        lStr = "被保險人本人 🔒"; mStr = "";
+      }
+      var liveDisplay = "—";
+      if(rule.live === "不適用" || p.category === "壽險保障") {
+        liveDisplay = '<span style="color:#dcdfe4">不適用</span>';
+      } else if(rule.live === "鎖定本人" || p.category === "年金險" || p.category === "投資型保險") {
+        liveDisplay = '<span style="font-size:12px;background:#f0f0f0;color:#888;padding:2px 7px;border-radius:6px">本人 🔒</span>';
+      } else {
+        var partsPD = [];
+        if(lStr) partsPD.push('<div>生存金：'+lStr+'</div>');
+        if(mStr) partsPD.push('<div>滿期金：'+mStr+'</div>');
+        liveDisplay = partsPD.length ? partsPD.join("") : '<span style="color:#dcdfe4">—</span>';
+      }
+      var dColor = !dStr ? "#dcdfe4" : "#374151";
+      dStr = dStr || "—";
+
+      htmlPD += '<tr>'+
+        '<td style="'+tdStylePD+'">'+(isMR?'<span style="font-size:11px;color:#fff;background:#378ADD;padding:2px 8px;border-radius:99px;font-weight:700">主</span>':'<span style="font-size:11px;color:#888;background:#ebebeb;padding:2px 8px;border-radius:99px;font-weight:700">附</span>')+'</td>'+
+        '<td style="'+tdStylePD+'"><span style="font-size:11px;padding:2px 8px;border-radius:99px;background:'+cc+'1A;color:'+cc+';font-weight:700;white-space:nowrap">'+(p.category||'—')+'</span></td>'+
+        '<td style="'+tdStylePD+'"><span style="font-family:monospace;font-size:11px;background:#EEF4FF;color:#3B82F6;padding:2px 8px;border-radius:99px;white-space:nowrap">'+(p.policyNo||p.id)+'</span></td>'+
+        '<td style="'+tdStylePD+'font-weight:700;color:#1f2937">'+(p.itemName||'—')+'</td>'+
+        '<td style="'+tdStylePD+'text-align:right;font-weight:800;color:#0C447C;font-variant-numeric:tabular-nums;white-space:nowrap">'+amtText+'</td>'+
+        '<td style="'+tdStylePD+'text-align:right;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums">'+premDisplayPD+'</td>'+
+        '<td style="'+tdStylePD+'"><span style="font-size:11px;padding:2px 8px;border-radius:99px;background:'+(isPolicyActiveEx(p)?"#EAF3DE":"#f0f0f0")+';color:'+(isPolicyActiveEx(p)?"#27500A":"#888")+'">'+(p.status||"有效")+'</span></td>'+
+        '<td style="'+tdStylePD+'color:'+dColor+';line-height:1.5">'+dStr+'</td>'+
+        '<td style="'+tdStylePD+'line-height:1.5;font-size:13px">'+liveDisplay+'</td>'+
+      '</tr>';
+    });
+
+    htmlPD += '</tbody></table></div></div>';
     return htmlPD;
   }
 
