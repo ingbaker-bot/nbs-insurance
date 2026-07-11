@@ -49,13 +49,26 @@
     .pg.act{display:block}
     .pv-note{padding:10px 12px;background:#E6F1FB;border-radius:8px;margin-bottom:12px;font-size:14px;color:#0C447C;line-height:1.7}
     .pv-blk{border:1px solid #e8e8e8;border-radius:8px;overflow:hidden;margin-bottom:8px}
-    .pv-hdr{padding:6px 12px;background:#f7f7f5;border-bottom:1px solid #f0f0f0;font-size:14px;font-weight:500;color:#666}
+    .pv-hdr{padding:8px 12px;background:#f7f7f5;border-bottom:1px solid #f0f0f0;font-size:15px;font-weight:600;color:#444}
     .prog-wrap{background:#f0f0f0;border-radius:99px;height:8px;overflow:hidden;max-width:280px;margin:0 auto 8px}
     .prog-bar{height:100%;border-radius:99px;transition:width .2s}
     .flist{padding:12px 14px;background:#f7f7f5;border-radius:8px;margin-bottom:20px}
     .fitem{font-size:16px;color:#333;display:flex;align-items:center;gap:6px;margin-bottom:4px}
     .spin{display:inline-block;width:16px;height:16px;border:2px solid #e0e0e0;border-top-color:#378ADD;border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle}
     @keyframes sp{to{transform:rotate(360deg)}}
+    .ex-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:400;align-items:center;justify-content:center;padding:20px}
+    .ex-modal-overlay.active{display:flex}
+    .ex-modal-card{background:#fff;border-radius:18px;padding:24px;width:100%;max-width:420px;box-shadow:0 12px 40px rgba(0,0,0,.2)}
+    .ex-modal-title{font-size:19px;font-weight:700;color:#1a1a2e;margin-bottom:4px}
+    .ex-modal-sub{font-size:13px;color:#9aa0ac;margin-bottom:16px}
+    .ex-modal-field{margin-bottom:14px}
+    .ex-modal-field label{display:block;font-size:13px;color:#666;margin-bottom:6px;font-weight:500}
+    .ex-modal-input{width:100%;padding:13px 14px;border:1.5px solid #1a1a2e;border-radius:12px;font-size:16px;font-family:inherit;outline:none;box-sizing:border-box}
+    .ex-modal-input::placeholder{color:#c3c7ce}
+    .ex-modal-btns{display:flex;gap:10px;margin-top:18px}
+    .ex-modal-btn{flex:1;padding:13px;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;border:none;font-family:inherit}
+    .ex-modal-btn.cancel{background:#f0f1f3;color:#666}
+    .ex-modal-btn.save{background:#27AE60;color:#fff}
   </style>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="nav.js"></script>
@@ -65,6 +78,10 @@
 <button style="display:none" id="B_BACK"></button>
 <div style="display:none" id="HDR_TITLE"></div>
 <div class="member-tabs" id="member-tabs"></div>
+<div id="export-settings-row" style="display:flex;gap:8px;padding:8px 16px;background:#fafafa;border-bottom:1px solid #eee">
+  <button onclick="openNicknameModal()" style="font-size:14px;padding:5px 12px;border:1px solid #ddd;border-radius:99px;background:#fff;color:#666;cursor:pointer;font-family:inherit">✏️ 稱呼設定</button>
+  <button onclick="openAgentInfoModal()" style="font-size:14px;padding:5px 12px;border:1px solid #ddd;border-radius:99px;background:#fff;color:#666;cursor:pointer;font-family:inherit">⚙️ 業務員資訊</button>
+</div>
 
 <div class="pg act" id="P_SEL">
   <div class="wrap">
@@ -275,7 +292,7 @@ function doShowPreview(){
   var isPdf=fmt.startsWith("pdf");
   document.getElementById("HDR_TITLE").textContent="預覽確認";
   document.getElementById("PV_NOTE").innerHTML='ℹ️ 以下為<strong>真實資料預覽</strong>，點「'+(isPdf?"匯出 PDF":"下載圖片")+'」後系統產生'+(isPdf?"PDF":"PNG")+'檔案。';
-  document.getElementById("WM_HINT").textContent='匯出圖片底部將自動加上「NBS 雲端保單體檢 '+pName+' '+pDate+'」浮水印';
+  document.getElementById("WM_HINT").textContent='匯出圖片底部將自動加上「'+getWatermarkText()+'」浮水印';
   var eb=document.getElementById("B_EXPORT");
   eb.style.background=isPdf?"#E74C3C":"#378ADD";
   eb.textContent=isPdf?"匯出 PDF":"下載圖片";
@@ -290,7 +307,7 @@ function doShowPreview(){
     }
     var div=document.createElement("div");
     div.className="pv-blk";
-    div.innerHTML='<div class="pv-hdr">'+b.icon+" "+b.label+'</div><div>'+renderBlock(b.key)+'</div>';
+    div.innerHTML='<div class="pv-hdr">'+b.icon+' 【'+getDisplayName()+'】'+b.label+'</div><div>'+renderBlock(b.key)+'</div>';
     c.appendChild(div);
   });
   goPage("P_PREV");
@@ -690,6 +707,59 @@ function getInsAge(pid) {
   var mo=(a-new Date(b.getFullYear()+y,b.getMonth(),b.getDate()))/(1000*60*60*24*30.4375);
   if(mo>=6)y++;
   return y;
+}
+
+// ── 被保險人稱呼、業務員顯示資訊 ──────────────────────────
+// 稱呼依「被保險人」各自儲存（同一個人在不同家庭/不同瀏覽器不會互通，
+// 只存在目前這台裝置的瀏覽器裡）；業務員資訊是整台裝置共用一份。
+function getDisplayName() {
+  var nick = localStorage.getItem("nbs_nickname_" + currentPersonId);
+  return (nick && nick.trim()) ? nick.trim() : pName;
+}
+
+function getWatermarkText() {
+  var agentName = localStorage.getItem("nbs_agent_watermark_name");
+  if (agentName === null) agentName = (typeof currentUser !== "undefined" && currentUser && currentUser.name) || "";
+  var agentContact = localStorage.getItem("nbs_agent_watermark_contact") || "";
+  var parts = ["NBS 雲端保單體檢"];
+  if (agentName) parts.push(agentName);
+  if (agentContact) parts.push(agentContact);
+  parts.push(pDate);
+  parts.push("整理");
+  return parts.join(" ");
+}
+
+function openNicknameModal() {
+  document.getElementById("nickname-modal-title").textContent = "請輸入 " + pName + " 的稱呼";
+  document.getElementById("nickname-modal-input").value = localStorage.getItem("nbs_nickname_" + currentPersonId) || "";
+  document.getElementById("nickname-modal-overlay").classList.add("active");
+}
+function closeNicknameModal() {
+  document.getElementById("nickname-modal-overlay").classList.remove("active");
+}
+function saveNickname() {
+  var v = document.getElementById("nickname-modal-input").value.trim();
+  if (v) localStorage.setItem("nbs_nickname_" + currentPersonId, v);
+  else localStorage.removeItem("nbs_nickname_" + currentPersonId);
+  closeNicknameModal();
+}
+
+function openAgentInfoModal() {
+  var savedName = localStorage.getItem("nbs_agent_watermark_name");
+  if (savedName === null) savedName = (typeof currentUser !== "undefined" && currentUser && currentUser.name) || "";
+  document.getElementById("agent-modal-name").value = savedName;
+  document.getElementById("agent-modal-contact").value = localStorage.getItem("nbs_agent_watermark_contact") || "";
+  document.getElementById("agent-modal-overlay").classList.add("active");
+}
+function closeAgentInfoModal() {
+  document.getElementById("agent-modal-overlay").classList.remove("active");
+}
+function saveAgentInfo() {
+  var n = document.getElementById("agent-modal-name").value.trim();
+  var c = document.getElementById("agent-modal-contact").value.trim();
+  localStorage.setItem("nbs_agent_watermark_name", n);
+  localStorage.setItem("nbs_agent_watermark_contact", c);
+  closeAgentInfoModal();
 }
 
 function switchPerson(pid) {
@@ -1244,7 +1314,7 @@ function setP(v){
 function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
 
 async function doExportPNG(blks,div){
-  var wm='<div style="padding:8px;background:#f7f7f5;text-align:center;font-size:14px;color:#aaa">NBS 雲端保單體檢 '+pName+' '+pDate+'</div>';
+  var wm='<div style="padding:8px;background:#f7f7f5;text-align:center;font-size:14px;color:#aaa">'+getWatermarkText()+'</div>';
   var disclaimer='<div style="padding:8px 14px;font-size:16px;color:#999;line-height:1.6;text-align:left">⚠️ 本報告彙總之資訊，旨在作為檢視與討論保障內容的參考藍圖；為守護您的權益，實際理賠給付項目與條件，仍須以各家保險公司之最新資料及正式保險契約條款為準。</div>';
   if(fmt==="png_single"){
     div.style.width="1200px";
@@ -1284,7 +1354,7 @@ async function doExportPNG(blks,div){
 async function doExportPDF(blks,div){
   var J=window.jspdf.jsPDF;
   var pdf=new J("l","mm","a4");  // 預設橫向，更適合寬表格
-  var wm='<div style="padding:8px;background:#f7f7f5;text-align:center;font-size:14px;color:#aaa">NBS 雲端保單體檢 '+pName+' '+pDate+'</div>';
+  var wm='<div style="padding:8px;background:#f7f7f5;text-align:center;font-size:14px;color:#aaa">'+getWatermarkText()+'</div>';
   var disclaimer='<div style="padding:8px 14px;font-size:16px;color:#999;line-height:1.6;text-align:left">⚠️ 本報告彙總之資訊，旨在作為檢視與討論保障內容的參考藍圖；為守護您的權益，實際理賠給付項目與條件，仍須以各家保險公司之最新資料及正式保險契約條款為準。</div>';
   for(var i=0;i<blks.length;i++){
     var showDisclaimer = fmt==="pdf_pages" ? true : (i===blks.length-1);
@@ -1338,7 +1408,7 @@ function gas(action,params){
 
 // ── 頁面載入後 ─────────────────────────────────────────
 window.addEventListener("nbs_nav_ready", async function(e) {
-  var currentUser   = e.detail.user;
+  currentUser       = e.detail.user;
   familyData        = e.detail.familyData;
   currentPersonId   = e.detail.currentPersonId;
   familyFileName    = e.detail.familyFileName;
@@ -1426,5 +1496,38 @@ if (typeof NBS_NAV !== "undefined") {
 }
 
 </script>
+<div class="ex-modal-overlay" id="nickname-modal-overlay">
+  <div class="ex-modal-card">
+    <div class="ex-modal-title" id="nickname-modal-title">請輸入稱呼</div>
+    <div class="ex-modal-sub">輸入後會自動儲存，下次不需再填</div>
+    <div class="ex-modal-field">
+      <input class="ex-modal-input" id="nickname-modal-input" placeholder="例如：建明哥、麗敏姐、大哥…" maxlength="20"/>
+    </div>
+    <div class="ex-modal-btns">
+      <button class="ex-modal-btn cancel" onclick="closeNicknameModal()">取消</button>
+      <button class="ex-modal-btn save" onclick="saveNickname()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<div class="ex-modal-overlay" id="agent-modal-overlay">
+  <div class="ex-modal-card">
+    <div class="ex-modal-title">業務員顯示資訊</div>
+    <div class="ex-modal-sub">會顯示在匯出圖片底部的浮水印上，輸入後自動儲存</div>
+    <div class="ex-modal-field">
+      <label>姓名</label>
+      <input class="ex-modal-input" id="agent-modal-name" placeholder="例如：王小明"/>
+    </div>
+    <div class="ex-modal-field">
+      <label>聯絡方式 / LINE ID</label>
+      <input class="ex-modal-input" id="agent-modal-contact" placeholder="例如：0912-345-678 或 LINE ID"/>
+    </div>
+    <div class="ex-modal-btns">
+      <button class="ex-modal-btn cancel" onclick="closeAgentInfoModal()">取消</button>
+      <button class="ex-modal-btn save" onclick="saveAgentInfo()">儲存</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
