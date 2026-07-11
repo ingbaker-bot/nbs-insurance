@@ -779,6 +779,9 @@ function renderPolicies() {
     // 產生安全 ID 用於 DOM 操作
     const safeId = policyNo.replace(/[^a-zA-Z0-9]/g, '') + "_" + Math.random().toString(36).substr(2, 5);
 
+    // 生效日：優先取主約的起始日，沒有主約就退回這組保單第一筆
+    const effDate = mainPol.startDate || rows[0].startDate;
+
     // 渲染群組標題 (點擊可展開/收合附約)
     html += `<div class="policy-group">
       <div class="group-header" onclick="toggleRiders('${safeId}')" style="cursor:pointer; display:flex; align-items:center;">
@@ -786,6 +789,7 @@ function renderPolicies() {
         <span class="policy-no-badge">${policyNo}</span>
         <span class="group-company" style="margin-left:8px;">${rows[0].company||'—'}</span>
         ${currentTab==='all' && member ? `<span class="group-member-badge" style="margin-left:8px;">${member.name}</span>` : ''}
+        ${effDate ? `<span style="margin-left:8px;font-size:13px;color:#999;white-space:nowrap;">生效日 ${toRoc(effDate)}</span>` : ''}
         <span class="group-total">年繳 NT${groupTotal.toLocaleString()}</span>
       </div>`;
 

@@ -14,6 +14,11 @@
     .save-btn{padding:6px 16px;background:#378ADD;color:#fff;border:none;border-radius:7px;font-size:16px;font-weight:500;cursor:pointer;font-family:inherit}
     .save-btn:disabled{background:#ccc}
     .member-tabs{display:flex;background:#fafafa;border-bottom:1px solid #eee;overflow-x:auto;padding:0 16px}
+    .product-query-bar{display:none;align-items:center;gap:8px;padding:10px 16px;background:#F5F8FF;border-bottom:1px solid #EEF2FF;flex-wrap:wrap}
+    .product-query-name{font-size:14px;color:#374151;font-weight:500;flex:1;min-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .product-query-btn{font-size:13px;padding:6px 12px;border-radius:8px;border:1px solid #D6E0FF;background:#fff;color:#3B82F6;cursor:pointer;white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;gap:4px}
+    .product-query-btn:hover{background:#EEF4FF}
+    .product-query-btn.copied{background:#22C55E;color:#fff;border-color:#22C55E}
     .member-tab{padding:9px 14px;font-size:14px;cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;color:#888}
     .member-tab.active{border-bottom-color:#378ADD;color:#378ADD;font-weight:500}
     .main { 
@@ -91,6 +96,11 @@
     <button class="back-btn" onclick="goBack()">‹</button>
     <div class="header-title"></div>
     <button class="save-btn" id="save-btn" onclick="saveCoverage()">儲存</button>
+  </div>
+  <div class="product-query-bar" id="product-query-bar">
+    <span class="product-query-name" id="product-query-name"></span>
+    <button class="product-query-btn" id="product-query-copy-btn" onclick="copyItemName()">📋 複製商品名稱</button>
+    <a class="product-query-btn" href="https://insprod.tii.org.tw/Query.aspx" target="_blank" rel="noopener">🔍 保發中心商品查詢</a>
   </div>
 
 <div class="member-tabs" id="member-tabs"></div>
@@ -214,6 +224,7 @@ function showListView(){
   document.getElementById("loading").style.display="none";
   document.getElementById("content").style.display="block";
   document.getElementById("header-title")?.remove();
+  document.getElementById("product-query-bar").style.display="none";
   // ▼ 拿掉「附約」二字
   document.querySelector(".header-title").textContent="";
   document.querySelector(".back-btn").onclick=goBack;
@@ -281,6 +292,34 @@ function countFilled(cov){
 }
 
 // ── 附約編輯頁 ────────────────────────────────────────────
+function copyItemName(){
+  const name = document.getElementById("product-query-name").textContent;
+  if(!name) return;
+  const btn = document.getElementById("product-query-copy-btn");
+  const done = () => {
+    const original = "📋 複製商品名稱";
+    btn.textContent = "✓ 已複製";
+    btn.classList.add("copied");
+    setTimeout(()=>{ btn.textContent = original; btn.classList.remove("copied"); }, 1500);
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(name).then(done).catch(()=>fallbackCopy(name, done));
+  } else {
+    fallbackCopy(name, done);
+  }
+}
+
+function fallbackCopy(text, done){
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.style.position = "fixed";
+  ta.style.opacity = "0";
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand("copy"); done(); } catch(e) { alert("複製失敗，請手動選取文字複製"); }
+  document.body.removeChild(ta);
+}
+
 function openCoverageEdit(policyId){
   currentPolicyId=policyId;viewMode="edit";openGroups={};
   const person=personDataMap[currentPersonId];
@@ -288,6 +327,9 @@ function openCoverageEdit(policyId){
   if(!policy) return;
   if(!policy.coverage) policy.coverage={};
   document.querySelector(".header-title").textContent=policy.itemName||"附約保障";
+  const qbar = document.getElementById("product-query-bar");
+  document.getElementById("product-query-name").textContent = policy.itemName || "";
+  qbar.style.display = "flex";
   document.querySelector(".back-btn").onclick=()=>{
     if(dirty&&!confirm("有未儲存的變更，確定要返回？"))return;
     dirty=false;showListView();
