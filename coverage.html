@@ -16,6 +16,7 @@
     .member-tabs{display:flex;background:#fafafa;border-bottom:1px solid #eee;overflow-x:auto;padding:0 16px}
     .product-query-bar{display:none;align-items:center;gap:8px;padding:10px 16px;background:#F5F8FF;border-bottom:1px solid #EEF2FF;flex-wrap:wrap}
     .product-query-name{font-size:14px;color:#374151;font-weight:500;flex:1;min-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .product-query-amount{font-size:14px;color:#3B82F6;font-weight:600;white-space:nowrap}
     .product-query-btn{font-size:13px;padding:6px 12px;border-radius:8px;border:1px solid #D6E0FF;background:#fff;color:#3B82F6;cursor:pointer;white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;gap:4px}
     .product-query-btn:hover{background:#EEF4FF}
     .product-query-btn.copied{background:#22C55E;color:#fff;border-color:#22C55E}
@@ -99,6 +100,7 @@
   </div>
   <div class="product-query-bar" id="product-query-bar">
     <span class="product-query-name" id="product-query-name"></span>
+    <span class="product-query-amount" id="product-query-amount"></span>
     <button class="product-query-btn" id="product-query-copy-btn" onclick="copyItemName()">📋 複製商品名稱</button>
     <a class="product-query-btn" href="https://insprod.tii.org.tw/Query.aspx" target="_blank" rel="noopener">🔍 保發中心商品查詢</a>
   </div>
@@ -343,6 +345,10 @@ function openCoverageEdit(policyId){
   document.querySelector(".header-title").textContent=policy.itemName||"附約保障";
   const qbar = document.getElementById("product-query-bar");
   document.getElementById("product-query-name").textContent = policy.itemName || "";
+  const amtEl = document.getElementById("product-query-amount");
+  amtEl.textContent = policy.insuredAmount
+    ? `保額 ${policy.insuredAmount} ${policy.insuredAmountUnit||"萬元"}`
+    : "";
   qbar.style.display = "flex";
   document.querySelector(".back-btn").onclick=()=>{
     if(dirty&&!confirm("有未儲存的變更，確定要返回？"))return;

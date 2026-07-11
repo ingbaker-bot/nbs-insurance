@@ -151,12 +151,20 @@ var person={},policies=[],coverage={},savings=[];
 var pName="",pDate="";
 
 // ── 按鈕綁定 ─────────────────────────────────────────────
-document.getElementById("B_BACK").onclick    = function(){ window.location.href="family.html"; };
+function _goFamily() {
+  if (window.NBSRouter && typeof NBSRouter.navigate === "function") {
+    NBSRouter.navigate("family.html");
+  } else {
+    window.location.href = "family.html";
+  }
+}
+
+document.getElementById("B_BACK").onclick    = _goFamily;
 document.getElementById("B_TOGALL").onclick  = doToggleAll;
 document.getElementById("B_PREV").onclick    = doShowPreview;
 document.getElementById("B_BACK2").onclick   = doShowSelect;
 document.getElementById("B_EXPORT").onclick  = doExport;
-document.getElementById("B_FINISH").onclick  = function(){ history.back(); };
+document.getElementById("B_FINISH").onclick  = _goFamily;
 
 // ── 建立區塊清單 ──────────────────────────────────────────
 function buildBlocks(){
@@ -908,7 +916,7 @@ function buildGapAnalysisEx(active, coverage, targets, covOverrides) {
 //   且調整的內容不會被保存，因此一併移除，匯出頁維持「只做匯出選擇」
 //   的單純定位。
 
-function goBack() { window.location.href="family.html"; }
+function goBack() { _goFamily(); }
 
 function callGAS(action, params) {
   // 統一路由到 nav.js 的 NBS_NAV.callGAS（直連 Drive API，含 OAuth token）
