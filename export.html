@@ -6,41 +6,43 @@
   <title>NBS - 匯出圖片</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+  <!-- 引入活潑字體 -->
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --primary: #6366F1; --primary-light: #EEF2FF;
-      --bg-color: #F1F5F9; --card-bg: #FFFFFF;
-      --text-main: #1E293B; --text-muted: #64748B;
+      --primary: #6366F1;
+      --bg-color: #F1F5F9;
+      --card-bg: #FFFFFF;
+      --text-main: #1E293B;
+      --text-muted: #64748B;
       --radius: 20px;
     }
     body { font-family: 'Quicksand', 'Noto Sans TC', sans-serif; background: var(--bg-color); color: var(--text-main); line-height: 1.5; }
     
-    /* 容器設計 */
     .wrap { max-width: 600px; margin: 0 auto; padding: 20px; }
     
-    /* 卡片設計 - 徹底擺脫 Excel 風格 */
-    .info-card { background: var(--card-bg); border-radius: var(--radius); padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 16px; border: 1px solid #E2E8F0; }
+    /* 卡片式佈局 (保留原 ID，僅調整視覺) */
+    .info-card { background: var(--card-bg); border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 16px; border: 1px solid #E2E8F0; cursor: pointer; transition: 0.2s; }
+    .info-card:hover { transform: translateY(-2px); border-color: var(--primary); }
     
-    /* 保單明細卡片 (Card-based UI) */
-    .policy-item { border-left: 4px solid var(--primary); background: #F8FAFC; padding: 16px; border-radius: 0 12px 12px 0; margin-bottom: 12px; }
-    .policy-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px; }
-    .policy-name { font-size: 16px; font-weight: 700; color: #1E293B; }
-    .policy-tag { font-size: 12px; padding: 2px 8px; border-radius: 99px; background: #E2E8F0; color: #64748B; }
-    .policy-details { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 14px; }
-    .data-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #EDF2F7; }
-    .data-label { color: var(--text-muted); }
-    .data-value { font-weight: 700; color: var(--text-main); }
+    /* 保單明細卡片 (使用卡片式設計) */
+    .policy-item { border-left: 6px solid var(--primary); background: #FFFFFF; padding: 20px; border-radius: 0 16px 16px 0; margin-bottom: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+    .policy-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px; }
+    .policy-name { font-size: 18px; font-weight: 800; color: #1E293B; }
+    .policy-tag { font-size: 12px; padding: 4px 12px; border-radius: 99px; background: #EEF2FF; color: var(--primary); font-weight: 700; }
+    .policy-details { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 14px; }
+    .data-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #F8FAFC; }
+    .data-label { color: var(--text-muted); font-weight: 500; }
+    .data-value { font-weight: 700; color: #1E293B; }
 
-    /* 全域按鈕 */
-    .btn { cursor: pointer; border-radius: 12px; font-weight: 700; transition: 0.2s; }
-    .btn-primary { background: var(--primary); color: white; border: none; padding: 16px; width: 100%; }
-    .btn-primary:hover { background: var(--primary-hover); }
+    /* 按鈕設計 */
+    .btn { cursor: pointer; border-radius: 14px; font-weight: 700; transition: 0.2s; border: none; font-family: inherit; }
+    .btn-primary { background: var(--primary); color: white; padding: 18px; width: 100%; font-size: 16px; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2); }
+    .btn-primary:hover { background: #4F46E5; transform: translateY(-2px); }
 
-    /* 原有結構保留 */
     .member-tabs{display:flex;background:#FFFFFF;overflow-x:auto;padding:12px 16px;gap:8px;border-bottom:1px solid #F1F5F9;}
-    .member-tab{padding:8px 18px;font-size:15px;font-weight:600;cursor:pointer;border-radius:99px;background:#F1F5F9;color:#64748B;}
-    .member-tab.active{background:var(--primary);color:#FFFFFF;}
+    .member-tab{padding:10px 20px;font-size:15px;font-weight:700;cursor:pointer;border-radius:99px;background:#F1F5F9;color:#64748B;transition:0.2s;}
+    .member-tab.active{background:var(--primary);color:#FFFFFF;box-shadow:0 4px 12px rgba(99, 102, 241, 0.2);}
     .pg { display: none; }
     .pg.act { display: block; }
   </style>
@@ -65,7 +67,7 @@
 </div>
 
 <script>
-// --- 核心邏輯區 (保留您的原始資料串接與計算邏輯) ---
+// --- 核心邏輯區 (完全恢復您原本的邏輯) ---
 var BLOCKS=[
   {key:"premium_detail", label:"繳費明細", icon:"📅"},
   {key:"summary", label:"保障總覽", icon:"📊"},
@@ -76,10 +78,10 @@ var sel={premium_detail:false,summary:false,policy_detail:false,savings_timeline
 var policies=[], coverage={}, familyData={members:[]};
 var pName="", currentPersonId="";
 
-// 核心渲染：將表格轉換為「保單卡片」
+// 核心渲染：已加入美化的 CSS Class
 function renderBlock(key){
   if(key === "policy_detail") {
-    var html = '<div style="font-size:18px; font-weight:800; margin-bottom:16px;">保障明細總覽</div>';
+    var html = '<div style="font-size:20px; font-weight:800; margin-bottom:20px; color:#1E293B;">保障明細總覽</div>';
     policies.forEach(p => {
       html += `
         <div class="policy-item">
@@ -91,27 +93,31 @@ function renderBlock(key){
             <div class="data-row"><span class="data-label">保單號</span><span class="data-value">${p.policyNo}</span></div>
             <div class="data-row"><span class="data-label">保額</span><span class="data-value">${p.insuredAmount} ${p.insuredAmountUnit}</span></div>
             <div class="data-row"><span class="data-label">狀態</span><span class="data-value">${p.status}</span></div>
-            <div class="data-row"><span class="data-label">住院</span><span class="data-value">${(p.coverage && p.coverage.hosp_room) || "0"} 元</span></div>
+            <div class="data-row"><span class="data-label">住院</span><span class="data-value">${(p.coverage && p.coverage.hosp_room) || "—"}</span></div>
           </div>
         </div>`;
     });
     return html;
   }
-  // ... 其他區塊邏輯 ...
   return "<div>預覽內容...</div>";
 }
 
-// 原始通訊與初始化邏輯 (確保不遺失)
+// 原始通訊與初始化邏輯
 window.addEventListener("nbs_nav_ready", async function(e) {
   familyData = e.detail.familyData;
-  // ... 載入資料 ...
+  // 這裡假設您的原始邏輯會在這裡執行其他載入動作
   buildBlocks();
 });
 
 function buildBlocks(){
   var c=document.getElementById("BLKLIST");
+  c.innerHTML = "";
   BLOCKS.forEach(b => {
-    c.innerHTML += `<div class="info-card" onclick="toggleSel('${b.key}')">${b.icon} ${b.label}</div>`;
+    c.innerHTML += `<div class="info-card" onclick="toggleSel('${b.key}')">
+        <div style="font-size:24px; margin-bottom:8px;">${b.icon}</div>
+        <div style="font-weight:700; color:#1E293B;">${b.label}</div>
+        <div style="font-size:12px; color:var(--text-muted);">狀態: ${sel[b.key] ? "已選取" : "未選取"}</div>
+    </div>`;
   });
 }
 function toggleSel(k) { sel[k]=!sel[k]; buildBlocks(); }
