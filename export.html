@@ -8,12 +8,12 @@
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f5f3;min-height:100vh;color:#1a1a1a}
     .hdr{background:#fff;border-bottom:1px solid #eee;padding:12px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100}
-    .back{background:none;border:none;font-size:24px;color:#666;cursor:pointer}
+    .back{background:none;border:none;font-size:24px;color:#666;cursor:pointer;padding:4px}
     .wrap{padding:16px}
     .member-tabs{display:flex;gap:8px;padding:12px 16px;background:#fff;overflow-x:auto}
-    .member-tab{padding:8px 16px;border-radius:20px;background:#eee;cursor:pointer;white-space:nowrap}
+    .member-tab{padding:8px 16px;border-radius:20px;background:#eee;cursor:pointer;white-space:nowrap;font-size:14px}
     .member-tab.active{background:#6366f1;color:#fff}
-    .info-card{background:#fff;padding:16px;border-radius:12px;margin-bottom:12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+    .info-card{background:#fff;padding:16px;border-radius:12px;margin-bottom:12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border:1px solid #eee}
     .info-card.active{border:2px solid #6366f1}
     .btn-fixed{position:fixed;bottom:20px;left:20px;right:20px;background:#6366f1;color:#fff;padding:16px;border-radius:12px;text-align:center;font-weight:bold;cursor:pointer}
     .pg{display:none}.pg.act{display:block}
@@ -46,9 +46,11 @@ var BLOCKS=[{key:"premium_detail",label:"繳費明細"},{key:"summary",label:"�
 var sel={premium_detail:false,summary:false,policy_detail:false,savings_timeline:false};
 
 function goBack() {
-    if(document.getElementById("P_PREV").classList.contains("act")) {
-        document.getElementById("P_PREV").classList.remove("act");
-        document.getElementById("P_SEL").classList.add("act");
+    var pPrev = document.getElementById("P_PREV");
+    var pSel = document.getElementById("P_SEL");
+    if(pPrev.classList.contains("act")) {
+        pPrev.classList.remove("act");
+        pSel.classList.add("act");
     } else {
         window.history.back();
     }
@@ -70,22 +72,29 @@ document.getElementById("B_PREV").onclick=()=>{
   document.getElementById("ALERT").style.display="none";
   document.getElementById("P_SEL").classList.remove("act");
   document.getElementById("P_PREV").classList.add("act");
-  document.getElementById("PV_BLOCKS").innerHTML = "<h3>預覽內容</h3><p>已選擇: " + Object.keys(sel).filter(k=>sel[k]).join(", ") + "</p>";
+  // 顯示選取的項目
+  var selected = Object.keys(sel).filter(k=>sel[k]).map(k => BLOCKS.find(b=>b.key===k).label);
+  document.getElementById("PV_BLOCKS").innerHTML = "<h3>已選取區塊</h3><p style='margin-top:10px; color:#666;'>" + selected.join("、") + "</p>";
 };
 
 document.getElementById("B_EXPORT").onclick=()=>alert("執行下載圖片功能");
 
 window.addEventListener("nbs_nav_ready", (e)=>{
   var container=document.getElementById("member-tabs");
-  e.detail.familyData.members.forEach(m=>{
-    var div=document.createElement("div"); div.className="member-tab"; div.innerText=m.name;
-    div.onclick=()=>{
-      document.querySelectorAll('.member-tab').forEach(t=>t.classList.remove('active'));
-      div.classList.add('active');
-      if(window.NBS_NAV && typeof NBS_NAV.switchPerson === 'function') NBS_NAV.switchPerson(m.id);
-    };
-    container.appendChild(div);
-  });
+  if(e.detail && e.detail.familyData) {
+      e.detail.familyData.members.forEach(m=>{
+        var div=document.createElement("div"); div.className="member-tab"; div.innerText=m.name;
+        div.onclick=()=>{
+          document.querySelectorAll('.member-tab').forEach(t=>t.classList.remove('active'));
+          div.classList.add('active');
+          if(window.NBS_NAV) {
+            if(typeof NBS_NAV.switchPerson === 'function') NBS_NAV.switchPerson(m.id);
+            else if(typeof NBS_NAV.onMemberChange === 'function') NBS_NAV.onMemberChange(m.id);
+          }
+        };
+        container.appendChild(div);
+      });
+  }
   buildBlocks();
 });
 </script>
