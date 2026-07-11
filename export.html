@@ -527,8 +527,11 @@ var CAT_COLORS = {
 };
 
 var COVERAGE_GROUPS_EX = [
-  { label:"壽險保障", color:"#4A90D9", items:[
-    { label:"壽險保障額度", keys:["life_basic", "life_term"], unit:"萬元" },
+  { label:"壽險/重大保障(終身/定期)", color:"#4A90D9", items:[
+    { label:"終身壽險", unit:"萬元", compute:function(pols){ return lifeAmountEx(pols, ["壽險保障"], false); } },
+    { label:"定期壽險", unit:"萬元", compute:function(pols){ return lifeAmountEx(pols, ["壽險保障"], true); }, remain:function(pols){ return lifeRemainYearsEx(pols, ["壽險保障"]); } },
+    { label:"重大終身", unit:"萬元", compute:function(pols){ return lifeAmountEx(pols, ["重大疾病險","重大傷病險","特定傷病險"], false); } },
+    { label:"重大定期", unit:"萬元", compute:function(pols){ return lifeAmountEx(pols, ["重大疾病險","重大傷病險","特定傷病險"], true); }, remain:function(pols){ return lifeRemainYearsEx(pols, ["重大疾病險","重大傷病險","特定傷病險"]); } },
   ]},
   { label:"意外險", color:"#F5A623", items:[
     { label:"意外門診", keys:["acc_opd"], unit:"萬元/次" },
@@ -767,6 +770,36 @@ function saveAgentInfo() {
 function getBlockTitleHtml(b) {
   return '<div style="padding:14px 16px;background:#f7f7f5;border-bottom:2px solid #e6e6e6;font-size:22px;font-weight:700;color:#1a1a2e">'+
     b.icon+' 【'+getDisplayName()+'】'+b.label+'</div>';
+}
+
+// 判斷保單是「終身」還是「定期」：保障截止日（covEndDate/covEndRaw）
+// 沒填 = 終身，有填 = 定期。isTerm 傳 true 找定期的、false 找終身的。
+function lifeAmountEx(pols, cats, isTerm) {
+  var amt = 0;
+  pols.forEach(function(p){
+    if (cats.indexOf(p.category) === -1) return;
+    var hasEnd = !!(p.covEndDate || p.covEndRaw);
+    if (isTerm !== hasEnd) return;
+    var w = convertToWanEx(p.insuredAmount, p.insuredAmountUnit);
+    if (w !== null) amt += w;
+  });
+  return amt;
+}
+// 定期保單的「保障剩餘年期」：以分析日為基準，抓同一組類別裡最快到期
+// 的那張保單（最需要留意續保/續買的那一張）
+function lifeRemainYearsEx(pols, cats) {
+  var minYears = null;
+  var base = (person.profile && person.profile.analysisDate) ? new Date(person.profile.analysisDate) : new Date();
+  pols.forEach(function(p){
+    if (cats.indexOf(p.category) === -1) return;
+    var endRaw = p.covEndDate || p.covEndRaw;
+    if (!endRaw) return;
+    var end = new Date(endRaw);
+    if (isNaN(end)) return;
+    var yrs = Math.max(0, Math.round((end - base) / (365.25*24*3600*1000)));
+    if (minYears === null || yrs < minYears) minYears = yrs;
+  });
+  return minYears;
 }
 
 function switchPerson(pid) {
@@ -1245,6 +1278,22 @@ function renderBlock(key){
           '<span style="font-size:17px;font-weight:600;letter-spacing:.04em;color:'+g.color+'">'+g.label+'</span>'+
         '</div>';
       g.items.forEach(function(item){
+        var total, displayVal, remainNote = "";
+        if (item.compute) {
+          total = item.compute(policies);
+          displayVal = total>0
+            ? '<span style="font-size:16px;font-weight:600;font-family:monospace;color:'+g.color+'">'+total.toLocaleString()+'<span style="font-size:14px;color:#999;font-weight:normal;font-family:sans-serif;margin-left:2px">'+item.unit+'</span></span>'
+            : '<span style="color:#ddd">—</span>';
+          if (item.remain) {
+            var ry = item.remain(policies);
+            if (ry !== null) remainNote = '<span style="font-size:13px;color:#999;margin-left:4px">(剩 '+ry+' 年)</span>';
+          }
+          html+='<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 12px;border-bottom:1px dashed #f5f5f5;opacity:'+(total>0?1:0.45)+'">'+
+            '<span style="font-size:16px;color:'+(total>0?"#444":"#bbb")+'">'+item.label+remainNote+'</span>'+
+            displayVal+
+          '</div>';
+          return;
+        }
         var maxKey = item.keys && item.keys.find(function(k){ return k.endsWith('_max'); });
         var minKey = maxKey ? maxKey.replace('_max','_min') : null;
         var minVal = minKey ? sumCovEx([minKey],policies,cov3) : 0;
