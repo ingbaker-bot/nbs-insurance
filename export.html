@@ -6,96 +6,76 @@
   <title>NBS - 匯出圖片</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
-    :root { --primary: #6366F1; --bg-color: #F1F5F9; --card-bg: #FFFFFF; --text-main: #1E293B; --text-muted: #64748B; }
-    body { font-family: 'Quicksand', 'Noto Sans TC', sans-serif; background: var(--bg-color); color: var(--text-main); margin: 0; padding: 0; }
-    .wrap { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .info-card { background: var(--card-bg); border-radius: 16px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 16px; border: 1px solid #E2E8F0; cursor: pointer; transition: 0.2s; }
-    .info-card:hover { border-color: var(--primary); }
-    .btn { cursor: pointer; border-radius: 14px; font-weight: 700; transition: 0.2s; border: none; padding: 18px; width: 100%; font-size: 16px; background: var(--primary); color: white; }
-    .member-tabs { display: flex; background: #FFFFFF; padding: 12px 16px; gap: 8px; border-bottom: 1px solid #F1F5F9; overflow-x: auto; }
-    .member-tab { padding: 10px 20px; font-weight: 700; cursor: pointer; border-radius: 99px; background: #F1F5F9; color: #64748B; white-space: nowrap; }
-    .member-tab.active { background: var(--primary); color: #FFFFFF; }
-    .pg { display: none; }
-    .pg.act { display: block; }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f5f3;min-height:100vh;color:#1a1a1a}
+    .hdr{background:#fff;border-bottom:1px solid #eee;padding:12px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100}
+    .back{background:none;border:none;font-size:20px;color:#666;cursor:pointer}
+    .wrap{padding:16px}
+    .member-tabs{display:flex;gap:8px;padding:12px 16px;background:#fff;overflow-x:auto}
+    .member-tab{padding:8px 16px;border-radius:20px;background:#eee;cursor:pointer;white-space:nowrap}
+    .member-tab.active{background:#6366f1;color:#fff}
+    .info-card{background:#fff;padding:16px;border-radius:12px;margin-bottom:12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+    .info-card.active{border:2px solid #6366f1}
+    .btn-fixed{position:fixed;bottom:20px;left:20px;right:20px;background:#6366f1;color:#fff;padding:16px;border-radius:12px;text-align:center;font-weight:bold;cursor:pointer}
+    .pg{display:none}.pg.act{display:block}
+    .alert{color:red;font-size:14px;text-align:center;padding:10px;display:none}
   </style>
-  <script src="nav.js"></script>
 </head>
 <body>
+
+<div class="hdr">
+  <button class="back" onclick="window.history.back()">❮</button>
+  <div class="hdr-title">匯出設定</div>
+</div>
 
 <div id="member-tabs" class="member-tabs"></div>
 
 <div class="pg act" id="P_SEL">
-  <div class="wrap">
-    <div id="BLKLIST"></div>
-    <button class="btn" id="B_PREV">預覽與匯出</button>
-  </div>
+  <div class="wrap" id="BLKLIST"></div>
+  <div id="ALERT" class="alert">請至少選擇一個區塊</div>
+  <div class="btn-fixed" id="B_PREV">預覽與匯出</div>
 </div>
 
 <div class="pg" id="P_PREV">
   <div class="wrap" id="PV_BLOCKS"></div>
-  <div class="wrap">
-    <button class="btn" id="B_EXPORT">下載圖片</button>
-  </div>
+  <div class="btn-fixed" id="B_EXPORT">確認下載圖片</div>
 </div>
 
+<script src="nav.js"></script>
 <script>
-var BLOCKS=[
-  {key:"premium_detail", label:"繳費明細", icon:"📅"},
-  {key:"summary", label:"保障總覽", icon:"📊"},
-  {key:"policy_detail", label:"保障明細", icon:"📋"},
-  {key:"savings_timeline", label:"現金流", icon:"📈"},
-];
+var BLOCKS=[{key:"premium_detail",label:"繳費明細"},{key:"summary",label:"保障總覽"},{key:"policy_detail",label:"保障明細"},{key:"savings_timeline",label:"現金流"}];
 var sel={premium_detail:false,summary:false,policy_detail:false,savings_timeline:false};
 
-function initUI() {
-    buildBlocks();
-    document.getElementById("B_PREV").onclick = function() {
-        document.getElementById("P_SEL").classList.remove("act");
-        document.getElementById("P_PREV").classList.add("act");
-        renderPreview();
+function buildBlocks(){
+  var c=document.getElementById("BLKLIST"); c.innerHTML="";
+  BLOCKS.forEach(b=>{
+    var d=document.createElement("div");
+    d.className="info-card "+(sel[b.key]?"active":"");
+    d.innerHTML=`<span>${b.label}</span><span>${sel[b.key]?"✅":"⬜"}</span>`;
+    d.onclick=()=>{sel[b.key]=!sel[b.key];buildBlocks();};
+    c.appendChild(d);
+  });
+}
+
+document.getElementById("B_PREV").onclick=()=>{
+  if(!Object.values(sel).some(v=>v)){document.getElementById("ALERT").style.display="block";return;}
+  document.getElementById("P_SEL").classList.remove("act");
+  document.getElementById("P_PREV").classList.add("act");
+};
+
+window.addEventListener("nbs_nav_ready", (e)=>{
+  var container=document.getElementById("member-tabs");
+  e.detail.familyData.members.forEach(m=>{
+    var div=document.createElement("div"); div.className="member-tab"; div.innerText=m.name;
+    div.onclick=()=>{
+      document.querySelectorAll('.member-tab').forEach(t=>t.classList.remove('active'));
+      div.classList.add('active');
+      if(window.NBS_NAV) NBS_NAV.switchPerson(m.id);
     };
-    document.getElementById("B_EXPORT").onclick = function() {
-        alert("準備匯出圖片...");
-    };
-}
-
-function buildBlocks() {
-    var c = document.getElementById("BLKLIST");
-    c.innerHTML = "";
-    BLOCKS.forEach(b => {
-        var div = document.createElement("div");
-        div.className = "info-card";
-        div.innerHTML = `<div style="font-size:24px;">${b.icon}</div><div>${b.label}</div><small>${sel[b.key] ? '✅ 已勾選' : '⬜ 未選取'}</small>`;
-        div.onclick = () => { sel[b.key] = !sel[b.key]; buildBlocks(); };
-        c.appendChild(div);
-    });
-}
-
-function renderPreview() {
-    var pv = document.getElementById("PV_BLOCKS");
-    pv.innerHTML = "<h3>預覽結果</h3>";
-    Object.keys(sel).forEach(k => { if(sel[k]) pv.innerHTML += `<div class="info-card">區塊: ${k}</div>`; });
-}
-
-// 監聽 nav.js 的資料載入
-window.addEventListener("nbs_nav_ready", function(e) {
-    var container = document.getElementById("member-tabs");
-    e.detail.familyData.members.forEach(m => {
-        var div = document.createElement("div");
-        div.className = "member-tab";
-        div.innerText = m.name;
-        div.dataset.id = m.id;
-        div.onclick = () => {
-            document.querySelectorAll('.member-tab').forEach(t => t.classList.remove('active'));
-            div.classList.add('active');
-            // 呼叫您原本的切換邏輯
-            if(typeof NBS_NAV !== 'undefined') NBS_NAV.switchPerson(m.id);
-        };
-        container.appendChild(div);
-    });
-    initUI();
+    container.appendChild(div);
+  });
+  buildBlocks();
 });
 </script>
 </body>
