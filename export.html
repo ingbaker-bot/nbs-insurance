@@ -35,14 +35,14 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* 頂部導覽列 (保留讓 nav.js 注入的空間特性) */
+    /* 頂部導覽列 */
     .hdr{background:rgba(255,255,255,0.8);backdrop-filter:blur(10px);border-bottom:1px solid #F1F5F9;padding:12px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100}
     .back{background:none;border:none;font-size:26px;color:var(--text-muted);cursor:pointer;padding:0;transition:0.2s}
     .back:hover{color:var(--primary)}
     .hdr-title{font-size:18px;font-weight:700;flex:1;color:#1E293B}
     .hdr-sub{font-size:14px;color:var(--text-muted)}
 
-    /* 膠囊狀的成員標籤頁 (年輕化關鍵) */
+    /* 膠囊狀的成員標籤頁 */
     .member-tabs{display:flex;background:#FFFFFF;overflow-x:auto;padding:12px 16px;gap:8px;border-bottom:1px solid #F1F5F9;scrollbar-width:none;}
     .member-tabs::-webkit-scrollbar { display: none; }
     .member-tab{padding:8px 18px;font-size:15px;font-weight:600;cursor:pointer;white-space:nowrap;border-radius:99px;background:#F1F5F9;color:#64748B;transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1);}
@@ -56,7 +56,7 @@
     .sec-lbl button { background: #FFFFFF; box-shadow: var(--shadow-sm); border: none !important; color: var(--primary) !important; font-weight: 600; transition: 0.2s; }
     .sec-lbl button:hover { background: var(--primary-light); }
 
-    /* 選擇區塊卡片 (大圓角與陰影) */
+    /* 選擇區塊卡片 */
     .blk{display:flex;align-items:center;gap:16px;padding:16px;border:2px solid transparent;border-radius:var(--radius-lg);cursor:pointer;background:var(--card-bg);margin-bottom:12px;box-shadow:var(--shadow-sm);transition:all 0.2s ease;-webkit-tap-highlight-color:rgba(0,0,0,0)}
     .blk:active { transform: scale(0.98); }
     .blk.on{border-color:var(--primary);background:var(--primary-light);box-shadow:var(--shadow-md)}
@@ -86,7 +86,7 @@
     .fmt-section-hdr.is-pdf .fmt-hdr-sel{background:var(--pdf-light);color:var(--pdf-color)}
     .fmt-chevron{font-size:14px;color:#94A3B8;transition:transform .2s;width:16px;text-align:center}
 
-    /* 主要動作按鈕 (漸層與懸浮效果) */
+    /* 主要動作按鈕 */
     .pbtn{width:100%;padding:16px;background:linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);color:#fff;border:none;border-radius:var(--radius-md);font-size:17px;font-weight:700;cursor:pointer;font-family:inherit;display:block;box-shadow:0 4px 15px rgba(99,102,241,0.3);transition:all 0.2s ease;-webkit-tap-highlight-color:rgba(0,0,0,0)}
     .pbtn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(99,102,241,0.4)}
     .pbtn:active{transform:translateY(0)}
@@ -129,7 +129,6 @@
     .ex-modal-btn.save{background:var(--primary);color:#fff;box-shadow:0 4px 12px rgba(99,102,241,0.2)}
     .ex-modal-btn.save:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(99,102,241,0.3)}
 
-    /* 設定列的按鈕 */
     #export-settings-row button { border:none !important; background:#FFFFFF !important; box-shadow:var(--shadow-sm); font-weight:600; color:#475569 !important; transition:0.2s; padding: 8px 16px !important;}
     #export-settings-row button:hover { background:var(--bg-color) !important; color:var(--primary) !important;}
   </style>
@@ -232,6 +231,142 @@ var fmt="png_single";
 var fmtOpen="png";
 var person={},policies=[],coverage={},savings=[];
 var pName="",pDate="";
+
+// ── 核心定義區 (結合您的完整細項 + 年輕化配色) ────────────
+var GAP_GROUPS_EX = [
+  { key:"family", label:"家庭責任", color:"#6366F1", items:[
+    { key:"life_permanent", label:"終身壽險",    unit:"萬元",   color:"#6366F1" },
+    { key:"life_term",      label:"定期壽險",    unit:"萬元",   color:"#8B5CF6" },
+    { key:"investment",     label:"投資型保險",  unit:"",       color:"#64748B", isBool:true },
+    { key:"savings",        label:"儲蓄險",      unit:"",       color:"#F43F5E", isBool:true },
+  ]},
+  { key:"before", label:"評估確診", arrowLabel:"醫療前期", arrowColor:"#10B981", color:"#10B981", items:[
+    { key:"ci_special", label:"重大/特傷/重疾", unit:"萬元",   color:"#059669" },
+    { key:"cancer",     label:"初次罹患癌症",    unit:"萬元",   color:"#34D399" },
+  ]},
+  { key:"during", label:"積極修復", arrowLabel:"醫療中期", arrowColor:"#F59E0B", color:"#F59E0B", items:[
+    { key:"hosp_real_room",  label:"實支病房費",        unit:"元/日",  color:"#D97706" },
+    { key:"hosp_daily",      label:"住院日額+出院",      unit:"元/日",  color:"#F59E0B" },
+    { key:"surgery",         label:"手術險(最高)",      unit:"",       color:"#FBBF24", isBool:true },
+    { key:"cancer_hosp",     label:"癌症病房(含出院)",  unit:"元/日",  color:"#FCD34D" },
+    { key:"acc_medical",     label:"意外醫療",          unit:"萬/次",  color:"#FB923C" },
+    { key:"acc_hosp",        label:"意外住院",          unit:"元/日",  color:"#FDBA74" },
+  ]},
+  { key:"after",  label:"康復療養", arrowLabel:"醫療後期", arrowColor:"#EC4899", color:"#EC4899", items:[
+    { key:"ltc_disable",    label:"失能一次金",      unit:"萬元",    color:"#BE185D" },
+    { key:"ltc_support",    label:"失能扶助",        unit:"萬元/月", color:"#DB2777" },
+    { key:"ltc_care",       label:"長照",            unit:"萬元/月", color:"#EC4899" },
+    { key:"cancer_hospice", label:"癌症安寧",        unit:"萬元",    color:"#F472B6" },
+    { key:"cancer_death",   label:"癌症身故",        unit:"萬元",    color:"#FBCFE8" },
+    { key:"waiver",         label:"保費豁免",        unit:"",        color:"#94A3B8", isBool:true },
+  ]},
+];
+
+var GAP_KEY_MAP_EX = {
+  life_permanent:  { cats:["壽險保障"],          keys:["life_basic"] },
+  life_term:       { cats:[],                   keys:["life_term"] },
+  investment:      { cats:["投資型保險"],        keys:[] },
+  savings:         { cats:["儲蓄險","年金險"],   keys:[] },
+  ci_special:      { cats:["重大疾病險","重大傷病險","特定傷病險"], keys:["can_first"] },
+  cancer:          { cats:["癌症醫療"],          keys:["can_first"] },
+  hosp_real_room:  { cats:["醫療保障"],          keys:["hosp_room", "hosp_ext_room"] },
+  hosp_daily:      { cats:["醫療保障"],          keys:["daily_room_1_30", "hosp_ext_daily", "daily_discharge"] },
+  surgery:         { cats:["醫療保障","定額手術"], keys:["hosp_surgery", "hosp_ext_surgery", "surg_hosp_max", "surg_opd_max"] },
+  cancer_hosp:     { cats:["癌症醫療"],          keys:["can_hosp", "can_discharge"] },
+  acc_medical:     { cats:["意外險"],            keys:["acc_opd"] },
+  acc_hosp:        { cats:["意外險"],            keys:["acc_hosp"] },
+  ltc_disable:     { cats:["失能長照"],          keys:["ltc_dis_amt"] },
+  ltc_support:     { cats:["失能長照"],          keys:["ltc_dis_life", "acc_support", "ltc_life"] },
+  ltc_care:        { cats:["失能長照"],          keys:["ltc_monthly", "ltc_care", "ltc_yr", "ltc_mo"] },
+  cancer_hospice:  { cats:["癌症醫療"],          keys:["can_hospice"] },
+  cancer_death:    { cats:["癌症醫療"],          keys:["can_death"] },
+  waiver:          { cats:[],                   keys:["ltc_waiver"] },
+};
+
+// 完整版各項保障明細定義 (加上年輕化顏色)
+var COVERAGE_GROUPS_EX = [
+  { label:"壽險與重大保障", color:"#6366F1", items:[
+    { label:"終身壽險", unit:"萬元", compute:function(pols){ return lifeAmountEx(pols, ["壽險保障"], false); } },
+    { label:"定期壽險", unit:"萬元", compute:function(pols){ return lifeAmountEx(pols, ["壽險保障"], true); }, remain:function(pols){ return lifeRemainYearsEx(pols, ["壽險保障"]); } },
+    { label:"重大終身", unit:"萬元", compute:function(pols){ return lifeAmountEx(pols, ["重大疾病險","重大傷病險","特定傷病險"], false); } },
+    { label:"重大定期", unit:"萬元", compute:function(pols){ return lifeAmountEx(pols, ["重大疾病險","重大傷病險","特定傷病險"], true); }, remain:function(pols){ return lifeRemainYearsEx(pols, ["重大疾病險","重大傷病險","特定傷病險"]); } },
+  ]},
+  { label:"意外防護網", color:"#F59E0B", items:[
+    { label:"意外門診", keys:["acc_opd"], unit:"萬元/次" },
+    { label:"意外住院日額", keys:["acc_hosp"], unit:"元/日" },
+    { label:"加護病房", keys:["acc_icu"], unit:"元/日" },
+    { label:"骨折療養金", keys:["acc_fracture_max", "acc_fracture"], unit:"元" },
+    { label:"重大/特定燒燙傷", keys:["acc_burn_max", "acc_burn"], unit:"萬元" },
+    { label:"特定事故加倍", keys:["acc_special_max", "acc_special"], unit:"萬元" },
+    { label:"食物中毒", keys:["acc_food"], unit:"元/次" },
+    { label:"意外失能 (2~11級)", keys:["acc_disable_max", "acc_disable"], unit:"萬元" },
+    { label:"喪失工作能力", keys:["acc_work"], unit:"萬元/月" },
+    { label:"失能扶助金", keys:["acc_support"], unit:"萬元/月" },
+  ]},
+  { label:"住院醫療實支實付", color:"#10B981", items:[
+    { label:"病房費", keys:["hosp_room", "hosp_ext_room"], unit:"元/日" },
+    { label:"手術費", keys:["hosp_surgery", "hosp_ext_surgery"], unit:"元/次" },
+    { label:"醫療雜費", keys:["hosp_misc", "hosp_ext_misc"], unit:"元/次" },
+    { label:"加護病房費", keys:["hosp_icu"], unit:"元/日" },
+    { label:"重大器官移植", keys:["hosp_organ_max", "hosp_organ"], unit:"萬元" },
+    { label:"自負額", keys:["hosp_deduct"], unit:"元" },
+    { label:"每次住院總限額", keys:["hosp_limit_per"], unit:"元/次" },
+    { label:"醫療給付總限額", keys:["hosp_limit_acct"], unit:"萬元" },
+  ]},
+  { label:"日額型住院", color:"#3B82F6", items:[
+    { label:"病房費 (1~30日)", keys:["daily_room_1_30", "hosp_ext_daily"], unit:"元/日" },
+    { label:"病房費 (31日起)", keys:["daily_room_31"], unit:"元/日" },
+    { label:"加護病房", keys:["daily_icu"], unit:"元/日" },
+    { label:"燒燙傷中心", keys:["daily_burn"], unit:"元/日" },
+    { label:"老年住院關懷", keys:["daily_senior"], unit:"元/次" },
+    { label:"出院療養金", keys:["daily_discharge"], unit:"元/日" },
+    { label:"住院看護療養", keys:["daily_nurse"], unit:"元/日" },
+    { label:"住院前後門診", keys:["daily_opd"], unit:"元/次" },
+    { label:"住院前急診", keys:["daily_er"], unit:"元/次" },
+    { label:"緊急醫療轉送", keys:["daily_transport"], unit:"元/次" },
+    { label:"特殊醫材補助", keys:["daily_device"], unit:"元/次" },
+    { label:"罹患重大疾病", keys:["daily_major"], unit:"元" },
+    { label:"抗排斥藥物", keys:["daily_antirej"], unit:"元" },
+    { label:"代替手術放射線", keys:["daily_radiation"], unit:"元" },
+    { label:"帳戶金額", keys:["daily_limit"], unit:"萬元" },
+    { label:"給付倍數", keys:["daily_limit_times"], unit:"倍" },
+  ]},
+  { label:"定額手術", color:"#8B5CF6", items:[
+    { label:"門診手術醫療", keys:["surg_opd_max", "surg_opd"], unit:"元/次" },
+    { label:"特定處置項目", keys:["surg_special_max", "surg_special"], unit:"元/次" },
+    { label:"住院手術醫療", keys:["surg_hosp_max", "surg_hosp"], unit:"元/次" },
+    { label:"手術看護療養金", keys:["surg_nurse_max", "surg_nurse"], unit:"元" },
+    { label:"保險給付限制", keys:["surg_limit"], unit:"萬元" },
+  ]},
+  { label:"癌症醫療", color:"#F43F5E", items:[
+    { label:"低侵襲/特定癌症", keys:["can_low"], unit:"元" },
+    { label:"初次罹癌 (一次)", keys:["can_first"], unit:"萬元" },
+    { label:"癌症住院醫療", keys:["can_hosp"], unit:"元/日" },
+    { label:"出院療養", keys:["can_discharge"], unit:"元/日" },
+    { label:"癌症門診醫療", keys:["can_opd"], unit:"元/次" },
+    { label:"癌症質子治療", keys:["can_proton"], unit:"萬元/次" },
+    { label:"放射線治療", keys:["can_radiation"], unit:"元/日" },
+    { label:"癌症基因檢測", keys:["can_gene"], unit:"萬元" },
+    { label:"化學治療", keys:["can_chemo"], unit:"元/日" },
+    { label:"標靶藥物治療", keys:["can_target"], unit:"萬元" },
+    { label:"達文西手術", keys:["can_davinci"], unit:"萬元" },
+    { label:"義乳重建手術", keys:["can_breast"], unit:"萬元" },
+    { label:"自體免疫細胞治療", keys:["can_immune"], unit:"萬元" },
+    { label:"骨髓/幹細胞移植", keys:["can_marrow"], unit:"萬元" },
+    { label:"癌症給付總限額", keys:["can_total"], unit:"萬元" },
+    { label:"安寧照護", keys:["can_hospice"], unit:"萬元" },
+    { label:"癌症身故", keys:["can_death"], unit:"萬元" },
+  ]},
+  { label:"失能長照", color:"#D946EF", items:[
+    { label:"長照/長看關懷", keys:["ltc_care"], unit:"萬元" },
+    { label:"長期照護療養 (月)", keys:["ltc_monthly"], unit:"萬元/月" },
+    { label:"生活扶助/重大傷病", keys:["ltc_life"], unit:"萬元/月" },
+    { label:"特定傷病 (年)", keys:["ltc_yr"], unit:"萬元/年" },
+    { label:"特定傷病 (月)", keys:["ltc_mo"], unit:"萬元/月" },
+    { label:"失能(殘廢)保險金", keys:["ltc_dis_amt"], unit:"萬元" },
+    { label:"失能生活扶助金", keys:["ltc_dis_life"], unit:"萬元/月" },
+  ]},
+];
 
 // ── 按鈕綁定 ─────────────────────────────────────────────
 function _goFamily() {
@@ -450,7 +585,6 @@ function renderSavingsTimeline(pdm3,fData,startYr,endYr){
   if(!groups.length)return'<div style="padding:40px;text-align:center;color:#94A3B8;font-size:16px;font-weight:600;background:#fff;border-radius:24px;box-shadow:0 2px 10px rgba(0,0,0,0.02)">暫無儲蓄險預測資料 🍃</div>';
   var maxTotal=Math.max.apply(null,Object.values(totalFlows).concat([1]));
   
-  // 美化年輕化的圓潤表格
   var yh=years.map(function(y3){return'<th style="padding:12px 6px;text-align:center;font-weight:700;color:#64748B;border-bottom:2px solid #F1F5F9;white-space:nowrap">'+y3+'<br><span style="font-size:13px;color:#94A3B8;font-weight:600">'+(y3-1911)+'年</span></th>';}).join("");
   var gr=groups.map(function(g){
     var pay=g.policies.filter(function(pr){return Object.keys(pr.flows).length===0;}).length;
@@ -463,7 +597,6 @@ function renderSavingsTimeline(pdm3,fData,startYr,endYr){
         var amt=pr.flows[y4]||0;
         if(!amt)return'<td style="text-align:center;color:#CBD5E1;font-size:14px;border-bottom:1px solid #F1F5F9">—</td>';
         var w=Math.max(24,Math.round((amt/maxTotal)*50));
-        // 金額長條圖改為柔和漸層
         return'<td style="text-align:center;border-bottom:1px solid #F1F5F9"><div style="height:24px;border-radius:6px;background:linear-gradient(90deg, #EEF2FF, #E0E7FF);display:inline-flex;align-items:center;padding:0 6px;min-width:'+w+'px"><span style="font-size:15px;color:#4F46E5;white-space:nowrap;font-weight:700;font-family:monospace">'+fmtAmtEx(amt)+'</span></div></td>';
       }).join("");
       var fc='<td style="padding:12px 16px;min-width:200px;border-bottom:1px solid #F1F5F9">'+
@@ -494,7 +627,6 @@ function renderSavingsTimeline(pdm3,fData,startYr,endYr){
     '<tbody>'+gr+tot+'</tbody></table></div></div>';
 }
 
-// ── Summary 輔助函式 ──────────────
 function convertToWanEx(amount, unit) {
   var n = parseFloat(amount);
   if (isNaN(n)) return null;
@@ -520,127 +652,6 @@ function sumCovEx(keys, policies, coverage) {
   }
   return total;
 }
-
-// 保障群組與細項定義
-var GAP_GROUPS_EX = [
-  { key:"family", label:"家庭責任", color:"#6366F1", items:[
-    { key:"life_permanent", label:"終身壽險",    unit:"萬元",   color:"#6366F1" },
-    { key:"life_term",      label:"定期壽險",    unit:"萬元",   color:"#8B5CF6" },
-    { key:"investment",     label:"投資型保險",  unit:"",       color:"#64748B", isBool:true },
-    { key:"savings",        label:"儲蓄險",      unit:"",       color:"#F43F5E", isBool:true },
-  ]},
-  { key:"before", label:"評估確診", arrowLabel:"醫療前期", arrowColor:"#10B981", color:"#10B981", items:[
-    { key:"ci_special", label:"重大/特傷/重疾", unit:"萬元",   color:"#059669" },
-    { key:"cancer",     label:"初次罹患癌症",    unit:"萬元",   color:"#34D399" },
-  ]},
-  { key:"during", label:"積極修復", arrowLabel:"醫療中期", arrowColor:"#F59E0B", color:"#F59E0B", items:[
-    { key:"hosp_real_room",  label:"實支病房費",        unit:"元/日",  color:"#D97706" },
-    { key:"hosp_daily",      label:"住院日額+出院",      unit:"元/日",  color:"#F59E0B" },
-    { key:"surgery",         label:"手術險(最高)",      unit:"",       color:"#FBBF24", isBool:true },
-    { key:"cancer_hosp",     label:"癌症病房(含出院)",  unit:"元/日",  color:"#FCD34D" },
-    { key:"acc_medical",     label:"意外醫療",          unit:"萬/次",  color:"#FB923C" },
-    { key:"acc_hosp",        label:"意外住院",          unit:"元/日",  color:"#FDBA74" },
-  ]},
-  { key:"after",  label:"康復療養", arrowLabel:"醫療後期", arrowColor:"#EC4899", color:"#EC4899", items:[
-    { key:"ltc_disable",    label:"失能一次金",      unit:"萬元",    color:"#BE185D" },
-    { key:"ltc_support",    label:"失能扶助",        unit:"萬元/月", color:"#DB2777" },
-    { key:"ltc_care",       label:"長照",            unit:"萬元/月", color:"#EC4899" },
-    { key:"cancer_hospice", label:"癌症安寧",        unit:"萬元",    color:"#F472B6" },
-    { key:"cancer_death",   label:"癌症身故",        unit:"萬元",    color:"#FBCFE8" },
-    { key:"waiver",         label:"保費豁免",        unit:"",        color:"#94A3B8", isBool:true },
-  ]},
-];
-
-var GAP_KEY_MAP_EX = {
-  life_permanent:  { cats:["壽險保障"],          keys:["life_basic"] },
-  life_term:       { cats:[],                   keys:["life_term"] },
-  investment:      { cats:["投資型保險"],        keys:[] },
-  savings:         { cats:["儲蓄險","年金險"],   keys:[] },
-  ci_special:      { cats:["重大疾病險","重大傷病險","特定傷病險"], keys:["can_first"] },
-  cancer:          { cats:["癌症醫療"],          keys:["can_first"] },
-  hosp_real_room:  { cats:["醫療保障"],          keys:["hosp_room", "hosp_ext_room"] },
-  hosp_daily:      { cats:["醫療保障"],          keys:["daily_room_1_30", "hosp_ext_daily", "daily_discharge"] },
-  surgery:         { cats:["醫療保障","定額手術"], keys:["hosp_surgery", "hosp_ext_surgery", "surg_hosp_max", "surg_opd_max"] },
-  cancer_hosp:     { cats:["癌症醫療"],          keys:["can_hosp", "can_discharge"] },
-  acc_medical:     { cats:["意外險"],            keys:["acc_opd"] },
-  acc_hosp:        { cats:["意外險"],            keys:["acc_hosp"] },
-  ltc_disable:     { cats:["失能長照"],          keys:["ltc_dis_amt"] },
-  ltc_support:     { cats:["失能長照"],          keys:["ltc_dis_life", "acc_support", "ltc_life"] },
-  ltc_care:        { cats:["失能長照"],          keys:["ltc_monthly", "ltc_care", "ltc_yr", "ltc_mo"] },
-  cancer_hospice:  { cats:["癌症醫療"],          keys:["can_hospice"] },
-  cancer_death:    { cats:["癌症醫療"],          keys:["can_death"] },
-  waiver:          { cats:[],                   keys:["ltc_waiver"] },
-};
-
-var COVERAGE_TYPES = [
-  { key:"life",       label:"壽險保障", group:"壽險", color:"#4A90D9", detect:(p,c)=>p.some(x=>x.category==="壽險保障") },
-  { key:"acc_death",  label:"意外身故", group:"意外", color:"#F5A623", detect:(p,c)=>p.some(x=>x.category==="意外險") },
-  { key:"acc_medical",label:"意外醫療", group:"意外", color:"#F08C00", detect:(p,c)=>Object.keys(c).some(k=>k.includes("acc_opd")) },
-  { key:"acc_hosp",   label:"意外住院", group:"意外", color:"#D97706", detect:(p,c)=>Object.keys(c).some(k=>k.includes("daily_room"))&&p.some(x=>x.category==="意外險") },
-  { key:"hosp_real",  label:"實支實付", group:"醫療", color:"#27AE8F", detect:(p,c)=>Object.keys(c).some(k=>k.includes("hosp_room")) },
-  { key:"hosp_daily", label:"住院日額", group:"醫療", color:"#1E8A72", detect:(p,c)=>Object.keys(c).some(k=>k.includes("daily_room")) },
-  { key:"hosp_surg",  label:"手術險",   group:"醫療", color:"#166756", detect:(p,c)=>Object.keys(c).some(k=>k.includes("surg_opd")||k.includes("surg_hosp")) },
-  { key:"ci",         label:"重大疾病", group:"重大", color:"#9B59B6", detect:(p,c)=>p.some(x=>["重大疾病險","重大傷病險","特定傷病險"].includes(x.category)) },
-  { key:"cancer",     label:"癌症險",   group:"癌症", color:"#E74C3C", detect:(p,c)=>Object.keys(c).some(k=>k.includes("can_first")||k.includes("can_hosp")) },
-  { key:"ltc",        label:"長照險",   group:"長照", color:"#27500A", detect:(p,c)=>Object.keys(c).some(k=>k.includes("ltc_monthly")||k.includes("ltc_care")) },
-  { key:"disable",    label:"失能險",   group:"長照", color:"#5BAD6F", detect:(p,c)=>Object.keys(c).some(k=>k.includes("ltc_dis_amt")||k.includes("ltc_dis_life")) },
-  { key:"savings",    label:"儲蓄險",   group:"財務", color:"#E8638A", detect:(p,c)=>p.some(x=>x.category==="儲蓄險") },
-  { key:"annuity",    label:"年金險",   group:"財務", color:"#C0392B", detect:(p,c)=>p.some(x=>x.category==="年金險") },
-  { key:"investment", label:"投資型",   group:"財務", color:"#95A5A6", detect:(p,c)=>p.some(x=>x.category==="投資型保險") },
-];
-
-var GROUP_COLORS = { 壽險:"#4A90D9",意外:"#F5A623",醫療:"#27AE8F",重大:"#9B59B6",癌症:"#E74C3C",長照:"#27500A",財務:"#E8638A" };
-
-var CAT_COLORS = {
-  "壽險保障":"#4A90D9","醫療保障":"#27AE8F","意外險":"#F5A623",
-  "重大疾病險":"#9B59B6","重大傷病險":"#8E44AD","特定傷病險":"#7D3C98",
-  "儲蓄險":"#E8638A","年金險":"#C0392B","投資型保險":"#95A5A6",
-};
-
-var COVERAGE_GROUPS_EX = [
-  { label:"壽險與重大保障", color:"#6366F1", items:[
-    { label:"終身壽險", unit:"萬元", compute:function(pols){ return lifeAmountEx(pols, ["壽險保障"], false); } },
-    { label:"定期壽險", unit:"萬元", compute:function(pols){ return lifeAmountEx(pols, ["壽險保障"], true); }, remain:function(pols){ return lifeRemainYearsEx(pols, ["壽險保障"]); } },
-    { label:"重大終身", unit:"萬元", compute:function(pols){ return lifeAmountEx(pols, ["重大疾病險","重大傷病險","特定傷病險"], false); } },
-    { label:"重大定期", unit:"萬元", compute:function(pols){ return lifeAmountEx(pols, ["重大疾病險","重大傷病險","特定傷病險"], true); }, remain:function(pols){ return lifeRemainYearsEx(pols, ["重大疾病險","重大傷病險","特定傷病險"]); } },
-  ]},
-  { label:"意外防護網", color:"#F59E0B", items:[
-    { label:"意外門診", keys:["acc_opd"], unit:"萬元/次" },
-    { label:"意外住院日額", keys:["acc_hosp"], unit:"元/日" },
-    { label:"加護病房", keys:["acc_icu"], unit:"元/日" },
-    { label:"骨折療養金", keys:["acc_fracture_max", "acc_fracture"], unit:"元" },
-    { label:"重大/特定燒燙傷", keys:["acc_burn_max", "acc_burn"], unit:"萬元" },
-    { label:"特定事故加倍", keys:["acc_special_max", "acc_special"], unit:"萬元" },
-    { label:"意外失能 (2~11級)", keys:["acc_disable_max", "acc_disable"], unit:"萬元" },
-    { label:"失能扶助金", keys:["acc_support"], unit:"萬元/月" },
-  ]},
-  { label:"住院醫療實支實付", color:"#10B981", items:[
-    { label:"病房費", keys:["hosp_room", "hosp_ext_room"], unit:"元/日" },
-    { label:"手術費", keys:["hosp_surgery", "hosp_ext_surgery"], unit:"元/次" },
-    { label:"醫療雜費", keys:["hosp_misc", "hosp_ext_misc"], unit:"元/次" },
-    { label:"每次住院總限額", keys:["hosp_limit_per"], unit:"元/次" },
-  ]},
-  { label:"日額住院與手術", color:"#3B82F6", items:[
-    { label:"病房費 (1~30日)", keys:["daily_room_1_30", "hosp_ext_daily"], unit:"元/日" },
-    { label:"加護病房", keys:["daily_icu"], unit:"元/日" },
-    { label:"出院療養金", keys:["daily_discharge"], unit:"元/日" },
-    { label:"門診手術醫療", keys:["surg_opd_max", "surg_opd"], unit:"元/次" },
-    { label:"住院手術醫療", keys:["surg_hosp_max", "surg_hosp"], unit:"元/次" },
-  ]},
-  { label:"癌症專屬醫療", color:"#F43F5E", items:[
-    { label:"初次罹癌 (一次金)", keys:["can_first"], unit:"萬元" },
-    { label:"癌症住院醫療", keys:["can_hosp"], unit:"元/日" },
-    { label:"癌症門診醫療", keys:["can_opd"], unit:"元/次" },
-    { label:"化學治療/放射", keys:["can_chemo","can_radiation"], unit:"元/次" },
-    { label:"標靶藥物治療", keys:["can_target"], unit:"萬元" },
-  ]},
-  { label:"長照與失能", color:"#8B5CF6", items:[
-    { label:"長照/長看關懷", keys:["ltc_care"], unit:"萬元" },
-    { label:"長期照護療養 (月)", keys:["ltc_monthly"], unit:"萬元/月" },
-    { label:"失能(殘廢)保險金", keys:["ltc_dis_amt"], unit:"萬元" },
-    { label:"失能生活扶助金", keys:["ltc_dis_life"], unit:"萬元/月" },
-  ]},
-];
 
 var currentUser    = null;
 var familyData     = null;
@@ -762,7 +773,6 @@ function saveAgentInfo() {
   closeAgentInfoModal();
 }
 
-// 區塊標題設計優化 (年輕化字體與間距)
 function getBlockTitleHtml(b) {
   return '<div style="padding:0 0 20px 0;font-size:26px;font-weight:800;color:#1E293B;display:flex;align-items:center;gap:12px;letter-spacing:0.02em">'+
     '<span style="font-size:32px">'+b.icon+'</span> '+getDisplayName()+' 的 '+b.label+'</div>';
@@ -837,7 +847,7 @@ function buildSvgArrows(phases) {
 function buildDonutChartEx(active, coverage, targets, covOverrides) {
   var allItems = GAP_GROUPS_EX.flatMap(g=>g.items);
   var n = allItems.length;
-  var cx=300, cy=210, OR=140, IR=80; // 加粗甜甜圈
+  var cx=300, cy=210, OR=140, IR=80;
   var gapA=0.04, sliceA=(Math.PI*2-n*gapA)/n;
   var angle=-Math.PI/2;
   var paths="", labels=""; 
@@ -912,8 +922,6 @@ function buildDonutChartEx(active, coverage, targets, covOverrides) {
   });
 
   var okN = allItems.filter(item=>getItemStatusEx(item.key,active,coverage,targets,covOverrides).status==="ok").length;
-  var gapN = allItems.filter(item=>getItemStatusEx(item.key,active,coverage,targets,covOverrides).status==="gap").length;
-  var insN = allItems.filter(item=>getItemStatusEx(item.key,active,coverage,targets,covOverrides).status==="insufficient").length;
 
   return `<div style="display:flex;flex-direction:column;width:100%">
     <div style="display:flex;align-items:center;justify-content:center;gap:30px;flex-wrap:wrap;margin-bottom:30px;padding:0">
@@ -954,7 +962,6 @@ function renderBlock(key){
     var totalTWD_pd=active.reduce(function(s,p){return s+(p.premiumTWD||0);},0);
     var htmlPD='<div style="padding:0">';
 
-    // 年繳/月均統計 (便當盒設計 Bento Box)
     htmlPD+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px">'+
       '<div style="padding:20px;border-radius:24px;background:linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%);box-shadow:0 4px 15px rgba(99,102,241,0.1)">'+
         '<div style="font-size:15px;color:#4F46E5;margin-bottom:4px;font-weight:700">💰 年繳總保費</div>'+
@@ -966,7 +973,6 @@ function renderBlock(key){
       '</div>'+
     '</div>';
 
-    // 月曆 (圓潤膠囊風格)
     htmlPD+='<div style="font-size:18px;font-weight:700;color:#1E293B;margin-bottom:12px;display:flex;align-items:center;gap:8px"><span>📊</span> 繳費月曆分佈</div>';
     var nowM=new Date().getMonth();
     var cellsPD=Array.from({length:12},function(_,mi){
@@ -986,7 +992,6 @@ function renderBlock(key){
     }).join("");
     htmlPD+='<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:32px">'+cellsPD+'</div>';
 
-    // 整合表優化 (無框設計，圓角卡片)
     htmlPD+='<div style="font-size:18px;font-weight:700;color:#1E293B;margin-bottom:12px;display:flex;align-items:center;gap:8px"><span>📋</span> 保單與受益人總覽</div>';
 
     var tblStyle_pd = 'width:100%;border-collapse:separate;border-spacing:0;font-size:15px;';
@@ -1049,7 +1054,6 @@ function renderBlock(key){
       var rule = BENEF_RULES_PD[p.category] || { death:"可設定", live:"可設定" };
       var ownerName  = p.ownerName  || p.proposer || p.applicant || "—";
 
-      // 身故受益人 (精準恢復原始邏輯)
       var dStr = "";
       if(rule.death === "鎖定本人") { dStr = "被保險人本人 🔒"; }
       else if(p.beneficiaryDeathText) { dStr = p.beneficiaryDeathText; }
@@ -1057,7 +1061,6 @@ function renderBlock(key){
         dStr = p.beneficiaryDeathCustom.map(function(c){ return c.customName || "指定家人"; }).join("、");
       }
 
-      // 生存/滿期受益人 (精準恢復原始邏輯，避免 undefined 變指定其他)
       var lStr = "", mStr = "";
       if(p.beneficiaryLiveText) lStr = p.beneficiaryLiveText;
       else if(p.beneficiaryLiveType === "self")  lStr = "被保險人本人";
@@ -1116,7 +1119,6 @@ function renderBlock(key){
     html+='<div style="font-size:18px;font-weight:700;color:#1E293B;margin-bottom:16px;display:flex;align-items:center;gap:8px"><span>🎯</span> 保障覆蓋率視覺化</div>';
     html+='<div style="background:#fff;border-radius:24px;padding:24px;margin-bottom:24px;box-shadow:0 4px 20px rgba(0,0,0,0.03);border:1px solid #F1F5F9">'+buildDonutChartEx(active,cov,{},{})+'</div>';
 
-    // 就醫情況 (設計升級)
     html+='<div style="font-size:18px;font-weight:700;color:#1E293B;margin-bottom:12px;margin-top:32px;display:flex;align-items:center;gap:8px"><span>🏥</span> 就醫理賠金試算</div>';
     var baseHosp=sumCovEx(["hosp_room","hosp_ext_room","daily_room_1_30","hosp_ext_daily","daily_discharge"],policies,cov);
     html+='<div style="background:#fff;border-radius:24px;overflow:hidden;margin-bottom:16px;box-shadow:0 4px 20px rgba(0,0,0,0.03);border:1px solid #F1F5F9">'+
@@ -1126,7 +1128,8 @@ function renderBlock(key){
         '<th style="padding:16px;text-align:center;font-weight:700;color:#F59E0B;border-bottom:2px solid #E2E8F0">⚠️ 意外事故</th>'+
         '<th style="padding:16px;text-align:center;font-weight:700;color:#F43F5E;border-bottom:2px solid #E2E8F0">🎗️ 癌症治療</th>'+
       '</tr></thead><tbody>';
-    [["🚑 門診治療","opd"],["🏥 留院觀察/住院","hosp"]].forEach(function(rc,ri){
+    // ✅ 已修正為「住院」
+    [["🚑 門診治療","opd"],["🏥 住院","hosp"]].forEach(function(rc,ri){
       html+='<tr style="border-bottom:'+(ri===0?"1px solid #F1F5F9":"none")+'"><td style="padding:16px;font-weight:700;color:#475569;background:#F8FAFC">'+rc[0]+'</td>';
       ["disease","accident","cancer"].forEach(function(ck){
         if(rc[1]==="opd"&&ck==="disease"){html+='<td style="text-align:center;padding:16px"><div style="display:inline-flex;padding:6px 14px;border-radius:99px;background:#ECFDF5"><span style="font-size:14px;font-weight:700;color:#059669">健保給付</span></div></td>';}
@@ -1145,6 +1148,7 @@ function renderBlock(key){
     return html;
   }
 
+  // ▼ 保單明細一覽表 (完美結合年輕化與完整細項)
   if(key==="policy_detail"){
     var cov3={};
     policies.forEach(function(p){
@@ -1153,10 +1157,11 @@ function renderBlock(key){
       });
     });
     var html='<div style="padding:0">';
-    html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;align-items:start">';
+    // ✅ 瀑布流自適應排版 grid-auto-flow: dense
+    html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;align-items:start;grid-auto-flow:dense;">';
     
-    // Masonry 卡片流設計
-    var covStyles = { '日額住院與手術': 'grid-row:span 2;', '癌症專屬醫療': 'grid-row:span 2;', '長照與失能': 'grid-column:2;' };
+    // 長清單設定 span 2 讓版面均勻
+    var covStyles = { '日額型住院': 'grid-row:span 2;', '癌症醫療': 'grid-row:span 2;' };
     COVERAGE_GROUPS_EX.forEach(function(g){
       var extraStyle = covStyles[g.label] || '';
       html+='<div style="'+extraStyle+'background:#fff;border-radius:20px;box-shadow:0 4px 15px rgba(0,0,0,0.03);overflow:hidden;border:1px solid #F1F5F9;border-top:6px solid '+g.color+'">'+
@@ -1325,8 +1330,6 @@ function showDone(blks){
   goPage("P_DONE");
 }
 
-// === 恢復被遺失的重要底層通訊程式碼 ===
-
 function callGAS(action, params) {
   if (window.NBS_NAV && typeof NBS_NAV.callGAS === 'function') {
     return NBS_NAV.callGAS(action, params);
@@ -1350,7 +1353,7 @@ function gas(action,params){
 
 // 支援兩種事件：nav.js 自行載入 或 family.html 先載入後通知
 window.addEventListener("nbs_family_loaded", function(e) {
-  if (typeof familyData !== "undefined" && familyData) return; // 已初始化
+  if (typeof familyData !== "undefined" && familyData) return;
   var u = JSON.parse(localStorage.getItem("nbs_user") || "{}");
   window.dispatchEvent(new CustomEvent("nbs_nav_ready", {
     detail: {
@@ -1363,7 +1366,7 @@ window.addEventListener("nbs_family_loaded", function(e) {
   }));
 });
 
-// 必須保證跟舊版一模一樣的同步掛載時機
+// 同步掛載時機
 if (typeof NBS_NAV !== "undefined" && typeof NBS_NAV.init === "function") {
     NBS_NAV.init({ page: "export" });
 }
