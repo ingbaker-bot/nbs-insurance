@@ -6,39 +6,40 @@
   <title>NBS - 匯出設定</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f5f3;min-height:100vh;color:#1a1a1a}
-    .hdr{background:#fff;border-bottom:1px solid #eee;padding:12px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100}
-    .back{background:none;border:none;font-size:24px;color:#666;cursor:pointer;padding:4px}
-    .wrap{padding:16px}
-    .member-tabs{display:flex;gap:8px;padding:12px 16px;background:#fff;overflow-x:auto}
-    .member-tab{padding:8px 16px;border-radius:20px;background:#eee;cursor:pointer;white-space:nowrap;font-size:14px}
-    .member-tab.active{background:#6366f1;color:#fff}
-    .info-card{background:#fff;padding:16px;border-radius:12px;margin-bottom:12px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;border:1px solid #eee}
-    .info-card.active{border:2px solid #6366f1}
-    .btn-fixed{position:fixed;bottom:20px;left:20px;right:20px;background:#6366f1;color:#fff;padding:16px;border-radius:12px;text-align:center;font-weight:bold;cursor:pointer}
-    .pg{display:none}.pg.act{display:block}
-    .alert{color:red;font-size:14px;text-align:center;padding:10px;display:none}
+    :root { --primary: #6366f1; --bg: #f8fafc; --text: #1e293b; }
+    body { font-family: 'PingFang TC', -apple-system, sans-serif; background: var(--bg); color: var(--text); padding-bottom: 80px; }
+    .hdr { background: #fff; padding: 16px 20px; display: flex; align-items: center; border-bottom: 1px solid #e2e8f0; }
+    .back { cursor: pointer; border: none; background: none; font-size: 20px; margin-right: 15px; }
+    .wrap { padding: 20px; max-width: 500px; margin: auto; }
+    .member-tabs { display: flex; gap: 10px; padding: 15px 20px; background: #fff; overflow-x: auto; margin-bottom: 20px; }
+    .member-tab { padding: 8px 20px; border-radius: 20px; background: #f1f5f9; cursor: pointer; font-weight: 600; white-space: nowrap; transition: 0.3s; }
+    .member-tab.active { background: var(--primary); color: white; }
+    .card { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; border: 2px solid transparent; cursor: pointer; }
+    .card.active { border-color: var(--primary); background: #f5f3ff; }
+    .btn-fixed { position: fixed; bottom: 20px; left: 20px; right: 20px; background: var(--primary); color: white; padding: 18px; border-radius: 16px; text-align: center; font-weight: 700; cursor: pointer; box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.4); }
+    .pg { display: none; } .pg.act { display: block; }
+    .preview-box { background: white; padding: 30px; border-radius: 24px; text-align: center; border: 1px solid #e2e8f0; }
   </style>
 </head>
 <body>
 
 <div class="hdr">
   <button class="back" onclick="goBack()">❮</button>
-  <div class="hdr-title">匯出設定</div>
+  <div style="font-weight:700; font-size:18px;">匯出設定</div>
 </div>
 
 <div id="member-tabs" class="member-tabs"></div>
 
 <div class="pg act" id="P_SEL">
   <div class="wrap" id="BLKLIST"></div>
-  <div id="ALERT" class="alert">請至少選擇一個區塊</div>
-  <div class="btn-fixed" id="B_PREV">預覽與匯出</div>
+  <div class="btn-fixed" id="B_PREV">下一步：預覽與匯出</div>
 </div>
 
 <div class="pg" id="P_PREV">
-  <div class="wrap" id="PV_BLOCKS" style="margin-bottom:80px; background:#fff; padding:20px;"></div>
-  <div class="btn-fixed" id="B_EXPORT">確認下載圖片</div>
+  <div class="wrap">
+    <div id="PV_BLOCKS" class="preview-box"></div>
+  </div>
+  <div class="btn-fixed" id="B_EXPORT">儲存為圖片</div>
 </div>
 
 <script src="nav.js"></script>
@@ -48,39 +49,32 @@ var sel={premium_detail:false,summary:false,policy_detail:false,savings_timeline
 
 function goBack() {
     var pPrev = document.getElementById("P_PREV");
-    var pSel = document.getElementById("P_SEL");
     if(pPrev.classList.contains("act")) {
         pPrev.classList.remove("act");
-        pSel.classList.add("act");
-    } else {
-        window.history.back();
-    }
+        document.getElementById("P_SEL").classList.add("act");
+    } else { window.history.back(); }
 }
 
 function buildBlocks(){
   var c=document.getElementById("BLKLIST"); c.innerHTML="";
   BLOCKS.forEach(b=>{
     var d=document.createElement("div");
-    d.className="info-card "+(sel[b.key]?"active":"");
-    d.innerHTML=`<span>${b.label}</span><span>${sel[b.key]?"✅":"⬜"}</span>`;
+    d.className="card "+(sel[b.key]?"active":"");
+    d.innerHTML=`<span style="font-weight:600">${b.label}</span><span>${sel[b.key]?"✨":"⚪"}</span>`;
     d.onclick=()=>{sel[b.key]=!sel[b.key];buildBlocks();};
     c.appendChild(d);
   });
 }
 
 document.getElementById("B_PREV").onclick=()=>{
-  if(!Object.values(sel).some(v=>v)){document.getElementById("ALERT").style.display="block";return;}
-  document.getElementById("ALERT").style.display="none";
   document.getElementById("P_SEL").classList.remove("act");
   document.getElementById("P_PREV").classList.add("act");
   var selected = Object.keys(sel).filter(k=>sel[k]).map(k => BLOCKS.find(b=>b.key===k).label);
-  document.getElementById("PV_BLOCKS").innerHTML = "<h3>選取清單</h3><p style='margin-top:10px; color:#333;'>" + selected.join("、") + "</p>";
+  document.getElementById("PV_BLOCKS").innerHTML = "<h3>選取清單</h3><p style='color:#64748b; margin-top:10px;'>" + selected.join("、") + "</p>";
 };
 
-// 實際執行下載圖片的邏輯
 document.getElementById("B_EXPORT").onclick = () => {
-    const element = document.getElementById("PV_BLOCKS");
-    html2canvas(element).then(canvas => {
+    html2canvas(document.getElementById("PV_BLOCKS")).then(canvas => {
         const link = document.createElement("a");
         link.download = "保單明細.png";
         link.href = canvas.toDataURL("image/png");
@@ -90,20 +84,15 @@ document.getElementById("B_EXPORT").onclick = () => {
 
 window.addEventListener("nbs_nav_ready", (e)=>{
   var container=document.getElementById("member-tabs");
-  if(e.detail && e.detail.familyData) {
-      e.detail.familyData.members.forEach(m=>{
-        var div=document.createElement("div"); div.className="member-tab"; div.innerText=m.name;
-        div.onclick=()=>{
-          document.querySelectorAll('.member-tab').forEach(t=>t.classList.remove('active'));
-          div.classList.add('active');
-          if(window.NBS_NAV) {
-            if(typeof NBS_NAV.switchPerson === 'function') NBS_NAV.switchPerson(m.id);
-            else if(typeof NBS_NAV.onMemberChange === 'function') NBS_NAV.onMemberChange(m.id);
-          }
-        };
-        container.appendChild(div);
-      });
-  }
+  e.detail.familyData.members.forEach(m=>{
+    var div=document.createElement("div"); div.className="member-tab"; div.innerText=m.name;
+    div.onclick=()=>{
+      document.querySelectorAll('.member-tab').forEach(t=>t.classList.remove('active'));
+      div.classList.add('active');
+      if(window.NBS_NAV) { (NBS_NAV.switchPerson || NBS_NAV.onMemberChange)(m.id); }
+    };
+    container.appendChild(div);
+  });
   buildBlocks();
 });
 </script>
