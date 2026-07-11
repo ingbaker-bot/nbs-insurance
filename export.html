@@ -35,7 +35,7 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* 頂部導覽列 */
+    /* 頂部導覽列 (保留讓 nav.js 注入的空間特性) */
     .hdr{background:rgba(255,255,255,0.8);backdrop-filter:blur(10px);border-bottom:1px solid #F1F5F9;padding:12px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100}
     .back{background:none;border:none;font-size:26px;color:var(--text-muted);cursor:pointer;padding:0;transition:0.2s}
     .back:hover{color:var(--primary)}
@@ -137,9 +137,11 @@
   <script src="nav.js"></script>
 </head>
 <body>
+<!-- 保留隱藏的 div 供 nav.js 正確掛載側邊欄與 Header -->
 <div style="display:none" id="HDR_SUB"></div>
 <button style="display:none" id="B_BACK"></button>
 <div style="display:none" id="HDR_TITLE"></div>
+
 <div class="member-tabs" id="member-tabs"></div>
 <div id="export-settings-row" style="display:flex;gap:12px;padding:12px 16px;background:#F8FAFC;border-bottom:1px solid #E2E8F0">
   <button onclick="openNicknameModal()" style="font-size:14px;border-radius:99px;cursor:pointer;font-family:inherit">✨ 稱呼設定</button>
@@ -519,6 +521,7 @@ function sumCovEx(keys, policies, coverage) {
   return total;
 }
 
+// 保障群組與細項定義
 var GAP_GROUPS_EX = [
   { key:"family", label:"家庭責任", color:"#6366F1", items:[
     { key:"life_permanent", label:"終身壽險",    unit:"萬元",   color:"#6366F1" },
@@ -567,6 +570,32 @@ var GAP_KEY_MAP_EX = {
   cancer_hospice:  { cats:["癌症醫療"],          keys:["can_hospice"] },
   cancer_death:    { cats:["癌症醫療"],          keys:["can_death"] },
   waiver:          { cats:[],                   keys:["ltc_waiver"] },
+};
+
+// 恢復原始的屬性定義
+var COVERAGE_TYPES = [
+  { key:"life",       label:"壽險保障", group:"壽險", color:"#4A90D9", detect:(p,c)=>p.some(x=>x.category==="壽險保障") },
+  { key:"acc_death",  label:"意外身故", group:"意外", color:"#F5A623", detect:(p,c)=>p.some(x=>x.category==="意外險") },
+  { key:"acc_medical",label:"意外醫療", group:"意外", color:"#F08C00", detect:(p,c)=>Object.keys(c).some(k=>k.includes("acc_opd")) },
+  { key:"acc_hosp",   label:"意外住院", group:"意外", color:"#D97706", detect:(p,c)=>Object.keys(c).some(k=>k.includes("daily_room"))&&p.some(x=>x.category==="意外險") },
+  { key:"hosp_real",  label:"實支實付", group:"醫療", color:"#27AE8F", detect:(p,c)=>Object.keys(c).some(k=>k.includes("hosp_room")) },
+  { key:"hosp_daily", label:"住院日額", group:"醫療", color:"#1E8A72", detect:(p,c)=>Object.keys(c).some(k=>k.includes("daily_room")) },
+  { key:"hosp_surg",  label:"手術險",   group:"醫療", color:"#166756", detect:(p,c)=>Object.keys(c).some(k=>k.includes("surg_opd")||k.includes("surg_hosp")) },
+  { key:"ci",         label:"重大疾病", group:"重大", color:"#9B59B6", detect:(p,c)=>p.some(x=>["重大疾病險","重大傷病險","特定傷病險"].includes(x.category)) },
+  { key:"cancer",     label:"癌症險",   group:"癌症", color:"#E74C3C", detect:(p,c)=>Object.keys(c).some(k=>k.includes("can_first")||k.includes("can_hosp")) },
+  { key:"ltc",        label:"長照險",   group:"長照", color:"#27500A", detect:(p,c)=>Object.keys(c).some(k=>k.includes("ltc_monthly")||k.includes("ltc_care")) },
+  { key:"disable",    label:"失能險",   group:"長照", color:"#5BAD6F", detect:(p,c)=>Object.keys(c).some(k=>k.includes("ltc_dis_amt")||k.includes("ltc_dis_life")) },
+  { key:"savings",    label:"儲蓄險",   group:"財務", color:"#E8638A", detect:(p,c)=>p.some(x=>x.category==="儲蓄險") },
+  { key:"annuity",    label:"年金險",   group:"財務", color:"#C0392B", detect:(p,c)=>p.some(x=>x.category==="年金險") },
+  { key:"investment", label:"投資型",   group:"財務", color:"#95A5A6", detect:(p,c)=>p.some(x=>x.category==="投資型保險") },
+];
+
+var GROUP_COLORS = { 壽險:"#4A90D9",意外:"#F5A623",醫療:"#27AE8F",重大:"#9B59B6",癌症:"#E74C3C",長照:"#27500A",財務:"#E8638A" };
+
+var CAT_COLORS = {
+  "壽險保障":"#4A90D9","醫療保障":"#27AE8F","意外險":"#F5A623",
+  "重大疾病險":"#9B59B6","重大傷病險":"#8E44AD","特定傷病險":"#7D3C98",
+  "儲蓄險":"#E8638A","年金險":"#C0392B","投資型保險":"#95A5A6",
 };
 
 var COVERAGE_GROUPS_EX = [
@@ -1259,6 +1288,15 @@ function showDone(blks){
   goPage("P_DONE");
 }
 
+// === 恢復被遺失的重要底層通訊程式碼 ===
+
+function callGAS(action, params) {
+  if (window.NBS_NAV && typeof NBS_NAV.callGAS === 'function') {
+    return NBS_NAV.callGAS(action, params);
+  }
+  return Promise.reject(new Error('nav.js 未載入，請重新整理頁面'));
+}
+
 function gas(action,params){
   if(action==="saveFile"){
     return fetch(GAS,{method:"POST",headers:{"Content-Type":"text/plain"},body:JSON.stringify(Object.assign({action:action},params))}).then(function(r){return r.json();});
@@ -1272,6 +1310,21 @@ function gas(action,params){
   });
   return fetch(url.toString()).then(function(r){return r.json();});
 }
+
+// 支援兩種事件：nav.js 自行載入 或 family.html 先載入後通知
+window.addEventListener("nbs_family_loaded", function(e) {
+  if (typeof familyData !== "undefined" && familyData) return; // 已初始化
+  var u = JSON.parse(localStorage.getItem("nbs_user") || "{}");
+  window.dispatchEvent(new CustomEvent("nbs_nav_ready", {
+    detail: {
+      user:            u,
+      familyData:      e.detail.familyData,
+      currentPersonId: e.detail.familyData && e.detail.familyData.members &&
+                       e.detail.familyData.members[0] && e.detail.familyData.members[0].personId,
+      familyFileName:  e.detail.familyFileName
+    }
+  }));
+});
 
 window.addEventListener("nbs_nav_ready", async function(e) {
   currentUser       = e.detail.user;
@@ -1334,7 +1387,17 @@ window.addEventListener("nbs_nav_ready", async function(e) {
 
 if (typeof NBS_NAV !== "undefined") { 
     NBS_NAV.onMemberChange = function(pid) { switchPerson(pid); };
+    // 恢復最重要的 Nav 啟動掛載點
+    if (NBS_NAV.init) NBS_NAV.init({ page: "export" });
 }
+
+// 萬一 nav.js 還沒載入好，備用的保險啟動掛載點
+setTimeout(function() {
+    if (typeof NBS_NAV !== "undefined" && NBS_NAV.init && !document.querySelector('.nbs-sidebar')) {
+        NBS_NAV.init({ page: "export" });
+    }
+}, 500);
+
 </script>
 
 <div class="ex-modal-overlay" id="nickname-modal-overlay">
