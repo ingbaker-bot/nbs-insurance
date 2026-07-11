@@ -260,6 +260,9 @@ async function loadData() {
         if (cached) personDataMap[m.personId] = JSON.parse(cached);
       }
     }));
+    // SPA 底下，這段 await 期間使用者可能已經切到別頁——這時候
+    // DOM 已經被替換掉，不該再繼續操作，靜默結束即可，不用報錯
+    if (window.NBSRouter && !NBSRouter.isActive("savings.html")) return;
     document.getElementById("loading").style.display = "none";
     document.getElementById("settings-view").style.display = "block";
     renderTabs();
@@ -267,7 +270,12 @@ async function loadData() {
     const now = new Date().getFullYear();
     document.getElementById("tl-start").value = now;
     document.getElementById("tl-end").value   = now + 14;  // 15 年（起始+14），橫式 A4 剛好
-  } catch(e) { alert("資料載入異常：" + e.message); }
+  } catch(e) {
+    // 同上：如果是因為使用者已經切走、DOM 被替換掉導致的錯誤，
+    // 不用跳出誤導性的 alert，只記錄到 console 方便除錯即可
+    if (window.NBSRouter && !NBSRouter.isActive("savings.html")) { console.warn("[savings] 已切換頁面，略過：", e); return; }
+    alert("資料載入異常：" + e.message);
+  }
 }
 
 // ── 頁面 Tab ──────────────────────────────────────────────

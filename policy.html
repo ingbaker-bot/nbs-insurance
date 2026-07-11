@@ -667,11 +667,15 @@ window.addEventListener("nbs_nav_ready", async function(e) {
       await Promise.all(fetchPromises);
     }
 
+    // SPA 底下，await 期間使用者可能已經切到別頁，DOM 已經被替換掉
+    if (window.NBSRouter && !NBSRouter.isActive("policy.html")) return;
+
     document.getElementById("loading").style.display = "none";
     document.getElementById("content").style.display = "block";
     renderTabs();
     renderPolicies();
   } catch(err) {
+    if (window.NBSRouter && !NBSRouter.isActive("policy.html")) { console.warn("[policy] 已切換頁面，略過：", err); return; }
     console.error("policy.html init error", err);
     document.getElementById("loading").innerHTML = "載入失敗：" + err.message;
   }

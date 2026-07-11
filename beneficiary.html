@@ -178,9 +178,14 @@
           await Promise.all(fetchPromises);
         }
 
+        // SPA 底下，await 期間使用者可能已經切到別頁，DOM 已經被
+        // 替換掉，不該再繼續操作
+        if (window.NBSRouter && !NBSRouter.isActive("beneficiary.html")) return;
+
         renderTabs();
         renderPolicyView();
       } catch(err) {
+        if (window.NBSRouter && !NBSRouter.isActive("beneficiary.html")) { console.warn("[beneficiary] 已切換頁面，略過：", err); return; }
         document.getElementById("policy-list").innerHTML = "載入異常：" + err.message;
       }
     });

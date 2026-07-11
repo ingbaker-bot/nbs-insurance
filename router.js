@@ -231,6 +231,13 @@
     navigate(key, { skipPush: true });
   });
 
-  global.NBSRouter = { navigate: navigate };
+  global.NBSRouter = {
+    navigate: navigate,
+    // 讓各頁面的非同步資料載入（await 之後）可以檢查自己是否還是
+    // 目前使用者正在看的頁面，避免使用者已經切到別頁時，還去操作
+    // 已經被替換掉的 DOM（例如 document.getElementById(...).style
+    // 對一個已經不存在的元素，會拋出 Cannot read properties of null）。
+    isActive: function(key) { return _current.key === key; }
+  };
 
 })(window);

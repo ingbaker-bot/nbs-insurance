@@ -1403,6 +1403,10 @@ window.addEventListener("nbs_nav_ready", async function(e) {
   } catch (ex) { 
     console.error("export load error", ex); 
   }
+
+  // SPA 底下，await 期間使用者可能已經切到別頁，DOM 已經被替換掉
+  if (window.NBSRouter && !NBSRouter.isActive("export.html")) return;
+
   renderTabs();
   updatePrevBtn();
 
