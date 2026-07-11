@@ -820,11 +820,14 @@ function lifeRemainYearsEx(pols, cats) {
 }
 
 // ── Phase 0：共用視覺元件（大數字 Stat 卡片）──────────────
-// 設計原則（跟使用者確認過）：
+// 設計原則（跟使用者確認過，並依實測回饋修正）：
 // - 底色維持各分類原本的語意色（辨識度優先），只把飽和度/圓角/陰影
 //   升級成新風格，不整組換成單一主色。
-// - 有資料的項目排前面、用大字凸顯；沒規劃的項目最多顯示 2 項當提示
-//   （避免看起來像資料沒抓到），超過的用「其餘 N 項尚未規劃」收合。
+// - 【重要】絕對不隱藏任何欄位名稱——「哪些保障還沒規劃」正是保單
+//   體檢報告最核心的價值，不能為了版面乾淨犧牲掉。有規劃的項目用
+//   大數字獨立成行；沒規劃的項目全部列出，但合併壓縮成卡片底部
+//   一行小字（「尚未規劃：A、B、C…」），資料 100% 保留，只是用
+//   密度分層取代刪減。
 function buildStatGroupCard(g, policies, cov3) {
   var itemsData = g.items.map(function(item){
     var total, isRange=false, minVal=0, maxVal=0, remainNote="";
@@ -847,13 +850,13 @@ function buildStatGroupCard(g, policies, cov3) {
 
   var filled = itemsData.filter(function(x){ return x.total>0; });
   var empty  = itemsData.filter(function(x){ return !(x.total>0); });
-  var showEmpty = empty.slice(0, 2);
-  var hiddenCount = empty.length - showEmpty.length;
 
   var rowsHtml = filled.map(function(x){ return statRowHtml(x, g.color, true); }).join("");
-  rowsHtml += showEmpty.map(function(x){ return statRowHtml(x, g.color, false); }).join("");
-  var footerHtml = hiddenCount>0
-    ? '<div style="padding:7px 16px;font-size:12px;color:#c2c5cc">其餘 '+hiddenCount+' 項尚未規劃</div>'
+  var emptyLine = empty.length
+    ? '<div style="padding:10px 16px;border-top:1px solid #f2f2f4;font-size:12px;color:#aaacb3;line-height:1.9">'+
+        '<span style="font-weight:700;color:#9799a2">尚未規劃：</span>'+
+        empty.map(function(x){ return x.label; }).join('、')+
+      '</div>'
     : '';
 
   return '<div style="background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04)">'+
@@ -861,15 +864,13 @@ function buildStatGroupCard(g, policies, cov3) {
       '<span style="font-size:24px;line-height:1">'+(g.icon||'')+'</span>'+
       '<span style="font-size:16px;font-weight:800;letter-spacing:.02em;color:'+g.color+'">'+g.label+'</span>'+
     '</div>'+
-    (rowsHtml || '<div style="padding:16px;font-size:13px;color:#c2c5cc;text-align:center">尚未規劃</div>') +
-    footerHtml +
+    (rowsHtml || '') +
+    emptyLine +
   '</div>';
 }
 function statRowHtml(x, color, isFilled) {
   var valueHtml;
-  if (!isFilled) {
-    valueHtml = '<span style="font-size:14px;color:#d5d7dd;font-weight:600">未規劃</span>';
-  } else if (x.isRange) {
+  if (x.isRange) {
     valueHtml = '<span style="font-size:21px;font-weight:800;color:'+color+';font-variant-numeric:tabular-nums">'+
       x.minVal.toLocaleString()+'<span style="color:#c7c9d1;margin:0 2px;font-weight:400">～</span>'+x.maxVal.toLocaleString()+
       '<span style="font-size:12px;color:#9aa0ac;font-weight:700;margin-left:2px">'+x.unit+'</span></span>';
@@ -878,7 +879,7 @@ function statRowHtml(x, color, isFilled) {
       '<span style="font-size:12px;color:#9aa0ac;font-weight:700;margin-left:2px">'+x.unit+'</span></span>';
   }
   return '<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-top:1px solid #f2f2f4">'+
-    '<span style="font-size:13px;color:'+(isFilled?"#555":"#c2c5cc")+';font-weight:700">'+x.label+(isFilled?x.remainNote:"")+'</span>'+
+    '<span style="font-size:13px;color:#555;font-weight:700">'+x.label+x.remainNote+'</span>'+
     valueHtml+
   '</div>';
 }
