@@ -307,7 +307,7 @@ function doShowPreview(){
     }
     var div=document.createElement("div");
     div.className="pv-blk";
-    div.innerHTML='<div class="pv-hdr">'+b.icon+' 【'+getDisplayName()+'】'+b.label+'</div><div>'+renderBlock(b.key)+'</div>';
+    div.innerHTML=getBlockTitleHtml(b)+'<div>'+renderBlock(b.key)+'</div>';
     c.appendChild(div);
   });
   goPage("P_PREV");
@@ -760,6 +760,13 @@ function saveAgentInfo() {
   localStorage.setItem("nbs_agent_watermark_name", n);
   localStorage.setItem("nbs_agent_watermark_contact", c);
   closeAgentInfoModal();
+}
+
+// ── 區塊標題（預覽 + 實際匯出都用這一份，確保匯出的圖片/PDF
+//    一定會包含標題，不會像之前只有預覽畫面看得到）──────────
+function getBlockTitleHtml(b) {
+  return '<div style="padding:14px 16px;background:#f7f7f5;border-bottom:2px solid #e6e6e6;font-size:22px;font-weight:700;color:#1a1a2e">'+
+    b.icon+' 【'+getDisplayName()+'】'+b.label+'</div>';
 }
 
 function switchPerson(pid) {
@@ -1318,7 +1325,7 @@ async function doExportPNG(blks,div){
   var disclaimer='<div style="padding:8px 14px;font-size:16px;color:#999;line-height:1.6;text-align:left">⚠️ 本報告彙總之資訊，旨在作為檢視與討論保障內容的參考藍圖；為守護您的權益，實際理賠給付項目與條件，仍須以各家保險公司之最新資料及正式保險契約條款為準。</div>';
   if(fmt==="png_single"){
     div.style.width="1200px";
-    div.innerHTML=blks.map(function(b){return'<div style="border-bottom:1px solid #f0f0f0">'+renderBlock(b.key)+'</div>';}).join("")+disclaimer+wm;
+    div.innerHTML=blks.map(function(b){return'<div style="border-bottom:1px solid #f0f0f0">'+getBlockTitleHtml(b)+renderBlock(b.key)+'</div>';}).join("")+disclaimer+wm;
     setP(30);await sleep(400);
     var singleW=Math.max(div.scrollWidth,div.offsetWidth,800);
     div.style.width=singleW+"px";
@@ -1334,7 +1341,7 @@ async function doExportPNG(blks,div){
   }else{
     for(var i=0;i<blks.length;i++){
       div.style.width="1200px";
-      div.innerHTML=renderBlock(blks[i].key)+disclaimer+wm;
+      div.innerHTML=getBlockTitleHtml(blks[i])+renderBlock(blks[i].key)+disclaimer+wm;
       setP(Math.round(i/blks.length*90));await sleep(300);
       var actualW=Math.max(div.scrollWidth,div.offsetWidth,800);
       div.style.width=actualW+"px";
@@ -1359,7 +1366,7 @@ async function doExportPDF(blks,div){
   for(var i=0;i<blks.length;i++){
     var showDisclaimer = fmt==="pdf_pages" ? true : (i===blks.length-1);
     div.style.width="1200px";
-    div.innerHTML=renderBlock(blks[i].key)+(showDisclaimer?disclaimer:"")+wm;
+    div.innerHTML=getBlockTitleHtml(blks[i])+renderBlock(blks[i].key)+(showDisclaimer?disclaimer:"")+wm;
     setP(Math.round(i/blks.length*90));await sleep(300);
     var actualW3=Math.max(div.scrollWidth,div.offsetWidth,800);
     div.style.width=actualW3+"px";
