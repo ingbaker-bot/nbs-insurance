@@ -1345,9 +1345,9 @@ function renderBlock(key){
     });
     var html='<div style="padding:14px 12px">';
     html+='<div style="font-size:15px;font-weight:800;color:#444;margin-bottom:12px">各項保障加總</div>';
-    html+='<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:14px;align-items:start">';
+    html+='<div style="column-count:2;column-gap:14px">';
     COVERAGE_GROUPS_EX.forEach(function(g){
-      html += buildStatGroupCard(g, policies, cov3);
+      html += '<div style="break-inside:avoid;margin-bottom:14px">'+buildStatGroupCard(g, policies, cov3)+'</div>';
     });
     html+='</div></div>';
     return html;
@@ -1456,7 +1456,8 @@ async function doExportPDF(blks,div){
     div.style.width="1200px";
     if(i>0) pdf.addPage("a4","landscape");
     var iw=277, ih=(c.height/c.width)*iw;
-    pdf.addImage(c.toDataURL("image/png"),"PNG",10,10,iw,Math.min(ih,190));
+    if(ih>190){ iw=iw*(190/ih); ih=190; } // 內容太高時等比例縮小，避免寬高比例被拉伸變形
+    pdf.addImage(c.toDataURL("image/png"),"PNG",10,10,iw,ih);
   }
   setP(95);
   pdf.save(pName+"_保單體檢_"+pDate+".pdf");
