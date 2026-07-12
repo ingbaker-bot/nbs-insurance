@@ -673,20 +673,33 @@
   // 獨立的「個人」檔案裡（用 personId 對應）。另存新檔時，家庭檔案
   // 跟每一位成員的個人檔案都要各自複製一份、給新的 ID，草案才會是
   // 真正獨立、不影響現況的版本。
+  function _stripDraftTag(name) {
+    return (name || "").replace(/〔草案[：:][^〕]*〕/g, "").replace(/〔歷史現況〕/g, "").trim();
+  }
+
   function _duplicateFamilyAsDraft(draftLabel) {
     if (!_family) return Promise.reject(new Error("尚未載入家庭資料"));
     var groupId = _family.familyGroupId || _family.familyId;
     var newFamilyId = "f_" + Date.now() + "_" + Math.random().toString(36).substr(2,5);
     var idMap = {};
+    var label = draftLabel || "草案";
 
     var newFamily = JSON.parse(JSON.stringify(_family));
     newFamily.familyId = newFamilyId;
     newFamily.familyGroupId = groupId;
     newFamily.role = "draft";
-    newFamily.draftLabel = draftLabel || "草案";
+    newFamily.draftLabel = label;
     newFamily.basedOnFamilyId = _family.familyId;
     newFamily.createdAt = new Date().toISOString();
     newFamily.updatedAt = new Date().toISOString();
+    // 分析日改成建立草案當天，不要原封不動延用舊的
+    newFamily.analysisDate = new Date().toISOString().slice(0,10);
+    // 把「草案」標記直接寫進家庭名稱本身：在 listFamilies 還沒回傳
+    // familyId/role 這些欄位讓前端正確分組之前，這樣至少光看家庭
+    // 列表的標題文字就能分辨「這是草案」，不會跟現況搞混；等 GAS
+    // 補上欄位、前端能正確分組合併卡片後，這個標記依然有意義（無論
+    // 分不分組，隨時可以一眼確認自己在哪個版本）
+    newFamily.familyName = _stripDraftTag(_family.familyName) + "〔草案：" + label + "〕";
 
     newFamily.members = (newFamily.members || []).map(function(m){
       if (m.role === "beneficiary_only") return m; // 沒有獨立個人檔案的不用複製
@@ -729,6 +742,7 @@
             var oldFamily = rf.content;
             oldFamily.role = "archived";
             oldFamily.updatedAt = new Date().toISOString();
+            oldFamily.familyName = _stripDraftTag(oldFamily.familyName) + "〔歷史現況〕";
             return _gas("saveFile", { fileType:"families", fileId: oldFamily.familyId, fileName: old.fileName, content: oldFamily });
           });
         })
@@ -737,6 +751,7 @@
     return archiveOld.then(function(){
       _family.role = "current";
       _family.updatedAt = new Date().toISOString();
+      _family.familyName = _stripDraftTag(_family.familyName); // 升格後移除「〔草案：...〕」標記
       return _gas("saveFile", { fileType:"families", fileId:_family.familyId, fileName:fn, content:_family });
     }).then(function(){
       _invalidateBundleCache(fn);
