@@ -1273,6 +1273,10 @@ async function savePolicy() {
   const covEndRaw = document.getElementById("f-covend").value.trim();
 
   const policy = {
+    ...(editingPolicy || {}),  // 保留既有保單裡「這張表單管不到」的資料
+                                // （coverage.html 填的保障金額、beneficiary.html
+                                // 填的受益人資料），避免每次編輯保單任何欄位
+                                // 存檔，就把這些資料整個清空、要重新輸入一次
     id:          editingPolicy ? editingPolicy.id : "pol_" + Date.now(),
     isMain:      document.getElementById("f-ismain").value === "true",
     policyNo,
