@@ -509,6 +509,10 @@ function renderGroupBody(g,cov,policyId){
     </div>`;
   }
   (g.fields||[]).forEach(f=>{
+    // 保障期間類型/期間這兩個欄位已經在上面的選擇器處理過，
+    // 不能再被這個一般欄位迴圈重複渲染成空白輸入框——否則存檔時
+    // 這個空白輸入框會被當成「使用者清空了」，把上面選好的值蓋掉
+    if (g.periodKey && (f.key === g.periodKey+"_period_type" || f.key === g.periodKey+"_period")) return;
     if(f.type==="checkbox"){
       html+=`<label class="cb-row"><input type="checkbox" id="cov_${f.key}" ${cov[f.key]?"checked":""} onchange="markDirty()"/><span>${f.label}</span></label>`;
     } else if(f.type==="range"){
