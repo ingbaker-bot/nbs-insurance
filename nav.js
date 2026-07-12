@@ -438,7 +438,7 @@
         '<img src="https://i.ibb.co/FkVkNhhd/NBS-4F3.jpg" class="nbs-logo-img" onerror="this.style.display=\'none\'"/>' +
       '</div>' +
       '<div class="nbs-fam">' +
-        '<div class="nbs-fn">'+_family.familyName+'</div>' +
+        '<div class="nbs-fn">'+_family.familyName+_versionBadgeHtml()+'</div>' +
         '<div class="nbs-fd">分析日 '+_fmtROC(_family.analysisDate)+'</div>' +
       '</div>' +
       '<div class="nbs-nsec">' +
@@ -449,11 +449,40 @@
         '<span class="nbs-nicon">🏠</span>' +
         '<span class="nbs-nlabel">家庭保單首頁</span>' +
       '</div>' +
+      _versionActionsHtml() +
       '<div class="nbs-foot">' +
         '<button class="nbs-pbtn" onclick="NBS_NAV._print()">🖨️ 快速列印此頁</button>' +
         '<button class="nbs-bbtn" onclick="NBS_NAV._back()">← 返回家庭列表</button>' +
         '<div class="nbs-disclaimer">本報告為保障檢視參考，實際理賠項目與條件以各保險公司正式契約條款為準。</div>' +
       '</div>';
+  }
+
+  // ── 現況/草案/歷史現況：版本標示 + 操作入口 ─────────────
+  function _versionBadgeHtml() {
+    var role = _family.role || "current";
+    if (role === "current") return "";
+    var label = role === "draft" ? "草案"+(_family.draftLabel?"："+_family.draftLabel:"") : "歷史現況";
+    var color = role === "draft" ? "#f59e0b" : "#9ca3af";
+    return ' <span style="font-size:11px;font-weight:700;color:#fff;background:'+color+';padding:2px 8px;border-radius:99px;vertical-align:middle">'+label+'</span>';
+  }
+
+  function _versionActionsHtml() {
+    var role = _family.role || "current";
+    var html = '<div class="nbs-ni" onclick="NBS_NAV._promptCreateDraft()">' +
+      '<span class="nbs-nicon">📝</span>' +
+      '<span class="nbs-nlabel">另存新檔（建立提案草案）</span>' +
+    '</div>';
+    if (role === "draft") {
+      html += '<div class="nbs-ni" onclick="NBS_NAV._promptPromoteDraft()">' +
+        '<span class="nbs-nicon">✅</span>' +
+        '<span class="nbs-nlabel">升格為現況</span>' +
+      '</div>';
+      html += '<div class="nbs-ni" onclick="NBS_NAV._promptDeleteDraft()">' +
+        '<span class="nbs-nicon">🗑️</span>' +
+        '<span class="nbs-nlabel">刪除此草案</span>' +
+      '</div>';
+    }
+    return html;
   }
 
   function _renderBottomTab() {
@@ -638,6 +667,130 @@
   global.NBS_NAV._print    = function() { window.print(); };
   global.NBS_NAV._back     = function() { _navigate("main.html"); };
   global.NBS_NAV._goFamily = function() { _navigate("family.html"); };
+
+  // ── 另存新檔（建立提案草案）/ 升格 / 刪除草案 ─────────────
+  // 重要：家庭檔案只是「成員名單」，每位成員真正的保單/保障資料存在
+  // 獨立的「個人」檔案裡（用 personId 對應）。另存新檔時，家庭檔案
+  // 跟每一位成員的個人檔案都要各自複製一份、給新的 ID，草案才會是
+  // 真正獨立、不影響現況的版本。
+  function _duplicateFamilyAsDraft(draftLabel) {
+    if (!_family) return Promise.reject(new Error("尚未載入家庭資料"));
+    var groupId = _family.familyGroupId || _family.familyId;
+    var newFamilyId = "f_" + Date.now() + "_" + Math.random().toString(36).substr(2,5);
+    var idMap = {};
+
+    var newFamily = JSON.parse(JSON.stringify(_family));
+    newFamily.familyId = newFamilyId;
+    newFamily.familyGroupId = groupId;
+    newFamily.role = "draft";
+    newFamily.draftLabel = draftLabel || "草案";
+    newFamily.basedOnFamilyId = _family.familyId;
+    newFamily.createdAt = new Date().toISOString();
+    newFamily.updatedAt = new Date().toISOString();
+
+    newFamily.members = (newFamily.members || []).map(function(m){
+      if (m.role === "beneficiary_only") return m; // 沒有獨立個人檔案的不用複製
+      var newPid = "p_" + Date.now() + "_" + Math.random().toString(36).substr(2,5);
+      idMap[m.personId] = newPid;
+      return Object.assign({}, m, { personId: newPid });
+    });
+
+    var newFamilyFileName = newFamily.familyName + "_" + newFamilyId + ".json";
+
+    var savePersonPromises = Object.keys(idMap).map(function(oldPid){
+      var newPid = idMap[oldPid];
+      var personData = _personsData[oldPid];
+      if (!personData) return Promise.resolve();
+      var newPersonData = JSON.parse(JSON.stringify(personData));
+      newPersonData.personId = newPid;
+      newPersonData.basedOnPersonId = oldPid;
+      var pFileName = (newPersonData.profile && newPersonData.profile.name || "member") + "_" + newPid + ".json";
+      return _gas("saveFile", { fileType:"persons", fileId:newPid, fileName:pFileName, content:newPersonData });
+    });
+
+    return Promise.all(savePersonPromises).then(function(){
+      return _gas("saveFile", { fileType:"families", fileId:newFamilyId, fileName:newFamilyFileName, content:newFamily });
+    }).then(function(){
+      return { fileName: newFamilyFileName, familyName: newFamily.familyName };
+    });
+  }
+
+  function _promoteDraftToCurrent() {
+    if (!_family || _family.role !== "draft") return Promise.reject(new Error("目前這份不是草案，無法升格"));
+    var fn = localStorage.getItem("nbs_current_family");
+    var basedOnId = _family.basedOnFamilyId;
+
+    var archiveOld = basedOnId
+      ? _gas("listFamilies", {}).then(function(res){
+          var old = (res.families || []).find(function(f){ return f.familyId === basedOnId; });
+          if (!old) return null;
+          return _gas("readFile", { fileType:"families", fileName: old.fileName }).then(function(rf){
+            if (!rf || rf.status !== "ok") return null;
+            var oldFamily = rf.content;
+            oldFamily.role = "archived";
+            oldFamily.updatedAt = new Date().toISOString();
+            return _gas("saveFile", { fileType:"families", fileId: oldFamily.familyId, fileName: old.fileName, content: oldFamily });
+          });
+        })
+      : Promise.resolve();
+
+    return archiveOld.then(function(){
+      _family.role = "current";
+      _family.updatedAt = new Date().toISOString();
+      return _gas("saveFile", { fileType:"families", fileId:_family.familyId, fileName:fn, content:_family });
+    }).then(function(){
+      _invalidateBundleCache(fn);
+    });
+  }
+
+  // 刪除草案：需要 GAS 後端支援 deleteFile 這個動作（目前尚未提供，
+  // 等後端補上後這裡就能直接接上運作，不需要再改前端）
+  function _deleteDraftFiles() {
+    if (!_family || _family.role !== "draft") return Promise.reject(new Error("目前這份不是草案，無法刪除"));
+    var fn = localStorage.getItem("nbs_current_family");
+    var personFileNames = (_family.members || [])
+      .filter(function(m){ return m.role !== "beneficiary_only"; })
+      .map(function(m){
+        var p = _personsData[m.personId];
+        var nm = (p && p.profile && p.profile.name) || m.name || "member";
+        return nm + "_" + m.personId + ".json";
+      });
+    return _gas("deleteFile", { fileType:"families", fileName: fn }).then(function(){
+      return Promise.all(personFileNames.map(function(pfn){
+        return _gas("deleteFile", { fileType:"persons", fileName: pfn }).catch(function(){});
+      }));
+    });
+  }
+
+  global.NBS_NAV._promptCreateDraft = function() {
+    var label = window.prompt("請輸入這份草案的名稱（例如：方案A、增加壽險方案）", "草案");
+    if (label === null) return; // 使用者取消
+    _duplicateFamilyAsDraft(label.trim() || "草案").then(function(res){
+      alert("已建立草案「"+ (label.trim() || "草案") +"」，可以到家庭列表切換過去編輯。");
+    }).catch(function(err){
+      alert("建立草案失敗："+(err.message||err));
+    });
+  };
+
+  global.NBS_NAV._promptPromoteDraft = function() {
+    if (!window.confirm("確定要把這份草案升格為現況嗎？\n原本的現況會改標記成「歷史現況」保留下來，不會刪除。")) return;
+    _promoteDraftToCurrent().then(function(){
+      alert("已升格為現況，畫面即將重新整理。");
+      window.location.reload();
+    }).catch(function(err){
+      alert("升格失敗："+(err.message||err));
+    });
+  };
+
+  global.NBS_NAV._promptDeleteDraft = function() {
+    if (!window.confirm("確定要刪除這份草案嗎？此動作無法復原。")) return;
+    _deleteDraftFiles().then(function(){
+      alert("草案已刪除，即將返回家庭列表。");
+      global.NBS_NAV._back();
+    }).catch(function(err){
+      alert("刪除失敗（可能是後端尚未支援刪除功能）："+(err.message||err));
+    });
+  };
 
   // ==========================================
   // 9. 工具函式

@@ -157,6 +157,16 @@
     .family-meta { font-size: 12px; color: #9CA3AF; }
     .chevron { color: #D1D5DB; font-size: 18px; flex-shrink: 0; }
 
+    .version-badge { font-size: 11px; font-weight: 700; color: #6366f1; background: #eef2ff; padding: 2px 8px; border-radius: 99px; margin-left: 6px; vertical-align: middle; }
+    .version-picker { position: relative; display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; color: #4f46e5; background: #eef2ff; padding: 6px 10px; border-radius: 99px; flex-shrink: 0; cursor: pointer; }
+    .version-picker .chevron { font-size: 12px; color: #4f46e5; transition: transform .15s; }
+    .version-picker.open .chevron { transform: rotate(180deg); }
+    .version-menu { display: none; position: absolute; top: calc(100% + 6px); right: 0; background: #fff; border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.14); padding: 6px; min-width: 160px; z-index: 50; }
+    .version-picker.open .version-menu { display: block; }
+    .version-opt { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 9px; font-size: 13px; font-weight: 600; color: #374151; white-space: nowrap; cursor: pointer; }
+    .version-opt:hover { background: #f5f5ff; }
+    .version-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
     .add-btn {
       width: 100%; padding: 13px;
       background: linear-gradient(90deg, #3B82F6, #7C3AED);
@@ -514,6 +524,32 @@
     }
 
     // ── 渲染家庭列表 ──────────────────────────────────────────
+    // ── 家庭分組：同一個家庭（現況/草案/歷史現況）合併成一張卡片 ──
+    // 向下相容：舊資料沒有 familyGroupId/role 欄位時，
+    // 用 familyId 當群組 key、預設 role="current"，行為等同以前
+    // 「一個檔案一張卡片」，不會因為這次改版而壞掉。
+    function groupFamilies(families) {
+      var groups = {}, order = [];
+      families.forEach(function(f){
+        var gid = f.familyGroupId || f.familyId || f.fileName;
+        if (!groups[gid]) { groups[gid] = { groupId: gid, versions: [] }; order.push(gid); }
+        groups[gid].versions.push(Object.assign({}, f, { role: f.role || "current" }));
+      });
+      return order.map(function(gid){
+        var g = groups[gid];
+        // 每組排序：現況優先，草案其次（依建立時間新到舊），歷史現況最後
+        var roleOrder = { current: 0, draft: 1, archived: 2 };
+        g.versions.sort(function(a,b){
+          var ra = roleOrder[a.role] !== undefined ? roleOrder[a.role] : 1;
+          var rb = roleOrder[b.role] !== undefined ? roleOrder[b.role] : 1;
+          if (ra !== rb) return ra - rb;
+          return (b.updatedAt||"").localeCompare(a.updatedAt||"");
+        });
+        g.primary = g.versions.find(function(v){ return v.role === "current"; }) || g.versions[0];
+        return g;
+      });
+    }
+
     function renderFamilies(families, isSearch) {
       const listEl  = document.getElementById("family-list");
       const labelEl = document.getElementById("list-label");
@@ -543,17 +579,47 @@
         labelEl.textContent = `家庭列表　${families.length} 個家庭`;
       }
 
-      listEl.innerHTML = display.map(f => `
+      const groups = groupFamilies(display);
+      const roleLabel = { current: "現況", draft: "草案", archived: "歷史現況" };
+      const roleColor = { current: "#10b981", draft: "#f59e0b", archived: "#9ca3af" };
+
+      listEl.innerHTML = groups.map(g => {
+        const f = g.primary;
+        const hasMultiple = g.versions.length > 1;
+        const versionOptionsHtml = g.versions.map(v =>
+          `<div class="version-opt" onclick="event.stopPropagation();openFamily('${v.fileName}','${v.familyName}')">
+             <span class="version-dot" style="background:${roleColor[v.role]}"></span>
+             <span>${roleLabel[v.role] || v.role}${v.draftLabel ? '：'+v.draftLabel : ''}</span>
+           </div>`
+        ).join("");
+
+        return `
         <div class="family-card" onclick="openFamily('${f.fileName}', '${f.familyName}')">
           <div class="family-avatar">${f.familyName[0] || "?"}</div>
           <div class="family-info">
-            <div class="family-name">${f.familyName}</div>
+            <div class="family-name">${f.familyName}${hasMultiple ? ` <span class="version-badge">${g.versions.length} 個版本</span>` : ""}</div>
             <div class="family-meta">${f.memberCount || (f.members && f.members.length) || 0} 位成員　·　分析日 ${toRoc(f.analysisDate)}</div>
           </div>
-          <div class="chevron">›</div>
+          ${hasMultiple
+            ? `<div class="version-picker" onclick="event.stopPropagation();toggleVersionMenu(this)">
+                 <span class="version-picker-label">${roleLabel[f.role]}</span>
+                 <span class="chevron">▾</span>
+                 <div class="version-menu">${versionOptionsHtml}</div>
+               </div>`
+            : `<div class="chevron">›</div>`}
         </div>
-      `).join("");
+      `;
+      }).join("");
     }
+
+    // 版本選單開合（點別的地方自動關閉）
+    function toggleVersionMenu(el) {
+      document.querySelectorAll(".version-picker.open").forEach(function(o){ if(o!==el) o.classList.remove("open"); });
+      el.classList.toggle("open");
+    }
+    document.addEventListener("click", function(){
+      document.querySelectorAll(".version-picker.open").forEach(function(o){ o.classList.remove("open"); });
+    });
 
     // ── 搜尋篩選 ─────────────────────────────────────────────
     function filterFamilies() {
