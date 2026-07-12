@@ -378,6 +378,7 @@ function openCoverageEdit(policyId){
   const policy = person?.policies?.find(p=>p.id===policyId) ;
   if(!policy) return;
   if(!policy.coverage) policy.coverage={};
+  document.getElementById("stats-row").innerHTML=""; // 清除清單畫面殘留的「全部保單已填」提示，避免跟編輯畫面混在一起造成混淆
   document.querySelector(".header-title").textContent=policy.itemName||"附約保障";
   const qbar = document.getElementById("product-query-bar");
   document.getElementById("product-query-name").textContent = policy.itemName || "";
@@ -395,7 +396,9 @@ function openCoverageEdit(policyId){
 
 function renderEdit(policy){
   const cov=policy.coverage||{};
-  let html="";
+  let html=`<div style="padding:10px 14px;background:#FFF7E6;border:1.5px solid #FFD666;border-radius:10px;margin-bottom:14px;font-size:15px;font-weight:700;color:#874D00">
+    ✏️ 目前編輯：${policy.itemName||"（未命名保單）"}　<span style="font-weight:500;font-size:13px;color:#9A6400">保單號 ${policy.policyNo||policy.id}</span>
+  </div>`;
   GROUPS.forEach(g=>{
     const filledCount=countGroupFilled(g,cov);
     const isOpen=openGroups[g.key];
