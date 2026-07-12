@@ -1146,6 +1146,17 @@ function parseDate(inputId, hintId) {
 }
 
 // 日期字串轉西元
+// AI 匯入保單時，把 PDF 上看到的原始保費（可能是月繳/季繳/半年繳的
+// 單期金額）依繳費方式換算成正確的「年繳總額」。「年繳保費」欄位設計
+// 上本來就是要填已經換算好的年繳總額，不會自動依繳費方式再乘算一次
+// ——這個函式只在 AI 匯入時使用，手動輸入維持原本「使用者自己填年繳
+// 總額」的行為不變。
+function annualizePremium(raw, payMode) {
+  const n = Number(raw) || 0;
+  const mult = { "月繳":12, "季繳":4, "半年繳":2, "年繳":1 }[payMode] || 1;
+  return Math.round(n * mult);
+}
+
 function rocToWestern(raw) {
   if (!raw) return null;
   const d = raw.replace(/\D/g,"");
@@ -1540,7 +1551,9 @@ async function handlePDFUpload() {
             .join('\n');
         }
         const mergedCoverage = Object.assign({}, oldPol.coverage || {}, aiPol.coverage || {});
-        
+        const newPayModeU = aiPol.payMode || oldPol.payMode;
+        const annualPremiumU = aiPol.premium !== null ? annualizePremium(aiPol.premium, newPayModeU) : null;
+
         person.policies[existingIdx] = {
           ...oldPol,
           id: oldPol.id, 
@@ -1548,13 +1561,13 @@ async function handlePDFUpload() {
           category: aiPol.category || oldPol.category,
           amount: aiPol.amount || oldPol.amount,
           insuredAmountUnit: aiPol.amountUnit || oldPol.insuredAmountUnit || "萬元", 
-          payMode: aiPol.payMode || oldPol.payMode,
+          payMode: newPayModeU,
           status: aiPol.status || oldPol.status,
           startDateRaw: aiPol.startDate || oldPol.startDateRaw,
           payEndRaw: aiPol.payEndDate || oldPol.payEndRaw,
           covEndRaw: aiPol.covEndDate || oldPol.covEndRaw,
-          premiumOrig: aiPol.premium !== null ? aiPol.premium : oldPol.premiumOrig,
-          premiumTWD: aiPol.premium !== null ? aiPol.premium : oldPol.premiumTWD,
+          premiumOrig: annualPremiumU !== null ? annualPremiumU : oldPol.premiumOrig,
+          premiumTWD: annualPremiumU !== null ? annualPremiumU : oldPol.premiumTWD,
           beneficiaryDeathText: aiPol.beneficiaryDeathText || oldPol.beneficiaryDeathText,
           beneficiaryLiveText: aiPol.beneficiaryLiveText || oldPol.beneficiaryLiveText,
           beneficiaryMaturityText: aiPol.beneficiaryMaturityText || oldPol.beneficiaryMaturityText,
@@ -1563,6 +1576,8 @@ async function handlePDFUpload() {
         };
         updateCount++;
       } else {
+        const newPayModeN = aiPol.payMode || "年繳";
+        const annualPremiumN = annualizePremium(aiPol.premium, newPayModeN);
         person.policies.push({
           id: "pol_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
           isMain: aiPol.isMain,
@@ -1572,13 +1587,13 @@ async function handlePDFUpload() {
           category: aiPol.category,
           insuredAmount: aiPol.amount,
           insuredAmountUnit: aiPol.amountUnit || "萬元", 
-          payMode: aiPol.payMode || "年繳",
+          payMode: newPayModeN,
           status: aiPol.status || "有效",
           startDateRaw: aiPol.startDate,
           payEndRaw: aiPol.payEndDate,
           covEndRaw: aiPol.covEndDate,
-          premiumOrig: aiPol.premium,
-          premiumTWD: aiPol.premium || 0,
+          premiumOrig: annualPremiumN,
+          premiumTWD: annualPremiumN,
           currency: "TWD",
           coverage: aiPol.coverage || {},
           updatedAt: new Date().toISOString()
