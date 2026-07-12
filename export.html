@@ -859,7 +859,9 @@ var TERM_BADGE_FIELD_MAP = {
   "意外險":              { ageKey:"acc_age" },
   "住院醫療 (實支實付)": { ageKey:"hosp_age" },
   "日額型住院":          { typeKey:"daily_period_type", valKey:"daily_period" },
+  "定額手術":            { typeKey:"surg_period_type", valKey:"surg_period" },
   "癌症醫療":            { typeKey:"can_period_type", valKey:"can_period" },
+  "失能長照":            { typeKey:"ltc_period_type", valKey:"ltc_period" },
 };
 function getTermBadge(g, policies) {
   var conf = TERM_BADGE_FIELD_MAP[g.label];
@@ -958,14 +960,16 @@ function getPolicyExpiryDisplay(p) {
     var v = cv.acc_age;
     return (!v || v === "終身") ? "終身" : "至"+v+"歲";
   }
-  if (cat === "醫療保障") {
+  if (cat === "醫療保障" || cat === "定額手術") {
     if (cv.hosp_age) return (cv.hosp_age === "終身") ? "終身" : "至"+cv.hosp_age+"歲";
     if (cv.daily_period_type) return fmt(cv.daily_period_type, cv.daily_period);
+    if (cv.surg_period_type) return fmt(cv.surg_period_type, cv.surg_period);
     return "—";
   }
   if (cat === "癌症醫療") return fmt(cv.can_period_type, cv.can_period);
+  if (cat === "失能長照") return fmt(cv.ltc_period_type, cv.ltc_period);
   if (["壽險保障","重大疾病險","重大傷病險","特定傷病險"].indexOf(cat) !== -1) return fmt(cv.protect_period_type, cv.protect_period);
-  return "—"; // 定額手術/失能長照/儲蓄險/投資型/年金險目前沒有保障期間欄位
+  return "—"; // 儲蓄險/投資型/年金險目前沒有保障期間欄位
 }
 
 function switchPerson(pid) {

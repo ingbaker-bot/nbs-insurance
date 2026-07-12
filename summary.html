@@ -185,7 +185,9 @@ var TERM_BADGE_FIELD_MAP = {
   "意外險":              { ageKey:"acc_age" },
   "住院醫療 (實支實付)": { ageKey:"hosp_age" },
   "日額型住院":          { typeKey:"daily_period_type", valKey:"daily_period" },
+  "定額手術":            { typeKey:"surg_period_type", valKey:"surg_period" },
   "癌症醫療":            { typeKey:"can_period_type", valKey:"can_period" },
+  "失能長照":            { typeKey:"ltc_period_type", valKey:"ltc_period" },
 };
 function getTermBadge(g, policies) {
   var conf = TERM_BADGE_FIELD_MAP[g.label];

@@ -123,7 +123,9 @@ var GROUPS=[
   {key:"accident",label:"意外險",icon:"⚡",color:"#633806",bg:"#FAEEDA",type:"accident"},
   {key:"hospitalize",label:"住院醫療（實支實付）",icon:"🏥",color:"#085041",bg:"#E1F5EE",type:"hospitalize"},
   {key:"daily",label:"日額型住院",icon:"📅",color:"#0C447C",bg:"#E6F1FB",type:"daily"},
-  {key:"surgery",label:"定額手術",icon:"🔪",color:"#3C3489",bg:"#EEEDFE",fields:[
+  {key:"surgery",label:"定額手術",icon:"🔪",color:"#3C3489",bg:"#EEEDFE",periodKey:"surg",fields:[
+    {key:"surg_period_type",label:"保障期間類型",unit:""},
+    {key:"surg_period",label:"保障期間",unit:""},
     {key:"surg_opd",label:"門診手術醫療保險金",unit:"元",type:"range"},
     {key:"surg_special",label:"特定處置項目保險金",unit:"元",type:"range"},
     {key:"surg_hosp",label:"住院手術醫療保險金",unit:"元",type:"range"},
@@ -181,7 +183,9 @@ var GROUPS=[
     {key:"ltc_yr",label:"特定傷病保險金（每年）",unit:"萬元/年"},
     {key:"ltc_mo",label:"特定傷病保險金（每月）",unit:"萬元/月"},
   ]},
-  {key:"ltc",label:"失能長照",icon:"🤝",color:"#27500A",bg:"#EAF3DE",fields:[
+  {key:"ltc",label:"失能長照",icon:"🤝",color:"#27500A",bg:"#EAF3DE",periodKey:"ltc",fields:[
+    {key:"ltc_period_type",label:"保障期間類型",unit:""},
+    {key:"ltc_period",label:"保障期間",unit:""},
     {key:"ltc_care",label:"長照／長看關懷保險金",unit:"萬元"},
     {key:"ltc_monthly",label:"長期照護療養（每月）",unit:"萬元"},
     {key:"ltc_dis_amt",label:"失能（殘廢）保險金",unit:"萬元"},
@@ -486,6 +490,24 @@ function renderGroupBody(g,cov,policyId){
   if(g.type==="ci") return renderCi(cov,policyId);
   // 一般群組
   let html='<div class="group-body"><div class="fields-grid">';
+  if (g.periodKey) {
+    const pkType = g.periodKey+"_period_type", pkVal = g.periodKey+"_period";
+    const periodType = cov[pkType]||"終身", period = cov[pkVal]||"";
+    html += `<div class="field field-full">
+      <label>保障期間</label>
+      <div class="type-row" style="margin-bottom:6px">
+        ${["歲","年","終身"].map(t=>`<button class="qbtn ${periodType===t?'on-cancer':''}" onclick="setVal('${pkType}','${t}','${policyId}')">${t}</button>`).join("")}
+      </div>
+      ${periodType==="終身"?'<div class="note blue">終身保障</div>':`
+      <div class="quick-btns">
+        ${periodType==="歲"?[65,70,75,80,85].map(a=>`<button class="qbtn ${period==a?'on-cancer':''}" onclick="setVal('${pkVal}',${a},'${policyId}')">${a}歲</button>`).join(""):
+          [10,15,20,30].map(a=>`<button class="qbtn ${period==a?'on-cancer':''}" onclick="setVal('${pkVal}',${a},'${policyId}')">${a}年</button>`).join("")}
+        <input type="number" id="cov_${pkVal}_custom" placeholder="${periodType==='歲'?'自填歲':'自填年'}" value="${period}"
+          style="width:72px;padding:4px 7px;font-size:14px;border:1px solid #ddd;border-radius:99px;outline:none;font-family:inherit"
+          oninput="setVal('${pkVal}',this.value,'${policyId}');markDirty()"/>
+      </div>`}
+    </div>`;
+  }
   (g.fields||[]).forEach(f=>{
     if(f.type==="checkbox"){
       html+=`<label class="cb-row"><input type="checkbox" id="cov_${f.key}" ${cov[f.key]?"checked":""} onchange="markDirty()"/><span>${f.label}</span></label>`;
