@@ -1260,7 +1260,7 @@ function renderBlock(key){
     var thStylePD = 'padding:8px 10px;text-align:left;font-size:11px;font-weight:800;color:#9aa0ac;border-bottom:2px solid #eef0f3;white-space:nowrap;background:#f7f8fa;';
     var tdStylePD = 'padding:8px 10px;vertical-align:middle;border-bottom:1px solid #f2f2f4;font-size:13px;';
 
-    htmlPD += '<div style="column-count:2;column-gap:14px">';
+    htmlPD += '<div>';
 
     pdGroups.forEach(function(grp){
       var mainPol = grp.rows.find(function(p){return p.isMain===true;}) || grp.rows[0];
