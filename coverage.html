@@ -64,6 +64,7 @@
     .qbtn.on-hosp{border-color:#085041;background:#E1F5EE;color:#085041}
     .qbtn.on-daily{border-color:#0C447C;background:#E6F1FB;color:#0C447C}
     .qbtn.on-cancer{border-color:#791F1F;background:#FCEBEB;color:#791F1F}
+    .qbtn.on-ci{border-color:#9B59B6;background:#F3E8FA;color:#9B59B6}
     /* 分隔標題 */
     .sub-title{font-size:14px;font-weight:500;color:#378ADD;background:#E6F1FB;padding:4px 10px;border-radius:5px;margin:10px 0 8px;grid-column:1/-1}
     .sub-title.orange{color:#633806;background:#FAEEDA}
@@ -163,7 +164,16 @@ var GROUPS=[
   // 舊保單）。
   // ltc_life/ltc_yr/ltc_mo 沿用原本在「失能長照」分類的欄位 key 不變，
   // 只是改到這裡顯示，既有保單填過的資料完全不受影響、照樣讀得到。
-  {key:"ci",label:"重大",icon:"🚨",color:"#9B59B6",bg:"#F3E8FA",fields:[
+  // 重大：涵蓋「壽險保障／重大疾病險／重大傷病險／特定傷病險」，
+  // 這裡的「保障期間」選擇器是獨立欄位（protect_period_type/
+  // protect_period），跟保單本身的「繳費期滿日」「保障期滿日」完全
+  // 脫鉤——這兩個日期欄位語意上很容易混淆（繳費期間 ≠ 保障期間，
+  // 例如「終身壽險，繳費20年」是終身保障、只是20年繳完，不是定期
+  // 保單），容易造成系統誤判，所以比照癌症醫療、日額型住院的做法，
+  // 讓使用者自己明確點選這張保單是終身還是定期，不看那兩個日期欄位。
+  {key:"ci",label:"重大",icon:"🚨",color:"#9B59B6",bg:"#F3E8FA",type:"ci",fields:[
+    {key:"protect_period_type",label:"保障期間類型",unit:""},
+    {key:"protect_period",label:"保障期間",unit:""},
     {key:"ci_major_lump",label:"重大疾病一次金",unit:"萬元"},
     {key:"ci_catastrophic_lump",label:"重大傷病一次金",unit:"萬元"},
     {key:"ci_specific_lump",label:"特定傷病一次金",unit:"萬元"},
@@ -470,6 +480,7 @@ function renderGroupBody(g,cov,policyId){
   if(g.type==="hospitalize") return renderHospitalize(cov,policyId);
   if(g.type==="daily") return renderDaily(cov,policyId);
   if(g.type==="cancer") return renderCancer(cov,policyId);
+  if(g.type==="ci") return renderCi(cov,policyId);
   // 一般群組
   let html='<div class="group-body"><div class="fields-grid">';
   (g.fields||[]).forEach(f=>{
@@ -669,6 +680,35 @@ function renderCancer(cov,pid){
     <div class="field"><label>癌症給付總限額</label><div class="input-unit"><input type="number" id="cov_can_total" placeholder="—" value="${cov.can_total||''}" oninput="markDirty()"/><span class="unit">萬元</span></div></div>
     <div class="field"><label>安寧照護</label><div class="input-unit"><input type="number" id="cov_can_hospice" placeholder="—" value="${cov.can_hospice||''}" oninput="markDirty()"/><span class="unit">萬元</span></div></div>
     <div class="field"><label>癌症身故</label><div class="input-unit"><input type="number" id="cov_can_death" placeholder="—" value="${cov.can_death||''}" oninput="markDirty()"/><span class="unit">萬元</span></div></div>
+  </div></div>`;
+}
+
+// ── 重大（壽險保障／重大疾病／重大傷病／特定傷病）────────
+function renderCi(cov,pid){
+  const periodType=cov.protect_period_type||"終身";
+  const period=cov.protect_period||"";
+  return `<div class="group-body"><div class="fields-grid">
+    <div class="field field-full">
+      <label>保障期間</label>
+      <div class="note" style="margin-bottom:6px;color:#9aa0ac">這裡填的是「保障」本身的期間，跟繳費期間是兩件事（例如終身壽險可以只繳費20年，但保障是終身的）</div>
+      <div class="type-row" style="margin-bottom:6px">
+        ${["歲","年","終身"].map(t=>`<button class="qbtn ${periodType===t?'on-ci':''}" onclick="setVal('protect_period_type','${t}','${pid}')">${t}</button>`).join("")}
+      </div>
+      ${periodType==="終身"?'<div class="note blue">終身保障</div>':`
+      <div class="quick-btns">
+        ${periodType==="歲"?[70,75,80,85].map(a=>`<button class="qbtn ${period==a?'on-ci':''}" onclick="setVal('protect_period',${a},'${pid}')">${a}歲</button>`).join(""):
+          [10,15,20,30].map(a=>`<button class="qbtn ${period==a?'on-ci':''}" onclick="setVal('protect_period',${a},'${pid}')">${a}年</button>`).join("")}
+        <input type="number" id="cov_protect_period_custom" placeholder="${periodType==='歲'?'自填歲':'自填年'}" value="${period}"
+          style="width:72px;padding:4px 7px;font-size:14px;border:1px solid #ddd;border-radius:99px;outline:none;font-family:inherit"
+          oninput="setVal('protect_period',this.value,'${pid}');markDirty()"/>
+      </div>`}
+    </div>
+    <div class="field"><label>重大疾病一次金</label><div class="input-unit"><input type="number" id="cov_ci_major_lump" placeholder="—" value="${cov.ci_major_lump||''}" oninput="markDirty()"/><span class="unit">萬元</span></div></div>
+    <div class="field"><label>重大傷病一次金</label><div class="input-unit"><input type="number" id="cov_ci_catastrophic_lump" placeholder="—" value="${cov.ci_catastrophic_lump||''}" oninput="markDirty()"/><span class="unit">萬元</span></div></div>
+    <div class="field"><label>特定傷病一次金</label><div class="input-unit"><input type="number" id="cov_ci_specific_lump" placeholder="—" value="${cov.ci_specific_lump||''}" oninput="markDirty()"/><span class="unit">萬元</span></div></div>
+    <div class="field"><label>生活扶助金（每月）</label><div class="input-unit"><input type="number" id="cov_ltc_life" placeholder="—" value="${cov.ltc_life||''}" oninput="markDirty()"/><span class="unit">萬元/月</span></div></div>
+    <div class="field"><label>特定傷病保險金（每年）</label><div class="input-unit"><input type="number" id="cov_ltc_yr" placeholder="—" value="${cov.ltc_yr||''}" oninput="markDirty()"/><span class="unit">萬元/年</span></div></div>
+    <div class="field"><label>特定傷病保險金（每月）</label><div class="input-unit"><input type="number" id="cov_ltc_mo" placeholder="—" value="${cov.ltc_mo||''}" oninput="markDirty()"/><span class="unit">萬元/月</span></div></div>
   </div></div>`;
 }
 

@@ -515,7 +515,7 @@ var GAP_GROUPS_EX = [
 // 精準對應 coverage.html 的資料庫欄位
 var GAP_KEY_MAP_EX = {
   life_permanent:  { cats:["壽險保障"],          keys:["life_basic"] },
-  life_term:       { cats:[],                   keys:["life_term"] },
+  life_term:       { cats:["壽險保障"],          keys:["life_term"] },
   investment:      { cats:["投資型保險"],        keys:[] },
   savings:         { cats:["儲蓄險","年金險"],   keys:[] },
   ci_special:      { cats:["重大疾病險","重大傷病險","特定傷病險"], keys:["can_first"] },
@@ -676,11 +676,14 @@ function getItemCurrentEx(key, policies, coverage, covOverrides) {
   if (["life_permanent", "life_term"].includes(key)) {
       let amt = 0;
       var matchedPolicies = policies.filter(p => map.cats.includes(p.category));
+      var wantTerm = (key === "life_term");
       matchedPolicies.forEach(p => {
+         var pt = (p.coverage && p.coverage.protect_period_type) || "終身";
+         var isPolTerm = (pt !== "終身");
+         if (isPolTerm !== wantTerm) return;
          var w = convertToWanEx(p.insuredAmount, p.insuredAmountUnit);
          if (w !== null) amt += w;
       });
-      if (amt === 0 && matchedPolicies.length > 0) return 1; 
       return amt;
   }
 
@@ -809,34 +812,33 @@ function getBlockTitleHtml(b) {
     b.icon+' 【'+getDisplayName()+'】'+b.label+'</div>';
 }
 
-// 判斷保單是「終身」還是「定期」：保障截止日（covEndDate/covEndRaw）
-// 沒填 = 終身，有填 = 定期。isTerm 傳 true 找定期的、false 找終身的。
+// 判斷保單是「終身」還是「定期」：改讀 coverage.html 裡的
+// protect_period_type（歲/年/終身），不再用容易跟繳費期滿日混淆的
+// 保單保障截止日。isTerm 傳 true 找定期的、false 找終身的。
 function lifeAmountEx(pols, cats, isTerm) {
   var amt = 0;
   pols.forEach(function(p){
     if (cats.indexOf(p.category) === -1) return;
-    var hasEnd = !!(p.covEndDate || p.covEndRaw);
-    if (isTerm !== hasEnd) return;
+    var pt = (p.coverage && p.coverage.protect_period_type) || "終身";
+    var isPolTerm = (pt !== "終身");
+    if (isTerm !== isPolTerm) return;
     var w = convertToWanEx(p.insuredAmount, p.insuredAmountUnit);
     if (w !== null) amt += w;
   });
   return amt;
 }
-// 定期保單的「保障剩餘年期」：以分析日為基準，抓同一組類別裡最快到期
-// 的那張保單（最需要留意續保/續買的那一張）
+// 定期保單的保障期間顯示文字（保障至X歲／保障X年）
 function lifeRemainYearsEx(pols, cats) {
-  var minYears = null;
-  var base = (person.profile && person.profile.analysisDate) ? new Date(person.profile.analysisDate) : new Date();
+  var texts = [];
   pols.forEach(function(p){
     if (cats.indexOf(p.category) === -1) return;
-    var endRaw = p.covEndDate || p.covEndRaw;
-    if (!endRaw) return;
-    var end = new Date(endRaw);
-    if (isNaN(end)) return;
-    var yrs = Math.max(0, Math.round((end - base) / (365.25*24*3600*1000)));
-    if (minYears === null || yrs < minYears) minYears = yrs;
+    var pt = (p.coverage && p.coverage.protect_period_type) || "終身";
+    if (pt === "終身") return;
+    var val = p.coverage && p.coverage.protect_period;
+    var text = pt === "歲" ? "保障至"+(val||"—")+"歲" : "保障"+(val||"—")+"年";
+    if (texts.indexOf(text) === -1) texts.push(text);
   });
-  return minYears;
+  return texts.length ? texts.join("／") : null;
 }
 
 // ── Phase 0：共用視覺元件（大數字 Stat 卡片）──────────────
@@ -890,7 +892,7 @@ function buildStatGroupCard(g, policies, cov3) {
       total = item.compute(policies);
       if (item.remain) {
         var ry = item.remain(policies);
-        if (ry !== null) remainNote = ' (剩 '+ry+' 年)';
+        if (ry !== null) remainNote = ' ('+ry+')';
       }
     } else {
       var maxKey = item.keys && item.keys.find(function(k){ return k.endsWith('_max'); });

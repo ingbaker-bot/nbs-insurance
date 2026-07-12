@@ -217,7 +217,7 @@ var GAP_GROUPS = [
 // 精準對應 coverage.html 的資料庫欄位
 var GAP_KEY_MAP = {
   life_permanent:  { cats:["壽險保障"],          keys:["life_basic"] },
-  life_term:       { cats:[],                   keys:["life_term"] },
+  life_term:       { cats:["壽險保障"],          keys:["life_term"] },
   investment:      { cats:["投資型保險"],        keys:[] },
   savings:         { cats:["儲蓄險","年金險"],   keys:[] },
   ci_special:      { cats:["重大疾病險","重大傷病險","特定傷病險"], keys:["can_first"] },
@@ -371,11 +371,14 @@ function getItemCurrent(key, policies, coverage, covOverrides) {
   if (["life_permanent", "life_term"].includes(key)) {
       let amt = 0;
       const matchedPolicies = policies.filter(p => map.cats.includes(p.category));
+      const wantTerm = (key === "life_term");
       matchedPolicies.forEach(p => {
+         const pt = (p.coverage && p.coverage.protect_period_type) || "終身";
+         const isPolTerm = (pt !== "終身");
+         if (isPolTerm !== wantTerm) return;
          const w = convertToWan(p.insuredAmount, p.insuredAmountUnit);
          if (w !== null) amt += w;
       });
-      if (amt === 0 && matchedPolicies.length > 0) return 1; 
       return amt;
   }
 
