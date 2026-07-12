@@ -568,6 +568,9 @@ var COVERAGE_GROUPS_EX = [
     { label:"定期壽險", unit:"萬元", compute:function(pols){ return lifeAmountEx(pols, ["壽險保障"], true); }, remain:function(pols){ return lifeRemainYearsEx(pols, ["壽險保障"]); } },
     { label:"重大終身", unit:"萬元", compute:function(pols){ return lifeAmountEx(pols, ["重大疾病險","重大傷病險","特定傷病險"], false); } },
     { label:"重大定期", unit:"萬元", compute:function(pols){ return lifeAmountEx(pols, ["重大疾病險","重大傷病險","特定傷病險"], true); }, remain:function(pols){ return lifeRemainYearsEx(pols, ["重大疾病險","重大傷病險","特定傷病險"]); } },
+    { label:"生活扶助金（每月）", keys:["ltc_life"], unit:"萬元/月" },
+    { label:"特定傷病保險金（每年）", keys:["ltc_yr"], unit:"萬元/年" },
+    { label:"特定傷病保險金（每月）", keys:["ltc_mo"], unit:"萬元/月" },
   ]},
   { label:"意外險", icon:"⚡", color:"#F5A623", cats:["意外險"], items:[
     { label:"意外門診", keys:["acc_opd"], unit:"萬元/次" },
@@ -639,9 +642,6 @@ var COVERAGE_GROUPS_EX = [
   { label:"失能長照", icon:"🤝", color:"#27500A", cats:["失能長照"], items:[
     { label:"長照/長看關懷", keys:["ltc_care"], unit:"萬元" },
     { label:"長期照護療養 (月)", keys:["ltc_monthly"], unit:"萬元/月" },
-    { label:"生活扶助/重大傷病", keys:["ltc_life"], unit:"萬元/月" },
-    { label:"特定傷病 (年)", keys:["ltc_yr"], unit:"萬元/年" },
-    { label:"特定傷病 (月)", keys:["ltc_mo"], unit:"萬元/月" },
     { label:"失能(殘廢)保險金", keys:["ltc_dis_amt"], unit:"萬元" },
     { label:"失能生活扶助金", keys:["ltc_dis_life"], unit:"萬元/月" },
   ]},
@@ -1207,7 +1207,7 @@ function renderBlock(key){
 
     // 年繳/月均統計：大數字卡片
     htmlPD+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px">'+
-      '<div style="padding:16px 18px;border-radius:18px;background:linear-gradient(135deg,#E6F1FB,#F0F7FF);box-shadow:0 4px 14px -4px rgba(12,68,124,.12)"><div style="font-size:13px;font-weight:700;color:#5B8DBE;margin-bottom:4px">年繳總保費</div><div style="font-size:30px;font-weight:800;color:#0C447C;font-variant-numeric:tabular-nums">NT$ '+(totalTWD_pd/10000).toFixed(1)+'<span style="font-size:16px;font-weight:700;margin-left:2px">萬</span></div></div>'+
+      '<div style="padding:16px 18px;border-radius:18px;background:linear-gradient(135deg,#E6F1FB,#F0F7FF);box-shadow:0 4px 14px -4px rgba(12,68,124,.12)"><div style="font-size:13px;font-weight:700;color:#5B8DBE;margin-bottom:4px">年繳總保費</div><div style="font-size:30px;font-weight:800;color:#0C447C;font-variant-numeric:tabular-nums">NT$ '+totalTWD_pd.toLocaleString()+'<span style="font-size:16px;font-weight:700;margin-left:2px">元</span></div></div>'+
       '<div style="padding:16px 18px;border-radius:18px;background:linear-gradient(135deg,#EAF3DE,#F3F9EC);box-shadow:0 4px 14px -4px rgba(39,80,10,.12)"><div style="font-size:13px;font-weight:700;color:#6B9450;margin-bottom:4px">月均保費</div><div style="font-size:30px;font-weight:800;color:#27500A;font-variant-numeric:tabular-nums">NT$ '+Math.round(totalTWD_pd/12).toLocaleString()+'</div></div>'+
     '</div>';
 

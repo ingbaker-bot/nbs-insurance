@@ -766,7 +766,7 @@ function renderPolicies() {
       <div class="stat-label">${currentTab==='all'?'全家保單':'本人保單'}</div>
       <div class="stat-value" style="font-size: 17px; color:#0C447C;">${mainCount}主 / ${riderCount}附</div>
     </div>
-    <div class="stat-card"><div class="stat-label">年繳總保費</div><div class="stat-value">NT$ ${(totalTWD/10000).toFixed(1)}萬</div></div>
+    <div class="stat-card"><div class="stat-label">年繳總保費</div><div class="stat-value">NT$ ${totalTWD.toLocaleString()}元</div></div>
     <div class="stat-card"><div class="stat-label">月均保費</div><div class="stat-value">${Math.round(totalTWD/12).toLocaleString()}</div></div>`;
 
   // 5. 渲染保單列表 (維持主附約摺疊邏輯)
