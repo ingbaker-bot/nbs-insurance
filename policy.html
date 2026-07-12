@@ -545,6 +545,19 @@
       <input type="text" id="f-amount-unit-custom" placeholder="請輸入單位名稱" style="display:none;margin-top:6px;width:100%;padding:8px 10px;font-size: 16px;border:1px solid #378ADD;border-radius:7px;outline:none;font-family:inherit" />
     </div>
 
+    <!-- 身故保險金（留愛金額） -->
+    <div class="field">
+      <label>身故保險金（留愛金額）</label>
+      <div style="display:flex;gap:8px;align-items:flex-start">
+        <input type="text" id="f-death" placeholder="留空預設等於保額，增額型/帳戶價值型請自行填實際金額" style="flex:1;padding:8px 10px;font-size: 17px;border:1px solid #e0e0e0;border-radius:7px;outline:none;font-family:inherit" />
+        <select id="f-death-unit" style="width:90px;padding:8px 8px;font-size: 16px;border:1px solid #e0e0e0;border-radius:7px;outline:none;font-family:inherit;background:#fff">
+          <option value="萬元">萬元</option>
+          <option value="元">元</option>
+        </select>
+      </div>
+      <div class="hint">保險法用語「身故保險金」，也就是留給受益人的「留愛金額」。多數保單身故金＝保額，留空即可；如果是增額壽險、投資型保單（尤其 B 型＝保額+帳戶價值），請自行計算目前實際金額填入</div>
+    </div>
+
     <!-- 起始日 + 繳費期滿日 + 保障期滿日 -->
     <div class="grid-3">
       <div class="field">
@@ -893,6 +906,8 @@ function openForm(mode, memberId, policyIdOrNo) {
   document.getElementById("f-amount-unit").value = "萬元";
   document.getElementById("f-amount-unit-custom").style.display = "none";
   document.getElementById("f-amount-unit-custom").value = "";
+  document.getElementById("f-death").value = "";
+  document.getElementById("f-death-unit").value = "萬元";
   document.getElementById("twd-display").style.display = "none";
   document.getElementById("form-error").style.display = "none";
   document.getElementById("delete-btn").style.display = "none";
@@ -921,6 +936,8 @@ function openForm(mode, memberId, policyIdOrNo) {
     document.getElementById("f-status").value    = policy.status || "有效";
     document.getElementById("f-item").value      = policy.itemName || "";
     document.getElementById("f-amount").value = policy.insuredAmount || "";
+    document.getElementById("f-death").value = policy.deathBenefit || "";
+    document.getElementById("f-death-unit").value = policy.deathBenefitUnit || "萬元";
     document.getElementById("f-ismain").value = (policy.isMain !== false) ? "true" : "false";
     var savedUnit = policy.insuredAmountUnit || "萬元";
     var unitOptions = ["萬元","元","計劃","型","份"];
@@ -1269,6 +1286,8 @@ async function savePolicy() {
       if (u === "custom") return document.getElementById("f-amount-unit-custom").value.trim() || "萬元";
       return u;
     })(),
+    deathBenefit:      document.getElementById("f-death").value.trim() || null,
+    deathBenefitUnit:  document.getElementById("f-death-unit").value || "萬元",
     startDateRaw:  startRaw,
     payEndRaw,
     covEndRaw,
@@ -1396,6 +1415,7 @@ async function analyzePolicyText() {
       if (data.itemName) document.getElementById("f-item").value = data.itemName;
       if (data.category) document.getElementById("f-cat").value = data.category;
       if (data.amount) document.getElementById("f-amount").value = data.amount;
+      if (data.deathBenefit) document.getElementById("f-death").value = data.deathBenefit;
       if (data.payMode) document.getElementById("f-paymode").value = data.payMode;
       if (data.status) document.getElementById("f-status").value = data.status;
 
@@ -1561,6 +1581,8 @@ async function handlePDFUpload() {
           category: aiPol.category || oldPol.category,
           amount: aiPol.amount || oldPol.amount,
           insuredAmountUnit: aiPol.amountUnit || oldPol.insuredAmountUnit || "萬元", 
+          deathBenefit: aiPol.deathBenefit !== undefined ? aiPol.deathBenefit : oldPol.deathBenefit,
+          deathBenefitUnit: aiPol.deathBenefitUnit || oldPol.deathBenefitUnit || "萬元",
           payMode: newPayModeU,
           status: aiPol.status || oldPol.status,
           startDateRaw: aiPol.startDate || oldPol.startDateRaw,
@@ -1587,6 +1609,8 @@ async function handlePDFUpload() {
           category: aiPol.category,
           insuredAmount: aiPol.amount,
           insuredAmountUnit: aiPol.amountUnit || "萬元", 
+          deathBenefit: aiPol.deathBenefit || null,
+          deathBenefitUnit: aiPol.deathBenefitUnit || "萬元",
           payMode: newPayModeN,
           status: aiPol.status || "有效",
           startDateRaw: aiPol.startDate,

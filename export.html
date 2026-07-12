@@ -944,6 +944,30 @@ function statRowHtml(x, color) {
   '</div>';
 }
 
+// 依保單類別，讀取該類別在 coverage.html 裡對應的保障期間欄位，
+// 產生「到期日」顯示文字（跟 getTermBadge 用的是同一批欄位，這裡是
+// 單張保單版本，給保單與受益人整合表逐筆顯示用）
+function getPolicyExpiryDisplay(p) {
+  var cv = p.coverage || {};
+  var cat = p.category;
+  function fmt(typeVal, periodVal) {
+    if (!typeVal || typeVal === "終身") return "終身";
+    return typeVal === "歲" ? "至"+(periodVal||"—")+"歲" : (periodVal||"—")+"年期";
+  }
+  if (cat === "意外險") {
+    var v = cv.acc_age;
+    return (!v || v === "終身") ? "終身" : "至"+v+"歲";
+  }
+  if (cat === "醫療保障") {
+    if (cv.hosp_age) return (cv.hosp_age === "終身") ? "終身" : "至"+cv.hosp_age+"歲";
+    if (cv.daily_period_type) return fmt(cv.daily_period_type, cv.daily_period);
+    return "—";
+  }
+  if (cat === "癌症醫療") return fmt(cv.can_period_type, cv.can_period);
+  if (["壽險保障","重大疾病險","重大傷病險","特定傷病險"].indexOf(cat) !== -1) return fmt(cv.protect_period_type, cv.protect_period);
+  return "—"; // 定額手術/失能長照/儲蓄險/投資型/年金險目前沒有保障期間欄位
+}
+
 function switchPerson(pid) {
   currentPersonId = pid;
   var p = personDataMap[pid];
@@ -1286,6 +1310,8 @@ function renderBlock(key){
         '<th style="'+thStylePD+'text-align:right">保額</th>'+
         '<th style="'+thStylePD+'text-align:right">保費</th>'+
         '<th style="'+thStylePD+'">狀態</th>'+
+        '<th style="'+thStylePD+'min-width:90px">到期日</th>'+
+        '<th style="'+thStylePD+'text-align:right;min-width:80px">留愛金額</th>'+
         '<th style="'+thStylePD+'min-width:100px">身故受益人</th>'+
         '<th style="'+thStylePD+'min-width:100px">生存/滿期受益人</th>'+
       '</tr></thead><tbody>';
@@ -1335,6 +1361,11 @@ function renderBlock(key){
         var dColor = !dStr ? "#dcdfe4" : "#374151";
         dStr = dStr || "—";
 
+        var dbAmt = p.deathBenefit || p.insuredAmount;
+        var dbUnit = p.deathBenefit ? (p.deathBenefitUnit||'萬元') : (p.insuredAmountUnit||'萬元');
+        var dbText = dbAmt ? (dbAmt+' '+dbUnit) : '—';
+        var expiryText = getPolicyExpiryDisplay(p);
+
         htmlPD += '<tr>'+
           '<td style="'+tdStylePD+'">'+(isMR?'<span style="font-size:10px;color:#fff;background:#378ADD;padding:2px 7px;border-radius:99px;font-weight:700">主</span>':'<span style="font-size:10px;color:#888;background:#ebebeb;padding:2px 7px;border-radius:99px;font-weight:700">附</span>')+'</td>'+
           '<td style="'+tdStylePD+'"><span style="font-size:10px;padding:2px 7px;border-radius:99px;background:'+cc+'1A;color:'+cc+';font-weight:700;white-space:nowrap">'+(p.category||'—')+'</span></td>'+
@@ -1342,6 +1373,8 @@ function renderBlock(key){
           '<td style="'+tdStylePD+'text-align:right;font-weight:800;color:#0C447C;font-variant-numeric:tabular-nums;white-space:nowrap">'+amtText+'</td>'+
           '<td style="'+tdStylePD+'text-align:right;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums">'+premDisplayPD+'</td>'+
           '<td style="'+tdStylePD+'"><span style="font-size:10px;padding:2px 7px;border-radius:99px;background:'+(isPolicyActiveEx(p)?"#EAF3DE":"#f0f0f0")+';color:'+(isPolicyActiveEx(p)?"#27500A":"#888")+'">'+(p.status||"有效")+'</span></td>'+
+          '<td style="'+tdStylePD+'font-size:12px;color:'+(expiryText==="終身"?"#374151":expiryText==="—"?"#dcdfe4":"#B07000")+';font-weight:700;white-space:nowrap">'+expiryText+'</td>'+
+          '<td style="'+tdStylePD+'text-align:right;font-weight:800;color:#B0466F;font-variant-numeric:tabular-nums;white-space:nowrap">'+dbText+'</td>'+
           '<td style="'+tdStylePD+'color:'+dColor+';line-height:1.4;font-size:12px">'+dStr+'</td>'+
           '<td style="'+tdStylePD+'line-height:1.4;font-size:12px">'+liveDisplay+'</td>'+
         '</tr>';
