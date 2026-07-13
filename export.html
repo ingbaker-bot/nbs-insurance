@@ -462,6 +462,18 @@ function convertToWanEx(amount, unit) {
   return null;
 }
 
+// 留愛金額：只採用使用者在保單資料裡實際輸入的 deathBenefit（單位換算成萬元），
+// 不再用保額(insuredAmount)自動頂替。保額頂替會把重疾/意外/醫療等「理賠給
+// 被保險人本人」性質的保額誤顯示成「留給受益人」的留愛金額，資訊錯誤且
+// 容易誤導保戶。彙總小工具與明細表格都呼叫這個函式，確保兩處數字一致。
+function getDeathBenefitAmt(p) {
+  if (p.deathBenefit !== undefined && p.deathBenefit !== null && p.deathBenefit !== "") {
+    var w = convertToWanEx(p.deathBenefit, p.deathBenefitUnit || '萬元');
+    return w !== null ? w : 0;
+  }
+  return 0; // 沒填就是沒有，交由畫面顯示「—」，提醒業務員回頭跟保戶確認
+}
+
 function sumCovEx(keys, policies, coverage) {
   var total = 0;
   policies.forEach(p => {
@@ -878,12 +890,9 @@ function lifeAmountEx(pols, cats, isTerm) {
     var isPolTerm = (pt !== "終身");
     if (isTerm !== isPolTerm) return;
     
-    // 優先使用「留愛金額 (deathBenefit)」，若無才預設抓取「保額 (insuredAmount)」
-    var baseAmt = (p.deathBenefit !== undefined && p.deathBenefit !== null && p.deathBenefit !== "") ? p.deathBenefit : p.insuredAmount;
-    var baseUnit = (p.deathBenefit !== undefined && p.deathBenefit !== null && p.deathBenefit !== "") ? (p.deathBenefitUnit || '萬元') : (p.insuredAmountUnit || '萬元');
-    
-    var w = convertToWanEx(baseAmt, baseUnit);
-    if (w !== null) amt += w;
+    // 只加總使用者實際填寫的留愛金額(deathBenefit)，不再用保額(insuredAmount)頂替，
+    // 避免把重疾/意外等非壽險身故給付的保額誤算進終身壽險/重大終身總額。
+    amt += getDeathBenefitAmt(p);
   });
   return amt;
 }
@@ -1205,23 +1214,9 @@ function buildPremiumDetailParts() {
       if (LEGACY_CATS_PD.indexOf(p.category) === -1) {
         dbText = '—';
       } else {
-        var dbAmt = 0;
-        var dbUnit = '萬元';
-        
-        // 1. 如果有明確輸入 deathBenefit (留愛金額)，就直接使用
-        if (p.deathBenefit !== undefined && p.deathBenefit !== null && p.deathBenefit !== "") {
-            dbAmt = p.deathBenefit;
-            dbUnit = p.deathBenefitUnit || '萬元';
-        } else {
-            // 2. 如果沒輸入：只有「壽險保障」，或者「其他允許類別的主約」才預設帶入保額。
-            // 避免把「意外醫療附約」或「重大疾病附約」的保額錯誤顯示成留愛金額。
-            if (p.category === "壽險保障" || p.isMain) {
-                dbAmt = p.insuredAmount;
-                dbUnit = p.insuredAmountUnit || '萬元';
-            }
-        }
-        
-        dbText = (dbAmt && dbAmt > 0) ? (dbAmt + ' ' + dbUnit) : '—';
+        // 留愛金額只顯示使用者實際填寫的 deathBenefit，不再用保額(insuredAmount)頂替。
+        var dbAmt = getDeathBenefitAmt(p);
+        dbText = (dbAmt && dbAmt > 0) ? (dbAmt + ' 萬元') : '—';
       }
       var expiryText = getPolicyExpiryDisplay(p);
 
