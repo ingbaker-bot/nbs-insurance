@@ -1063,7 +1063,8 @@ function buildPremiumDetailParts() {
   // 10 欄固定寬度，header 跟每一列都用同一份，確保不管各自截圖幾張，
   // 欄位永遠對得整齊
   // 限制商品名最大寬度為400px，並加寬狀態(130px)與受益人(240px)
-  var COLS_PD = '60px 110px minmax(200px,400px) 150px 170px 130px 130px 150px 240px 240px';
+  // 讓商品名改為 1fr 填滿剩餘空白，同時保持狀態與受益人的寬裕空間
+  var COLS_PD = '60px 110px 1fr 160px 170px 130px 150px 150px 240px 240px';
 
   var colHeaderRow =
     '<div style="display:grid;grid-template-columns:'+COLS_PD+';border-bottom:2px solid #eef0f3">'+
