@@ -1633,13 +1633,13 @@ async function doExportPNG(blks,div){
 
 async function doExportPDF(blks,div){
   var J=window.jspdf.jsPDF;
-  var pdf=new J("l","mm","a4");  // 預設橫向，更適合寬表格
+  var pdf=new J({ orientation:"l", unit:"mm", format:[297,210] });  // 明確指定橫向寬高（297x210mm），避免文字參數解析問題
   var pageW=297, pageH=210, margin=10, usableW=pageW-margin*2, usableH=pageH-margin*2;
   var wm='<div style="padding:8px;background:#f7f7f5;text-align:center;font-size:14px;color:#aaa">'+getWatermarkText()+'</div>';
   var disclaimer='<div style="padding:8px 14px;font-size:16px;color:#999;line-height:1.6;text-align:left">⚠️ 本報告彙總之資訊，旨在作為檢視與討論保障內容的參考藍圖；為守護您的權益，實際理賠給付項目與條件，仍須以各家保險公司之最新資料及正式保險契約條款為準。</div>';
   var pageCount=0;
 
-  function addNewPage(){ if(pageCount>0) pdf.addPage("a4","landscape"); pageCount++; }
+  function addNewPage(){ if(pageCount>0) pdf.addPage([297,210],"l"); pageCount++; }
 
   async function captureHtml(html){
     div.style.width="1600px";
