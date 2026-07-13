@@ -438,7 +438,7 @@
         '<img src="https://i.ibb.co/FkVkNhhd/NBS-4F3.jpg" class="nbs-logo-img" onerror="this.style.display=\'none\'"/>' +
       '</div>' +
       '<div class="nbs-fam">' +
-        '<div class="nbs-fn">'+_family.familyName+_versionBadgeHtml()+'</div>' +
+        '<div class="nbs-fn">'+_versionIconHtml()+_family.familyName+'</div>' +
         '<div class="nbs-fd">分析日 '+_fmtROC(_family.analysisDate)+'</div>' +
       '</div>' +
       '<div class="nbs-nsec">' +
@@ -449,40 +449,46 @@
         '<span class="nbs-nicon">🏠</span>' +
         '<span class="nbs-nlabel">家庭保單首頁</span>' +
       '</div>' +
-      _versionActionsHtml() +
       '<div class="nbs-foot">' +
         '<button class="nbs-pbtn" onclick="NBS_NAV._print()">🖨️ 快速列印此頁</button>' +
         '<button class="nbs-bbtn" onclick="NBS_NAV._back()">← 返回家庭列表</button>' +
+        _versionActionsHtml() +
         '<div class="nbs-disclaimer">本報告為保障檢視參考，實際理賠項目與條件以各保險公司正式契約條款為準。</div>' +
       '</div>';
   }
 
-  // ── 現況/草案/歷史現況：版本標示 + 操作入口 ─────────────
-  function _versionBadgeHtml() {
+  // ── 現況/草案/歷史現況：標題前的精簡圖示 + 底部可收合的版本管理 ──
+  // 設計原則：「功能模組」是每天都在用的核心導覽，優先保持在最顯眼、
+  // 不用捲動就看得到的位置；另存新檔/升格/刪除草案是偶爾才用的操作，
+  // 收進底部一個預設收合的區塊，不跟核心功能搶版面。
+  function _versionIconHtml() {
     var role = _family.role || "current";
     if (role === "current") return "";
-    var label = role === "draft" ? "草案"+(_family.draftLabel?"："+_family.draftLabel:"") : "歷史現況";
-    var color = role === "draft" ? "#f59e0b" : "#9ca3af";
-    return ' <span style="font-size:11px;font-weight:700;color:#fff;background:'+color+';padding:2px 8px;border-radius:99px;vertical-align:middle">'+label+'</span>';
+    var icon = role === "draft" ? "📝" : "📦";
+    var title = role === "draft" ? "草案"+(_family.draftLabel?"："+_family.draftLabel:"") : "歷史現況";
+    return '<span title="'+title+'" style="margin-right:4px">'+icon+'</span>';
   }
 
   function _versionActionsHtml() {
     var role = _family.role || "current";
-    var html = '<div class="nbs-ni" onclick="NBS_NAV._promptCreateDraft()">' +
+    var summary = role === "draft"
+      ? "⋯ 版本管理（草案"+(_family.draftLabel?"："+_family.draftLabel:"")+"）"
+      : "⋯ 版本管理";
+    var items = '<div class="nbs-ni nbs-ni-sm" onclick="NBS_NAV._promptCreateDraft()">' +
       '<span class="nbs-nicon">📝</span>' +
       '<span class="nbs-nlabel">另存新檔（建立提案草案）</span>' +
     '</div>';
     if (role === "draft") {
-      html += '<div class="nbs-ni" onclick="NBS_NAV._promptPromoteDraft()">' +
+      items += '<div class="nbs-ni nbs-ni-sm" onclick="NBS_NAV._promptPromoteDraft()">' +
         '<span class="nbs-nicon">✅</span>' +
         '<span class="nbs-nlabel">升格為現況</span>' +
       '</div>';
-      html += '<div class="nbs-ni" onclick="NBS_NAV._promptDeleteDraft()">' +
+      items += '<div class="nbs-ni nbs-ni-sm" onclick="NBS_NAV._promptDeleteDraft()">' +
         '<span class="nbs-nicon">🗑️</span>' +
         '<span class="nbs-nlabel">刪除此草案</span>' +
       '</div>';
     }
-    return html;
+    return '<details class="nbs-version-mgr"><summary>'+summary+'</summary>'+items+'</details>';
   }
 
   function _renderBottomTab() {
@@ -843,6 +849,13 @@
       ".nbs-ni:hover .nbs-nlabel{color:#1D4ED8}",
       ".nbs-ni-on .nbs-nlabel{color:#4F46E5;font-weight:700}",
       ".nbs-foot{padding:10px;border-top:1px solid rgba(120,140,255,.10)}",
+      ".nbs-version-mgr{margin-top:10px;border-top:1px dashed rgba(120,140,255,.15);padding-top:8px}",
+      ".nbs-version-mgr summary{font-size:11px;font-weight:600;color:#9CA3AF;cursor:pointer;list-style:none;padding:4px 2px;-webkit-tap-highlight-color:rgba(0,0,0,0)}",
+      ".nbs-version-mgr summary::-webkit-details-marker{display:none}",
+      ".nbs-version-mgr[open] summary{color:#6b7280}",
+      ".nbs-ni-sm{padding:7px 6px!important;font-size:12px!important}",
+      ".nbs-ni-sm .nbs-nicon{font-size:14px!important}",
+      ".nbs-ni-sm .nbs-nlabel{font-size:12px!important}",
       ".nbs-disclaimer{margin-top:8px;padding:8px 10px;border-radius:8px;background:rgba(120,140,255,.05);border:1px solid rgba(120,140,255,.10);font-size:10px;color:#9CA3AF;line-height:1.6;letter-spacing:.01em}",
       ".nbs-pbtn{width:100%;padding:8px;margin-bottom:5px;background:linear-gradient(90deg,rgba(59,130,246,.10),rgba(124,58,237,.10));color:#4F46E5;border:1px solid rgba(120,140,255,.18);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px}",
       ".nbs-pbtn:hover{background:linear-gradient(90deg,rgba(59,130,246,.16),rgba(124,58,237,.16))}",
