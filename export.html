@@ -1227,7 +1227,7 @@ function switchPerson(pid) {
 
 // ── SVG 箭頭列（html2canvas 相容，不使用 clip-path+calc）────────────────
 function buildSvgArrows(phases) {
-  var W=600, H=40, tip=14;
+  var W=900, H=60, tip=24; // 放大比例
   var weights=[1,1.4,1], totalW=3.4;
   var widths=weights.map(function(w){return w/totalW*W;});
   var svg='<svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 '+W+' '+H+'" style="display:block;margin-bottom:16px">';
@@ -1243,7 +1243,8 @@ function buildSvgArrows(phases) {
     }
     svg+='<polygon points="'+pts+'" fill="'+ph.color+'"/>';
     var tx=i===0?x0+(w-tip)/2:i===2?x0+tip+(w-tip)/2:x0+tip+(w-tip*2)/2;
-    svg+='<text x="'+tx+'" y="'+(H/2+5)+'" text-anchor="middle" fill="#fff" font-size="13" font-weight="700" font-family="-apple-system,BlinkMacSystemFont,sans-serif">'+ph.label+'</text>';
+    // 箭頭內文字放大
+    svg+='<text x="'+tx+'" y="'+(H/2+8)+'" text-anchor="middle" fill="#fff" font-size="26" font-weight="700" font-family="-apple-system,BlinkMacSystemFont,sans-serif">'+ph.label+'</text>';
     x+=w;
   });
   svg+='</svg>';
@@ -1254,7 +1255,8 @@ function buildDonutChartEx(active, coverage, targets, covOverrides) {
   var allItems = GAP_GROUPS_EX.flatMap(g=>g.items);
   var n = allItems.length;
   
-  var cx=300, cy=210, OR=135, IR=72;
+  // 放大 SVG 畫布比例以容納更大字體
+  var cx=450, cy=315, OR=210, IR=115;
   var gapA=0.03, sliceA=(Math.PI*2-n*gapA)/n;
 
   var angle=-Math.PI/2;
@@ -1262,7 +1264,8 @@ function buildDonutChartEx(active, coverage, targets, covOverrides) {
   var labels=""; 
 
   function renderLegend(g) {
-    var legendHtml = `<div style="font-size:18px;font-weight:800;color:${g.color};margin-bottom:10px;border-bottom:2px solid ${g.color}30;padding-bottom:6px">${g.label}</div>`;
+    // 卡片標題放大
+    var legendHtml = `<div style="font-size:28px;font-weight:800;color:${g.color};margin-bottom:16px;border-bottom:3px solid ${g.color}30;padding-bottom:10px">${g.label}</div>`;
     
     g.items.forEach(item => {
       var {status, pct, current, target} = getItemStatusEx(item.key, active, coverage, targets, covOverrides);
@@ -1271,23 +1274,23 @@ function buildDonutChartEx(active, coverage, targets, covOverrides) {
 
       var amtHtml = "";
       if (item.isBool) {
-        amtHtml = current > 0 ? `<span style="color:#555;font-size:16px;font-weight:700">有</span>` : `<span style="color:#bbb;font-size:16px;font-weight:700">無</span>`;
+        amtHtml = current > 0 ? `<span style="color:#555;font-size:24px;font-weight:700">有</span>` : `<span style="color:#bbb;font-size:24px;font-weight:700">無</span>`;
       } else {
         if (current > 0 || target > 0) {
           var displayVal = current > 0 ? current.toLocaleString() : "0";
           if (target > 0) displayVal += ` / ${target.toLocaleString()}`;
-          
-          amtHtml = `<span style="color:${current>0?'#0C447C':'#888'};font-weight:800;font-size:19px;font-variant-numeric:tabular-nums">${displayVal}<span style="font-size:13px;color:#888;margin-left:3px;font-weight:600">${item.unit}</span></span>`;
+          // 數字放大
+          amtHtml = `<span style="color:${current>0?'#0C447C':'#888'};font-weight:800;font-size:28px;font-variant-numeric:tabular-nums">${displayVal}<span style="font-size:18px;color:#888;margin-left:4px;font-weight:600">${item.unit}</span></span>`;
         } else {
-          amtHtml = `<span style="color:#bbb;font-size:16px;font-weight:700">0</span>`;
+          amtHtml = `<span style="color:#bbb;font-size:24px;font-weight:700">0</span>`;
         }
       }
 
-      legendHtml += `<div style="display:flex;align-items:center;gap:8px;font-size:15px;margin-bottom:8px">
-        <div style="width:11px;height:11px;border-radius:3px;background:${dotColor};flex-shrink:0"></div>
+      legendHtml += `<div style="display:flex;align-items:center;gap:12px;font-size:22px;margin-bottom:12px">
+        <div style="width:16px;height:16px;border-radius:4px;background:${dotColor};flex-shrink:0"></div>
         <span style="color:${status==="gap"?"#bbb":"#444"};font-weight:700;flex:1;white-space:nowrap">${item.label}</span>
         ${amtHtml}
-        <span style="margin-left:4px;font-size:14px">${icon}</span>
+        <span style="margin-left:6px;font-size:22px">${icon}</span>
       </div>`;
     });
     return legendHtml;
@@ -1313,24 +1316,25 @@ function buildDonutChartEx(active, coverage, targets, covOverrides) {
     if(pct>0.01) paths += `<path d="${donut(start,filledEnd,sliceA*pct>Math.PI?1:0,OR,IR)}" fill="${item.color}"/>`;
     if(status==="insufficient" && pct<0.99) {
       var gapSize=sliceA*(1-pct);
-      paths += `<path d="${donut(filledEnd,end,gapSize>Math.PI?1:0,OR,IR)}" fill="none" stroke="${item.color}" stroke-width="2.5" stroke-dasharray="4 3" opacity="0.45"/>`;
+      paths += `<path d="${donut(filledEnd,end,gapSize>Math.PI?1:0,OR,IR)}" fill="none" stroke="${item.color}" stroke-width="3" stroke-dasharray="6 4" opacity="0.45"/>`;
     }
 
     var isRight = Math.cos(midA) >= 0; 
     var x0 = px(OR, midA), y0 = py(OR, midA); 
-    var x1 = px(OR + 14, midA), y1 = py(OR + 14, midA); 
-    var x2 = x1 + (isRight ? 18 : -18), y2 = y1; 
+    var x1 = px(OR + 24, midA), y1 = py(OR + 24, midA); 
+    var x2 = x1 + (isRight ? 24 : -24), y2 = y1; 
 
     var textAnchor = isRight ? "start" : "end";
-    var textX = x2 + (isRight ? 4 : -4);
+    var textX = x2 + (isRight ? 6 : -6);
     var textColor = status === "gap" ? "#aaa" : "#555";
     var fw = status === "ok" ? "500" : "400";
     var prefix = status === "gap" ? "❌ " : status === "insufficient" ? "⚠️ " : "";
 
+    // SVG 圓環外圍文字標籤放大
     labels += `
-      <polyline points="${x0},${y0} ${x1},${y1} ${x2},${y2}" fill="none" stroke="${item.color}60" stroke-width="1.2"/>
-      <circle cx="${x0}" cy="${y0}" r="2" fill="${item.color}"/>
-      <text x="${textX}" y="${y2+4}" text-anchor="${textAnchor}" style="font-size:14px;fill:${textColor};font-weight:${fw};letter-spacing:0.03em">${prefix}${item.label}</text>
+      <polyline points="${x0},${y0} ${x1},${y1} ${x2},${y2}" fill="none" stroke="${item.color}60" stroke-width="2"/>
+      <circle cx="${x0}" cy="${y0}" r="3" fill="${item.color}"/>
+      <text x="${textX}" y="${y2+6}" text-anchor="${textAnchor}" style="font-size:22px;fill:${textColor};font-weight:${fw};letter-spacing:0.03em">${prefix}${item.label}</text>
     `;
   });
 
@@ -1338,34 +1342,24 @@ function buildDonutChartEx(active, coverage, targets, covOverrides) {
   var gapN = allItems.filter(item=>getItemStatusEx(item.key,active,coverage,targets,covOverrides).status==="gap").length;
   var insN = allItems.filter(item=>getItemStatusEx(item.key,active,coverage,targets,covOverrides).status==="insufficient").length;
 
-  return `<div style="display:flex;flex-direction:column;width:100%">
-    <div style="display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap;margin-bottom:24px;padding:0">
-      <svg viewBox="0 0 600 420" style="width:100%; max-width:660px; flex-shrink:0;">
-        ${paths}
-        ${labels}
-        <text x="${cx}" y="${cy-14}" text-anchor="middle" style="font-size:14px;fill:#888">✅ 達標</text>
-        <text x="${cx}" y="${cy+4}"  text-anchor="middle" style="font-size:19px;font-weight:bold;fill:#333">${okN}</text>
-        <text x="${cx}" y="${cy+20}" text-anchor="middle" style="font-size:14px;fill:#E74C3C">❌ 缺口 ${gapN}</text>
-        <text x="${cx}" y="${cy+34}" text-anchor="middle" style="font-size:14px;fill:#F5A623">⚠ 不足 ${insN}</text>
-      </svg>
-      <div style="min-width:180px;background:#fafbfc;padding:16px 18px;border-radius:16px;border:1px solid rgba(0,0,0,.04);box-shadow:0 3px 10px -4px rgba(0,0,0,.06)">
-        ${legendFamily}
-      </div>
-    </div>
-    
-    <div style="border-top:1px dashed #e8e8e8;padding-top:22px">
-      ${buildSvgArrows([
-        {label:GAP_GROUPS_EX[1].arrowLabel, color:"#4CAF86"},
-        {label:GAP_GROUPS_EX[2].arrowLabel, color:"#378ADD"},
-        {label:GAP_GROUPS_EX[3].arrowLabel, color:"#E87BAD"}
-      ])}
-      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));gap:14px;margin-top:14px">
-        <div style="background:#fafbfc;padding:14px 16px;border-radius:14px;border:1px solid rgba(0,0,0,.04)">${legendBefore}</div>
-        <div style="background:#fafbfc;padding:14px 16px;border-radius:14px;border:1px solid rgba(0,0,0,.04)">${legendDuring}</div>
-        <div style="background:#fafbfc;padding:14px 16px;border-radius:14px;border:1px solid rgba(0,0,0,.04)">${legendAfter}</div>
-      </div>
-    </div>
-  </div>`;
+  // 圓心文字放大
+  var svgHtml = `<svg viewBox="0 0 900 630" style="width:100%; height:auto;">
+    ${paths}
+    ${labels}
+    <text x="${cx}" y="${cy-25}" text-anchor="middle" style="font-size:22px;fill:#888">✅ 達標</text>
+    <text x="${cx}" y="${cy+15}"  text-anchor="middle" style="font-size:48px;font-weight:bold;fill:#333">${okN}</text>
+    <text x="${cx}" y="${cy+48}" text-anchor="middle" style="font-size:22px;fill:#E74C3C">❌ 缺口 ${gapN}</text>
+    <text x="${cx}" y="${cy+75}" text-anchor="middle" style="font-size:22px;fill:#F5A623">⚠ 不足 ${insN}</text>
+  </svg>`;
+
+  // 回傳包含所有元件的物件，以利排版
+  return {
+    svg: svgHtml,
+    legendFamily: legendFamily,
+    legendBefore: legendBefore,
+    legendDuring: legendDuring,
+    legendAfter: legendAfter
+  };
 }
 
 // ── 缺口／不足分析 ────────────────────────────────────────
@@ -1471,29 +1465,38 @@ function renderBlock(key){
         if(typeof e[1]==="number") cov[e[0]]=(cov[e[0]]||0)+e[1]; else cov[e[0]]=e[1];
       });
     });
-    var html='<div style="padding:0">';
 
-    // ── 保障覆蓋率環形圖（左：圓餅圖 / 右：家庭責任圖例，下：醫療前中後期）──
-    html+='<div style="padding:14px 12px">';
-    html+='<div style="font-size:15px;font-weight:800;color:#444;margin-bottom:8px">保障覆蓋率</div>';
-    html+='<div style="display:flex;gap:14px;font-size:13px;color:#888;margin-bottom:10px;flex-wrap:wrap;font-weight:600">'+
-      '<span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#27AE8F;margin-right:4px"></span>已規劃</span>'+
-      '<span style="color:#F5A623"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#F5A623;opacity:.5;margin-right:4px;border:1.5px dashed #F5A623"></span>不足</span>'+
-      '<span style="color:#bbb"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#e0e0e0;margin-right:4px"></span>缺口</span>'+
+    // 取得剛才拆解出來的圖表與卡片元件
+    var chartParts = buildDonutChartEx(active, cov, {}, {});
+
+    var html='<div style="padding:20px 16px">';
+
+    // ── 第一行：圓餅圖 (左) + 就醫狀況 (右) ──
+    html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-bottom:30px">';
+    
+    // 區塊 1-A：保障覆蓋率(圓餅圖)
+    html+='<div style="background:#fff;border-radius:24px;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);padding:24px;display:flex;flex-direction:column">';
+    html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">';
+    html+='<div style="font-size:38px;font-weight:800;color:#444;">保障覆蓋率</div>';
+    html+='<div style="display:flex;gap:20px;font-size:22px;color:#888;font-weight:600">'+
+      '<span><span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#27AE8F;margin-right:6px"></span>已規劃</span>'+
+      '<span style="color:#F5A623"><span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#F5A623;opacity:.5;margin-right:6px;border:2px dashed #F5A623"></span>不足</span>'+
+      '<span style="color:#bbb"><span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#e0e0e0;margin-right:6px"></span>缺口</span>'+
     '</div>';
-    html+='<div style="background:#fff;border-radius:20px;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);padding:20px;margin-bottom:14px">'+buildDonutChartEx(active,cov,{},{})+'</div>';
     html+='</div>';
+    html+='<div style="flex:1;display:flex;align-items:center;justify-content:center">'+chartParts.svg+'</div>';
+    html+='</div>'; 
 
-    // ── 就醫情況：改成三張並排 Stat 卡片，取代原本的表格 ──
-    html+='<div style="padding:14px 12px">';
-    html+='<div style="font-size:15px;font-weight:800;color:#444;margin-bottom:10px">就醫情況</div>';
+    // 區塊 1-B：就醫情況
+    html+='<div style="background:#fff;border-radius:24px;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);padding:24px;display:flex;flex-direction:column">';
+    html+='<div style="font-size:38px;font-weight:800;color:#444;margin-bottom:20px">就醫情況</div>';
     var baseHosp=sumCovEx(["hosp_room","hosp_ext_room","daily_room_1_30","hosp_ext_daily","daily_discharge"],policies,cov);
     var visitCats = [
       { label:"疾病", color:"#27AE8F", bg:"#EAF3DE" },
       { label:"意外", color:"#F5A623", bg:"#FAEEDA" },
       { label:"癌症", color:"#E74C3C", bg:"#FCEBEB" },
     ];
-    html+='<div style="background:#f7f8fa;border-radius:20px;padding:14px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:8px">';
+    html+='<div style="background:#f7f8fa;border-radius:24px;padding:20px;display:grid;grid-template-columns:repeat(3,1fr);gap:18px;flex:1">';
     visitCats.forEach(function(vc, ci){
       var ck = ["disease","accident","cancer"][ci];
       var opdVal="—", opdUnit="", opdIsInsurance=false;
@@ -1506,25 +1509,53 @@ function renderBlock(key){
       else if(ck==="accident") hospVal=(baseHosp+sumCovEx(["acc_hosp"],policies,cov))||"—";
       else hospVal=(baseHosp+sumCovEx(["can_hosp","can_discharge"],policies,cov))||"—";
 
-      html+='<div style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 3px 10px -3px rgba(0,0,0,.12)">'+
-        '<div style="padding:12px 14px;background:linear-gradient(135deg,'+vc.color+'26,'+vc.color+'0A);text-align:center">'+
-          '<span style="font-size:16px;font-weight:800;color:'+vc.color+'">'+vc.label+'</span>'+
-        '</div>'+
-        '<div style="padding:14px 16px;border-top:1px solid #f2f2f4;min-height:66px;display:flex;flex-direction:column;justify-content:center">'+
-          '<div style="font-size:12px;color:#6b7280;font-weight:700;margin-bottom:4px">門診</div>'+
+      html+='<div style="background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 3px 10px -3px rgba(0,0,0,.12);display:flex;flex-direction:column">';
+      html+='<div style="padding:16px;background:linear-gradient(135deg,'+vc.color+'26,'+vc.color+'0A);text-align:center">'+
+          '<span style="font-size:28px;font-weight:800;color:'+vc.color+'">'+vc.label+'</span>'+
+        '</div>';
+      html+='<div style="padding:20px;border-top:1px solid #f2f2f4;flex:1;display:flex;flex-direction:column;justify-content:center">'+
+          '<div style="font-size:22px;color:#6b7280;font-weight:700;margin-bottom:8px">門診</div>'+
           (opdIsInsurance
-            ? '<div style="display:inline-flex;padding:6px 14px;border-radius:9px;background:#EAF3DE"><span style="font-size:18px;font-weight:800;color:#27500A">健保</span></div>'
-            : '<div style="font-size:26px;font-weight:800;color:'+(opdVal!=="—"?"#1a1a1a":"#9ca3af")+';font-variant-numeric:tabular-nums">'+(typeof opdVal==="number"?opdVal.toLocaleString():opdVal)+(opdVal!=="—"?'<span style="font-size:13px;color:#6b7280;font-weight:700;margin-left:2px">'+opdUnit+'</span>':'')+'</div>')+
-        '</div>'+
-        '<div style="padding:14px 16px;border-top:1px solid #f2f2f4">'+
-          '<div style="font-size:12px;color:#6b7280;font-weight:700;margin-bottom:4px">住院</div>'+
-          '<div style="font-size:26px;font-weight:800;color:'+(hospVal!=="—"?"#1a1a1a":"#9ca3af")+';font-variant-numeric:tabular-nums">'+(typeof hospVal==="number"?hospVal.toLocaleString():hospVal)+(hospVal!=="—"?'<span style="font-size:13px;color:#6b7280;font-weight:700;margin-left:2px">'+hospUnit+'</span>':'')+'</div>'+
-          '</div>'+
-      '</div>';
+            ? '<div style="display:inline-flex;padding:8px 20px;border-radius:12px;background:#EAF3DE;margin:0 auto"><span style="font-size:28px;font-weight:800;color:#27500A">健保</span></div>'
+            : '<div style="font-size:40px;font-weight:800;color:'+(opdVal!=="—"?"#1a1a1a":"#9ca3af")+';font-variant-numeric:tabular-nums">'+(typeof opdVal==="number"?opdVal.toLocaleString():opdVal)+(opdVal!=="—"?'<span style="font-size:22px;color:#6b7280;font-weight:700;margin-left:4px">'+opdUnit+'</span>':'')+'</div>')+
+        '</div>';
+      html+='<div style="padding:20px;border-top:1px solid #f2f2f4;flex:1;display:flex;flex-direction:column;justify-content:center">'+
+          '<div style="font-size:22px;color:#6b7280;font-weight:700;margin-bottom:8px">住院</div>'+
+          '<div style="font-size:40px;font-weight:800;color:'+(hospVal!=="—"?"#1a1a1a":"#9ca3af")+';font-variant-numeric:tabular-nums">'+(typeof hospVal==="number"?hospVal.toLocaleString():hospVal)+(hospVal!=="—"?'<span style="font-size:22px;color:#6b7280;font-weight:700;margin-left:4px">'+hospUnit+'</span>':'')+'</div>'+
+          '</div>';
+      html+='</div>';
     });
     html+='</div>';
-    html+='<div style="font-size:12px;color:#b7bac2;padding:2px 4px">💡 疾病住院＝實支病房＋日額病房＋日額出院療養　　💡 意外住院＝疾病住院＋意外日額</div>';
+    html+='<div style="font-size:20px;color:#b7bac2;padding:16px 6px 0;text-align:center;font-weight:600">💡 疾病住院＝實支病房＋日額病房＋日額出院療養  💡 意外住院＝疾病住院＋意外日額</div>';
+    html+='</div>'; 
+    html+='</div>'; 
+
+    // ── 第二行：醫療前中後期 (左側 75%) + 家庭責任 (右側 25%) ──
+    html+='<div style="display:grid;grid-template-columns:3fr 1fr;gap:30px">';
+    
+    // 區塊 2-A：三個醫療階段（含上方箭頭圖形）
+    html+='<div style="background:#fff;border-radius:24px;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);padding:24px">';
+    html+= buildSvgArrows([
+      {label:GAP_GROUPS_EX[1].arrowLabel, color:"#4CAF86"},
+      {label:GAP_GROUPS_EX[2].arrowLabel, color:"#378ADD"},
+      {label:GAP_GROUPS_EX[3].arrowLabel, color:"#E87BAD"}
+    ]); 
+    html+='<div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:20px;margin-top:10px">';
+    html+='<div style="background:#fafbfc;padding:24px;border-radius:20px;border:1px solid rgba(0,0,0,.05)">'+chartParts.legendBefore+'</div>';
+    html+='<div style="background:#fafbfc;padding:24px;border-radius:20px;border:1px solid rgba(0,0,0,.05)">'+chartParts.legendDuring+'</div>';
+    html+='<div style="background:#fafbfc;padding:24px;border-radius:20px;border:1px solid rgba(0,0,0,.05)">'+chartParts.legendAfter+'</div>';
     html+='</div>';
+    html+='</div>'; 
+
+    // 區塊 2-B：家庭責任
+    html+='<div style="background:#fff;border-radius:24px;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);padding:24px">';
+    // 給家庭責任加上一個與箭頭高度相同的藍色標題條，維持視覺平衡
+    html+='<div style="height:60px;margin-bottom:16px;display:flex;align-items:center;justify-content:center;background:#1565C0;border-radius:8px;color:#fff;font-size:26px;font-weight:700">家庭與傳承</div>';
+    html+='<div style="background:#fafbfc;padding:24px;border-radius:20px;border:1px solid rgba(0,0,0,.05);height:calc(100% - 76px)">'+chartParts.legendFamily+'</div>';
+    html+='</div>'; 
+    
+    html+='</div>'; 
+    html+='</div>'; 
     return html;
   }
 
