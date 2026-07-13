@@ -1643,7 +1643,7 @@ function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
 
 async function doExportPNG(blks,div){
   var wm = ''; // 業務員資訊已移至上方，這裡留空
-  var disclaimer='<div style="padding:8px 14px;font-size:32px;color:#999;line-height:1.6;text-align:left">⚠️ 本報告彙總之資訊，旨在作為檢視與討論保障內容的參考藍圖；為守護您的權益，實際理賠給付項目與條件，仍須以各家保險公司之最新資料及正式保險契約條款為準。</div>';
+  var disclaimer='<div style="padding:8px 14px;font-size:32px;color:#999;line-height:1.6;text-align:left">⚠️ 本報告彙總之資訊為檢視與討論保障內容的參考藍圖；為守護您的權益，實際理賠給付項目與條件，仍以各家保險公司之最新資料及正式保險契約條款為準。</div>';
   if(fmt==="png_single"){
     div.style.width="2400px";
     div.innerHTML=blks.map(function(b){return'<div style="border-bottom:1px solid #f0f0f0">'+getBlockTitleHtml(b)+renderBlock(b.key)+'</div>';}).join("")+disclaimer+wm;
@@ -1684,7 +1684,7 @@ async function doExportPDF(blks,div){
   var pdf=new J({ orientation:"l", unit:"mm", format:[297,210] });  // 明確指定橫向寬高（297x210mm），避免文字參數解析問題
   var pageW=297, pageH=210, margin=10, usableW=pageW-margin*2, usableH=pageH-margin*2;
   var wm = ''; // 業務員資訊已移至上方，這裡留空
-  var disclaimer='<div style="padding:8px 14px;font-size:32px;color:#999;line-height:1.6;text-align:left">⚠️ 本報告彙總之資訊，旨在作為檢視與討論保障內容的參考藍圖；為守護您的權益，實際理賠給付項目與條件，仍須以各家保險公司之最新資料及正式保險契約條款為準。</div>';
+  var disclaimer='<div style="padding:8px 14px;font-size:32px;color:#999;line-height:1.6;text-align:left">⚠️ 本報告彙總之資訊為檢視與討論保障內容的參考藍圖；為守護您的權益，實際理賠給付項目與條件，仍以各家保險公司之最新資料及正式保險契約條款為準</div>';
   var pageCount=0;
 
   function addNewPage(){ if(pageCount>0) pdf.addPage([297,210],"l"); pageCount++; }
