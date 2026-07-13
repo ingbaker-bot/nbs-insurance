@@ -1597,7 +1597,7 @@ async function doExportPNG(blks,div){
   var wm='<div style="padding:8px;background:#f7f7f5;text-align:center;font-size:14px;color:#aaa">'+getWatermarkText()+'</div>';
   var disclaimer='<div style="padding:8px 14px;font-size:16px;color:#999;line-height:1.6;text-align:left">⚠️ 本報告彙總之資訊，旨在作為檢視與討論保障內容的參考藍圖；為守護您的權益，實際理賠給付項目與條件，仍須以各家保險公司之最新資料及正式保險契約條款為準。</div>';
   if(fmt==="png_single"){
-    div.style.width="2400px";
+    div.style.width="2100px";
     div.innerHTML=blks.map(function(b){return'<div style="border-bottom:1px solid #f0f0f0">'+getBlockTitleHtml(b)+renderBlock(b.key)+'</div>';}).join("")+disclaimer+wm;
     setP(30);await sleep(400);
     var singleW=Math.max(div.scrollWidth,div.offsetWidth,800);
@@ -1605,7 +1605,7 @@ async function doExportPNG(blks,div){
     await sleep(100);
     var c=await html2canvas(div,{scale:2,useCORS:true,backgroundColor:"#ffffff",
       width:singleW,windowWidth:singleW});
-    div.style.width="2400px";
+    div.style.width="2100px";
     setP(80);await sleep(100);
     var a=document.createElement("a");
     a.download=pName+"_保單體檢_"+pDate+".png";
@@ -1613,7 +1613,7 @@ async function doExportPNG(blks,div){
     setP(100);
   }else{
     for(var i=0;i<blks.length;i++){
-      div.style.width="2400px";
+      div.style.width="2100px";
       div.innerHTML=getBlockTitleHtml(blks[i])+renderBlock(blks[i].key)+disclaimer+wm;
       setP(Math.round(i/blks.length*90));await sleep(300);
       var actualW=Math.max(div.scrollWidth,div.offsetWidth,800);
@@ -1621,7 +1621,7 @@ async function doExportPNG(blks,div){
       await sleep(100);
       var c2=await html2canvas(div,{scale:2,useCORS:true,backgroundColor:"#ffffff",
         width:actualW,windowWidth:actualW});
-      div.style.width="2400px";
+      div.style.width="2100px";
       var a2=document.createElement("a");
       a2.download=pName+"_"+blks[i].label+"_"+pDate+".png";
       a2.href=c2.toDataURL("image/png");a2.click();
@@ -1642,14 +1642,14 @@ async function doExportPDF(blks,div){
   function addNewPage(){ if(pageCount>0) pdf.addPage([297,210],"l"); pageCount++; }
 
   async function captureHtml(html){
-    div.style.width="2400px";
+    div.style.width="2100px";
     div.innerHTML=html;
     await sleep(150);
     var aw=Math.max(div.scrollWidth,div.offsetWidth,800);
     div.style.width=aw+"px";
     await sleep(80);
     var c=await html2canvas(div,{scale:2,useCORS:true,backgroundColor:"#ffffff",width:aw,windowWidth:aw});
-    div.style.width="2400px";
+    div.style.width="2100px";
     return c;
   }
 
