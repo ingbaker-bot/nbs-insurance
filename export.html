@@ -1001,14 +1001,19 @@ function buildPremiumDetailParts() {
   var totalTWD_pd=active.reduce(function(s,p){return s+(p.premiumTWD||0);},0);
   var headerHtml='<div style="padding:14px 12px">';
 
-  headerHtml+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px">'+
-    '<div style="padding:16px 18px;border-radius:18px;background:linear-gradient(135deg,#E6F1FB,#F0F7FF);box-shadow:0 4px 14px -4px rgba(12,68,124,.12)"><div style="font-size:13px;font-weight:700;color:#5B8DBE;margin-bottom:4px">年繳總保費</div><div style="font-size:30px;font-weight:800;color:#0C447C;font-variant-numeric:tabular-nums">NT$ '+totalTWD_pd.toLocaleString()+'<span style="font-size:16px;font-weight:700;margin-left:2px">元</span></div></div>'+
-    '<div style="padding:16px 18px;border-radius:18px;background:linear-gradient(135deg,#EAF3DE,#F3F9EC);box-shadow:0 4px 14px -4px rgba(39,80,10,.12)"><div style="font-size:13px;font-weight:700;color:#6B9450;margin-bottom:4px">月均保費</div><div style="font-size:30px;font-weight:800;color:#27500A;font-variant-numeric:tabular-nums">NT$ '+Math.round(totalTWD_pd/12).toLocaleString()+'</div></div>'+
-  '</div>';
-
-  headerHtml+='<div style="font-size:15px;font-weight:800;color:#444;margin-bottom:10px">月繳費分配</div>';
+  headerHtml+='<div style="font-size:15px;font-weight:800;color:#444;margin-bottom:10px">年繳保費與月繳費分配</div>';
   var nowM=new Date().getMonth();
-  var cellsPD=Array.from({length:12},function(_,mi){
+  var statCells = [
+    '<div style="padding:10px 8px;border-radius:12px;background:linear-gradient(135deg,#E6F1FB,#F0F7FF);text-align:center;box-shadow:0 4px 10px -3px rgba(12,68,124,.18)">'+
+      '<div style="font-size:12px;font-weight:700;color:#5B8DBE">年繳總保費</div>'+
+      '<div style="font-size:15px;font-weight:800;margin-top:2px;color:#0C447C;font-variant-numeric:tabular-nums">'+totalTWD_pd.toLocaleString()+'<span style="font-size:11px;font-weight:700;margin-left:1px">元</span></div>'+
+    '</div>',
+    '<div style="padding:10px 8px;border-radius:12px;background:linear-gradient(135deg,#EAF3DE,#F3F9EC);text-align:center;box-shadow:0 4px 10px -3px rgba(39,80,10,.18)">'+
+      '<div style="font-size:12px;font-weight:700;color:#6B9450">月均保費</div>'+
+      '<div style="font-size:15px;font-weight:800;margin-top:2px;color:#27500A;font-variant-numeric:tabular-nums">'+Math.round(totalTWD_pd/12).toLocaleString()+'<span style="font-size:11px;font-weight:700;margin-left:1px">元</span></div>'+
+    '</div>',
+  ];
+  var monthCells=Array.from({length:12},function(_,mi){
     var t=0;
     active.forEach(function(p){
       var sm=new Date(p.startDate||"2020-01-01").getMonth(),pr=p.premiumTWD||0;
@@ -1019,11 +1024,12 @@ function buildPremiumDetailParts() {
     });
     var isNow = mi===nowM;
     return'<div style="padding:10px 6px;background:'+(isNow?"linear-gradient(135deg,#378ADD,#4F9AE8)":"#f7f8fa")+';border-radius:12px;text-align:center;'+(isNow?"box-shadow:0 4px 10px -3px rgba(55,138,221,.5)":"")+'">'+
-      '<div style="font-size:12px;font-weight:700;color:'+(isNow?"rgba(255,255,255,.85)":"#6b7280")+'">'+(mi+1)+'月</div>'+
-      '<div style="font-size:16px;font-weight:800;margin-top:2px;color:'+(isNow?"#fff":t>0?"#1a1a1a":"#9ca3af")+'">'+(t>0?(t>=10000?(t/10000).toFixed(1)+"萬":t.toLocaleString()):"—")+'</div>'+
+      '<div style="font-size:14px;font-weight:800;color:'+(isNow?"rgba(255,255,255,.9)":"#6b7280")+'">'+(mi+1)+'月</div>'+
+      '<div style="font-size:14px;font-weight:800;margin-top:2px;color:'+(isNow?"#fff":t>0?"#1a1a1a":"#9ca3af")+';font-variant-numeric:tabular-nums">'+(t>0?t.toLocaleString()+'<span style="font-size:10px;font-weight:700">元</span>':"—")+'</div>'+
     '</div>';
-  }).join("");
-  headerHtml+='<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:20px">'+cellsPD+'</div>';
+  });
+  var cellsPD = statCells.concat(monthCells).join("");
+  headerHtml+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:16px">'+cellsPD+'</div>';
   headerHtml+='<div style="font-size:15px;font-weight:800;color:#444;margin-bottom:10px">保單與受益人整合表</div>';
   headerHtml+='</div>';
 
@@ -1132,9 +1138,18 @@ function buildPremiumDetailParts() {
       var dColor = !dStr ? "#9ca3af" : "#374151";
       dStr = dStr || "—";
 
-      var dbAmt = p.deathBenefit || p.insuredAmount;
-      var dbUnit = p.deathBenefit ? (p.deathBenefitUnit||'萬元') : (p.insuredAmountUnit||'萬元');
-      var dbText = dbAmt ? (dbAmt+' '+dbUnit) : '—';
+      // 留愛金額只適用「留給受益人」性質的保障（壽險、意外、重大身故），
+      // 醫療/癌症/手術/日額型住院/失能長照這類理賠對象是被保險人自己
+      // （治療/生活costs)，不是留給受益人的錢，不該出現在這個欄位
+      var LEGACY_CATS_PD = ["壽險保障","意外險","重大疾病險","重大傷病險","特定傷病險"];
+      var dbText;
+      if (LEGACY_CATS_PD.indexOf(p.category) === -1) {
+        dbText = '—';
+      } else {
+        var dbAmt = p.deathBenefit || p.insuredAmount;
+        var dbUnit = p.deathBenefit ? (p.deathBenefitUnit||'萬元') : (p.insuredAmountUnit||'萬元');
+        dbText = dbAmt ? (dbAmt+' '+dbUnit) : '—';
+      }
       var expiryText = getPolicyExpiryDisplay(p);
 
       g += '<tr>'+
