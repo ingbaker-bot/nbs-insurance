@@ -828,8 +828,11 @@ function saveAgentInfo() {
 // ── 區塊標題（預覽 + 實際匯出都用這一份，確保匯出的圖片/PDF
 //    一定會包含標題，不會像之前只有預覽畫面看得到）──────────
 function getBlockTitleHtml(b) {
-  return '<div style="padding:14px 16px;background:#f7f7f5;border-bottom:2px solid #e6e6e6;font-size:44px;font-weight:700;color:#1a1a2e">'+
-    b.icon+' 【'+getDisplayName()+'】'+b.label+'</div>';
+  // 使用 Flex 排版，左邊放主標題，右邊放業務員資訊(28px, 黑色)
+  return '<div style="display:flex; justify-content:space-between; align-items:center; padding:14px 16px;background:#f7f7f5;border-bottom:2px solid #e6e6e6;">'+
+    '<div style="font-size:44px;font-weight:700;color:#1a1a2e">'+b.icon+' 【'+getDisplayName()+'】'+b.label+'</div>'+
+    '<div style="font-size:28px;font-weight:700;color:#000000;">'+getWatermarkText()+'</div>'+
+  '</div>';
 }
 
 // 判斷保單是「終身」還是「定期」：改讀 coverage.html 裡的
@@ -1059,7 +1062,8 @@ function buildPremiumDetailParts() {
   var tdStylePD = 'padding:10px;vertical-align:middle;font-size:26px;background:#fff;';
   // 10 欄固定寬度，header 跟每一列都用同一份，確保不管各自截圖幾張，
   // 欄位永遠對得整齊
-  var COLS_PD = '60px 110px minmax(220px,1fr) 160px 170px 100px 130px 150px 190px 190px';
+  // 限制商品名最大寬度為400px，並加寬狀態(130px)與受益人(240px)
+  var COLS_PD = '60px 110px minmax(200px,400px) 150px 170px 130px 130px 150px 240px 240px';
 
   var colHeaderRow =
     '<div style="display:grid;grid-template-columns:'+COLS_PD+';border-bottom:2px solid #eef0f3">'+
@@ -1594,8 +1598,8 @@ function setP(v){
 function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
 
 async function doExportPNG(blks,div){
-  var wm='<div style="padding:8px;background:#f7f7f5;text-align:center;font-size:14px;color:#aaa">'+getWatermarkText()+'</div>';
-  var disclaimer='<div style="padding:8px 14px;font-size:16px;color:#999;line-height:1.6;text-align:left">⚠️ 本報告彙總之資訊，旨在作為檢視與討論保障內容的參考藍圖；為守護您的權益，實際理賠給付項目與條件，仍須以各家保險公司之最新資料及正式保險契約條款為準。</div>';
+  var wm = ''; // 業務員資訊已移至上方，這裡留空
+  var disclaimer='<div style="padding:8px 14px;font-size:32px;color:#999;line-height:1.6;text-align:left">⚠️ 本報告彙總之資訊，旨在作為檢視與討論保障內容的參考藍圖；為守護您的權益，實際理賠給付項目與條件，仍須以各家保險公司之最新資料及正式保險契約條款為準。</div>';
   if(fmt==="png_single"){
     div.style.width="2100px";
     div.innerHTML=blks.map(function(b){return'<div style="border-bottom:1px solid #f0f0f0">'+getBlockTitleHtml(b)+renderBlock(b.key)+'</div>';}).join("")+disclaimer+wm;
@@ -1635,8 +1639,8 @@ async function doExportPDF(blks,div){
   var J=window.jspdf.jsPDF;
   var pdf=new J({ orientation:"l", unit:"mm", format:[297,210] });  // 明確指定橫向寬高（297x210mm），避免文字參數解析問題
   var pageW=297, pageH=210, margin=10, usableW=pageW-margin*2, usableH=pageH-margin*2;
-  var wm='<div style="padding:8px;background:#f7f7f5;text-align:center;font-size:14px;color:#aaa">'+getWatermarkText()+'</div>';
-  var disclaimer='<div style="padding:8px 14px;font-size:16px;color:#999;line-height:1.6;text-align:left">⚠️ 本報告彙總之資訊，旨在作為檢視與討論保障內容的參考藍圖；為守護您的權益，實際理賠給付項目與條件，仍須以各家保險公司之最新資料及正式保險契約條款為準。</div>';
+  var wm = ''; // 業務員資訊已移至上方，這裡留空
+  var disclaimer='<div style="padding:8px 14px;font-size:32px;color:#999;line-height:1.6;text-align:left">⚠️ 本報告彙總之資訊，旨在作為檢視與討論保障內容的參考藍圖；為守護您的權益，實際理賠給付項目與條件，仍須以各家保險公司之最新資料及正式保險契約條款為準。</div>';
   var pageCount=0;
 
   function addNewPage(){ if(pageCount>0) pdf.addPage([297,210],"l"); pageCount++; }
