@@ -683,7 +683,12 @@ function getItemCurrentEx(key, policies, coverage, covOverrides) {
          var pt = (p.coverage && p.coverage.protect_period_type) || "終身";
          var isPolTerm = (pt !== "終身");
          if (isPolTerm !== wantTerm) return;
-         var w = convertToWanEx(p.insuredAmount, p.insuredAmountUnit);
+         
+         // 優先使用「留愛金額 (deathBenefit)」，若無才預設抓取「保額 (insuredAmount)」
+         var baseAmt = (p.deathBenefit !== undefined && p.deathBenefit !== null && p.deathBenefit !== "") ? p.deathBenefit : p.insuredAmount;
+         var baseUnit = (p.deathBenefit !== undefined && p.deathBenefit !== null && p.deathBenefit !== "") ? (p.deathBenefitUnit || '萬元') : (p.insuredAmountUnit || '萬元');
+         
+         var w = convertToWanEx(baseAmt, baseUnit);
          if (w !== null) amt += w;
       });
       return amt;
@@ -847,7 +852,12 @@ function lifeAmountEx(pols, cats, isTerm) {
     var pt = (p.coverage && p.coverage.protect_period_type) || "終身";
     var isPolTerm = (pt !== "終身");
     if (isTerm !== isPolTerm) return;
-    var w = convertToWanEx(p.insuredAmount, p.insuredAmountUnit);
+    
+    // 優先使用「留愛金額 (deathBenefit)」，若無才預設抓取「保額 (insuredAmount)」
+    var baseAmt = (p.deathBenefit !== undefined && p.deathBenefit !== null && p.deathBenefit !== "") ? p.deathBenefit : p.insuredAmount;
+    var baseUnit = (p.deathBenefit !== undefined && p.deathBenefit !== null && p.deathBenefit !== "") ? (p.deathBenefitUnit || '萬元') : (p.insuredAmountUnit || '萬元');
+    
+    var w = convertToWanEx(baseAmt, baseUnit);
     if (w !== null) amt += w;
   });
   return amt;
@@ -1168,9 +1178,23 @@ function buildPremiumDetailParts() {
       if (LEGACY_CATS_PD.indexOf(p.category) === -1) {
         dbText = '—';
       } else {
-        var dbAmt = p.deathBenefit || p.insuredAmount;
-        var dbUnit = p.deathBenefit ? (p.deathBenefitUnit||'萬元') : (p.insuredAmountUnit||'萬元');
-        dbText = dbAmt ? (dbAmt+' '+dbUnit) : '—';
+        var dbAmt = 0;
+        var dbUnit = '萬元';
+        
+        // 1. 如果有明確輸入 deathBenefit (留愛金額)，就直接使用
+        if (p.deathBenefit !== undefined && p.deathBenefit !== null && p.deathBenefit !== "") {
+            dbAmt = p.deathBenefit;
+            dbUnit = p.deathBenefitUnit || '萬元';
+        } else {
+            // 2. 如果沒輸入：只有「壽險保障」，或者「其他允許類別的主約」才預設帶入保額。
+            // 避免把「意外醫療附約」或「重大疾病附約」的保額錯誤顯示成留愛金額。
+            if (p.category === "壽險保障" || p.isMain) {
+                dbAmt = p.insuredAmount;
+                dbUnit = p.insuredAmountUnit || '萬元';
+            }
+        }
+        
+        dbText = (dbAmt && dbAmt > 0) ? (dbAmt + ' ' + dbUnit) : '—';
       }
       var expiryText = getPolicyExpiryDisplay(p);
 
