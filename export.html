@@ -1227,10 +1227,11 @@ function switchPerson(pid) {
 
 // ── SVG 箭頭列（html2canvas 相容，不使用 clip-path+calc）────────────────
 function buildSvgArrows(phases) {
-  var W=900, H=60, tip=24; // 放大比例
+  var W=900, H=50, tip=20;
   var weights=[1,1.4,1], totalW=3.4;
   var widths=weights.map(function(w){return w/totalW*W;});
-  var svg='<svg xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 '+W+' '+H+'" style="display:block;margin-bottom:16px">';
+  // 加上 height="85px" 與 preserveAspectRatio="none"，強制鎖死高度以對齊右側
+  var svg='<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="85px" preserveAspectRatio="none" viewBox="0 0 '+W+' '+H+'" style="display:block;margin-bottom:20px">';
   var x=0;
   phases.forEach(function(ph,i){
     var w=widths[i], x0=x, x1=x+w, pts;
@@ -1243,8 +1244,8 @@ function buildSvgArrows(phases) {
     }
     svg+='<polygon points="'+pts+'" fill="'+ph.color+'"/>';
     var tx=i===0?x0+(w-tip)/2:i===2?x0+tip+(w-tip)/2:x0+tip+(w-tip*2)/2;
-    // 箭頭內文字放大
-    svg+='<text x="'+tx+'" y="'+(H/2+8)+'" text-anchor="middle" fill="#fff" font-size="26" font-weight="700" font-family="-apple-system,BlinkMacSystemFont,sans-serif">'+ph.label+'</text>';
+    // 箭頭內文字放大為 28px
+    svg+='<text x="'+tx+'" y="'+(H/2+8)+'" text-anchor="middle" fill="#fff" font-size="28" font-weight="700" font-family="-apple-system,BlinkMacSystemFont,sans-serif">'+ph.label+'</text>';
     x+=w;
   });
   svg+='</svg>';
@@ -1255,8 +1256,8 @@ function buildDonutChartEx(active, coverage, targets, covOverrides) {
   var allItems = GAP_GROUPS_EX.flatMap(g=>g.items);
   var n = allItems.length;
   
-  // 放大 SVG 畫布比例以容納更大字體
-  var cx=450, cy=315, OR=210, IR=115;
+  // 放大 SVG 畫布座標，容納超大字體
+  var cx=500, cy=350, OR=230, IR=125;
   var gapA=0.03, sliceA=(Math.PI*2-n*gapA)/n;
 
   var angle=-Math.PI/2;
@@ -1264,8 +1265,8 @@ function buildDonutChartEx(active, coverage, targets, covOverrides) {
   var labels=""; 
 
   function renderLegend(g) {
-    // 卡片標題放大
-    var legendHtml = `<div style="font-size:28px;font-weight:800;color:${g.color};margin-bottom:16px;border-bottom:3px solid ${g.color}30;padding-bottom:10px">${g.label}</div>`;
+    // 標題放大至 36px
+    var legendHtml = `<div style="font-size:36px;font-weight:800;color:${g.color};margin-bottom:20px;border-bottom:3px solid ${g.color}30;padding-bottom:12px">${g.label}</div>`;
     
     g.items.forEach(item => {
       var {status, pct, current, target} = getItemStatusEx(item.key, active, coverage, targets, covOverrides);
@@ -1274,23 +1275,24 @@ function buildDonutChartEx(active, coverage, targets, covOverrides) {
 
       var amtHtml = "";
       if (item.isBool) {
-        amtHtml = current > 0 ? `<span style="color:#555;font-size:24px;font-weight:700">有</span>` : `<span style="color:#bbb;font-size:24px;font-weight:700">無</span>`;
+        amtHtml = current > 0 ? `<span style="color:#555;font-size:32px;font-weight:700">有</span>` : `<span style="color:#bbb;font-size:32px;font-weight:700">無</span>`;
       } else {
         if (current > 0 || target > 0) {
           var displayVal = current > 0 ? current.toLocaleString() : "0";
           if (target > 0) displayVal += ` / ${target.toLocaleString()}`;
-          // 數字放大
-          amtHtml = `<span style="color:${current>0?'#0C447C':'#888'};font-weight:800;font-size:28px;font-variant-numeric:tabular-nums">${displayVal}<span style="font-size:18px;color:#888;margin-left:4px;font-weight:600">${item.unit}</span></span>`;
+          // 數字放大至 38px
+          amtHtml = `<span style="color:${current>0?'#0C447C':'#888'};font-weight:800;font-size:38px;font-variant-numeric:tabular-nums">${displayVal}<span style="font-size:24px;color:#888;margin-left:6px;font-weight:600">${item.unit}</span></span>`;
         } else {
-          amtHtml = `<span style="color:#bbb;font-size:24px;font-weight:700">0</span>`;
+          amtHtml = `<span style="color:#bbb;font-size:32px;font-weight:700">0</span>`;
         }
       }
 
-      legendHtml += `<div style="display:flex;align-items:center;gap:12px;font-size:22px;margin-bottom:12px">
-        <div style="width:16px;height:16px;border-radius:4px;background:${dotColor};flex-shrink:0"></div>
+      // 項目文字放大至 30px
+      legendHtml += `<div style="display:flex;align-items:center;gap:14px;font-size:30px;margin-bottom:16px">
+        <div style="width:20px;height:20px;border-radius:6px;background:${dotColor};flex-shrink:0"></div>
         <span style="color:${status==="gap"?"#bbb":"#444"};font-weight:700;flex:1;white-space:nowrap">${item.label}</span>
         ${amtHtml}
-        <span style="margin-left:6px;font-size:22px">${icon}</span>
+        <span style="margin-left:8px;font-size:28px">${icon}</span>
       </div>`;
     });
     return legendHtml;
@@ -1316,25 +1318,25 @@ function buildDonutChartEx(active, coverage, targets, covOverrides) {
     if(pct>0.01) paths += `<path d="${donut(start,filledEnd,sliceA*pct>Math.PI?1:0,OR,IR)}" fill="${item.color}"/>`;
     if(status==="insufficient" && pct<0.99) {
       var gapSize=sliceA*(1-pct);
-      paths += `<path d="${donut(filledEnd,end,gapSize>Math.PI?1:0,OR,IR)}" fill="none" stroke="${item.color}" stroke-width="3" stroke-dasharray="6 4" opacity="0.45"/>`;
+      paths += `<path d="${donut(filledEnd,end,gapSize>Math.PI?1:0,OR,IR)}" fill="none" stroke="${item.color}" stroke-width="4" stroke-dasharray="6 5" opacity="0.45"/>`;
     }
 
     var isRight = Math.cos(midA) >= 0; 
     var x0 = px(OR, midA), y0 = py(OR, midA); 
-    var x1 = px(OR + 24, midA), y1 = py(OR + 24, midA); 
-    var x2 = x1 + (isRight ? 24 : -24), y2 = y1; 
+    var x1 = px(OR + 26, midA), y1 = py(OR + 26, midA); 
+    var x2 = x1 + (isRight ? 32 : -32), y2 = y1; 
 
     var textAnchor = isRight ? "start" : "end";
-    var textX = x2 + (isRight ? 6 : -6);
+    var textX = x2 + (isRight ? 8 : -8);
     var textColor = status === "gap" ? "#aaa" : "#555";
-    var fw = status === "ok" ? "500" : "400";
+    var fw = status === "ok" ? "600" : "500";
     var prefix = status === "gap" ? "❌ " : status === "insufficient" ? "⚠️ " : "";
 
-    // SVG 圓環外圍文字標籤放大
+    // 圓餅圖外圍文字放大至 26px
     labels += `
       <polyline points="${x0},${y0} ${x1},${y1} ${x2},${y2}" fill="none" stroke="${item.color}60" stroke-width="2"/>
-      <circle cx="${x0}" cy="${y0}" r="3" fill="${item.color}"/>
-      <text x="${textX}" y="${y2+6}" text-anchor="${textAnchor}" style="font-size:22px;fill:${textColor};font-weight:${fw};letter-spacing:0.03em">${prefix}${item.label}</text>
+      <circle cx="${x0}" cy="${y0}" r="4" fill="${item.color}"/>
+      <text x="${textX}" y="${y2+8}" text-anchor="${textAnchor}" style="font-size:26px;fill:${textColor};font-weight:${fw};letter-spacing:0.03em">${prefix}${item.label}</text>
     `;
   });
 
@@ -1342,20 +1344,16 @@ function buildDonutChartEx(active, coverage, targets, covOverrides) {
   var gapN = allItems.filter(item=>getItemStatusEx(item.key,active,coverage,targets,covOverrides).status==="gap").length;
   var insN = allItems.filter(item=>getItemStatusEx(item.key,active,coverage,targets,covOverrides).status==="insufficient").length;
 
-  // 圓心文字放大
-  // 加入 max-height: 380px 限制最大高度，迫使第一行縮小，讓出 3/5 的空間給下方
-  var svgHtml = `<svg viewBox="0 0 900 630" style="width:100%; max-height:380px; height:auto; margin:0 auto; display:block;">
-    ${paths}
-    ${labels}
-    <text x="${cx}" y="${cy-25}" text-anchor="middle" style="font-size:22px;fill:#888">✅ 達標</text>
-    <text x="${cx}" y="${cy+15}"  text-anchor="middle" style="font-size:48px;font-weight:bold;fill:#333">${okN}</text>
-    <text x="${cx}" y="${cy+48}" text-anchor="middle" style="font-size:22px;fill:#E74C3C">❌ 缺口 ${gapN}</text>
-    <text x="${cx}" y="${cy+75}" text-anchor="middle" style="font-size:22px;fill:#F5A623">⚠ 不足 ${insN}</text>
-  </svg>`;
-
-  // 回傳包含所有元件的物件，以利排版
+  // 圓心文字放大，並改為回傳物件格式以供後續精準排版
   return {
-    svg: svgHtml,
+    svg: `<svg viewBox="0 0 1000 700" style="width:100%; max-height:450px; height:auto; display:block; margin:0 auto;">
+        ${paths}
+        ${labels}
+        <text x="${cx}" y="${cy-24}" text-anchor="middle" style="font-size:26px;fill:#888">✅ 達標</text>
+        <text x="${cx}" y="${cy+18}"  text-anchor="middle" style="font-size:64px;font-weight:bold;fill:#333">${okN}</text>
+        <text x="${cx}" y="${cy+56}" text-anchor="middle" style="font-size:24px;fill:#E74C3C">❌ 缺口 ${gapN}</text>
+        <text x="${cx}" y="${cy+88}" text-anchor="middle" style="font-size:24px;fill:#F5A623">⚠ 不足 ${insN}</text>
+      </svg>`,
     legendFamily: legendFamily,
     legendBefore: legendBefore,
     legendDuring: legendDuring,
@@ -1467,13 +1465,12 @@ function renderBlock(key){
       });
     });
 
-    // 取得拆解出來的圖表與卡片元件
     var chartParts = buildDonutChartEx(active, cov, {}, {});
 
     var html='<div style="padding:16px">';
 
-    // ── 第一行：圓餅圖 (左) + 就醫狀況 (右) ──
-    html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-bottom:30px">';
+    // ── 第一行：圓餅圖 (左側佔 2 份) + 就醫狀況 (右側佔 3 份) ──
+    html+='<div style="display:grid;grid-template-columns:2fr 3fr;gap:30px;margin-bottom:30px">';
     
     // 區塊 1-A：保障覆蓋率(圓餅圖)
     html+='<div style="background:#fff;border-radius:24px;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);padding:24px;display:flex;flex-direction:column">';
@@ -1488,7 +1485,7 @@ function renderBlock(key){
     html+='<div style="flex:1;display:flex;align-items:center;justify-content:center">'+chartParts.svg+'</div>';
     html+='</div>'; 
 
-    // 區塊 1-B：就醫情況 (重新排版)
+    // 區塊 1-B：就醫情況
     html+='<div style="background:#fff;border-radius:24px;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);padding:24px;display:flex;flex-direction:column">';
     html+='<div style="font-size:36px;font-weight:800;color:#444;margin-bottom:16px">就醫情況</div>';
     var baseHosp=sumCovEx(["hosp_room","hosp_ext_room","daily_room_1_30","hosp_ext_daily","daily_discharge"],policies,cov);
@@ -1510,26 +1507,23 @@ function renderBlock(key){
       else if(ck==="accident") hospVal=(baseHosp+sumCovEx(["acc_hosp"],policies,cov))||"—";
       else hospVal=(baseHosp+sumCovEx(["can_hosp","can_discharge"],policies,cov))||"—";
 
-      // 單一卡片改為水平清單排列 (左右對齊)
       html+='<div style="background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 3px 10px -3px rgba(0,0,0,.12);display:flex;flex-direction:column">';
       html+='<div style="padding:14px;background:linear-gradient(135deg,'+vc.color+'26,'+vc.color+'0A);text-align:center">'+
-          '<span style="font-size:26px;font-weight:800;color:'+vc.color+'">'+vc.label+'</span>'+
+          '<span style="font-size:30px;font-weight:800;color:'+vc.color+'">'+vc.label+'</span>'+
         '</div>';
       
-      // 門診列
       html+='<div style="padding:16px 24px;display:flex;justify-content:space-between;align-items:center;border-bottom:2px dashed #f2f2f4;flex:1">';
-      html+='<div style="font-size:24px;color:#6b7280;font-weight:700">門診</div>';
+      html+='<div style="font-size:26px;color:#6b7280;font-weight:700">門診</div>';
       if(opdIsInsurance) {
-        html+='<div style="padding:6px 20px;border-radius:12px;background:#EAF3DE"><span style="font-size:26px;font-weight:800;color:#27500A">健保</span></div>';
+        html+='<div style="padding:6px 20px;border-radius:12px;background:#EAF3DE"><span style="font-size:28px;font-weight:800;color:#27500A">健保</span></div>';
       } else {
-        html+='<div style="font-size:34px;font-weight:800;color:'+(opdVal!=="—"?"#1a1a1a":"#9ca3af")+';font-variant-numeric:tabular-nums">'+(typeof opdVal==="number"?opdVal.toLocaleString():opdVal)+(opdVal!=="—"?'<span style="font-size:18px;color:#6b7280;font-weight:700;margin-left:6px">'+opdUnit+'</span>':'')+'</div>';
+        html+='<div style="font-size:36px;font-weight:800;color:'+(opdVal!=="—"?"#1a1a1a":"#9ca3af")+';font-variant-numeric:tabular-nums">'+(typeof opdVal==="number"?opdVal.toLocaleString():opdVal)+(opdVal!=="—"?'<span style="font-size:20px;color:#6b7280;font-weight:700;margin-left:6px">'+opdUnit+'</span>':'')+'</div>';
       }
       html+='</div>';
 
-      // 住院列
       html+='<div style="padding:16px 24px;display:flex;justify-content:space-between;align-items:center;flex:1">';
-      html+='<div style="font-size:24px;color:#6b7280;font-weight:700">住院</div>';
-      html+='<div style="font-size:34px;font-weight:800;color:'+(hospVal!=="—"?"#1a1a1a":"#9ca3af")+';font-variant-numeric:tabular-nums">'+(typeof hospVal==="number"?hospVal.toLocaleString():hospVal)+(hospVal!=="—"?'<span style="font-size:18px;color:#6b7280;font-weight:700;margin-left:6px">'+hospUnit+'</span>':'')+'</div>';
+      html+='<div style="font-size:26px;color:#6b7280;font-weight:700">住院</div>';
+      html+='<div style="font-size:36px;font-weight:800;color:'+(hospVal!=="—"?"#1a1a1a":"#9ca3af")+';font-variant-numeric:tabular-nums">'+(typeof hospVal==="number"?hospVal.toLocaleString():hospVal)+(hospVal!=="—"?'<span style="font-size:20px;color:#6b7280;font-weight:700;margin-left:6px">'+hospUnit+'</span>':'')+'</div>';
       html+='</div>';
       html+='</div>';
     });
@@ -1538,18 +1532,16 @@ function renderBlock(key){
     html+='</div>'; 
     html+='</div>'; 
 
-    // ── 第二行：醫療前中後期 (左側 75%) + 家庭責任 (右側 25%) ──
+    // ── 第二行：醫療前中後期 (左側 3fr) + 家庭責任 (右側 1fr) ──
     html+='<div style="display:grid;grid-template-columns:3fr 1fr;gap:30px">';
     
     // 區塊 2-A：三個醫療階段
-    // 加入 display:flex; flex-direction:column; 讓內部元素可以自動撐滿高度
     html+='<div style="background:#fff;border-radius:24px;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);padding:24px;display:flex;flex-direction:column">';
     html+= buildSvgArrows([
       {label:GAP_GROUPS_EX[1].arrowLabel, color:"#4CAF86"},
       {label:GAP_GROUPS_EX[2].arrowLabel, color:"#378ADD"},
       {label:GAP_GROUPS_EX[3].arrowLabel, color:"#E87BAD"}
     ]); 
-    // flex:1 讓下方三欄區塊自動往下延伸填滿空間
     html+='<div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:20px;flex:1">';
     html+='<div style="background:#fafbfc;padding:24px;border-radius:20px;border:1px solid rgba(0,0,0,.05);display:flex;flex-direction:column">'+chartParts.legendBefore+'</div>';
     html+='<div style="background:#fafbfc;padding:24px;border-radius:20px;border:1px solid rgba(0,0,0,.05);display:flex;flex-direction:column">'+chartParts.legendDuring+'</div>';
@@ -1558,10 +1550,9 @@ function renderBlock(key){
     html+='</div>'; 
 
     // 區塊 2-B：家庭責任
-    // 同樣加入 display:flex; flex-direction:column; 讓這張卡片強制與左側同高
     html+='<div style="background:#fff;border-radius:24px;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);padding:24px;display:flex;flex-direction:column">';
-    html+='<div style="height:60px;margin-bottom:16px;display:flex;align-items:center;justify-content:center;background:#1565C0;border-radius:8px;color:#fff;font-size:26px;font-weight:700;flex-shrink:0">家庭與傳承</div>';
-    // 加入 flex:1 讓家庭與傳承的灰底框與左邊的三個灰底框對齊底部
+    // 高度強制鎖死為 85px，與左側 SVG 完全對齊
+    html+='<div style="height:85px;margin-bottom:20px;display:flex;align-items:center;justify-content:center;background:#1565C0;border-radius:8px;color:#fff;font-size:36px;font-weight:700;flex-shrink:0">家庭與傳承</div>';
     html+='<div style="background:#fafbfc;padding:24px;border-radius:20px;border:1px solid rgba(0,0,0,.05);flex:1">'+chartParts.legendFamily+'</div>';
     html+='</div>'; 
     
