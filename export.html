@@ -1817,9 +1817,9 @@ async function doExportPDF(blks,div){
       async function startNewPagePD(){
         addNewPage();
         // 1. 印上最上方主標題 (【XXX】保單繳費明細一覽表)
-        pdf.addImage(titleC.toDataURL("image/png"),"PNG",margin,margin,usableW,titleH);
+        pdf.addImage(titleC.toDataURL("image/jpeg",0.88),"JPEG",margin,margin,usableW,titleH);
         // 2. 緊接著印上列印標題 (年繳保費、月繳保費分配、欄位名稱)
-        pdf.addImage(headerC.toDataURL("image/png"),"PNG",margin,margin+titleH,hd.iw,hd.ih);
+        pdf.addImage(headerC.toDataURL("image/jpeg",0.88),"JPEG",margin,margin+titleH,hd.iw,hd.ih);
         
         // 回傳加上列印標題後的新 Y 座標，讓接下來的保單明細從這裡開始往下排
         return margin+titleH+hd.ih+4; 
@@ -1839,7 +1839,7 @@ async function doExportPDF(blks,div){
           // 整組放得下：維持原本「一組一張圖」的做法，看目前頁面剩餘
           // 空間夠不夠，不夠就直接換頁，圖片本身完全不縮小
           if (y + naturalH > margin+usableH && y > margin+1) { y = await startNewPagePD(); }
-          pdf.addImage(wholeC.toDataURL("image/png"),"PNG",margin,y,usableW,naturalH);
+          pdf.addImage(wholeC.toDataURL("image/jpeg",0.88),"JPEG",margin,y,usableW,naturalH);
           y += naturalH + 3;
         } else {
           // 整組太高，連自己獨佔一頁都放不下 → 拆成「組頭+欄位標題」
@@ -1847,7 +1847,7 @@ async function doExportPDF(blks,div){
           var chC = await captureHtml(gp.cardHeaderHtml);
           var chH = (chC.height/chC.width)*usableW;
           if (y + chH > margin+usableH && y > margin+1) { y = await startNewPagePD(); }
-          pdf.addImage(chC.toDataURL("image/png"),"PNG",margin,y,usableW,chH);
+          pdf.addImage(chC.toDataURL("image/jpeg",0.88),"JPEG",margin,y,usableW,chH);
           y += chH;
 
           for (var r=0; r<gp.rowsHtml.length; r++){
@@ -1858,10 +1858,10 @@ async function doExportPDF(blks,div){
               // 換頁後補印一次「組頭+欄位標題」，方便閱讀接續內容是哪一組保單
               var chC2 = await captureHtml(gp.cardHeaderHtml);
               var chH2 = (chC2.height/chC2.width)*usableW;
-              pdf.addImage(chC2.toDataURL("image/png"),"PNG",margin,y,usableW,chH2);
+              pdf.addImage(chC2.toDataURL("image/jpeg",0.88),"JPEG",margin,y,usableW,chH2);
               y += chH2;
             }
-            pdf.addImage(rowC.toDataURL("image/png"),"PNG",margin,y,usableW,rowH);
+            pdf.addImage(rowC.toDataURL("image/jpeg",0.88),"JPEG",margin,y,usableW,rowH);
             y += rowH;
           }
           y += 3;
@@ -1872,7 +1872,7 @@ async function doExportPDF(blks,div){
         var footerC = await captureHtml(disclaimer+wm);
         var fd = canvasToMM(footerC, usableW, 40);
         if(y + fd.ih > margin+usableH){ y = await startNewPagePD(); }
-        pdf.addImage(footerC.toDataURL("image/png"),"PNG",margin,y,fd.iw,fd.ih);
+        pdf.addImage(footerC.toDataURL("image/jpeg",0.88),"JPEG",margin,y,fd.iw,fd.ih);
       }
     } else {
       // ── 其餘區塊：維持單頁等比例縮放 ──────────────────
@@ -1880,7 +1880,7 @@ async function doExportPDF(blks,div){
       var c = await captureHtml(getBlockTitleHtml(blks[i])+renderBlock(blks[i].key)+(showDisclaimer?disclaimer:"")+wm);
       addNewPage();
       var d = canvasToMM(c, usableW, usableH);
-      pdf.addImage(c.toDataURL("image/png"),"PNG",margin,margin,d.iw,d.ih);
+      pdf.addImage(c.toDataURL("image/jpeg",0.88),"JPEG",margin,margin,d.iw,d.ih);
     }
   }
   setP(95);
