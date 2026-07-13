@@ -162,8 +162,8 @@ function lifeAmount(pols, cats, isTerm) {
     var pt = (p.coverage && p.coverage.protect_period_type) || "終身";
     var isPolTerm = (pt !== "終身");
     if (isTerm !== isPolTerm) return;
-    var w = convertToWan(p.insuredAmount, p.insuredAmountUnit);
-    if (w !== null) amt += w;
+    // 只加總使用者實際填寫的留愛金額(deathBenefit)，不再用保額(insuredAmount)頂替
+    amt += getDeathBenefitAmt(p);
   });
   return amt;
 }
@@ -280,6 +280,19 @@ function convertToWan(amount, unit) {
   return null; // 計劃/型/份/自訂等非金額單位，無法換算
 }
 
+// 留愛金額：只採用使用者實際輸入的 deathBenefit（單位換算成萬元），
+// 不再用保額(insuredAmount)自動頂替，避免把重疾/意外/醫療等「理賠給
+// 被保險人本人」性質的保額誤顯示成「留給受益人」的留愛金額。
+// 跟 export.html 的 getDeathBenefitAmt 邏輯完全一致，確保平時在
+// summary 檢視的數字，跟最後 export 匯出的報告數字一致。
+function getDeathBenefitAmt(p) {
+  if (p.deathBenefit !== undefined && p.deathBenefit !== null && p.deathBenefit !== "") {
+    const w = convertToWan(p.deathBenefit, p.deathBenefitUnit || '萬元');
+    return w !== null ? w : 0;
+  }
+  return 0;
+}
+
 function sumCov(keys, policies, coverage) {
   let total = 0;
   policies.forEach(p => {
@@ -307,8 +320,10 @@ var GAP_GROUPS = [
   { key:"family", label:"家庭責任", color:"#1565C0", items:[
     { key:"life_permanent", label:"終身壽險",    unit:"萬元",   color:"#1565C0" },
     { key:"life_term",      label:"定期壽險",    unit:"萬元",   color:"#1E88E5" },
-    { key:"investment",     label:"投資型保險",  unit:"",       color:"#7B1FA2", isBool:true },
-    { key:"savings",        label:"儲蓄險",      unit:"",       color:"#E91E8C", isBool:true },
+    { key:"investment",     label:"投資型保險",  unit:"萬元",   color:"#7B1FA2" },
+    { key:"savings",        label:"儲蓄險",      unit:"萬元",   color:"#E91E8C" },
+    { key:"ci_death",       label:"重大/特傷/重疾", unit:"萬元", color:"#C0392B" },
+    { key:"acc_death_amt",  label:"意外身故",     unit:"萬元",   color:"#F5A623" },
   ]},
   { key:"before", label:"評估確診", color:"#E53935", items:[
     { key:"ci_special",         label:"重大/特傷/重疾", unit:"萬元",   color:"#E53935" },
@@ -339,6 +354,8 @@ var GAP_KEY_MAP = {
   investment:      { cats:["投資型保險"],        keys:[] },
   savings:         { cats:["儲蓄險","年金險"],   keys:[] },
   ci_special:      { cats:["重大疾病險","重大傷病險","特定傷病險"], keys:["can_first"] },
+  ci_death:        { cats:["重大疾病險","重大傷病險","特定傷病險"], keys:[] },
+  acc_death_amt:   { cats:["意外險"],            keys:[] },
   cancer:          { cats:["癌症醫療"],          keys:["can_first"] },
   hosp_real_room:  { cats:["醫療保障"],          keys:["hosp_room", "hosp_ext_room"] },
   hosp_daily:      { cats:["醫療保障"],          keys:["daily_room_1_30", "hosp_ext_daily", "daily_discharge"] },
@@ -483,23 +500,35 @@ function getItemCurrent(key, policies, coverage, covOverrides) {
     return covOverrides[manualKey] ? 1 : 0;
   }
 
-  if(["investment","savings","waiver"].includes(key)) {
-    if(key==="investment") return policies.some(p=>p.category==="投資型保險")?1:0;
-    if(key==="savings")    return policies.some(p=>["儲蓄險","年金險"].includes(p.category))?1:0;
+  if(["waiver"].includes(key)) {
     if(key==="waiver")     return sumCov(["ltc_waiver"], policies, coverage) > 0 ? 1 : 0;
     return 0;
   }
 
-  if (["life_permanent", "life_term"].includes(key)) {
+  // 家庭責任區塊：終身壽險/定期壽險/投資型保險/儲蓄險/重大類/意外險，
+  // 這些保單通常都附帶身故(留愛)給付，只加總使用者實際填寫的
+  // 留愛金額(deathBenefit)，不再用保額(insuredAmount)頂替，也不再
+  // 用「有/無」布林值顯示投資型與儲蓄險，改成跟其他項目一致的實際金額。
+  if (["life_permanent", "life_term", "investment", "savings", "ci_death", "acc_death_amt"].includes(key)) {
       let amt = 0;
-      const matchedPolicies = policies.filter(p => map.cats.includes(p.category));
       const wantTerm = (key === "life_term");
+      const catMap = {
+          "life_permanent": ["壽險保障"],
+          "life_term": ["壽險保障"],
+          "investment": ["投資型保險"],
+          "savings": ["儲蓄險","年金險"],
+          "ci_death": ["重大疾病險","重大傷病險","特定傷病險"],
+          "acc_death_amt": ["意外險"]
+      };
+      const matchedPolicies = policies.filter(p => catMap[key].includes(p.category));
       matchedPolicies.forEach(p => {
-         const pt = (p.coverage && p.coverage.protect_period_type) || "終身";
-         const isPolTerm = (pt !== "終身");
-         if (isPolTerm !== wantTerm) return;
-         const w = convertToWan(p.insuredAmount, p.insuredAmountUnit);
-         if (w !== null) amt += w;
+         // 只有壽險需要區分定期或終身，其餘直接全額加總
+         if (key === "life_permanent" || key === "life_term") {
+             const pt = (p.coverage && p.coverage.protect_period_type) || "終身";
+             const isPolTerm = (pt !== "終身");
+             if (isPolTerm !== wantTerm) return;
+         }
+         amt += getDeathBenefitAmt(p);
       });
       return amt;
   }
