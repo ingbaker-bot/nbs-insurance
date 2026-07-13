@@ -1004,13 +1004,13 @@ function buildPremiumDetailParts() {
   headerHtml+='<div style="font-size:15px;font-weight:800;color:#444;margin-bottom:10px">年繳保費與月繳費分配</div>';
   var nowM=new Date().getMonth();
   var statCells = [
-    '<div style="padding:10px 8px;border-radius:12px;background:linear-gradient(135deg,#E6F1FB,#F0F7FF);text-align:center;box-shadow:0 4px 10px -3px rgba(12,68,124,.18)">'+
-      '<div style="font-size:12px;font-weight:700;color:#5B8DBE">年繳總保費</div>'+
-      '<div style="font-size:15px;font-weight:800;margin-top:2px;color:#0C447C;font-variant-numeric:tabular-nums">'+totalTWD_pd.toLocaleString()+'<span style="font-size:11px;font-weight:700;margin-left:1px">元</span></div>'+
+    '<div style="padding:12px 8px;border-radius:12px;background:linear-gradient(135deg,#E6F1FB,#F0F7FF);text-align:center;box-shadow:0 4px 10px -3px rgba(12,68,124,.18)">'+
+      '<div style="font-size:14px;font-weight:700;color:#5B8DBE">年繳總保費</div>'+
+      '<div style="font-size:19px;font-weight:800;margin-top:3px;color:#0C447C;font-variant-numeric:tabular-nums">'+totalTWD_pd.toLocaleString()+'<span style="font-size:12px;font-weight:700;margin-left:1px">元</span></div>'+
     '</div>',
-    '<div style="padding:10px 8px;border-radius:12px;background:linear-gradient(135deg,#EAF3DE,#F3F9EC);text-align:center;box-shadow:0 4px 10px -3px rgba(39,80,10,.18)">'+
-      '<div style="font-size:12px;font-weight:700;color:#6B9450">月均保費</div>'+
-      '<div style="font-size:15px;font-weight:800;margin-top:2px;color:#27500A;font-variant-numeric:tabular-nums">'+Math.round(totalTWD_pd/12).toLocaleString()+'<span style="font-size:11px;font-weight:700;margin-left:1px">元</span></div>'+
+    '<div style="padding:12px 8px;border-radius:12px;background:linear-gradient(135deg,#EAF3DE,#F3F9EC);text-align:center;box-shadow:0 4px 10px -3px rgba(39,80,10,.18)">'+
+      '<div style="font-size:14px;font-weight:700;color:#6B9450">月均保費</div>'+
+      '<div style="font-size:19px;font-weight:800;margin-top:3px;color:#27500A;font-variant-numeric:tabular-nums">'+Math.round(totalTWD_pd/12).toLocaleString()+'<span style="font-size:12px;font-weight:700;margin-left:1px">元</span></div>'+
     '</div>',
   ];
   var monthCells=Array.from({length:12},function(_,mi){
@@ -1023,12 +1023,13 @@ function buildPremiumDetailParts() {
       else if(p.payMode==="年繳"&&mi===sm%12)t+=pr;
     });
     var isNow = mi===nowM;
-    return'<div style="padding:10px 6px;background:'+(isNow?"linear-gradient(135deg,#378ADD,#4F9AE8)":"#f7f8fa")+';border-radius:12px;text-align:center;'+(isNow?"box-shadow:0 4px 10px -3px rgba(55,138,221,.5)":"")+'">'+
-      '<div style="font-size:14px;font-weight:800;color:'+(isNow?"rgba(255,255,255,.9)":"#6b7280")+'">'+(mi+1)+'月</div>'+
-      '<div style="font-size:14px;font-weight:800;margin-top:2px;color:'+(isNow?"#fff":t>0?"#1a1a1a":"#9ca3af")+';font-variant-numeric:tabular-nums">'+(t>0?t.toLocaleString()+'<span style="font-size:10px;font-weight:700">元</span>':"—")+'</div>'+
+    return'<div style="padding:12px 6px;background:'+(isNow?"linear-gradient(135deg,#378ADD,#4F9AE8)":"#f7f8fa")+';border-radius:12px;text-align:center;'+(isNow?"box-shadow:0 4px 10px -3px rgba(55,138,221,.5)":"")+'">'+
+      '<div style="font-size:16px;font-weight:800;color:'+(isNow?"rgba(255,255,255,.9)":"#6b7280")+'">'+(mi+1)+'月</div>'+
+      '<div style="font-size:17px;font-weight:800;margin-top:3px;color:'+(isNow?"#fff":t>0?"#1a1a1a":"#9ca3af")+';font-variant-numeric:tabular-nums">'+(t>0?t.toLocaleString()+'<span style="font-size:11px;font-weight:700">元</span>':"—")+'</div>'+
     '</div>';
   });
-  var cellsPD = statCells.concat(monthCells).join("");
+  var cellsPD = [statCells[0]].concat(monthCells.slice(0,6))
+    .concat([statCells[1]]).concat(monthCells.slice(6,12)).join("");
   headerHtml+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:16px">'+cellsPD+'</div>';
   headerHtml+='<div style="font-size:15px;font-weight:800;color:#444;margin-bottom:10px">保單與受益人整合表</div>';
   headerHtml+='</div>';
