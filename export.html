@@ -828,7 +828,7 @@ function saveAgentInfo() {
 // ── 區塊標題（預覽 + 實際匯出都用這一份，確保匯出的圖片/PDF
 //    一定會包含標題，不會像之前只有預覽畫面看得到）──────────
 function getBlockTitleHtml(b) {
-  return '<div style="padding:14px 16px;background:#f7f7f5;border-bottom:2px solid #e6e6e6;font-size:22px;font-weight:700;color:#1a1a2e">'+
+  return '<div style="padding:14px 16px;background:#f7f7f5;border-bottom:2px solid #e6e6e6;font-size:44px;font-weight:700;color:#1a1a2e">'+
     b.icon+' 【'+getDisplayName()+'】'+b.label+'</div>';
 }
 
@@ -1669,13 +1669,22 @@ async function doExportPDF(blks,div){
       // 頭部（統計+月曆）先自成一頁最上方；接著逐組保單依序往下疊，
       // 每加一組前先估算「現在這頁還放不放得下」，放不下才換頁，
       // 絕對不會把同一組保單（主約+附約）從中間切成兩半分散兩頁，
-      // 也不會為了硬塞進一頁而把整張圖縮到看不清楚
+      // 也不會為了硬塞進一頁而把整張圖縮到看不清楚。
+      // 每次換頁，標題都會在新的一頁重新印一次，不會只有第一頁有標題。
       var parts = buildPremiumDetailParts();
-      addNewPage();
-      var y = margin;
+      var titleC = await captureHtml(getBlockTitleHtml(blks[i]));
+      var titleH = (titleC.height/titleC.width)*usableW;
 
-      var headerC = await captureHtml(getBlockTitleHtml(blks[i]) + parts.headerHtml);
-      var hd = canvasToMM(headerC, usableW, usableH);
+      async function startNewPagePD(){
+        addNewPage();
+        pdf.addImage(titleC.toDataURL("image/png"),"PNG",margin,margin,usableW,titleH);
+        return margin+titleH+4;
+      }
+
+      var y = await startNewPagePD();
+
+      var headerC = await captureHtml(parts.headerHtml);
+      var hd = canvasToMM(headerC, usableW, usableH-titleH-4);
       pdf.addImage(headerC.toDataURL("image/png"),"PNG",margin,y,hd.iw,hd.ih);
       y += hd.ih + 3;
 
@@ -1690,7 +1699,7 @@ async function doExportPDF(blks,div){
         if (naturalH <= usableH) {
           // 整組放得下：維持原本「一組一張圖」的做法，看目前頁面剩餘
           // 空間夠不夠，不夠就直接換頁，圖片本身完全不縮小
-          if (y + naturalH > margin+usableH && y > margin+1) { addNewPage(); y = margin; }
+          if (y + naturalH > margin+usableH && y > margin+1) { y = await startNewPagePD(); }
           pdf.addImage(wholeC.toDataURL("image/png"),"PNG",margin,y,usableW,naturalH);
           y += naturalH + 3;
         } else {
@@ -1698,7 +1707,7 @@ async function doExportPDF(blks,div){
           // 跟「逐列」各自截圖、各自分頁，每一列都不會被縮小
           var chC = await captureHtml(gp.cardHeaderHtml);
           var chH = (chC.height/chC.width)*usableW;
-          if (y + chH > margin+usableH && y > margin+1) { addNewPage(); y = margin; }
+          if (y + chH > margin+usableH && y > margin+1) { y = await startNewPagePD(); }
           pdf.addImage(chC.toDataURL("image/png"),"PNG",margin,y,usableW,chH);
           y += chH;
 
@@ -1706,7 +1715,7 @@ async function doExportPDF(blks,div){
             var rowC = await captureHtml(gp.rowsHtml[r]);
             var rowH = (rowC.height/rowC.width)*usableW;
             if (y + rowH > margin+usableH) {
-              addNewPage(); y = margin;
+              y = await startNewPagePD();
               // 換頁後補印一次「組頭+欄位標題」，方便閱讀接續內容是哪一組保單
               var chC2 = await captureHtml(gp.cardHeaderHtml);
               var chH2 = (chC2.height/chC2.width)*usableW;
@@ -1723,7 +1732,7 @@ async function doExportPDF(blks,div){
       if(isLast || fmt==="pdf_pages"){
         var footerC = await captureHtml(disclaimer+wm);
         var fd = canvasToMM(footerC, usableW, 40);
-        if(y + fd.ih > margin+usableH){ addNewPage(); y = margin; }
+        if(y + fd.ih > margin+usableH){ y = await startNewPagePD(); }
         pdf.addImage(footerC.toDataURL("image/png"),"PNG",margin,y,fd.iw,fd.ih);
       }
     } else {
