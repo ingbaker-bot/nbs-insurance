@@ -25,7 +25,7 @@
     .member-tab.active{background:var(--primary);color:#fff;box-shadow:0 4px 10px -2px rgba(99,102,241,.5)}
     /* 選項頁保持窄版（手機友好），預覽頁用獨立 class */
     .wrap{padding:20px;max-width:560px;margin:0 auto}
-    .wrap-preview{padding:20px;width:2400px;margin:0 auto}
+    .wrap-preview{padding:20px;max-width:1240px;margin:0 auto}
     .sec-lbl{font-size:14px;font-weight:700;color:var(--text-muted);margin-bottom:12px;letter-spacing:.05em;display:flex;align-items:center;justify-content:space-between}
     .blk{display:flex;align-items:center;gap:14px;padding:16px 18px;border:2px solid transparent;border-radius:20px;cursor:pointer;background:var(--surface);margin-bottom:12px;box-shadow:0 4px 6px -1px rgba(0,0,0,.06);-webkit-tap-highlight-color:rgba(0,0,0,0);transition:.15s}
     .blk.on{border-color:var(--primary);background:var(--primary-light)}
@@ -124,7 +124,9 @@
 <div class="pg" id="P_PREV">
   <div class="wrap-preview">
     <div class="pv-note" id="PV_NOTE"></div>
-    <div id="PV_BLOCKS"></div>
+    <div id="PV_SCALE_OUTER" style="overflow:hidden;margin:0 auto">
+      <div id="PV_BLOCKS" style="width:2400px;transform-origin:top left"></div>
+    </div>
     <div style="padding:8px 12px;background:#f7f7f5;border-radius:8px;font-size:14px;color:#aaa;margin-bottom:12px">
       💡 <span id="WM_HINT"></span>
     </div>
@@ -300,6 +302,25 @@ function goPage(id){
   });
 }
 
+// 讓 2400px 設計寬度的報告預覽，依「可用寬度」自動等比縮小顯示，
+// 不影響瀏覽器 zoom、不影響旁邊 nav.js 側欄與按鈕的大小。
+// 下載的圖片永遠是未縮放的原始 2400px（乘以 html2canvas scale:2），
+// 這裡純粹是「畫面上看起來多大」，不影響下載品質。
+function fitPreviewScale(){
+  var outer = document.getElementById("PV_SCALE_OUTER");
+  var inner = document.getElementById("PV_BLOCKS");
+  if(!outer || !inner || !inner.offsetParent) return; // 不在畫面上就不用算
+  var available = outer.parentElement.clientWidth;
+  if(!available) return;
+  var scale = Math.min(1, available/2400);
+  inner.style.transform = "scale("+scale+")";
+  outer.style.width  = Math.round(2400*scale)+"px";
+  outer.style.height = Math.round(inner.scrollHeight*scale)+"px";
+}
+window.addEventListener("resize", function(){
+  if(document.getElementById("P_PREV").classList.contains("act")) fitPreviewScale();
+});
+
 function doShowSelect(){
   goPage("P_SEL");
   document.getElementById("HDR_TITLE").textContent="匯出圖片";
@@ -331,6 +352,8 @@ function doShowPreview(){
     c.appendChild(div);
   });
   goPage("P_PREV");
+  // 內容剛塞進 DOM，等瀏覽器排版完成後再量測高度並套用縮放
+  requestAnimationFrame(function(){ requestAnimationFrame(fitPreviewScale); });
 }
 
 // ── 現金流時間軸輔助函式 ─────────────────────────────────
