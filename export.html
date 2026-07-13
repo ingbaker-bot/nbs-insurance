@@ -873,9 +873,12 @@ function saveAgentInfo() {
 //    一定會包含標題，不會像之前只有預覽畫面看得到）──────────
 function getBlockTitleHtml(b) {
   // 使用 Flex 排版，左邊放主標題，右邊放業務員資訊(28px, 黑色)
-  return '<div style="display:flex; justify-content:space-between; align-items:center; padding:14px 16px;background:#f7f7f5;border-bottom:2px solid #e6e6e6;">'+
-    '<div style="font-size:44px;font-weight:700;color:#1a1a2e">'+b.icon+' 【'+getDisplayName()+'】'+b.label+'</div>'+
-    '<div style="font-size:28px;font-weight:700;color:#000000;">'+getWatermarkText()+'</div>'+
+  // 加上 flex-wrap:wrap + min-width:0，避免業務員姓名/聯絡方式較長時
+  // 把整條標題列撐爆超出 1200px 容器（flex子項目預設 min-width:auto，
+  // 不會自動換行，會直接把外層畫面往右撐開造成截斷）。
+  return '<div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; padding:14px 16px;background:#f7f7f5;border-bottom:2px solid #e6e6e6;">'+
+    '<div style="font-size:44px;font-weight:700;color:#1a1a2e;min-width:0;overflow-wrap:break-word">'+b.icon+' 【'+getDisplayName()+'】'+b.label+'</div>'+
+    '<div style="font-size:28px;font-weight:700;color:#000000;min-width:0;overflow-wrap:break-word">'+getWatermarkText()+'</div>'+
   '</div>';
 }
 
