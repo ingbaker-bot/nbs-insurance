@@ -449,9 +449,11 @@
         '<button class="nbs-row2-btn" onclick="NBS_NAV._goFamily()">🏠 保單首頁</button>' +
         '<button class="nbs-row2-btn" onclick="NBS_NAV._print()">🖨️ 列印此頁</button>' +
       '</div>' +
-      '<div class="nbs-foot">' +
-        '<button class="nbs-bbtn" onclick="NBS_NAV._back()">← 返回家庭列表</button>' +
+      '<div class="nbs-row2">' +
+        '<button class="nbs-row2-btn nbs-row2-btn-ghost" onclick="NBS_NAV._back()">← 返回列表</button>' +
         _versionActionsHtml() +
+      '</div>' +
+      '<div class="nbs-foot">' +
         '<div class="nbs-disclaimer">本報告為保障檢視參考，實際理賠項目與條件以各保險公司正式契約條款為準。</div>' +
       '</div>';
   }
@@ -470,25 +472,35 @@
 
   function _versionActionsHtml() {
     var role = _family.role || "current";
-    var summary = role === "draft"
-      ? "⋯ 版本管理（草案"+(_family.draftLabel?"："+_family.draftLabel:"")+"）"
-      : "⋯ 版本管理";
-    var items = '<div class="nbs-ni nbs-ni-sm" onclick="NBS_NAV._promptCreateDraft()">' +
+    var items = '<div class="nbs-ni nbs-ni-sm" onclick="event.stopPropagation();NBS_NAV._promptCreateDraft()">' +
       '<span class="nbs-nicon">📝</span>' +
       '<span class="nbs-nlabel">另存新檔（建立提案草案）</span>' +
     '</div>';
     if (role === "draft") {
-      items += '<div class="nbs-ni nbs-ni-sm" onclick="NBS_NAV._promptPromoteDraft()">' +
+      items += '<div class="nbs-ni nbs-ni-sm" onclick="event.stopPropagation();NBS_NAV._promptPromoteDraft()">' +
         '<span class="nbs-nicon">✅</span>' +
         '<span class="nbs-nlabel">升格為現況</span>' +
       '</div>';
-      items += '<div class="nbs-ni nbs-ni-sm" onclick="NBS_NAV._promptDeleteDraft()">' +
+      items += '<div class="nbs-ni nbs-ni-sm" onclick="event.stopPropagation();NBS_NAV._promptDeleteDraft()">' +
         '<span class="nbs-nicon">🗑️</span>' +
         '<span class="nbs-nlabel">刪除此草案</span>' +
       '</div>';
     }
-    return '<details class="nbs-version-mgr"><summary>'+summary+'</summary>'+items+'</details>';
+    return '<div class="nbs-vm">' +
+      '<button class="nbs-row2-btn nbs-row2-btn-ghost" onclick="event.stopPropagation();NBS_NAV._toggleVersionMenu(this)">⋯ 版本管理</button>' +
+      '<div class="nbs-vm-menu">'+items+'</div>' +
+    '</div>';
   }
+
+  global.NBS_NAV._toggleVersionMenu = function(btn) {
+    var wrap = btn.parentElement;
+    var wasOpen = wrap.classList.contains("nbs-vm-open");
+    document.querySelectorAll(".nbs-vm-open").forEach(function(o){ o.classList.remove("nbs-vm-open"); });
+    if (!wasOpen) wrap.classList.add("nbs-vm-open");
+  };
+  document.addEventListener("click", function(){
+    document.querySelectorAll(".nbs-vm-open").forEach(function(o){ o.classList.remove("nbs-vm-open"); });
+  });
 
   function _renderBottomTab() {
     var el = document.getElementById("nbs-bottom-tab");
@@ -848,17 +860,18 @@
       ".nbs-ni:hover .nbs-nlabel{color:#1D4ED8}",
       ".nbs-ni-on .nbs-nlabel{color:#4F46E5;font-weight:700}",
       ".nbs-foot{padding:10px;border-top:1px solid rgba(120,140,255,.10)}",
-      ".nbs-version-mgr{margin-top:10px;border-top:1px dashed rgba(120,140,255,.15);padding-top:8px}",
-      ".nbs-version-mgr summary{font-size:11px;font-weight:600;color:#9CA3AF;cursor:pointer;list-style:none;padding:4px 2px;-webkit-tap-highlight-color:rgba(0,0,0,0)}",
-      ".nbs-version-mgr summary::-webkit-details-marker{display:none}",
-      ".nbs-version-mgr[open] summary{color:#6b7280}",
       ".nbs-ni-sm{padding:7px 6px!important;font-size:12px!important}",
       ".nbs-ni-sm .nbs-nicon{font-size:14px!important}",
       ".nbs-ni-sm .nbs-nlabel{font-size:12px!important}",
       ".nbs-disclaimer{margin-top:8px;padding:8px 10px;border-radius:8px;background:rgba(120,140,255,.05);border:1px solid rgba(120,140,255,.10);font-size:10px;color:#9CA3AF;line-height:1.6;letter-spacing:.01em}",
       ".nbs-pbtn{width:100%;padding:8px;margin-bottom:5px;background:linear-gradient(90deg,rgba(59,130,246,.10),rgba(124,58,237,.10));color:#4F46E5;border:1px solid rgba(120,140,255,.18);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px}",
       ".nbs-row2{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:0 10px 8px}",
-      ".nbs-row2-btn{padding:8px 4px;background:linear-gradient(90deg,rgba(59,130,246,.10),rgba(124,58,237,.10));color:#4F46E5;border:1px solid rgba(120,140,255,.18);border-radius:9px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:4px;white-space:nowrap}",
+      ".nbs-row2-btn{padding:8px 4px;background:linear-gradient(90deg,rgba(59,130,246,.10),rgba(124,58,237,.10));color:#4F46E5;border:1px solid rgba(120,140,255,.18);border-radius:9px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:4px;white-space:nowrap;width:100%}",
+      ".nbs-row2-btn-ghost{background:transparent;color:#9CA3AF;border:1px solid rgba(120,140,255,.14)}",
+      ".nbs-row2-btn-ghost:hover{color:#6B7280}",
+      ".nbs-vm{position:relative}",
+      ".nbs-vm-menu{display:none;position:absolute;bottom:calc(100% + 6px);left:0;right:0;background:#fff;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.16);border:1px solid rgba(120,140,255,.14);padding:4px;z-index:60}",
+      ".nbs-vm-open .nbs-vm-menu{display:block}",
       ".nbs-pbtn:hover{background:linear-gradient(90deg,rgba(59,130,246,.16),rgba(124,58,237,.16))}",
       ".nbs-bbtn{width:100%;padding:7px;background:transparent;color:#9CA3AF;border:none;border-radius:7px;font-size:13px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px}",
       ".nbs-bbtn:hover{color:#6B7280}",
