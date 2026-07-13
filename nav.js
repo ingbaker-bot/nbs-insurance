@@ -445,12 +445,11 @@
         '<div class="nbs-sl">功能模組</div>' +
         navHtml +
       '</div>' +
-      '<div class="nbs-ni" onclick="NBS_NAV._goFamily()">' +
-        '<span class="nbs-nicon">🏠</span>' +
-        '<span class="nbs-nlabel">家庭保單首頁</span>' +
+      '<div class="nbs-row2">' +
+        '<button class="nbs-row2-btn" onclick="NBS_NAV._goFamily()">🏠 保單首頁</button>' +
+        '<button class="nbs-row2-btn" onclick="NBS_NAV._print()">🖨️ 列印此頁</button>' +
       '</div>' +
       '<div class="nbs-foot">' +
-        '<button class="nbs-pbtn" onclick="NBS_NAV._print()">🖨️ 快速列印此頁</button>' +
         '<button class="nbs-bbtn" onclick="NBS_NAV._back()">← 返回家庭列表</button>' +
         _versionActionsHtml() +
         '<div class="nbs-disclaimer">本報告為保障檢視參考，實際理賠項目與條件以各保險公司正式契約條款為準。</div>' +
@@ -858,6 +857,8 @@
       ".nbs-ni-sm .nbs-nlabel{font-size:12px!important}",
       ".nbs-disclaimer{margin-top:8px;padding:8px 10px;border-radius:8px;background:rgba(120,140,255,.05);border:1px solid rgba(120,140,255,.10);font-size:10px;color:#9CA3AF;line-height:1.6;letter-spacing:.01em}",
       ".nbs-pbtn{width:100%;padding:8px;margin-bottom:5px;background:linear-gradient(90deg,rgba(59,130,246,.10),rgba(124,58,237,.10));color:#4F46E5;border:1px solid rgba(120,140,255,.18);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px}",
+      ".nbs-row2{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:0 10px 8px}",
+      ".nbs-row2-btn{padding:8px 4px;background:linear-gradient(90deg,rgba(59,130,246,.10),rgba(124,58,237,.10));color:#4F46E5;border:1px solid rgba(120,140,255,.18);border-radius:9px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:4px;white-space:nowrap}",
       ".nbs-pbtn:hover{background:linear-gradient(90deg,rgba(59,130,246,.16),rgba(124,58,237,.16))}",
       ".nbs-bbtn{width:100%;padding:7px;background:transparent;color:#9CA3AF;border:none;border-radius:7px;font-size:13px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px}",
       ".nbs-bbtn:hover{color:#6B7280}",
