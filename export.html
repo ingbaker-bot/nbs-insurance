@@ -25,7 +25,7 @@
     .member-tab.active{background:var(--primary);color:#fff;box-shadow:0 4px 10px -2px rgba(99,102,241,.5)}
     /* 選項頁保持窄版（手機友好），預覽頁用獨立 class */
     .wrap{padding:20px;max-width:560px;margin:0 auto}
-    .wrap-preview{padding:20px;max-width:1200px;margin:0 auto}
+    .wrap-preview{padding:20px;width:1200px;margin:0 auto}
     .sec-lbl{font-size:14px;font-weight:700;color:var(--text-muted);margin-bottom:12px;letter-spacing:.05em;display:flex;align-items:center;justify-content:space-between}
     .blk{display:flex;align-items:center;gap:14px;padding:16px 18px;border:2px solid transparent;border-radius:20px;cursor:pointer;background:var(--surface);margin-bottom:12px;box-shadow:0 4px 6px -1px rgba(0,0,0,.06);-webkit-tap-highlight-color:rgba(0,0,0,0);transition:.15s}
     .blk.on{border-color:var(--primary);background:var(--primary-light)}
@@ -55,6 +55,7 @@
     .brow-inner{max-width:560px;margin:0 auto;display:flex;gap:10px;width:100%}
     .pg{display:none}
     .pg.act{display:block}
+    #P_PREV{overflow-x:auto}
     .pv-note{padding:12px 14px;background:var(--primary-light);border-radius:14px;margin-bottom:14px;font-size:14px;color:var(--primary-dark);line-height:1.7}
     .pv-blk{border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:12px;box-shadow:0 4px 6px -1px rgba(0,0,0,.05)}
     .pv-hdr{padding:8px 12px;background:#f7f7f5;border-bottom:1px solid #f0f0f0;font-size:15px;font-weight:600;color:#444}
@@ -1560,7 +1561,7 @@ function renderBlock(key){
 
       html+='<div style="background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 3px 10px -3px rgba(0,0,0,.12);display:flex;flex-direction:column">';
       html+='<div style="padding:14px;background:linear-gradient(135deg,'+vc.color+'26,'+vc.color+'0A);text-align:center">'+
-          '<span style="font-size:40px;font-weight:800;color:'+vc.color+'">'+vc.label+'</span>'+
+          '<span style="font-size:60px;font-weight:800;color:'+vc.color+'">'+vc.label+'</span>'+
         '</div>';
       
       html+='<div style="padding:16px 24px;display:flex;justify-content:space-between;align-items:center;border-bottom:2px dashed #f2f2f4;flex:1">';
