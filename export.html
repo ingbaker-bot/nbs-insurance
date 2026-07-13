@@ -1692,12 +1692,7 @@ async function doExportPDF(blks,div){
       }
 
       var y = await startNewPagePD();
-
-      var headerC = await captureHtml(parts.headerHtml);
-      var hd = canvasToMM(headerC, usableW, usableH-titleH-4);
-      pdf.addImage(headerC.toDataURL("image/png"),"PNG",margin,y,hd.iw,hd.ih);
-      y += hd.ih + 3;
-
+      
       for(var g=0; g<parts.groupPieces.length; g++){
         var gp = parts.groupPieces[g];
         var wholeC = await captureHtml(gp.fullHtml);
