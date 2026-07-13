@@ -489,9 +489,11 @@ var GAP_GROUPS_EX = [
   { key:"family", label:"家庭責任", color:"#1565C0", items:[
     { key:"life_permanent", label:"終身壽險",    unit:"萬元",   color:"#1565C0" },
     { key:"life_term",      label:"定期壽險",    unit:"萬元",   color:"#1E88E5" },
-    { key:"investment",     label:"投資型保險",  unit:"",       color:"#7B1FA2", isBool:true },
-    { key:"savings",        label:"儲蓄險",      unit:"",       color:"#E91E8C", isBool:true },
+    // 💡 修正：移除 isBool:true，讓投資型與儲蓄險顯示真實數字
+    { key:"investment",     label:"投資型保險",  unit:"萬元",   color:"#7B1FA2" },
+    { key:"savings",        label:"儲蓄險",      unit:"萬元",   color:"#E91E8C" },
   ]},
+  
   { key:"before", label:"評估確診", arrowLabel:"醫療前期", arrowColor:"#5BAD6F", color:"#E53935", items:[
     { key:"ci_special", label:"重大/特傷/重疾", unit:"萬元",   color:"#E53935" },
     { key:"cancer",     label:"初次罹患癌症",    unit:"萬元",   color:"#C62828" },
@@ -568,6 +570,20 @@ var COVERAGE_GROUPS_EX = [
   { label:"壽險/重大保障(終身/定期)", icon:"🛡️", color:"#4A90D9", items:[
     { label:"終身壽險", unit:"萬元", compute:function(pols){ return lifeAmountEx(pols, ["壽險保障"], false); } },
     { label:"定期壽險", unit:"萬元", compute:function(pols){ return lifeAmountEx(pols, ["壽險保障"], true); }, remain:function(pols){ return lifeRemainYearsEx(pols, ["壽險保障"]); } },
+    { label:"投資型(身故金)", unit:"萬元", compute:function(pols){ 
+        let sum=0; pols.filter(p=>p.category==="投資型保險").forEach(p=>{
+            let a=(p.deathBenefit!==undefined&&p.deathBenefit!==null&&p.deathBenefit!=="")?p.deathBenefit:p.insuredAmount;
+            let u=(p.deathBenefit!==undefined&&p.deathBenefit!==null&&p.deathBenefit!=="")?(p.deathBenefitUnit||'萬元'):(p.insuredAmountUnit||'萬元');
+            let w=convertToWanEx(a,u); if(w!==null) sum+=w;
+        }); return sum;
+    } },
+    { label:"儲蓄險(身故金)", unit:"萬元", compute:function(pols){ 
+        let sum=0; pols.filter(p=>["儲蓄險","年金險"].includes(p.category)).forEach(p=>{
+            let a=(p.deathBenefit!==undefined&&p.deathBenefit!==null&&p.deathBenefit!=="")?p.deathBenefit:p.insuredAmount;
+            let u=(p.deathBenefit!==undefined&&p.deathBenefit!==null&&p.deathBenefit!=="")?(p.deathBenefitUnit||'萬元'):(p.insuredAmountUnit||'萬元');
+            let w=convertToWanEx(a,u); if(w!==null) sum+=w;
+        }); return sum;
+    } },
     { label:"重大終身", unit:"萬元", compute:function(pols){ return lifeAmountEx(pols, ["重大疾病險","重大傷病險","特定傷病險"], false); } },
     { label:"重大定期", unit:"萬元", compute:function(pols){ return lifeAmountEx(pols, ["重大疾病險","重大傷病險","特定傷病險"], true); }, remain:function(pols){ return lifeRemainYearsEx(pols, ["重大疾病險","重大傷病險","特定傷病險"]); } },
     { label:"生活扶助金（每月）", keys:["ltc_life"], unit:"萬元/月" },
@@ -668,23 +684,31 @@ function getItemCurrentEx(key, policies, coverage, covOverrides) {
     return covOverrides[manualKey] ? 1 : 0;
   }
 
-  if(["investment","savings","waiver"].includes(key)) {
-    if(key==="investment") return policies.some(p=>p.category==="投資型保險")?1:0;
-    if(key==="savings")    return policies.some(p=>["儲蓄險","年金險"].includes(p.category))?1:0;
-    if(key==="waiver")     return sumCovEx(["ltc_waiver"], policies, coverage) > 0 ? 1 : 0;
+  if(["waiver"].includes(key)) {
+    if(key==="waiver") return sumCovEx(["ltc_waiver"], policies, coverage) > 0 ? 1 : 0;
     return 0;
   }
 
-  if (["life_permanent", "life_term"].includes(key)) {
+  // 💡 修正：將投資型與儲蓄險併入金額計算邏輯
+  if (["life_permanent", "life_term", "investment", "savings"].includes(key)) {
       let amt = 0;
-      var matchedPolicies = policies.filter(p => map.cats.includes(p.category));
       var wantTerm = (key === "life_term");
+      var catMap = {
+          "life_permanent": ["壽險保障"],
+          "life_term": ["壽險保障"],
+          "investment": ["投資型保險"],
+          "savings": ["儲蓄險", "年金險"]
+      };
+      var matchedPolicies = policies.filter(p => catMap[key].includes(p.category));
+      
       matchedPolicies.forEach(p => {
-         var pt = (p.coverage && p.coverage.protect_period_type) || "終身";
-         var isPolTerm = (pt !== "終身");
-         if (isPolTerm !== wantTerm) return;
+         // 只有壽險需要區分定期或終身，投資型與儲蓄險直接全額加總
+         if (key === "life_permanent" || key === "life_term") {
+             var pt = (p.coverage && p.coverage.protect_period_type) ? p.coverage.protect_period_type : "終身";
+             var isPolTerm = (pt !== "終身");
+             if (isPolTerm !== wantTerm) return;
+         }
          
-         // 優先使用「留愛金額 (deathBenefit)」，若無才預設抓取「保額 (insuredAmount)」
          var baseAmt = (p.deathBenefit !== undefined && p.deathBenefit !== null && p.deathBenefit !== "") ? p.deathBenefit : p.insuredAmount;
          var baseUnit = (p.deathBenefit !== undefined && p.deathBenefit !== null && p.deathBenefit !== "") ? (p.deathBenefitUnit || '萬元') : (p.insuredAmountUnit || '萬元');
          
@@ -849,7 +873,8 @@ function lifeAmountEx(pols, cats, isTerm) {
   var amt = 0;
   pols.forEach(function(p){
     if (cats.indexOf(p.category) === -1) return;
-    var pt = (p.coverage && p.coverage.protect_period_type) || "終身";
+    // 💡 修正：防呆處理，如果欄位是空字串，強制預設為 "終身"
+    var pt = (p.coverage && p.coverage.protect_period_type) ? p.coverage.protect_period_type : "終身";
     var isPolTerm = (pt !== "終身");
     if (isTerm !== isPolTerm) return;
     
@@ -1087,7 +1112,8 @@ function buildPremiumDetailParts() {
   // 欄位永遠對得整齊
   // 限制商品名最大寬度為400px，並加寬狀態(130px)與受益人(240px)
   // 讓商品名改為 1fr 填滿剩餘空白，同時保持狀態與受益人的寬裕空間
-  var COLS_PD = '60px 110px 1fr 160px 170px 130px 150px 150px 240px 240px';
+  // 加入 minmax(300px, 1fr) 確保在預覽畫面中商品名不會被擠壓變形
+  var COLS_PD = '60px 110px minmax(300px,1fr) 150px 170px 130px 150px 150px 240px 240px';
 
   var colHeaderRow =
     '<div style="display:grid;grid-template-columns:'+COLS_PD+';border-bottom:2px solid #eef0f3">'+
@@ -1173,7 +1199,8 @@ function buildPremiumDetailParts() {
       // 留愛金額只適用「留給受益人」性質的保障（壽險、意外、重大身故），
       // 醫療/癌症/手術/日額型住院/失能長照這類理賠對象是被保險人自己
       // （治療/生活costs)，不是留給受益人的錢，不該出現在這個欄位
-      var LEGACY_CATS_PD = ["壽險保障","意外險","重大疾病險","重大傷病險","特定傷病險"];
+      // 將投資型、儲蓄、年金險加入，讓它們也能在整合表中顯示留愛金額
+      var LEGACY_CATS_PD = ["壽險保障","意外險","重大疾病險","重大傷病險","特定傷病險", "投資型保險", "儲蓄險", "年金險"];
       var dbText;
       if (LEGACY_CATS_PD.indexOf(p.category) === -1) {
         dbText = '—';
