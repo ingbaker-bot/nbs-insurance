@@ -531,6 +531,7 @@ var GAP_GROUPS_EX = [
     // 💡 修正：移除 isBool:true，讓投資型與儲蓄險顯示真實數字
     { key:"investment",     label:"投資型保險",  unit:"萬元",   color:"#7B1FA2" },
     { key:"savings",        label:"儲蓄險",      unit:"萬元",   color:"#E91E8C" },
+    { key:"ci_death",       label:"重大/特傷/重疾", unit:"萬元", color:"#C0392B" },
   ]},
   
   { key:"before", label:"評估確診", arrowLabel:"醫療前期", arrowColor:"#5BAD6F", color:"#E53935", items:[
@@ -562,6 +563,7 @@ var GAP_KEY_MAP_EX = {
   investment:      { cats:["投資型保險"],        keys:[] },
   savings:         { cats:["儲蓄險","年金險"],   keys:[] },
   ci_special:      { cats:["重大疾病險","重大傷病險","特定傷病險"], keys:["can_first"] },
+  ci_death:        { cats:["重大疾病險","重大傷病險","特定傷病險"], keys:[] },
   cancer:          { cats:["癌症醫療"],          keys:["can_first"] },
   hosp_real_room:  { cats:["醫療保障"],          keys:["hosp_room", "hosp_ext_room"] },
   hosp_daily:      { cats:["醫療保障"],          keys:["daily_room_1_30", "hosp_ext_daily", "daily_discharge"] },
@@ -728,31 +730,31 @@ function getItemCurrentEx(key, policies, coverage, covOverrides) {
     return 0;
   }
 
-  // 💡 修正：將投資型與儲蓄險併入金額計算邏輯
-  if (["life_permanent", "life_term", "investment", "savings"].includes(key)) {
+  // 💡 修正：將投資型與儲蓄險併入金額計算邏輯；重大/特傷/重疾類保單
+  // 通常也附帶身故(留愛)給付，family(家庭責任)區塊需要納入這筆金額，
+  // 加總才會等於保戶真正的總身故保障，而不是只算壽險保障類。
+  if (["life_permanent", "life_term", "investment", "savings", "ci_death"].includes(key)) {
       let amt = 0;
       var wantTerm = (key === "life_term");
       var catMap = {
           "life_permanent": ["壽險保障"],
           "life_term": ["壽險保障"],
           "investment": ["投資型保險"],
-          "savings": ["儲蓄險", "年金險"]
+          "savings": ["儲蓄險", "年金險"],
+          "ci_death": ["重大疾病險", "重大傷病險", "特定傷病險"]
       };
       var matchedPolicies = policies.filter(p => catMap[key].includes(p.category));
       
       matchedPolicies.forEach(p => {
-         // 只有壽險需要區分定期或終身，投資型與儲蓄險直接全額加總
+         // 只有壽險需要區分定期或終身，投資型/儲蓄/重疾身故直接全額加總
          if (key === "life_permanent" || key === "life_term") {
              var pt = (p.coverage && p.coverage.protect_period_type) ? p.coverage.protect_period_type : "終身";
              var isPolTerm = (pt !== "終身");
              if (isPolTerm !== wantTerm) return;
          }
          
-         var baseAmt = (p.deathBenefit !== undefined && p.deathBenefit !== null && p.deathBenefit !== "") ? p.deathBenefit : p.insuredAmount;
-         var baseUnit = (p.deathBenefit !== undefined && p.deathBenefit !== null && p.deathBenefit !== "") ? (p.deathBenefitUnit || '萬元') : (p.insuredAmountUnit || '萬元');
-         
-         var w = convertToWanEx(baseAmt, baseUnit);
-         if (w !== null) amt += w;
+         // 只採用使用者實際填寫的留愛金額(deathBenefit)，不再用保額(insuredAmount)頂替
+         amt += getDeathBenefitAmt(p);
       });
       return amt;
   }
