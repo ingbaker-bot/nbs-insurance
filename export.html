@@ -1055,10 +1055,27 @@ function buildPremiumDetailParts() {
     pdGroupMap[k].rows.push(p);
   });
 
-  var thStylePD = 'padding:8px 10px;text-align:left;font-size:22px;font-weight:800;color:#6b7280;border-bottom:2px solid #eef0f3;white-space:nowrap;background:#f7f8fa;';
-  var tdStylePD = 'padding:8px 10px;vertical-align:middle;border-bottom:1px solid #f2f2f4;font-size:26px;';
+  var thStylePD = 'padding:10px;text-align:left;font-size:22px;font-weight:800;color:#6b7280;white-space:nowrap;background:#f7f8fa;';
+  var tdStylePD = 'padding:10px;vertical-align:middle;font-size:26px;background:#fff;';
+  // 10 欄固定寬度，header 跟每一列都用同一份，確保不管各自截圖幾張，
+  // 欄位永遠對得整齊
+  var COLS_PD = '60px 110px minmax(220px,1fr) 160px 170px 100px 130px 150px 190px 190px';
 
-  var groupHtmls = pdGroups.map(function(grp){
+  var colHeaderRow =
+    '<div style="display:grid;grid-template-columns:'+COLS_PD+';border-bottom:2px solid #eef0f3">'+
+      '<div style="'+thStylePD+'"></div>'+
+      '<div style="'+thStylePD+'">險種</div>'+
+      '<div style="'+thStylePD+'">商品名</div>'+
+      '<div style="'+thStylePD+'text-align:right">保額</div>'+
+      '<div style="'+thStylePD+'text-align:right">保費</div>'+
+      '<div style="'+thStylePD+'">狀態</div>'+
+      '<div style="'+thStylePD+'">到期日</div>'+
+      '<div style="'+thStylePD+'text-align:right">留愛金額</div>'+
+      '<div style="'+thStylePD+'">身故受益人</div>'+
+      '<div style="'+thStylePD+'">生存/滿期受益人</div>'+
+    '</div>';
+
+  var groupPieces = pdGroups.map(function(grp){
     var mainPol = grp.rows.find(function(p){return p.isMain===true;}) || grp.rows[0];
     var riders = grp.rows.filter(function(p){return p!==mainPol;});
     var ordered = [mainPol].concat(riders);
@@ -1070,31 +1087,17 @@ function buildPremiumDetailParts() {
       ? '<span style="font-size:24px;color:#6b7280;font-weight:600;white-space:nowrap">生效日 '+startRocText+(insAgeAtStart!==null?'　投保年齡 '+insAgeAtStart+'歲':'')+'</span>'
       : (insAgeAtStart!==null ? '<span style="font-size:24px;color:#6b7280;font-weight:600;white-space:nowrap">投保年齡 '+insAgeAtStart+'歲</span>' : '');
 
-    var g = '<div style="break-inside:avoid;margin-bottom:14px;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04)">';
-    g += '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;padding:12px 16px;background:linear-gradient(135deg,#EEF4FF,#F7F5FF)">'+
-      '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+
-        '<span style="font-family:monospace;font-size:24px;font-weight:700;color:#3B82F6;background:#fff;padding:3px 9px;border-radius:99px">'+grp.key+'</span>'+
-        '<span style="font-size:30px;font-weight:800;color:#374151">'+(mainPol.company||'未知')+'</span>'+
-        startInfoHtml+
-      '</div>'+
-      '<span style="font-size:26px;font-weight:700;color:#6b7280">年繳 NT$'+groupTotalPrem.toLocaleString()+'</span>'+
-    '</div>';
+    var cardHeaderHtml =
+      '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;padding:12px 16px;background:linear-gradient(135deg,#EEF4FF,#F7F5FF)">'+
+        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+
+          '<span style="font-family:monospace;font-size:24px;font-weight:700;color:#3B82F6;background:#fff;padding:3px 9px;border-radius:99px">'+grp.key+'</span>'+
+          '<span style="font-size:30px;font-weight:800;color:#374151">'+(mainPol.company||'未知')+'</span>'+
+          startInfoHtml+
+        '</div>'+
+        '<span style="font-size:26px;font-weight:700;color:#6b7280">年繳 NT$'+groupTotalPrem.toLocaleString()+'</span>'+
+      '</div>';
 
-    g += '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">';
-    g += '<thead><tr>'+
-      '<th style="'+thStylePD+'"></th>'+
-      '<th style="'+thStylePD+'">險種</th>'+
-      '<th style="'+thStylePD+'min-width:110px">商品名</th>'+
-      '<th style="'+thStylePD+'text-align:right">保額</th>'+
-      '<th style="'+thStylePD+'text-align:right">保費</th>'+
-      '<th style="'+thStylePD+'">狀態</th>'+
-      '<th style="'+thStylePD+'min-width:90px">到期日</th>'+
-      '<th style="'+thStylePD+'text-align:right;min-width:80px">留愛金額</th>'+
-      '<th style="'+thStylePD+'min-width:100px">身故受益人</th>'+
-      '<th style="'+thStylePD+'min-width:100px">生存/滿期受益人</th>'+
-    '</tr></thead><tbody>';
-
-    ordered.forEach(function(p){
+    var rowsHtml = ordered.map(function(p){
       var cc=CC[p.category]||"#999";
       var isMR = p===mainPol;
       var amtText = p.insuredAmount ? p.insuredAmount + " " + (p.insuredAmountUnit || '萬元') : '—';
@@ -1153,25 +1156,36 @@ function buildPremiumDetailParts() {
       }
       var expiryText = getPolicyExpiryDisplay(p);
 
-      g += '<tr>'+
-        '<td style="'+tdStylePD+'">'+(isMR?'<span style="font-size:20px;color:#fff;background:#378ADD;padding:2px 7px;border-radius:99px;font-weight:700">主</span>':'<span style="font-size:20px;color:#888;background:#ebebeb;padding:2px 7px;border-radius:99px;font-weight:700">附</span>')+'</td>'+
-        '<td style="'+tdStylePD+'"><span style="font-size:20px;padding:2px 7px;border-radius:99px;background:'+cc+'1A;color:'+cc+';font-weight:700;white-space:nowrap">'+(p.category||'—')+'</span></td>'+
-        '<td style="'+tdStylePD+'font-weight:700;color:#1f2937">'+(p.itemName||'—')+'</td>'+
-        '<td style="'+tdStylePD+'text-align:right;font-weight:800;color:#0C447C;font-variant-numeric:tabular-nums;white-space:nowrap">'+amtText+'</td>'+
-        '<td style="'+tdStylePD+'text-align:right;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums">'+premDisplayPD+'</td>'+
-        '<td style="'+tdStylePD+'"><span style="font-size:20px;padding:2px 7px;border-radius:99px;background:'+(isPolicyActiveEx(p)?"#EAF3DE":"#f0f0f0")+';color:'+(isPolicyActiveEx(p)?"#27500A":"#888")+'">'+(p.status||"有效")+'</span></td>'+
-        '<td style="'+tdStylePD+'font-size:24px;color:'+(expiryText==="終身"?"#374151":expiryText==="—"?"#9ca3af":"#B07000")+';font-weight:700;white-space:nowrap">'+expiryText+'</td>'+
-        '<td style="'+tdStylePD+'text-align:right;font-weight:800;color:#B0466F;font-variant-numeric:tabular-nums;white-space:nowrap">'+dbText+'</td>'+
-        '<td style="'+tdStylePD+'color:'+dColor+';line-height:1.4;font-size:24px">'+dStr+'</td>'+
-        '<td style="'+tdStylePD+'line-height:1.4;font-size:24px">'+liveDisplay+'</td>'+
-      '</tr>';
+      return '<div style="display:grid;grid-template-columns:'+COLS_PD+';border-bottom:1px solid #f2f2f4">'+
+        '<div style="'+tdStylePD+'">'+(isMR?'<span style="font-size:20px;color:#fff;background:#378ADD;padding:2px 7px;border-radius:99px;font-weight:700">主</span>':'<span style="font-size:20px;color:#888;background:#ebebeb;padding:2px 7px;border-radius:99px;font-weight:700">附</span>')+'</div>'+
+        '<div style="'+tdStylePD+'"><span style="font-size:20px;padding:2px 7px;border-radius:99px;background:'+cc+'1A;color:'+cc+';font-weight:700;white-space:nowrap">'+(p.category||'—')+'</span></div>'+
+        '<div style="'+tdStylePD+'font-weight:700;color:#1f2937">'+(p.itemName||'—')+'</div>'+
+        '<div style="'+tdStylePD+'text-align:right;font-weight:800;color:#0C447C;font-variant-numeric:tabular-nums;white-space:nowrap">'+amtText+'</div>'+
+        '<div style="'+tdStylePD+'text-align:right;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums">'+premDisplayPD+'</div>'+
+        '<div style="'+tdStylePD+'"><span style="font-size:20px;padding:2px 7px;border-radius:99px;background:'+(isPolicyActiveEx(p)?"#EAF3DE":"#f0f0f0")+';color:'+(isPolicyActiveEx(p)?"#27500A":"#888")+'">'+(p.status||"有效")+'</span></div>'+
+        '<div style="'+tdStylePD+'font-size:24px;color:'+(expiryText==="終身"?"#374151":expiryText==="—"?"#9ca3af":"#B07000")+';font-weight:700;white-space:nowrap">'+expiryText+'</div>'+
+        '<div style="'+tdStylePD+'text-align:right;font-weight:800;color:#B0466F;font-variant-numeric:tabular-nums;white-space:nowrap">'+dbText+'</div>'+
+        '<div style="'+tdStylePD+'color:'+dColor+';line-height:1.4;font-size:24px">'+dStr+'</div>'+
+        '<div style="'+tdStylePD+'line-height:1.4;font-size:24px">'+liveDisplay+'</div>'+
+      '</div>';
     });
 
-    g += '</tbody></table></div></div>';
-    return g;
+    var cardWrapOpen  = '<div style="break-inside:avoid;margin-bottom:14px;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04)">';
+    var cardWrapClose = '</div>';
+    var fullHtml = cardWrapOpen + cardHeaderHtml + colHeaderRow + rowsHtml.join("") + cardWrapClose;
+
+    return {
+      key: grp.key,
+      cardHeaderHtml: cardWrapOpen + cardHeaderHtml + colHeaderRow, // 換頁時可以重複印一次，方便閱讀
+      rowsHtml: rowsHtml,
+      cardWrapClose: cardWrapClose,
+      fullHtml: fullHtml
+    };
   });
 
-  return { headerHtml: headerHtml, groupHtmls: groupHtmls };
+  var groupHtmls = groupPieces.map(function(gp){ return gp.fullHtml; });
+
+  return { headerHtml: headerHtml, groupHtmls: groupHtmls, groupPieces: groupPieces };
 }
 
 function switchPerson(pid) {
@@ -1665,15 +1679,45 @@ async function doExportPDF(blks,div){
       pdf.addImage(headerC.toDataURL("image/png"),"PNG",margin,y,hd.iw,hd.ih);
       y += hd.ih + 3;
 
-      for(var g=0; g<parts.groupHtmls.length; g++){
-        var gc = await captureHtml(parts.groupHtmls[g]);
-        var gd = canvasToMM(gc, usableW, usableH);
-        if(y + gd.ih > margin+usableH && y > margin+1){
-          addNewPage();
-          y = margin;
+      for(var g=0; g<parts.groupPieces.length; g++){
+        var gp = parts.groupPieces[g];
+        var wholeC = await captureHtml(gp.fullHtml);
+        // 用原始寬高比反推：如果這一整組貼滿版面寬度時的高度，本來就
+        // 超過一整頁能用的高度，代表就算自己獨佔一頁也放不下，要拆成
+        // 「組頭+逐列」個別分頁，而不是硬縮小塞進去
+        var naturalH = (wholeC.height / wholeC.width) * usableW;
+
+        if (naturalH <= usableH) {
+          // 整組放得下：維持原本「一組一張圖」的做法，看目前頁面剩餘
+          // 空間夠不夠，不夠就直接換頁，圖片本身完全不縮小
+          if (y + naturalH > margin+usableH && y > margin+1) { addNewPage(); y = margin; }
+          pdf.addImage(wholeC.toDataURL("image/png"),"PNG",margin,y,usableW,naturalH);
+          y += naturalH + 3;
+        } else {
+          // 整組太高，連自己獨佔一頁都放不下 → 拆成「組頭+欄位標題」
+          // 跟「逐列」各自截圖、各自分頁，每一列都不會被縮小
+          var chC = await captureHtml(gp.cardHeaderHtml);
+          var chH = (chC.height/chC.width)*usableW;
+          if (y + chH > margin+usableH && y > margin+1) { addNewPage(); y = margin; }
+          pdf.addImage(chC.toDataURL("image/png"),"PNG",margin,y,usableW,chH);
+          y += chH;
+
+          for (var r=0; r<gp.rowsHtml.length; r++){
+            var rowC = await captureHtml(gp.rowsHtml[r]);
+            var rowH = (rowC.height/rowC.width)*usableW;
+            if (y + rowH > margin+usableH) {
+              addNewPage(); y = margin;
+              // 換頁後補印一次「組頭+欄位標題」，方便閱讀接續內容是哪一組保單
+              var chC2 = await captureHtml(gp.cardHeaderHtml);
+              var chH2 = (chC2.height/chC2.width)*usableW;
+              pdf.addImage(chC2.toDataURL("image/png"),"PNG",margin,y,usableW,chH2);
+              y += chH2;
+            }
+            pdf.addImage(rowC.toDataURL("image/png"),"PNG",margin,y,usableW,rowH);
+            y += rowH;
+          }
+          y += 3;
         }
-        pdf.addImage(gc.toDataURL("image/png"),"PNG",margin,y,gd.iw,gd.ih);
-        y += gd.ih + 3;
       }
 
       if(isLast || fmt==="pdf_pages"){
