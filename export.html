@@ -615,18 +615,28 @@ function sumCovEx(keys, policies, coverage) {
 // ── 保障群組與細項定義 (全新規劃) ─────────────────────────────────────────
 var GAP_GROUPS_EX = [
   { key:"family", label:"家庭責任", color:"#1565C0", items:[
-    { key:"life_permanent", label:"終身壽險",    unit:"萬元",   color:"#1565C0" },
-    { key:"life_term",      label:"定期壽險",    unit:"萬元",   color:"#1E88E5" },
+    { key:"life_permanent",       label:"終身壽險",    unit:"萬元",   color:"#1565C0" },
+    { key:"life_term",            label:"定期壽險",    unit:"萬元",   color:"#1E88E5" },
     // 💡 修正：移除 isBool:true，讓投資型與儲蓄險顯示真實數字
-    { key:"investment",     label:"投資型保險",  unit:"萬元",   color:"#7B1FA2" },
-    { key:"savings",        label:"儲蓄險",      unit:"萬元",   color:"#E91E8C" },
-    { key:"ci_death",       label:"重大/特傷/重疾", unit:"萬元", color:"#C0392B" },
-    { key:"acc_death_amt",  label:"意外身故",     unit:"萬元",   color:"#F5A623" },
+    { key:"investment",           label:"投資型保險",  unit:"萬元",   color:"#7B1FA2" },
+    { key:"savings",              label:"儲蓄險",      unit:"萬元",   color:"#E91E8C" },
+    // 身故保險金：跟評估確診那三項（重大疾病一次金/重大傷病一次金/特定傷病一次金）
+    // 讀的是完全不同的欄位（這裡讀 deathBenefit留愛金額），兩邊互不影響。
+    // 有些保單設計上確診才賠、沒有身故金，這裡顯示缺口是正確行為。
+    { key:"ci_death_major",        label:"重疾",       unit:"萬元", color:"#C0392B" },
+    { key:"ci_death_specific",     label:"特傷",       unit:"萬元", color:"#D35400" },
+    { key:"ci_death_catastrophic", label:"重傷",       unit:"萬元", color:"#A93226" },
+    { key:"acc_death_amt",        label:"意外身故",    unit:"萬元",   color:"#F5A623" },
+    // 癌症身故金：藏在癌症險保單的 can_death 欄位裡，需逐張癌症保單檢視填寫，
+    // 資料來源跟「癌症險」donut分類共用 can_death，只是顯示位置搬來這裡。
+    { key:"cancer_death",         label:"癌症身故",    unit:"萬元",   color:"#8E44AD" },
   ]},
   
   { key:"before", label:"評估確診", arrowLabel:"醫療前期", arrowColor:"#5BAD6F", color:"#E53935", items:[
-    { key:"ci_special", label:"重大/特傷/重疾", unit:"萬元",   color:"#E53935" },
-    { key:"cancer",     label:"初次罹患癌症",    unit:"萬元",   color:"#C62828" },
+    { key:"ci_major",         label:"重大疾病",   unit:"萬元",   color:"#E53935" },
+    { key:"ci_catastrophic",  label:"重大傷病",   unit:"萬元",   color:"#EC7063" },
+    { key:"ci_specific",      label:"特定傷病",   unit:"萬元",   color:"#CB4335" },
+    { key:"cancer",           label:"初次罹患癌症", unit:"萬元", color:"#C62828" },
   ]},
   { key:"during", label:"積極修復", arrowLabel:"醫療中期", arrowColor:"#378ADD", color:"#FF8F00", items:[
     { key:"hosp_real_room",  label:"實支病房費",        unit:"元/日",  color:"#E65100" },
@@ -641,7 +651,7 @@ var GAP_GROUPS_EX = [
     { key:"ltc_disable",         label:"失能一次金",      unit:"萬元",    color:"#1B5E20" },
     { key:"ltc_support",         label:"失能扶助",        unit:"萬元/月", color:"#2E7D32" },
     { key:"ltc_care",            label:"長照",            unit:"萬元/月", color:"#43A047" },
-    { key:"cancer_death_hospice",label:"癌症身故/安寧",   unit:"萬元",    color:"#81C784" },
+    { key:"cancer_hospice",      label:"癌症安寧",        unit:"萬元",    color:"#81C784" },
     { key:"waiver",              label:"保費豁免",        unit:"",        color:"#A5D6A7", isBool:true },
   ]},
 ];
@@ -652,8 +662,14 @@ var GAP_KEY_MAP_EX = {
   life_term:       { cats:["壽險保障"],          keys:["life_term"] },
   investment:      { cats:["投資型保險"],        keys:[] },
   savings:         { cats:["儲蓄險","年金險"],   keys:[] },
-  ci_special:      { cats:["重大疾病險","重大傷病險","特定傷病險"], keys:["can_first"] },
-  ci_death:        { cats:["重大疾病險","重大傷病險","特定傷病險"], keys:[] },
+  // 評估確診：確診即賠的一次金，三種各自對應獨立欄位，互不加總
+  ci_major:         { cats:["重大疾病險"],        keys:["ci_major_lump"] },
+  ci_catastrophic:  { cats:["重大傷病險"],        keys:["ci_catastrophic_lump"] },
+  ci_specific:      { cats:["特定傷病險"],        keys:["ci_specific_lump"] },
+  // 家庭責任：身故保險金（留愛金額），三種各自對應獨立保單分類，互不加總
+  ci_death_major:        { cats:["重大疾病險"], keys:[] },
+  ci_death_specific:     { cats:["特定傷病險"], keys:[] },
+  ci_death_catastrophic: { cats:["重大傷病險"], keys:[] },
   acc_death_amt:   { cats:["意外險"],            keys:[] },
   cancer:          { cats:["癌症醫療"],          keys:["can_first"] },
   hosp_real_room:  { cats:["醫療保障"],          keys:["hosp_room", "hosp_ext_room"] },
@@ -666,10 +682,9 @@ var GAP_KEY_MAP_EX = {
   ltc_disable:     { cats:["失能長照"],          keys:["ltc_dis_amt"] },
   ltc_support:     { cats:["失能長照"],          keys:["ltc_dis_life", "acc_support", "ltc_life"] },
   ltc_care:        { cats:["失能長照"],          keys:["ltc_monthly", "ltc_care", "ltc_yr", "ltc_mo"] },
-  // 癌症身故／安寧合併：兩者只要其中一項有資料，加總後就會大於 0，
-  // getItemStatusEx 判斷「current > 0 即算達標」的邏輯自然就是
-  // 「任一項有規劃即可」，不需要額外的特殊判斷
-  cancer_death_hospice: { cats:["癌症醫療"],     keys:["can_death","can_hospice"] },
+  // 癌症安寧／癌症身故：原本合併讀 can_death+can_hospice，現在拆開各自獨立
+  cancer_hospice:  { cats:["癌症醫療"],          keys:["can_hospice"] },
+  cancer_death:    { cats:["癌症醫療"],          keys:["can_death"] },
   waiver:          { cats:[],                   keys:["ltc_waiver"] },
 };
 
@@ -824,7 +839,7 @@ function getItemCurrentEx(key, policies, coverage, covOverrides) {
   // 💡 修正：將投資型與儲蓄險併入金額計算邏輯；重大/特傷/重疾、意外險
   // 這類保單通常也附帶身故(留愛)給付，family(家庭責任)區塊需要納入這筆
   // 金額，加總才會等於保戶真正的總身故保障，而不是只算壽險保障類。
-  if (["life_permanent", "life_term", "investment", "savings", "ci_death", "acc_death_amt"].includes(key)) {
+  if (["life_permanent", "life_term", "investment", "savings", "ci_death_major", "ci_death_specific", "ci_death_catastrophic", "acc_death_amt"].includes(key)) {
       let amt = 0;
       var wantTerm = (key === "life_term");
       var catMap = {
@@ -832,13 +847,15 @@ function getItemCurrentEx(key, policies, coverage, covOverrides) {
           "life_term": ["壽險保障"],
           "investment": ["投資型保險"],
           "savings": ["儲蓄險", "年金險"],
-          "ci_death": ["重大疾病險", "重大傷病險", "特定傷病險"],
+          "ci_death_major":        ["重大疾病險"],
+          "ci_death_specific":     ["特定傷病險"],
+          "ci_death_catastrophic": ["重大傷病險"],
           "acc_death_amt": ["意外險"]
       };
       var matchedPolicies = policies.filter(p => catMap[key].includes(p.category));
       
       matchedPolicies.forEach(p => {
-         // 只有壽險需要區分定期或終身，投資型/儲蓄/重疾/意外身故直接全額加總
+         // 只有壽險需要區分定期或終身，重疾/特傷/重傷/意外身故直接全額加總
          if (key === "life_permanent" || key === "life_term") {
              var pt = (p.coverage && p.coverage.protect_period_type) ? p.coverage.protect_period_type : "終身";
              var isPolTerm = (pt !== "終身");
@@ -851,9 +868,9 @@ function getItemCurrentEx(key, policies, coverage, covOverrides) {
       return amt;
   }
 
-  if (key === "ci_special") {
+  if (["ci_major","ci_catastrophic","ci_specific"].includes(key)) {
       var matchedPolicies = policies.filter(p => map.cats.includes(p.category));
-      var amt = sumCovEx(["ci_major_lump","ci_catastrophic_lump","ci_specific_lump"], matchedPolicies, coverage);
+      var amt = sumCovEx(map.keys, matchedPolicies, coverage);
       if (amt === 0) {
         matchedPolicies.forEach(p => {
            var w = convertToWanEx(p.insuredAmount, p.insuredAmountUnit);
@@ -867,7 +884,7 @@ function getItemCurrentEx(key, policies, coverage, covOverrides) {
   var NO_FALLBACK_KEYS = [
     "acc_medical","acc_hosp","hosp_real_room","hosp_daily",
     "surgery","cancer_hosp","cancer_surgery","ltc_disable","ltc_support",
-    "ltc_care","cancer_death_hospice"
+    "ltc_care","cancer_hospice","cancer_death"
   ];
   if (NO_FALLBACK_KEYS.indexOf(key) !== -1) {
     return sumCovEx(map.keys, policies, coverage);
@@ -1437,8 +1454,8 @@ var DONUT_CATEGORIES_EX = [
   { key:"investment",     label:"投資型保險",   color:"#7B1FA2", subKeys:["investment"] },
   { key:"savings",        label:"儲蓄險",       color:"#E91E8C", subKeys:["savings"] },
   { key:"acc",            label:"意外險",       color:"#F5A623", subKeys:["acc_death_amt","acc_medical","acc_hosp"] },
-  { key:"ci",             label:"重疾/特傷/重大", color:"#C0392B", subKeys:["ci_special","ci_death"] },
-  { key:"cancer",         label:"癌症險",       color:"#C62828", subKeys:["cancer","cancer_hosp","cancer_surgery","cancer_death_hospice"] },
+  { key:"ci",             label:"重疾/特傷/重大", color:"#C0392B", subKeys:["ci_major","ci_catastrophic","ci_specific","ci_death_major","ci_death_specific","ci_death_catastrophic"] },
+  { key:"cancer",         label:"癌症險",       color:"#C62828", subKeys:["cancer","cancer_hosp","cancer_surgery","cancer_hospice","cancer_death"] },
   { key:"hosp_real_room", label:"住院醫療",     color:"#E65100", subKeys:["hosp_real_room"] },
   { key:"hosp_daily",     label:"住院日額",     color:"#F57C00", subKeys:["hosp_daily"] },
   { key:"surgery",        label:"手術醫療",     color:"#FF9800", subKeys:["surgery"] },
@@ -1509,9 +1526,14 @@ function buildDonutChartEx(active, coverage, targets, covOverrides) {
   var legendDuring = renderLegend(GAP_GROUPS_EX[2]);
   var legendAfter  = renderLegend(GAP_GROUPS_EX[3]);
 
+  // 顏色＝狀態，不再＝類別：跟上方圖例（已規劃=綠／部分有=橘／缺口=灰）
+  // 完全對齊，類別的識別改由外圍拉線標籤文字負責，不再靠色相分辨。
+  var STATUS_COLOR_EX = { full:"#27AE8F", partial:"#F5A623", none:"#e0e0e0" };
+
   var chartCats = DONUT_CATEGORIES_EX;
   chartCats.forEach(item => {
     var {status,pct} = getDonutCategoryStatusEx(item, active, coverage, targets, covOverrides);
+    var sColor = STATUS_COLOR_EX[status];
     var start = angle+gapA/2;
     var end   = angle+gapA/2+sliceA;
     var filledEnd = start + sliceA*pct;
@@ -1522,10 +1544,10 @@ function buildDonutChartEx(active, coverage, targets, covOverrides) {
     var donut=(a1,a2,lg,r1,r2)=>`M${px(r1,a1)},${py(r1,a1)} A${r1},${r1} 0 ${lg} 1 ${px(r1,a2)},${py(r1,a2)} L${px(r2,a2)},${py(r2,a2)} A${r2},${r2} 0 ${lg} 0 ${px(r2,a1)},${py(r2,a1)} Z`;
 
     paths += `<path d="${donut(start,end,sliceA>Math.PI?1:0,OR,IR)}" fill="#f0f0f0"/>`;
-    if(pct>0.01) paths += `<path d="${donut(start,filledEnd,sliceA*pct>Math.PI?1:0,OR,IR)}" fill="${item.color}"/>`;
+    if(pct>0.01) paths += `<path d="${donut(start,filledEnd,sliceA*pct>Math.PI?1:0,OR,IR)}" fill="${sColor}"/>`;
     if(status==="partial" && pct<0.99) {
       var gapSize=sliceA*(1-pct);
-      paths += `<path d="${donut(filledEnd,end,gapSize>Math.PI?1:0,OR,IR)}" fill="none" stroke="${item.color}" stroke-width="4" stroke-dasharray="6 5" opacity="0.45"/>`;
+      paths += `<path d="${donut(filledEnd,end,gapSize>Math.PI?1:0,OR,IR)}" fill="none" stroke="${sColor}" stroke-width="4" stroke-dasharray="6 5" opacity="0.45"/>`;
     }
 
     var isRight = Math.cos(midA) >= 0; 
@@ -1541,8 +1563,8 @@ function buildDonutChartEx(active, coverage, targets, covOverrides) {
 
     // 圓餅圖外圍文字放大至 26px
     labels += `
-      <polyline points="${x0},${y0} ${x1},${y1} ${x2},${y2}" fill="none" stroke="${item.color}60" stroke-width="2"/>
-      <circle cx="${x0}" cy="${y0}" r="4" fill="${item.color}"/>
+      <polyline points="${x0},${y0} ${x1},${y1} ${x2},${y2}" fill="none" stroke="${sColor}60" stroke-width="2"/>
+      <circle cx="${x0}" cy="${y0}" r="4" fill="${sColor}"/>
       <text x="${textX}" y="${y2+8}" text-anchor="${textAnchor}" style="font-size:26px;fill:${textColor};font-weight:${fw};letter-spacing:0.03em">${prefix}${item.label}</text>
     `;
   });
