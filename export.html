@@ -1427,9 +1427,40 @@ function buildSvgArrows(phases) {
   return svg;
 }
 
+// ── 保障覆蓋率圓餅圖專用：20項合併為12大類 ──────────────────
+// 只影響圓餅圖本身的視覺呈現，跟下方「評估確診/積極修復/康復療養/
+// 家庭責任」四張明細卡片完全獨立（那四張卡片繼續用 GAP_GROUPS_EX
+// 逐項顯示，不受影響），避免合併後看不出每個總數的組成來源。
+var DONUT_CATEGORIES_EX = [
+  { key:"life_permanent", label:"終身壽險",     color:"#1565C0", subKeys:["life_permanent"] },
+  { key:"life_term",      label:"定期壽險",     color:"#1E88E5", subKeys:["life_term"] },
+  { key:"investment",     label:"投資型保險",   color:"#7B1FA2", subKeys:["investment"] },
+  { key:"savings",        label:"儲蓄險",       color:"#E91E8C", subKeys:["savings"] },
+  { key:"acc",            label:"意外險",       color:"#F5A623", subKeys:["acc_death_amt","acc_medical","acc_hosp"] },
+  { key:"ci",             label:"重疾/特傷/重大", color:"#C0392B", subKeys:["ci_special","ci_death"] },
+  { key:"cancer",         label:"癌症險",       color:"#C62828", subKeys:["cancer","cancer_hosp","cancer_surgery","cancer_death_hospice"] },
+  { key:"hosp_real_room", label:"住院醫療",     color:"#E65100", subKeys:["hosp_real_room"] },
+  { key:"hosp_daily",     label:"住院日額",     color:"#F57C00", subKeys:["hosp_daily"] },
+  { key:"surgery",        label:"手術醫療",     color:"#FF9800", subKeys:["surgery"] },
+  { key:"ltc",            label:"失能/長照",    color:"#2E7D32", subKeys:["ltc_disable","ltc_support","ltc_care"] },
+  { key:"waiver",         label:"豁免",         color:"#A5D6A7", subKeys:["waiver"] },
+];
+
+// 合併類別的三態判斷：全部子項目都有 → full(有)；全部都沒有 → none(沒有)；
+// 部分子項目有部分沒有 → partial(部分有)。pct 用子項目「有的比例」畫扇形填色。
+function getDonutCategoryStatusEx(cat, active, coverage, targets, covOverrides) {
+  var n = cat.subKeys.length;
+  var presentCount = 0;
+  cat.subKeys.forEach(function(k){
+    var current = getItemCurrentEx(k, active, coverage, covOverrides);
+    if (current > 0) presentCount++;
+  });
+  var status = presentCount===0 ? "none" : (presentCount===n ? "full" : "partial");
+  return { status: status, pct: n ? presentCount/n : 0 };
+}
+
 function buildDonutChartEx(active, coverage, targets, covOverrides) {
-  var allItems = GAP_GROUPS_EX.flatMap(g=>g.items);
-  var n = allItems.length;
+  var n = DONUT_CATEGORIES_EX.length;
   
   // 放大 SVG 畫布座標，容納超大字體
   var cx=500, cy=350, OR=230, IR=125;
@@ -1478,8 +1509,9 @@ function buildDonutChartEx(active, coverage, targets, covOverrides) {
   var legendDuring = renderLegend(GAP_GROUPS_EX[2]);
   var legendAfter  = renderLegend(GAP_GROUPS_EX[3]);
 
-  allItems.forEach(item => {
-    var {status,pct} = getItemStatusEx(item.key, active, coverage, targets, covOverrides);
+  var chartCats = DONUT_CATEGORIES_EX;
+  chartCats.forEach(item => {
+    var {status,pct} = getDonutCategoryStatusEx(item, active, coverage, targets, covOverrides);
     var start = angle+gapA/2;
     var end   = angle+gapA/2+sliceA;
     var filledEnd = start + sliceA*pct;
@@ -1491,7 +1523,7 @@ function buildDonutChartEx(active, coverage, targets, covOverrides) {
 
     paths += `<path d="${donut(start,end,sliceA>Math.PI?1:0,OR,IR)}" fill="#f0f0f0"/>`;
     if(pct>0.01) paths += `<path d="${donut(start,filledEnd,sliceA*pct>Math.PI?1:0,OR,IR)}" fill="${item.color}"/>`;
-    if(status==="insufficient" && pct<0.99) {
+    if(status==="partial" && pct<0.99) {
       var gapSize=sliceA*(1-pct);
       paths += `<path d="${donut(filledEnd,end,gapSize>Math.PI?1:0,OR,IR)}" fill="none" stroke="${item.color}" stroke-width="4" stroke-dasharray="6 5" opacity="0.45"/>`;
     }
@@ -1503,9 +1535,9 @@ function buildDonutChartEx(active, coverage, targets, covOverrides) {
 
     var textAnchor = isRight ? "start" : "end";
     var textX = x2 + (isRight ? 8 : -8);
-    var textColor = status === "gap" ? "#aaa" : "#555";
-    var fw = status === "ok" ? "600" : "500";
-    var prefix = status === "gap" ? "❌ " : status === "insufficient" ? "⚠️ " : "";
+    var textColor = status === "none" ? "#aaa" : "#555";
+    var fw = status === "full" ? "600" : "500";
+    var prefix = status === "none" ? "❌ " : status === "partial" ? "◐ " : "";
 
     // 圓餅圖外圍文字放大至 26px
     labels += `
@@ -1515,19 +1547,19 @@ function buildDonutChartEx(active, coverage, targets, covOverrides) {
     `;
   });
 
-  var okN = allItems.filter(item=>getItemStatusEx(item.key,active,coverage,targets,covOverrides).status==="ok").length;
-  var gapN = allItems.filter(item=>getItemStatusEx(item.key,active,coverage,targets,covOverrides).status==="gap").length;
-  var insN = allItems.filter(item=>getItemStatusEx(item.key,active,coverage,targets,covOverrides).status==="insufficient").length;
+  var okN  = chartCats.filter(item=>getDonutCategoryStatusEx(item,active,coverage,targets,covOverrides).status==="full").length;
+  var gapN = chartCats.filter(item=>getDonutCategoryStatusEx(item,active,coverage,targets,covOverrides).status==="none").length;
+  var insN = chartCats.filter(item=>getDonutCategoryStatusEx(item,active,coverage,targets,covOverrides).status==="partial").length;
 
   // 圓心文字放大，並改為回傳物件格式以供後續精準排版
   return {
-    svg: `<svg viewBox="0 0 1000 700" style="width:100%; max-height:450px; height:auto; display:block; margin:0 auto;">
+    svg: `<svg viewBox="0 0 1000 700" style="width:100%; max-height:620px; height:auto; display:block; margin:0 auto;">
         ${paths}
         ${labels}
-        <text x="${cx}" y="${cy-24}" text-anchor="middle" style="font-size:26px;fill:#888">✅ 達標</text>
+        <text x="${cx}" y="${cy-24}" text-anchor="middle" style="font-size:26px;fill:#888">✅ 已規劃</text>
         <text x="${cx}" y="${cy+18}"  text-anchor="middle" style="font-size:64px;font-weight:bold;fill:#333">${okN}</text>
         <text x="${cx}" y="${cy+56}" text-anchor="middle" style="font-size:24px;fill:#E74C3C">❌ 缺口 ${gapN}</text>
-        <text x="${cx}" y="${cy+88}" text-anchor="middle" style="font-size:24px;fill:#F5A623">⚠ 不足 ${insN}</text>
+        <text x="${cx}" y="${cy+88}" text-anchor="middle" style="font-size:24px;fill:#F5A623">◐ 部分有 ${insN}</text>
       </svg>`,
     legendFamily: legendFamily,
     legendBefore: legendBefore,
@@ -1653,7 +1685,7 @@ function renderBlock(key){
     html+='<div style="font-size:36px;font-weight:800;color:#444;">保障覆蓋率</div>';
     html+='<div style="display:flex;gap:20px;font-size:22px;color:#888;font-weight:600">'+
       '<span><span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#27AE8F;margin-right:6px"></span>已規劃</span>'+
-      '<span style="color:#F5A623"><span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#F5A623;opacity:.5;margin-right:6px;border:2px dashed #F5A623"></span>不足</span>'+
+      '<span style="color:#F5A623"><span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#F5A623;opacity:.5;margin-right:6px;border:2px dashed #F5A623"></span>部分有</span>'+
       '<span style="color:#bbb"><span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#e0e0e0;margin-right:6px"></span>缺口</span>'+
     '</div>';
     html+='</div>';
