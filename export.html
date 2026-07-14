@@ -363,16 +363,16 @@ function doShowPreview(){
 function fmtAmtEx(amt){if(amt>=10000)return(amt/10000).toFixed(1)+"萬";return amt.toLocaleString();}
 function isMonthlyEx(k){return k==="5";}
 function isYearlyDetailEx(k){return k==="6";}
-function getEndYearAt100Ex(memberId,policy){
-  var bd=(familyData&&familyData.members&&(familyData.members.find(function(m){return m.personId===memberId;})||{}).birthDate);
+function getEndYearAt100Ex(memberId,policy,profileBirthDate){
+  var bd=profileBirthDate||(familyData&&familyData.members&&(familyData.members.find(function(m){return m.personId===memberId;})||{}).birthDate);
   if(bd){var by=parseInt(bd.slice(0,4));if(!isNaN(by))return by+100;}
   if(policy&&policy.startDate){var sy=parseInt(policy.startDate.slice(0,4));if(!isNaN(sy))return sy+80;}
   return new Date().getFullYear()+50;
 }
-function calcPolicyFlowsEx(p,s,memberId,years){
+function calcPolicyFlowsEx(p,s,memberId,years,profileBirthDate){
   var sw=p.startDate?parseInt(p.startDate.slice(0,4)):null;
   var pw=p.payEndDate?parseInt(p.payEndDate.slice(0,4)):null;
-  var cw=p.covEndDate?parseInt(p.covEndDate.slice(0,4)):getEndYearAt100Ex(memberId,p);
+  var cw=p.covEndDate?parseInt(p.covEndDate.slice(0,4)):getEndYearAt100Ex(memberId,p,profileBirthDate);
   if(!sw)return{};
   var tk=s.type||"1",dfr=parseInt(s.duringFreqYr)||2,dsy=parseInt(s.duringStartYr)||1;
   var da=parseFloat(s.duringAmt)||0,afr=parseInt(s.afterFreqYr)||1;
@@ -399,6 +399,93 @@ function calcPolicyFlowsEx(p,s,memberId,years){
   });
   return flows;
 }
+// 供 PDF 分頁使用：跟 renderSavingsTimeline 共用同一套資料計算，
+// 但把「標題列」「每位被保險人一組」「合計列」拆成可以個別截圖、
+// 個別判斷是否需要換頁的獨立小表格，避免整塊硬塞進單一 A4 頁面
+// 導致被迫縮小到看不清楚。用同一份 colgroup 欄寬設定，確保各自
+// 分開截圖後，欄位仍然對得齊。
+function buildSavingsTimelineParts(pdm3,fData,startYr,endYr){
+  var years=[];for(var y=startYr;y<=endYr;y++)years.push(y);
+  var groups=[],totalFlows={};
+  (fData.members||[]).filter(function(m){return m.role!=="beneficiary_only";}).forEach(function(m){
+    var p3=pdm3[m.personId];if(!p3)return;
+    var sp=(p3.policies||[]).filter(function(p){return["儲蓄險","年金險","儲蓄年金","投資型保險"].indexOf(p.category)>=0;});
+    if(!sp.length)return;
+    var pRows=[];
+    sp.forEach(function(p){
+      var s2=(p3.savings||[]).find(function(sv){return sv.policyId===p.id;})||{type:"1"};
+      var flows=calcPolicyFlowsEx(p,s2,m.personId,years,p3.profile&&p3.profile.birthDate);
+      Object.keys(flows).forEach(function(y2){totalFlows[y2]=(totalFlows[y2]||0)+flows[y2];});
+      pRows.push({policyNo:p.policyNo||p.id,itemName:p.itemName||"",category:p.category||"",flows:flows});
+    });
+    if(pRows.length)groups.push({memberName:m.name,policies:pRows});
+  });
+  if(!groups.length)return null;
+
+  var maxTotal=Math.max.apply(null,Object.values(totalFlows).concat([1]));
+  var catBg={"儲蓄險":"#FBEAF0","年金險":"#FCEBEB","儲蓄年金":"#FBEAF0","投資型保險":"#f0f0f0"};
+  var catCo={"儲蓄險":"#B0466F","年金險":"#C0392B","儲蓄年金":"#B0466F","投資型保險":"#666"};
+
+  // 固定欄寬：第一欄(被保險人/保單)固定，其餘年份欄位平分，
+  // 標題表格跟每一組保單表格都套用同一份，確保欄位對齊
+  var colgroupHtml='<colgroup><col style="width:170px">'+years.map(function(){return'<col>';}).join("")+'</colgroup>';
+
+  var yh=years.map(function(y3){
+    return '<th style="background:linear-gradient(180deg,#f7f8fa,#fff);padding:10px 6px;text-align:center;font-weight:800;color:#374151;border-bottom:2px solid #e2e5ea;border-left:1px solid #eef0f3;white-space:nowrap">'+
+      '<div style="width:8px;height:8px;border-radius:50%;background:#6366f1;margin:0 auto 5px"></div>'+
+      y3+'<br><span style="font-size:15px;color:#6b7280;font-weight:600">'+(y3-1911)+'年</span>'+
+    '</th>';
+  }).join("");
+
+  var headerBandHtml =
+    '<div style="background:#fff;border-radius:20px 20px 0 0;overflow:hidden;border:1px solid rgba(0,0,0,.04);border-bottom:none">'+
+      '<div style="padding:16px 18px;background:linear-gradient(135deg,#EEF2FF,#F5F3FF);display:flex;align-items:center;gap:10px;flex-wrap:wrap">'+
+        '<span style="font-size:20px;font-weight:800;color:#4338ca">📈 未來現金流時間軸</span>'+
+        '<span style="font-size:15px;color:#7c7fa0;font-weight:700;background:#fff;padding:4px 12px;border-radius:99px">'+startYr+' － '+endYr+' 年・'+groups.length+' 位被保險人</span>'+
+      '</div>'+
+      '<table style="width:100%;border-collapse:collapse;font-size:16px;table-layout:fixed">'+colgroupHtml+
+      '<thead><tr><th style="background:#f7f8fa;padding:10px 14px;text-align:left;border-bottom:2px solid #e2e5ea;border-right:2px solid #e2e5ea;font-size:14px;font-weight:800;color:#6b7280">被保險人/保單</th>'+yh+'</tr></thead>'+
+      '</table></div>';
+
+  function buildGroupChunkHtml(g){
+    var pay=g.policies.filter(function(pr){return Object.keys(pr.flows).length===0;}).length;
+    var nr='<tr><td colspan="'+(years.length+1)+'" style="background:linear-gradient(135deg,#EEF4FF,#F7F5FF);padding:12px 16px;font-size:19px;font-weight:800;color:#374151;border-top:2px solid #e2e5ea">'+
+      '👤 '+g.memberName+'<span style="color:#6b7280;font-weight:700;margin-left:9px;font-size:14px">'+g.policies.length+' 張保單</span>'+
+      (pay?'<span style="color:#B07000;font-size:14px;margin-left:7px;font-weight:700">（含 '+pay+' 張繳費中）</span>':'')+
+    '</td></tr>';
+    var pr2=g.policies.map(function(pr){
+      var cells=years.map(function(y4){
+        var amt=pr.flows[y4]||0;
+        if(!amt)return'<td style="text-align:center;color:#9ca3af;font-size:15px;border-left:1px solid #f5f6f8">—</td>';
+        var w=Math.max(34,Math.round((amt/maxTotal)*62));
+        var bg=catBg[pr.category]||"#eef0f3", co=catCo[pr.category]||"#555";
+        return'<td style="text-align:center;border-left:1px solid #f5f6f8;padding:5px 3px"><div style="height:28px;line-height:28px;border-radius:99px;background:'+bg+';display:inline-block;padding:0 10px;min-width:'+w+'px;text-align:center;white-space:nowrap"><span style="font-size:15px;color:'+co+';font-weight:800;font-variant-numeric:tabular-nums">'+fmtAmtEx(amt)+'</span></div></td>';
+      }).join("");
+      var fc='<td style="padding:9px 6px 9px 14px;border-right:2px solid #e2e5ea">'+
+        '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+
+          '<span style="font-size:13px;font-weight:800;padding:3px 9px;border-radius:99px;background:'+(catBg[pr.category]||"#eef0f3")+';color:'+(catCo[pr.category]||"#555")+'">'+(pr.category)+'</span>'+
+          '<span style="font-size:13px;font-weight:800;color:#6366f1;background:#eef2ff;padding:3px 8px;border-radius:99px;font-variant-numeric:tabular-nums">'+pr.policyNo+'</span>'+
+          (!Object.keys(pr.flows).length?'<span style="font-size:13px;color:#B07000;font-weight:700">繳費中</span>':'')+
+        '</div>'+
+        (pr.itemName?'<div style="font-size:15px;color:#444;font-weight:700;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px">'+pr.itemName+'</div>':'')+
+      '</td>';
+      return'<tr>'+fc+cells+'</tr>';
+    }).join("");
+    var mf={};g.policies.forEach(function(pr){Object.keys(pr.flows).forEach(function(y5){mf[y5]=(mf[y5]||0)+pr.flows[y5];});});
+    var sub='<tr style="background:#F5F6FF;font-weight:800;color:#4f46e5;border-top:1px solid #e2e5ea"><td style="padding:7px 6px 7px 14px;border-right:2px solid #e2e5ea;font-size:14px">小計</td>'+
+      years.map(function(y6){var a=mf[y6]||0;return a?'<td style="text-align:center;font-size:15px;font-variant-numeric:tabular-nums">'+fmtAmtEx(a)+'</td>':'<td style="text-align:center;color:#9ca3af">—</td>';}).join("")+'</tr>';
+    return '<table style="width:100%;border-collapse:collapse;font-size:16px;table-layout:fixed;background:#fff">'+colgroupHtml+'<tbody>'+nr+pr2+sub+'</tbody></table>';
+  }
+
+  var totalRowHtml = '<table style="width:100%;border-collapse:collapse;font-size:16px;table-layout:fixed;background:#fff;border-radius:0 0 20px 20px;overflow:hidden">'+colgroupHtml+
+    '<tbody><tr style="background:linear-gradient(135deg,#EEF2FF,#F5F3FF);font-weight:800;color:#4338ca;border-top:2px solid #c7d2fe">'+
+    '<td style="padding:10px 6px 10px 14px;border-right:2px solid #e2e5ea;font-size:14px">合計現金流</td>'+
+    years.map(function(y7){var a=totalFlows[y7]||0;return a?'<td style="text-align:center;font-size:16px;font-variant-numeric:tabular-nums">'+fmtAmtEx(a)+'</td>':'<td style="text-align:center;color:#9ca3af">—</td>';}).join("")+
+    '</tr></tbody></table>';
+
+  return { headerBandHtml:headerBandHtml, groups:groups, buildGroupChunkHtml:buildGroupChunkHtml, totalRowHtml:totalRowHtml };
+}
+
 function renderSavingsTimeline(pdm3,fData,startYr,endYr){
   var years=[];for(var y=startYr;y<=endYr;y++)years.push(y);
   var groups=[],totalFlows={};
@@ -409,7 +496,7 @@ function renderSavingsTimeline(pdm3,fData,startYr,endYr){
     var pRows=[];
     sp.forEach(function(p){
       var s2=(p3.savings||[]).find(function(sv){return sv.policyId===p.id;})||{type:"1"};
-      var flows=calcPolicyFlowsEx(p,s2,m.personId,years);
+      var flows=calcPolicyFlowsEx(p,s2,m.personId,years,p3.profile&&p3.profile.birthDate);
       Object.keys(flows).forEach(function(y2){totalFlows[y2]=(totalFlows[y2]||0)+flows[y2];});
       pRows.push({policyNo:p.policyNo||p.id,itemName:p.itemName||"",category:p.category||"",flows:flows});
     });
@@ -440,7 +527,7 @@ function renderSavingsTimeline(pdm3,fData,startYr,endYr){
         if(!amt)return'<td style="text-align:center;color:#9ca3af;font-size:13px;border-left:1px solid #f5f6f8">—</td>';
         var w=Math.max(30,Math.round((amt/maxTotal)*54));
         var bg=catBg[pr.category]||"#eef0f3", co=catCo[pr.category]||"#555";
-        return'<td style="text-align:center;border-left:1px solid #f5f6f8;padding:4px 3px"><div style="height:24px;border-radius:99px;background:'+bg+';display:inline-flex;align-items:center;justify-content:center;padding:0 8px;min-width:'+w+'px"><span style="font-size:13px;color:'+co+';white-space:nowrap;font-weight:800;font-variant-numeric:tabular-nums">'+fmtAmtEx(amt)+'</span></div></td>';
+        return'<td style="text-align:center;border-left:1px solid #f5f6f8;padding:4px 3px"><div style="height:24px;line-height:24px;border-radius:99px;background:'+bg+';display:inline-block;padding:0 8px;min-width:'+w+'px;text-align:center;white-space:nowrap"><span style="font-size:13px;color:'+co+';font-weight:800;font-variant-numeric:tabular-nums">'+fmtAmtEx(amt)+'</span></div></td>';
       }).join("");
       var fc='<td style="padding:8px 6px 8px 14px;min-width:130px;border-right:2px solid #e2e5ea">'+
         '<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">'+
@@ -1773,6 +1860,14 @@ async function doExportPDF(blks,div){
   var disclaimer='<div style="padding:8px 14px;font-size:32px;color:#999;line-height:1.6;text-align:left">⚠️ 本報告彙總之資訊為檢視與討論保障內容的參考藍圖；為守護您的權益，實際理賠給付項目與條件，仍以各家保險公司之最新資料及正式保險契約條款為準</div>';
   var pageCount=0;
 
+  // 供「儲蓄險現金流時間軸」分頁使用的資料（跟 renderBlock 同一套取得方式）
+  var nowYearGlobal = new Date().getFullYear();
+  var pdm2Global = {};
+  ((familyData && familyData.members) || []).filter(function(m){ return m.role!=="beneficiary_only"; }).forEach(function(m){
+    var cached = sessionStorage.getItem("nbs_person_"+m.personId);
+    if(cached) pdm2Global[m.personId]=JSON.parse(cached);
+  });
+
   function addNewPage(){ if(pageCount>0) pdf.addPage([297,210],"l"); pageCount++; }
 
   async function captureHtml(html){
@@ -1873,6 +1968,51 @@ async function doExportPDF(blks,div){
         var fd = canvasToMM(footerC, usableW, 40);
         if(y + fd.ih > margin+usableH){ y = await startNewPagePD(); }
         pdf.addImage(footerC.toDataURL("image/jpeg",0.88),"JPEG",margin,y,fd.iw,fd.ih);
+      }
+    } else if(blks[i].key==="savings_timeline"){
+      // ── 儲蓄險現金流時間軸：依被保險人分組動態分頁 ──────────
+      // 標題+欄位年份先自成一頁最上方，接著每位被保險人的所有保單
+      // 自成一組，整組放得下就整組印、放不下才換頁，永遠維持滿版
+      // 寬度，不會因為表格太高被迫縮小到看不清楚。
+      var stParts = buildSavingsTimelineParts(pdm2Global, familyData, nowYearGlobal, nowYearGlobal+14);
+      if(!stParts){
+        var emptyC = await captureHtml(getBlockTitleHtml(blks[i])+'<div style="padding:60px;text-align:center;color:#9ca3af;font-size:20px">尚無儲蓄保單設定領回資料</div>'+(isLast||fmt==="pdf_pages"?disclaimer:"")+wm);
+        addNewPage();
+        var ed = canvasToMM(emptyC, usableW, usableH);
+        pdf.addImage(emptyC.toDataURL("image/jpeg",0.88),"JPEG",margin,margin,ed.iw,ed.ih);
+      } else {
+        var titleC2 = await captureHtml(getBlockTitleHtml(blks[i]));
+        var titleH2 = (titleC2.height/titleC2.width)*usableW;
+        var headC2 = await captureHtml(stParts.headerBandHtml);
+        var hd2 = canvasToMM(headC2, usableW, usableH-titleH2-4);
+
+        async function startNewPageST(){
+          addNewPage();
+          pdf.addImage(titleC2.toDataURL("image/jpeg",0.88),"JPEG",margin,margin,usableW,titleH2);
+          pdf.addImage(headC2.toDataURL("image/jpeg",0.88),"JPEG",margin,margin+titleH2,hd2.iw,hd2.ih);
+          return margin+titleH2+hd2.ih;
+        }
+
+        var y2 = await startNewPageST();
+        for(var g2=0; g2<stParts.groups.length; g2++){
+          var chunkC = await captureHtml(stParts.buildGroupChunkHtml(stParts.groups[g2]));
+          var chunkH = (chunkC.height/chunkC.width)*usableW;
+          if(y2+chunkH > margin+usableH && y2>margin+1){ y2 = await startNewPageST(); }
+          pdf.addImage(chunkC.toDataURL("image/jpeg",0.88),"JPEG",margin,y2,usableW,chunkH);
+          y2 += chunkH;
+        }
+        var totC = await captureHtml(stParts.totalRowHtml);
+        var totH = (totC.height/totC.width)*usableW;
+        if(y2+totH > margin+usableH){ y2 = await startNewPageST(); }
+        pdf.addImage(totC.toDataURL("image/jpeg",0.88),"JPEG",margin,y2,usableW,totH);
+        y2 += totH;
+
+        if(isLast || fmt==="pdf_pages"){
+          var footC2 = await captureHtml(disclaimer+wm);
+          var fd2 = canvasToMM(footC2, usableW, 40);
+          if(y2+fd2.ih > margin+usableH){ y2 = await startNewPageST(); }
+          pdf.addImage(footC2.toDataURL("image/jpeg",0.88),"JPEG",margin,y2,fd2.iw,fd2.ih);
+        }
       }
     } else {
       // ── 其餘區塊：維持單頁等比例縮放 ──────────────────
