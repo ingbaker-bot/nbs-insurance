@@ -892,7 +892,7 @@
       ".nbs-row2-btn-ghost{background:transparent;color:#9CA3AF;border:1px solid rgba(120,140,255,.14)}",
       ".nbs-row2-btn-ghost:hover{color:#6B7280}",
       ".nbs-vm{position:relative}",
-      ".nbs-vm-menu{display:none;position:absolute;bottom:calc(100% + 6px);left:0;right:0;background:#fff;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.16);border:1px solid rgba(120,140,255,.14);padding:4px;z-index:60}",
+      ".nbs-vm-menu{display:none;position:absolute;bottom:calc(100% + 6px);right:-4px;width:190px;background:#fff;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.16);border:1px solid rgba(120,140,255,.14);padding:4px;z-index:60}",
       ".nbs-vm-open .nbs-vm-menu{display:block}",
       ".nbs-pbtn:hover{background:linear-gradient(90deg,rgba(59,130,246,.16),rgba(124,58,237,.16))}",
       ".nbs-bbtn{width:100%;padding:7px;background:transparent;color:#9CA3AF;border:none;border-radius:7px;font-size:13px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:5px}",
