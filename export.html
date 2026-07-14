@@ -1861,6 +1861,7 @@ async function doExportPDF(blks,div){
   var wm = ''; // 業務員資訊已移至上方，這裡留空
   var disclaimer='<div style="padding:8px 14px;font-size:32px;color:#999;line-height:1.6;text-align:left">⚠️ 本報告彙總之資訊為檢視與討論保障內容的參考藍圖；為守護您的權益，實際理賠給付項目與條件，仍以各家保險公司之最新資料及正式保險契約條款為準</div>';
   var pageCount=0;
+  var pageLabelCounters = {}; // 每個區塊前綴各自累計頁碼，例如 {"繳費":3,"現金流":2}
 
   // 供「儲蓄險現金流時間軸」分頁使用的資料（跟 renderBlock 同一套取得方式）
   var nowYearGlobal = new Date().getFullYear();
@@ -1870,7 +1871,33 @@ async function doExportPDF(blks,div){
     if(cached) pdm2Global[m.personId]=JSON.parse(cached);
   });
 
-  function addNewPage(){ if(pageCount>0) pdf.addPage([297,210],"l"); pageCount++; }
+  // 用 canvas 直接畫文字產生標籤圖片，而不是走 html2canvas 擷取整個 DOM，
+  // 避免多一次昂貴的擷取；canvas 2D fillText 是瀏覽器原生字型渲染，
+  // 中文字不需要額外嵌入字型（這也是 jsPDF 原生 pdf.text() 無法直接顯示
+  // 中文的原因，所以整份報告一律用擷取圖片的方式處理文字）。
+  function makePageLabelImg(text){
+    var c = document.createElement("canvas");
+    c.width = 360; c.height = 72;
+    var ctx = c.getContext("2d");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0,0,c.width,c.height);
+    ctx.fillStyle = "#9CA3AF";
+    ctx.font = "700 38px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+    ctx.textBaseline = "middle";
+    ctx.textAlign = "right";
+    ctx.fillText(text, c.width-12, c.height/2);
+    return c.toDataURL("image/png");
+  }
+
+  // 在頁面右下角（10mm 頁緣留白處，不會跟內容重疊）蓋上「前綴-頁碼」標籤
+  function stampPageLabel(prefix){
+    if(!prefix) return;
+    pageLabelCounters[prefix] = (pageLabelCounters[prefix]||0)+1;
+    var img = makePageLabelImg(prefix+"-"+pageLabelCounters[prefix]);
+    pdf.addImage(img,"PNG", pageW-margin-22, pageH-6, 22, 4.4);
+  }
+
+  function addNewPage(labelPrefix){ if(pageCount>0) pdf.addPage([297,210],"l"); pageCount++; stampPageLabel(labelPrefix); }
 
   async function captureHtml(html){
     div.style.width="2400px";
@@ -1912,7 +1939,7 @@ async function doExportPDF(blks,div){
 
       // 【修改點 2】修改換頁函數，讓每新的一頁都同時印上「主標題」與「保費統計與月曆」
       async function startNewPagePD(){
-        addNewPage();
+        addNewPage("繳費");
         // 1. 印上最上方主標題 (【XXX】保單繳費明細一覽表)
         pdf.addImage(titleC.toDataURL("image/jpeg",0.88),"JPEG",margin,margin,usableW,titleH);
         // 2. 緊接著印上列印標題 (年繳保費、月繳保費分配、欄位名稱)
@@ -1979,8 +2006,7 @@ async function doExportPDF(blks,div){
       var stParts = buildSavingsTimelineParts(pdm2Global, familyData, nowYearGlobal, nowYearGlobal+14);
       if(!stParts){
         var emptyC = await captureHtml(getBlockTitleHtml(blks[i])+'<div style="padding:60px;text-align:center;color:#9ca3af;font-size:20px">尚無儲蓄保單設定領回資料</div>'+(isLast||fmt==="pdf_pages"?disclaimer:"")+wm);
-        addNewPage();
-        var ed = canvasToMM(emptyC, usableW, usableH);
+        addNewPage("現金流");
         pdf.addImage(emptyC.toDataURL("image/jpeg",0.88),"JPEG",margin,margin,ed.iw,ed.ih);
       } else {
         var titleC2 = await captureHtml(getBlockTitleHtml(blks[i]));
@@ -1989,7 +2015,7 @@ async function doExportPDF(blks,div){
         var hd2 = canvasToMM(headC2, usableW, usableH-titleH2-4);
 
         async function startNewPageST(){
-          addNewPage();
+          addNewPage("現金流");
           pdf.addImage(titleC2.toDataURL("image/jpeg",0.88),"JPEG",margin,margin,usableW,titleH2);
           pdf.addImage(headC2.toDataURL("image/jpeg",0.88),"JPEG",margin,margin+titleH2,hd2.iw,hd2.ih);
           return margin+titleH2+hd2.ih;
@@ -2018,9 +2044,10 @@ async function doExportPDF(blks,div){
       }
     } else {
       // ── 其餘區塊：維持單頁等比例縮放 ──────────────────
+      var PAGE_LABEL_PREFIX = { summary:"彙總", policy_detail:"保障" };
       var showDisclaimer = fmt==="pdf_pages" ? true : isLast;
       var c = await captureHtml(getBlockTitleHtml(blks[i])+renderBlock(blks[i].key)+(showDisclaimer?disclaimer:"")+wm);
-      addNewPage();
+      addNewPage(PAGE_LABEL_PREFIX[blks[i].key] || "報告");
       var d = canvasToMM(c, usableW, usableH);
       pdf.addImage(c.toDataURL("image/jpeg",0.88),"JPEG",margin,margin,d.iw,d.ih);
     }
