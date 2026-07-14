@@ -454,7 +454,7 @@
         _versionActionsHtml() +
       '</div>' +
       '<div class="nbs-foot">' +
-        '<div class="nbs-disclaimer">本報告為保障檢視參考，實際理賠項目與條件以各保險公司正式契約條款為準。</div>' +
+        _productLinksHtml() +
       '</div>';
   }
 
@@ -468,6 +468,28 @@
     var icon = role === "draft" ? "📝" : "📦";
     var title = role === "draft" ? "草案"+(_family.draftLabel?"："+_family.draftLabel:"") : "歷史現況";
     return '<span title="'+title+'" style="margin-right:4px">'+icon+'</span>';
+  }
+
+  // ── 商品資料查詢：跟目前開啟哪個家庭無關的通用保司商品知識庫連結 ──
+  // 設計原則同「版本管理」：偶爾才查、但需要隨時點得到，所以收進
+  // 預設收合的區塊，不跟「功能模組」的每日核心操作搶版面。未來要
+  // 加其他保險公司的資料庫，往 PRODUCT_LINKS 陣列加項目即可。
+  var PRODUCT_LINKS = [
+    { icon:"📘", label:"富邦｜醫療長照癌症豁免總覽", url:"https://notebooklm.google.com/notebook/a8816f85-d71e-4701-8a7e-5890ebce0759" },
+    { icon:"📗", label:"富邦｜現售商品總覽",         url:"https://notebooklm.google.com/notebook/dd52844f-700f-4d05-8d1a-ac39eef067c0" }
+  ];
+
+  function _productLinksHtml() {
+    var items = PRODUCT_LINKS.map(function(p) {
+      return '<a class="nbs-ni nbs-ni-sm" href="'+p.url+'" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">' +
+        '<span class="nbs-nicon">'+p.icon+'</span>' +
+        '<span class="nbs-nlabel">'+p.label+'</span>' +
+      '</a>';
+    }).join("");
+    return '<div class="nbs-vm">' +
+      '<button class="nbs-row2-btn nbs-row2-btn-ghost" style="width:100%" onclick="event.stopPropagation();NBS_NAV._toggleVersionMenu(this)">📚 商品資料查詢</button>' +
+      '<div class="nbs-vm-menu">'+items+'</div>' +
+    '</div>';
   }
 
   function _versionActionsHtml() {
