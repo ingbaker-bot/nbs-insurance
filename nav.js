@@ -450,11 +450,11 @@
         '<button class="nbs-row2-btn" onclick="NBS_NAV._print()">🖨️ 列印此頁</button>' +
       '</div>' +
       '<div class="nbs-row2">' +
-        '<button class="nbs-row2-btn nbs-row2-btn-ghost" onclick="NBS_NAV._back()">← 返回列表</button>' +
+        _productLinksHtml() +
         _versionActionsHtml() +
       '</div>' +
       '<div class="nbs-foot">' +
-        _productLinksHtml() +
+        '<button class="nbs-row2-btn nbs-row2-btn-ghost" style="width:100%" onclick="NBS_NAV._back()">← 返回列表</button>' +
       '</div>';
   }
 
@@ -487,7 +487,7 @@
       '</a>';
     }).join("");
     return '<div class="nbs-vm">' +
-      '<button class="nbs-row2-btn nbs-row2-btn-ghost" style="width:100%" onclick="event.stopPropagation();NBS_NAV._toggleVersionMenu(this)">📚 商品資料查詢</button>' +
+      '<button class="nbs-row2-btn nbs-row2-btn-ghost" style="width:100%" onclick="event.stopPropagation();NBS_NAV._toggleVersionMenu(this)">📚 富壽查詢</button>' +
       '<div class="nbs-vm-menu">'+items+'</div>' +
     '</div>';
   }
