@@ -1,0 +1,2246 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8"/>
+  <link rel="icon" href="data:,">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NBS - 匯出圖片</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    :root{
+      --primary:#6366f1; --primary-dark:#4f46e5; --primary-light:#eef2ff;
+      --accent-pdf:#f43f5e; --accent-pdf-light:#fff1f2;
+      --bg:#f8fafc; --surface:#ffffff; --text:#1e293b; --text-muted:#64748b;
+      --border:#e2e8f0; --success:#10b981; --success-light:#ecfdf5;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'PingFang TC',-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);min-height:100vh;color:var(--text);padding-bottom:96px}
+    .hdr{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100}
+    .back{background:none;border:none;font-size:26px;color:var(--text-muted);cursor:pointer;padding:0}
+    .hdr-title{font-size:18px;font-weight:700;flex:1}
+    .hdr-sub{font-size:14px;color:var(--text-muted)}
+    .member-tabs{display:flex;gap:8px;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;padding:14px 16px}
+    .member-tab{padding:8px 18px;border-radius:99px;background:#f1f5f9;cursor:pointer;white-space:nowrap;color:var(--text-muted);font-weight:600;font-size:14px;transition:.2s}
+    .member-tab.active{background:var(--primary);color:#fff;box-shadow:0 4px 10px -2px rgba(99,102,241,.5)}
+    /* 選項頁保持窄版（手機友好），預覽頁用獨立 class */
+    .wrap{padding:20px;max-width:560px;margin:0 auto}
+    @media (min-width:900px){ .wrap{max-width:920px} }
+    .wrap-preview{padding:20px;max-width:1240px;margin:0 auto}
+    .sec-lbl{font-size:14px;font-weight:700;color:var(--text-muted);margin-bottom:12px;letter-spacing:.05em;display:flex;align-items:center;justify-content:space-between}
+    #BLKLIST{display:grid;grid-template-columns:1fr;gap:12px}
+    @media (min-width:480px){ #BLKLIST{grid-template-columns:1fr 1fr} }
+    .blk{display:flex;align-items:center;gap:12px;padding:13px 16px;border:2px solid transparent;border-radius:18px;cursor:pointer;background:var(--surface);margin-bottom:0;box-shadow:0 4px 6px -1px rgba(0,0,0,.06);-webkit-tap-highlight-color:rgba(0,0,0,0);transition:.15s}
+    .blk.on{border-color:var(--primary);background:var(--primary-light)}
+    .chk{width:24px;height:24px;border-radius:8px;border:1.5px solid #d8dce6;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;color:#fff;background:#fff;transition:.15s}
+    .blk.on .chk{background:var(--primary);border-color:var(--primary)}
+    .blk-lbl{font-size:17px;font-weight:700;color:var(--text)}
+    .blk.on .blk-lbl{color:var(--primary-dark)}
+    .blk-desc{font-size:13px;color:var(--text-muted);margin-top:2px}
+    .fmt-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px}
+    .fmt{padding:14px 14px;border:2px solid transparent;border-radius:16px;cursor:pointer;background:var(--surface);box-shadow:0 4px 6px -1px rgba(0,0,0,.06);-webkit-tap-highlight-color:rgba(0,0,0,0);transition:.15s}
+    .fmt.spng{border-color:var(--primary);background:var(--primary-light)}
+    .fmt.spdf{border-color:var(--accent-pdf);background:var(--accent-pdf-light)}
+    .fmt-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:2px}
+    .fmt.spng .fmt-title{color:var(--primary-dark)}
+    .fmt.spdf .fmt-title{color:var(--accent-pdf)}
+    .fmt-desc{font-size:13px;color:var(--text-muted);line-height:1.5}
+    .fmt-section-hdr{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:700;color:var(--text);margin-top:10px;padding:8px 6px;cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,0);border-radius:10px}
+    .fmt-section-hdr:hover{background:#eef1f6}
+    .fmt-hdr-sel{font-size:13px;font-weight:700;padding:3px 12px;border-radius:99px;background:var(--primary-light);color:var(--primary-dark);white-space:nowrap}
+    .fmt-section-hdr.is-pdf .fmt-hdr-sel{background:var(--accent-pdf-light);color:var(--accent-pdf)}
+    .fmt-chevron{font-size:14px;color:#bbb;transition:transform .15s;width:16px;text-align:center}
+    .pbtn{width:100%;padding:16px;color:#fff;border:none;border-radius:16px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;display:block;box-shadow:0 10px 15px -5px rgba(99,102,241,.4);-webkit-tap-highlight-color:rgba(0,0,0,0)}
+    .pbtn:disabled{background:#cbd2e0!important;box-shadow:none;cursor:default}
+    .sbtn{padding:16px;background:#eef1f6;color:var(--text-muted);border:none;border-radius:16px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;flex:1;-webkit-tap-highlight-color:rgba(0,0,0,0)}
+    .brow{display:flex;gap:10px;position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--border);padding:12px 20px calc(12px + env(safe-area-inset-bottom));z-index:90;box-shadow:0 -4px 12px rgba(0,0,0,.04)}
+    .brow > .pbtn, .brow > .sbtn{margin-top:0}
+    .brow-inner{max-width:560px;margin:0 auto;display:flex;gap:10px;width:100%}
+    .pg{display:none}
+    .pg.act{display:block}
+    #P_PREV{overflow-x:auto}
+    .pv-note{padding:12px 14px;background:var(--primary-light);border-radius:14px;margin-bottom:14px;font-size:14px;color:var(--primary-dark);line-height:1.7}
+    .pv-blk{border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:12px;box-shadow:0 4px 6px -1px rgba(0,0,0,.05)}
+    .pv-hdr{padding:8px 12px;background:#f7f7f5;border-bottom:1px solid #f0f0f0;font-size:15px;font-weight:600;color:#444}
+    .prog-wrap{background:#eef1f6;border-radius:99px;height:10px;overflow:hidden;max-width:280px;margin:0 auto 8px}
+    .prog-bar{height:100%;border-radius:99px;transition:width .2s}
+    .flist{padding:14px 16px;background:#f8fafc;border-radius:16px;margin-bottom:24px;border:1px solid var(--border)}
+    .fitem{font-size:15px;color:var(--text);display:flex;align-items:center;gap:6px;margin-bottom:4px}
+    .spin{display:inline-block;width:16px;height:16px;border:2px solid #e0e0e0;border-top-color:var(--primary);border-radius:50%;animation:sp .7s linear infinite;vertical-align:middle}
+    @keyframes sp{to{transform:rotate(360deg)}}
+    .ex-modal-overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:400;align-items:center;justify-content:center;padding:20px}
+    .ex-modal-overlay.active{display:flex}
+    .ex-modal-card{background:var(--surface);border-radius:24px;padding:26px;width:100%;max-width:420px;box-shadow:0 20px 40px -8px rgba(0,0,0,.25)}
+    .ex-modal-title{font-size:19px;font-weight:700;color:var(--text);margin-bottom:4px}
+    .ex-modal-sub{font-size:13px;color:var(--text-muted);margin-bottom:18px}
+    .ex-modal-field{margin-bottom:14px}
+    .ex-modal-field label{display:block;font-size:13px;color:var(--text-muted);margin-bottom:6px;font-weight:600}
+    .ex-modal-input{width:100%;padding:13px 14px;border:1.5px solid var(--border);border-radius:14px;font-size:16px;font-family:inherit;outline:none;box-sizing:border-box;transition:.15s}
+    .ex-modal-input:focus{border-color:var(--primary)}
+    .ex-modal-input::placeholder{color:#c3c7ce}
+    .ex-modal-btns{display:flex;gap:10px;margin-top:20px}
+    .ex-modal-btn{flex:1;padding:14px;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;border:none;font-family:inherit}
+    .ex-modal-btn.cancel{background:#eef1f6;color:var(--text-muted)}
+    .ex-modal-btn.save{background:var(--primary);color:#fff;box-shadow:0 6px 14px -4px rgba(99,102,241,.5)}
+  </style>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="nav.js"></script>
+</head>
+<body>
+<div style="display:none" id="HDR_SUB"></div>
+<button style="display:none" id="B_BACK"></button>
+<div style="display:none" id="HDR_TITLE"></div>
+<div style="display:flex; align-items:center; justify-content:space-between; background:var(--surface); border-bottom:1px solid var(--border);">
+  <div class="member-tabs" id="member-tabs" style="border-bottom:none; flex:1;"></div>
+  <div id="export-settings-row" style="display:flex; gap:8px; padding:0 16px;">
+    <button onclick="openNicknameModal()" style="font-size:13px;font-weight:600;padding:6px 14px;border:none;border-radius:99px;background:var(--primary-light);color:var(--primary-dark);cursor:pointer;font-family:inherit">✏️ 稱呼設定</button>
+    <button onclick="openAgentInfoModal()" style="font-size:13px;font-weight:600;padding:6px 14px;border:none;border-radius:99px;background:var(--primary-light);color:var(--primary-dark);cursor:pointer;font-family:inherit">⚙️ 業務員資訊</button>
+  </div>
+</div>
+
+<div class="pg act" id="P_SEL">
+  <div class="wrap">
+    <div class="sec-lbl">選擇匯出區塊
+      <button id="B_TOGALL" style="font-size:13px;font-weight:600;padding:5px 14px;border:none;border-radius:99px;background:#eef1f6;color:var(--text-muted);cursor:pointer;font-family:inherit">全部取消</button>
+    </div>
+    <div id="BLKLIST"></div>
+    <div class="fmt-section-hdr" id="FMT_HDR_png" onclick="toggleFmtSection('png')">
+      <span style="flex:1">🖼️ 圖檔（PNG）</span>
+      <span class="fmt-hdr-sel" id="FMT_SEL_png"></span>
+      <span class="fmt-chevron" id="FMT_CHEV_png">▾</span>
+    </div>
+    <div class="fmt-grid" id="FMT_PNG"></div>
+    <div class="fmt-section-hdr is-pdf" id="FMT_HDR_pdf" onclick="toggleFmtSection('pdf')">
+      <span style="flex:1">📄 文件（PDF）</span>
+      <span class="fmt-hdr-sel" id="FMT_SEL_pdf"></span>
+      <span class="fmt-chevron" id="FMT_CHEV_pdf">▾</span>
+    </div>
+    <div class="fmt-grid" id="FMT_PDF"></div>
+    <div class="brow">
+      <div class="brow-inner">
+        <button class="pbtn" id="B_PREV" style="background:var(--primary)">預覽區塊</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="pg" id="P_PREV">
+  <div class="wrap-preview">
+    <div class="pv-note" id="PV_NOTE"></div>
+    <div id="PV_SCALE_OUTER" style="overflow:hidden;margin:0 auto">
+      <div id="PV_BLOCKS" style="width:2400px;transform-origin:top left"></div>
+    </div>
+    <div style="padding:8px 12px;background:#f7f7f5;border-radius:8px;font-size:14px;color:#aaa;margin-bottom:12px">
+      💡 <span id="WM_HINT"></span>
+    </div>
+    <div class="brow">
+      <div class="brow-inner">
+        <button class="sbtn" id="B_BACK2">返回修改</button>
+        <button class="pbtn" id="B_EXPORT" style="background:var(--primary);flex:2">下載圖片</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="pg" id="P_DOING">
+  <div class="wrap" style="text-align:center;padding-top:40px">
+    <div style="font-size:72px;margin-bottom:16px" id="EX_ICON">🖼️</div>
+    <div style="font-weight:500;font-size:18px;margin-bottom:8px" id="EX_MSG">正在產生圖片…</div>
+    <div style="font-size:14px;color:#999;margin-bottom:24px" id="EX_SUB"></div>
+    <div class="prog-wrap"><div class="prog-bar" id="PROG" style="width:0%;background:var(--primary)"></div></div>
+    <div style="font-size:19px;font-weight:500;margin-top:8px;color:var(--primary)" id="PROG_PCT">0%</div>
+  </div>
+</div>
+
+<div class="pg" id="P_DONE">
+  <div class="wrap" style="text-align:center;padding-top:32px">
+    <div style="font-size:96px;margin-bottom:16px">✅</div>
+    <div style="font-weight:500;font-size:18px;margin-bottom:8px">匯出完成！</div>
+    <div style="font-size:14px;color:#999;line-height:1.8;margin-bottom:20px" id="DONE_MSG"></div>
+    <div class="flist" id="DONE_FILES"></div>
+    <div class="brow">
+      <div class="brow-inner">
+        <button class="sbtn" id="B_DONE_PREV" style="flex:1">回前一頁</button>
+        <button class="pbtn" id="B_FINISH" style="background:var(--primary);flex:1;width:auto">回家庭首頁</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── 設定 ─────────────────────────────────────────────────
+var   GAS="https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec";
+
+// ▼ 四大匯出區塊（重新拆分）
+var   BLOCKS=[
+  {key:"premium_detail",   label:"保險繳費明細一覽表", icon:"📅",desc:"年繳/月均統計、月曆、保單與受益人整合表"},
+  {key:"summary",          label:"保單彙總一覽表",     icon:"📊",desc:"保障覆蓋率、家庭責任、醫療階段、就醫情況"},
+  {key:"policy_detail",    label:"保單明細一覽表",     icon:"📋",desc:"各項保障加總明細"},
+  {key:"savings_timeline", label:"儲蓄險現金流時間軸", icon:"📈",desc:"未來15年各被保險人現金流匯整"},
+];
+var   FMTS=[
+  {key:"png_single",  type:"png",label:"PNG 一張長圖",desc:"所有區塊合併，適合 LINE 傳送"},
+  {key:"png_multiple",type:"png",label:"PNG 分張",    desc:"每個區塊各自一張"},
+  {key:"pdf_merge",   type:"pdf",label:"PDF 合併",    desc:"所有區塊合併為單一 PDF"},
+  {key:"pdf_pages",   type:"pdf",label:"PDF 分頁",    desc:"每個區塊各自一頁"},
+];
+var   CC={"壽險保障":"#4A90D9","醫療保障":"#27AE8F","意外險":"#F5A623","重大疾病險":"#9B59B6","重大傷病險":"#8E44AD","特定傷病險":"#7D3C98","儲蓄險":"#E8638A","年金險":"#C0392B","投資型保險":"#95A5A6"};
+
+// ── 狀態 ─────────────────────────────────────────────────
+var sel={premium_detail:false,summary:false,policy_detail:false,savings_timeline:false};
+var fmt="png_single";
+var fmtOpen="png"; // 手風琴目前展開的區塊，預設展開 PNG
+var person={},policies=[],coverage={},savings=[];
+var pName="",pDate="";
+
+// ── 按鈕綁定 ─────────────────────────────────────────────
+function _goFamily() {
+  if (window.NBSRouter && typeof NBSRouter.navigate === "function") {
+    NBSRouter.navigate("family.html");
+  } else {
+    window.location.href = "family.html";
+  }
+}
+
+document.getElementById("B_BACK").onclick    = _goFamily;
+document.getElementById("B_TOGALL").onclick  = doToggleAll;
+document.getElementById("B_PREV").onclick    = doShowPreview;
+document.getElementById("B_BACK2").onclick   = doShowSelect;
+document.getElementById("B_EXPORT").onclick  = doExport;
+document.getElementById("B_FINISH").onclick  = _goFamily;
+document.getElementById("B_DONE_PREV").onclick = doShowSelect;
+
+// ── 建立區塊清單 ──────────────────────────────────────────
+function buildBlocks(){
+  var c=document.getElementById("BLKLIST");
+  c.innerHTML="";
+  BLOCKS.forEach(function(b){
+    var d=document.createElement("div");
+    d.className="blk"+(sel[b.key]?" on":"");
+    d.innerHTML='<div class="chk">'+(sel[b.key]?"✓":"")+'</div><span style="font-size:28px;flex-shrink:0">'+b.icon+'</span><div style="flex:1"><div class="blk-lbl">'+b.label+'</div><div class="blk-desc">'+b.desc+'</div></div>';
+    d.onclick=(function(key){return function(){
+      sel[key]=!sel[key];
+      buildBlocks();
+      updateToggleBtn();
+      updatePrevBtn();
+    };})(b.key);
+    c.appendChild(d);
+  });
+}
+
+function buildFmts(){
+  ["png","pdf"].forEach(function(t){
+    var c=document.getElementById("FMT_"+t.toUpperCase());
+    c.innerHTML="";
+    FMTS.filter(function(f){return f.type===t;}).forEach(function(f){
+      var d=document.createElement("div");
+      var sc=fmt===f.key?(t==="png"?"spng":"spdf"):"";
+      d.className="fmt "+sc;
+      d.innerHTML='<div class="fmt-title">'+f.label+'</div><div class="fmt-desc">'+f.desc+'</div>';
+      d.onclick=(function(key,type){return function(){
+        fmt=key;
+        buildFmts();
+        var eb=document.getElementById("B_EXPORT");
+        eb.style.background=fmt.startsWith("pdf")?"var(--accent-pdf)":"var(--primary)";
+        eb.textContent=fmt.startsWith("pdf")?"匯出 PDF":"下載圖片";
+      };})(f.key,t);
+      c.appendChild(d);
+    });
+  });
+  renderFmtSections();
+}
+
+// ── PNG／PDF 手風琴收合 ──────────────────────────────────
+function toggleFmtSection(type){
+  fmtOpen = (fmtOpen===type) ? null : type;
+  renderFmtSections();
+}
+
+function renderFmtSections(){
+  ["png","pdf"].forEach(function(t){
+    var isOpen = fmtOpen===t;
+    document.getElementById("FMT_"+t.toUpperCase()).style.display = isOpen ? "grid" : "none";
+    document.getElementById("FMT_CHEV_"+t).textContent = isOpen ? "▾" : "▸";
+    var selEl = document.getElementById("FMT_SEL_"+t);
+    var cur = FMTS.find(function(f){return f.key===fmt && f.type===t;});
+    if(!isOpen && cur){
+      selEl.textContent = cur.label;
+      selEl.style.display = "inline-block";
+    } else {
+      selEl.style.display = "none";
+    }
+  });
+}
+
+function updateToggleBtn(){
+  var all=BLOCKS.every(function(b){return sel[b.key];});
+  document.getElementById("B_TOGALL").textContent=all?"全部取消":"全部勾選";
+}
+
+function updatePrevBtn(){
+  var keys=BLOCKS.filter(function(b){return sel[b.key];});
+  var btn=document.getElementById("B_PREV");
+  if(keys.length===0){
+    btn.textContent="請至少勾選一個區塊";
+    btn.style.background="#ccc";
+    btn.disabled=true;
+  }else{
+    btn.textContent="預覽 "+keys.length+" 個區塊";
+    btn.style.background="var(--primary)";
+    btn.disabled=false;
+  }
+}
+
+function doToggleAll(){
+  var all=BLOCKS.every(function(b){return sel[b.key];});
+  BLOCKS.forEach(function(b){sel[b.key]=!all;});
+  buildBlocks();
+  updateToggleBtn();
+  updatePrevBtn();
+}
+
+function goPage(id){
+  ["P_SEL","P_PREV","P_DOING","P_DONE"].forEach(function(p){
+    document.getElementById(p).className="pg"+(p===id?" act":"");
+  });
+}
+
+// 讓 2400px 設計寬度的報告預覽，依「可用寬度」自動等比縮小顯示，
+// 不影響瀏覽器 zoom、不影響旁邊 nav.js 側欄與按鈕的大小。
+// 下載的圖片永遠是未縮放的原始 2400px（乘以 html2canvas scale:2），
+// 這裡純粹是「畫面上看起來多大」，不影響下載品質。
+function fitPreviewScale(){
+  var outer = document.getElementById("PV_SCALE_OUTER");
+  var inner = document.getElementById("PV_BLOCKS");
+  if(!outer || !inner || !inner.offsetParent) return; // 不在畫面上就不用算
+  var available = outer.parentElement.clientWidth;
+  if(!available) return;
+  var scale = Math.min(1, available/2400);
+  inner.style.transform = "scale("+scale+")";
+  outer.style.width  = Math.round(2400*scale)+"px";
+  outer.style.height = Math.round(inner.scrollHeight*scale)+"px";
+}
+window.addEventListener("resize", function(){
+  if(document.getElementById("P_PREV").classList.contains("act")) fitPreviewScale();
+});
+
+function doShowSelect(){
+  goPage("P_SEL");
+  document.getElementById("HDR_TITLE").textContent="匯出圖片";
+}
+
+function doShowPreview(){
+  if(document.getElementById("B_PREV").disabled) return;
+  if(!policies) { alert("資料仍在載入中，請稍後再試"); return; }
+  var selBlks=BLOCKS.filter(function(b){return sel[b.key];});
+  var isPdf=fmt.startsWith("pdf");
+  document.getElementById("HDR_TITLE").textContent="預覽確認";
+  document.getElementById("PV_NOTE").innerHTML='ℹ️ 以下為<strong>真實資料預覽</strong>，點「'+(isPdf?"匯出 PDF":"下載圖片")+'」後系統產生'+(isPdf?"PDF":"PNG")+'檔案。';
+  document.getElementById("WM_HINT").textContent='匯出圖片底部將自動加上「'+getWatermarkText()+'」浮水印';
+  var eb=document.getElementById("B_EXPORT");
+  eb.style.background=isPdf?"var(--accent-pdf)":"var(--primary)";
+  eb.textContent=isPdf?"匯出 PDF":"下載圖片";
+  var c=document.getElementById("PV_BLOCKS");
+  c.innerHTML="";
+  selBlks.forEach(function(b,i){
+    if(fmt!=="png_single"){
+      var tag=document.createElement("div");
+      tag.style.cssText="font-size:14px;color:#bbb;margin-bottom:3px";
+      tag.textContent="第 "+(i+1)+" "+(fmt.startsWith("pdf")?"頁":"張");
+      c.appendChild(tag);
+    }
+    var div=document.createElement("div");
+    div.className="pv-blk";
+    div.innerHTML=getBlockTitleHtml(b)+'<div>'+renderBlock(b.key)+'</div>';
+    c.appendChild(div);
+  });
+  goPage("P_PREV");
+  // 內容剛塞進 DOM，等瀏覽器排版完成後再量測高度並套用縮放
+  requestAnimationFrame(function(){ requestAnimationFrame(fitPreviewScale); });
+}
+
+// ── 現金流時間軸輔助函式 ─────────────────────────────────
+function fmtAmtEx(amt){if(amt>=10000)return(amt/10000).toFixed(1)+"萬";return amt.toLocaleString();}
+function isMonthlyEx(k){return k==="5";}
+function isYearlyDetailEx(k){return k==="6";}
+function getEndYearAt100Ex(memberId,policy,profileBirthDate){
+  var bd=profileBirthDate||(familyData&&familyData.members&&(familyData.members.find(function(m){return m.personId===memberId;})||{}).birthDate);
+  if(bd){var by=parseInt(bd.slice(0,4));if(!isNaN(by))return by+100;}
+  if(policy&&policy.startDate){var sy=parseInt(policy.startDate.slice(0,4));if(!isNaN(sy))return sy+80;}
+  return new Date().getFullYear()+50;
+}
+function calcPolicyFlowsEx(p,s,memberId,years,profileBirthDate){
+  var sw=p.startDate?parseInt(p.startDate.slice(0,4)):null;
+  var pw=p.payEndDate?parseInt(p.payEndDate.slice(0,4)):null;
+  var cw=p.covEndDate?parseInt(p.covEndDate.slice(0,4)):getEndYearAt100Ex(memberId,p,profileBirthDate);
+  if(!sw)return{};
+  var tk=s.type||"1",dfr=parseInt(s.duringFreqYr)||2,dsy=parseInt(s.duringStartYr)||1;
+  var da=parseFloat(s.duringAmt)||0,afr=parseInt(s.afterFreqYr)||1;
+  var asy=parseInt(s.afterStartYr!==undefined?s.afterStartYr:0),aa=parseFloat(s.afterAmt)||0;
+  var mo=isMonthlyEx(tk),yrd=isYearlyDetailEx(tk);
+  var ym={};
+  if(yrd&&s.yearlyAmts){s.yearlyAmts.forEach(function(r){var y=parseInt(r.yr),a=parseFloat(r.amt);if(!isNaN(y)&&!isNaN(a)&&a>0)ym[y]=(ym[y]||0)+a;});}
+  var er=(p.currency&&p.currency!=="TWD"&&parseFloat(s.exchangeRate))?parseFloat(s.exchangeRate):1;
+  var flows={};
+  years.forEach(function(yr){
+    if(yr>cw)return;
+    var fl=0,id=pw?(yr>=sw&&yr<pw):false,ia=pw?yr>=pw:yr>=sw;
+    if(yrd){fl=ym[yr]||0;}
+    else if(tk==="1"){if(pw&&yr===pw)fl=aa;}
+    else if(tk==="2"){
+      if(id&&da>0){var ft=sw+dsy-1,e=yr-ft;if(yr>=ft&&e%dfr===0)fl+=da;}
+      if(pw&&yr===pw)fl+=aa;
+    }else if(tk==="3"){if(ia&&aa>0){var b=(pw||sw)+asy,e2=yr-b;if(yr>=b&&e2%afr===0)fl=aa;}}
+    else if(tk==="4"){
+      if(id&&da>0){var ft2=sw+dsy-1,e3=yr-ft2;if(yr>=ft2&&e3%dfr===0)fl+=da;}
+      if(ia&&aa>0){var b2=(pw||sw)+asy,e4=yr-b2;if(yr>=b2&&e4%afr===0)fl+=aa;}
+    }else if(mo){if(ia&&aa>0)fl=aa*12;}
+    if(fl>0)flows[yr]=Math.round(fl*er);
+  });
+  return flows;
+}
+// 供 PDF 分頁使用：跟 renderSavingsTimeline 共用同一套資料計算，
+// 但把「標題列」「每位被保險人一組」「合計列」拆成可以個別截圖、
+// 個別判斷是否需要換頁的獨立小表格，避免整塊硬塞進單一 A4 頁面
+// 導致被迫縮小到看不清楚。用同一份 colgroup 欄寬設定，確保各自
+// 分開截圖後，欄位仍然對得齊。
+function buildSavingsTimelineParts(pdm3,fData,startYr,endYr){
+  var years=[];for(var y=startYr;y<=endYr;y++)years.push(y);
+  var groups=[],totalFlows={};
+  (fData.members||[]).filter(function(m){return m.role!=="beneficiary_only";}).forEach(function(m){
+    var p3=pdm3[m.personId];if(!p3)return;
+    var sp=(p3.policies||[]).filter(function(p){return["儲蓄險","年金險","儲蓄年金","投資型保險"].indexOf(p.category)>=0;});
+    if(!sp.length)return;
+    var pRows=[];
+    sp.forEach(function(p){
+      var s2=(p3.savings||[]).find(function(sv){return sv.policyId===p.id;})||{type:"1"};
+      var flows=calcPolicyFlowsEx(p,s2,m.personId,years,p3.profile&&p3.profile.birthDate);
+      Object.keys(flows).forEach(function(y2){totalFlows[y2]=(totalFlows[y2]||0)+flows[y2];});
+      pRows.push({policyNo:p.policyNo||p.id,itemName:p.itemName||"",category:p.category||"",flows:flows});
+    });
+    if(pRows.length)groups.push({memberName:m.name,policies:pRows});
+  });
+  if(!groups.length)return null;
+
+  var maxTotal=Math.max.apply(null,Object.values(totalFlows).concat([1]));
+  var catBg={"儲蓄險":"#FBEAF0","年金險":"#FCEBEB","儲蓄年金":"#FBEAF0","投資型保險":"#f0f0f0"};
+  var catCo={"儲蓄險":"#B0466F","年金險":"#C0392B","儲蓄年金":"#B0466F","投資型保險":"#666"};
+
+  // 固定欄寬：第一欄(被保險人/保單)固定，其餘年份欄位平分，
+  // 標題表格跟每一組保單表格都套用同一份，確保欄位對齊
+  var colgroupHtml='<colgroup><col style="width:190px">'+years.map(function(){return'<col>';}).join("")+'</colgroup>';
+
+  var yh=years.map(function(y3){
+    return '<th style="background:linear-gradient(180deg,#f7f8fa,#fff);padding:10px 6px;text-align:center;font-weight:800;color:#374151;border-bottom:2px solid #e2e5ea;border-left:1px solid #eef0f3;white-space:nowrap">'+
+      '<div style="width:8px;height:8px;border-radius:50%;background:#6366f1;margin:0 auto 5px"></div>'+
+      y3+'<br><span style="font-size:15px;color:#6b7280;font-weight:600">'+(y3-1911)+'年</span>'+
+    '</th>';
+  }).join("");
+
+  var headerBandHtml =
+    '<div style="background:#fff;border-radius:20px 20px 0 0;overflow:hidden;border:1px solid rgba(0,0,0,.04);border-bottom:none">'+
+      '<div style="padding:16px 18px;background:linear-gradient(135deg,#EEF2FF,#F5F3FF);display:flex;align-items:center;gap:10px;flex-wrap:wrap">'+
+        '<span style="font-size:20px;font-weight:800;color:#4338ca">📈 未來現金流時間軸</span>'+
+        '<span style="font-size:15px;color:#7c7fa0;font-weight:700;background:#fff;padding:4px 12px;border-radius:99px">'+startYr+' － '+endYr+' 年・'+groups.length+' 位被保險人</span>'+
+      '</div>'+
+      '<table style="width:100%;border-collapse:collapse;font-size:16px;table-layout:fixed">'+colgroupHtml+
+      '<thead><tr><th style="background:#f7f8fa;padding:10px 14px;text-align:left;border-bottom:2px solid #e2e5ea;border-right:2px solid #e2e5ea;font-size:14px;font-weight:800;color:#6b7280">被保險人/保單</th>'+yh+'</tr></thead>'+
+      '</table></div>';
+
+  function buildGroupChunkHtml(g){
+    var pay=g.policies.filter(function(pr){return Object.keys(pr.flows).length===0;}).length;
+    var nr='<tr><td colspan="'+(years.length+1)+'" style="background:linear-gradient(135deg,#EEF4FF,#F7F5FF);padding:12px 16px;font-size:19px;font-weight:800;color:#374151;border-top:2px solid #e2e5ea">'+
+      '👤 '+g.memberName+'<span style="color:#6b7280;font-weight:700;margin-left:9px;font-size:14px">'+g.policies.length+' 張保單</span>'+
+      (pay?'<span style="color:#B07000;font-size:14px;margin-left:7px;font-weight:700">（含 '+pay+' 張繳費中）</span>':'')+
+    '</td></tr>';
+    var pr2=g.policies.map(function(pr){
+      var cells=years.map(function(y4){
+        var amt=pr.flows[y4]||0;
+        if(!amt)return'<td style="text-align:center;color:#9ca3af;font-size:15px;border-left:1px solid #f5f6f8">—</td>';
+        var bg=catBg[pr.category]||"#eef0f3", co=catCo[pr.category]||"#555";
+        return'<td style="border-left:1px solid #f5f6f8;padding:5px 6px"><div style="height:28px;line-height:28px;border-radius:6px;background:'+bg+';text-align:center;white-space:nowrap"><span style="font-size:15px;color:'+co+';font-weight:800;font-variant-numeric:tabular-nums">'+fmtAmtEx(amt)+'</span></div></td>';
+      }).join("");
+      var fc='<td style="padding:9px 6px 9px 14px;border-right:2px solid #e2e5ea">'+
+        '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+
+          '<span style="font-size:13px;font-weight:800;padding:3px 9px;border-radius:99px;background:'+(catBg[pr.category]||"#eef0f3")+';color:'+(catCo[pr.category]||"#555")+'">'+(pr.category)+'</span>'+
+          '<span style="font-size:13px;font-weight:800;color:#6366f1;background:#eef2ff;padding:3px 8px;border-radius:99px;font-variant-numeric:tabular-nums">'+pr.policyNo+'</span>'+
+          (!Object.keys(pr.flows).length?'<span style="font-size:13px;color:#B07000;font-weight:700">繳費中</span>':'')+
+        '</div>'+
+        (pr.itemName?'<div style="font-size:15px;color:#444;font-weight:700;margin-top:3px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.3">'+pr.itemName+'</div>':'')+
+      '</td>';
+      return'<tr>'+fc+cells+'</tr>';
+    }).join("");
+    var mf={};g.policies.forEach(function(pr){Object.keys(pr.flows).forEach(function(y5){mf[y5]=(mf[y5]||0)+pr.flows[y5];});});
+    var sub='<tr style="background:#F5F6FF;font-weight:800;color:#4f46e5;border-top:1px solid #e2e5ea"><td style="padding:7px 6px 7px 14px;border-right:2px solid #e2e5ea;font-size:14px">小計</td>'+
+      years.map(function(y6){var a=mf[y6]||0;return a?'<td style="text-align:center;font-size:15px;font-variant-numeric:tabular-nums">'+fmtAmtEx(a)+'</td>':'<td style="text-align:center;color:#9ca3af">—</td>';}).join("")+'</tr>';
+    return '<table style="width:100%;border-collapse:collapse;font-size:16px;table-layout:fixed;background:#fff">'+colgroupHtml+'<tbody>'+nr+pr2+sub+'</tbody></table>';
+  }
+
+  var totalRowHtml = '<table style="width:100%;border-collapse:collapse;font-size:16px;table-layout:fixed;background:#fff;border-radius:0 0 20px 20px;overflow:hidden">'+colgroupHtml+
+    '<tbody><tr style="background:linear-gradient(135deg,#EEF2FF,#F5F3FF);font-weight:800;color:#4338ca;border-top:2px solid #c7d2fe">'+
+    '<td style="padding:10px 6px 10px 14px;border-right:2px solid #e2e5ea;font-size:14px">合計現金流</td>'+
+    years.map(function(y7){var a=totalFlows[y7]||0;return a?'<td style="text-align:center;font-size:16px;font-variant-numeric:tabular-nums">'+fmtAmtEx(a)+'</td>':'<td style="text-align:center;color:#9ca3af">—</td>';}).join("")+
+    '</tr></tbody></table>';
+
+  return { headerBandHtml:headerBandHtml, groups:groups, buildGroupChunkHtml:buildGroupChunkHtml, totalRowHtml:totalRowHtml };
+}
+
+function renderSavingsTimeline(pdm3,fData,startYr,endYr){
+  var years=[];for(var y=startYr;y<=endYr;y++)years.push(y);
+  var groups=[],totalFlows={};
+  (fData.members||[]).filter(function(m){return m.role!=="beneficiary_only";}).forEach(function(m){
+    var p3=pdm3[m.personId];if(!p3)return;
+    var sp=(p3.policies||[]).filter(function(p){return["儲蓄險","年金險","儲蓄年金","投資型保險"].indexOf(p.category)>=0;});
+    if(!sp.length)return;
+    var pRows=[];
+    sp.forEach(function(p){
+      var s2=(p3.savings||[]).find(function(sv){return sv.policyId===p.id;})||{type:"1"};
+      var flows=calcPolicyFlowsEx(p,s2,m.personId,years,p3.profile&&p3.profile.birthDate);
+      Object.keys(flows).forEach(function(y2){totalFlows[y2]=(totalFlows[y2]||0)+flows[y2];});
+      pRows.push({policyNo:p.policyNo||p.id,itemName:p.itemName||"",category:p.category||"",flows:flows});
+    });
+    if(pRows.length)groups.push({memberName:m.name,policies:pRows});
+  });
+  if(!groups.length)return'<div style="padding:30px;text-align:center;color:#9ca3af;font-size:14px">尚無儲蓄保單設定領回資料</div>';
+  var maxTotal=Math.max.apply(null,Object.values(totalFlows).concat([1]));
+  var catBg={"儲蓄險":"#FBEAF0","年金險":"#FCEBEB","儲蓄年金":"#FBEAF0","投資型保險":"#f0f0f0"};
+  var catCo={"儲蓄險":"#B0466F","年金險":"#C0392B","儲蓄年金":"#B0466F","投資型保險":"#666"};
+
+  // 年份時間軸節點：由左到右一條時間軸線串起每一年，強調「時間軸」的視覺語言
+  var yh=years.map(function(y3,yi){
+    return '<th style="background:linear-gradient(180deg,#f7f8fa,#fff);padding:9px 6px;text-align:center;font-weight:800;color:#374151;border-bottom:2px solid #e2e5ea;'+(yi>0?'border-left:1px solid #eef0f3;':'')+'white-space:nowrap;position:relative">'+
+      '<div style="width:7px;height:7px;border-radius:50%;background:#6366f1;margin:0 auto 4px"></div>'+
+      '<span style="font-size:14px">'+y3+'</span><br><span style="font-size:13px;color:#6b7280;font-weight:600">'+(y3-1911)+'年</span>'+
+    '</th>';
+  }).join("");
+
+  var gr=groups.map(function(g){
+    var pay=g.policies.filter(function(pr){return Object.keys(pr.flows).length===0;}).length;
+    var nr='<tr><td colspan="'+(years.length+1)+'" style="background:linear-gradient(135deg,#EEF4FF,#F7F5FF);padding:10px 14px;font-size:16px;font-weight:800;color:#374151;border-top:2px solid #e2e5ea">'+
+      '👤 '+g.memberName+'<span style="color:#6b7280;font-weight:700;margin-left:8px;font-size:12px">'+g.policies.length+' 張保單</span>'+
+      (pay?'<span style="color:#B07000;font-size:12px;margin-left:6px;font-weight:700">（含 '+pay+' 張繳費中）</span>':'')+
+    '</td></tr>';
+    var pr2=g.policies.map(function(pr){
+      var cells=years.map(function(y4){
+        var amt=pr.flows[y4]||0;
+        if(!amt)return'<td style="text-align:center;color:#9ca3af;font-size:13px;border-left:1px solid #f5f6f8">—</td>';
+        var bg=catBg[pr.category]||"#eef0f3", co=catCo[pr.category]||"#555";
+        return'<td style="border-left:1px solid #f5f6f8;padding:4px 5px"><div style="height:27px;line-height:27px;border-radius:6px;background:'+bg+';text-align:center;white-space:nowrap"><span style="font-size:14px;color:'+co+';font-weight:800;font-variant-numeric:tabular-nums">'+fmtAmtEx(amt)+'</span></div></td>';
+      }).join("");
+      var fc='<td style="padding:8px 6px 8px 14px;border-right:2px solid #e2e5ea">'+
+        '<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">'+
+          '<span style="font-size:11px;font-weight:800;padding:2px 8px;border-radius:99px;background:'+(catBg[pr.category]||"#eef0f3")+';color:'+(catCo[pr.category]||"#555")+'">'+(pr.category)+'</span>'+
+          '<span style="font-size:11px;font-weight:800;color:#6366f1;background:#eef2ff;padding:2px 7px;border-radius:99px;font-variant-numeric:tabular-nums">'+pr.policyNo+'</span>'+
+          (!Object.keys(pr.flows).length?'<span style="font-size:11px;color:#B07000;font-weight:700">繳費中</span>':'')+
+        '</div>'+
+        (pr.itemName?'<div style="font-size:13px;color:#444;font-weight:700;margin-top:3px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.3">'+pr.itemName+'</div>':'')+
+      '</td>';
+      return'<tr>'+fc+cells+'</tr>';
+    }).join("");
+    var mf={};g.policies.forEach(function(pr){Object.keys(pr.flows).forEach(function(y5){mf[y5]=(mf[y5]||0)+pr.flows[y5];});});
+    var sub='<tr style="background:#F5F6FF;font-weight:800;color:#4f46e5;border-top:1px solid #e2e5ea"><td style="padding:6px 6px 6px 14px;border-right:2px solid #e2e5ea;font-size:12px">小計</td>'+
+      years.map(function(y6){var a=mf[y6]||0;return a?'<td style="text-align:center;font-size:13px;font-variant-numeric:tabular-nums">'+fmtAmtEx(a)+'</td>':'<td style="text-align:center;color:#9ca3af">—</td>';}).join("")+'</tr>';
+    return nr+pr2+sub;
+  }).join("");
+  var tot='<tr style="background:linear-gradient(135deg,#EEF2FF,#F5F3FF);font-weight:800;color:#4338ca;border-top:2px solid #c7d2fe"><td style="padding:8px 6px 8px 14px;border-right:2px solid #e2e5ea;font-size:13px">合計現金流</td>'+
+    years.map(function(y7){var a=totalFlows[y7]||0;return a?'<td style="text-align:center;font-size:14px;font-variant-numeric:tabular-nums">'+fmtAmtEx(a)+'</td>':'<td style="text-align:center;color:#9ca3af">—</td>';}).join("")+'</tr>';
+  // 固定欄寬：第一欄(被保險人/保單)固定，其餘年份欄位平分，避免瀏覽器
+  // 把多餘空間全部塞進沒設寬度限制的第一欄，造成大片空白、金額色塊
+  // 反而被壓縮的問題
+  var colgroupHtml2='<colgroup><col style="width:190px">'+years.map(function(){return'<col>';}).join("")+'</colgroup>';
+  return'<div style="background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04)">'+
+    '<div style="padding:14px 16px;background:linear-gradient(135deg,#EEF2FF,#F5F3FF);display:flex;align-items:center;gap:10px;flex-wrap:wrap">'+
+      '<span style="font-size:17px;font-weight:800;color:#4338ca">📈 未來現金流時間軸</span>'+
+      '<span style="font-size:12px;color:#7c7fa0;font-weight:700;background:#fff;padding:3px 10px;border-radius:99px">'+startYr+' － '+endYr+' 年・'+groups.length+' 位被保險人</span>'+
+    '</div>'+
+    '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">'+
+    '<table style="width:100%;border-collapse:collapse;font-size:14px;table-layout:fixed">'+colgroupHtml2+
+    '<thead><tr><th style="background:#f7f8fa;padding:8px 14px;text-align:left;border-bottom:2px solid #e2e5ea;border-right:2px solid #e2e5ea;font-size:12px;font-weight:800;color:#6b7280">被保險人/保單</th>'+yh+'</tr></thead>'+
+    '<tbody>'+gr+tot+'</tbody></table></div></div>';
+}
+
+
+// ── Summary 輔助函式（移植自 summary.html）──────────────
+// 保額單位換算成「萬元」，同 summary.html 的 convertToWan
+// 判斷保單目前是否仍在保障中：只有「停效」才算失去保障，
+// 其餘狀態（有效/繳費期滿/自動墊繳/展期/緩繳/減額繳清）都代表保單
+// 仍在繼續提供保障，都應該算進保障覆蓋率計算裡。
+function isPolicyActiveEx(p) {
+  return p.status !== "停效";
+}
+
+function convertToWanEx(amount, unit) {
+  var n = parseFloat(amount);
+  if (isNaN(n)) return null;
+  var u = unit || "萬元";
+  if (u === "萬元") return n;
+  if (u === "元") return n / 10000;
+  return null;
+}
+
+// 留愛金額：只採用使用者在保單資料裡實際輸入的 deathBenefit（單位換算成萬元），
+// 不再用保額(insuredAmount)自動頂替。保額頂替會把重疾/意外/醫療等「理賠給
+// 被保險人本人」性質的保額誤顯示成「留給受益人」的留愛金額，資訊錯誤且
+// 容易誤導保戶。彙總小工具與明細表格都呼叫這個函式，確保兩處數字一致。
+function getDeathBenefitAmt(p) {
+  if (p.deathBenefit !== undefined && p.deathBenefit !== null && p.deathBenefit !== "") {
+    var w = convertToWanEx(p.deathBenefit, p.deathBenefitUnit || '萬元');
+    return w !== null ? w : 0;
+  }
+  return 0; // 沒填就是沒有，交由畫面顯示「—」，提醒業務員回頭跟保戶確認
+}
+
+function sumCovEx(keys, policies, coverage) {
+  var total = 0;
+  policies.forEach(p => {
+    keys.forEach(k => {
+      if (p.coverage && typeof p.coverage[k] === "number") {
+        total += p.coverage[k];
+      }
+    });
+  });
+  // 相容舊格式
+  if (total === 0 && coverage) {
+      policies.forEach(p => {
+          keys.forEach(k => {
+              if (coverage[p.id + "_" + k] && typeof coverage[p.id + "_" + k] === "number") {
+                  total += coverage[p.id + "_" + k];
+              }
+          });
+      });
+  }
+  return total;
+}
+
+// ── 保障群組與細項定義 (全新規劃) ─────────────────────────────────────────
+var GAP_GROUPS_EX = [
+  { key:"family", label:"家庭責任", color:"#1565C0", items:[
+    { key:"life_permanent", label:"終身壽險",    unit:"萬元",   color:"#1565C0" },
+    { key:"life_term",      label:"定期壽險",    unit:"萬元",   color:"#1E88E5" },
+    // 💡 修正：移除 isBool:true，讓投資型與儲蓄險顯示真實數字
+    { key:"investment",     label:"投資型保險",  unit:"萬元",   color:"#7B1FA2" },
+    { key:"savings",        label:"儲蓄險",      unit:"萬元",   color:"#E91E8C" },
+    { key:"ci_death",       label:"重大/特傷/重疾", unit:"萬元", color:"#C0392B" },
+    { key:"acc_death_amt",  label:"意外身故",     unit:"萬元",   color:"#F5A623" },
+  ]},
+  
+  { key:"before", label:"評估確診", arrowLabel:"醫療前期", arrowColor:"#5BAD6F", color:"#E53935", items:[
+    { key:"ci_special", label:"重大/特傷/重疾", unit:"萬元",   color:"#E53935" },
+    { key:"cancer",     label:"初次罹患癌症",    unit:"萬元",   color:"#C62828" },
+  ]},
+  { key:"during", label:"積極修復", arrowLabel:"醫療中期", arrowColor:"#378ADD", color:"#FF8F00", items:[
+    { key:"hosp_real_room",  label:"實支病房費",        unit:"元/日",  color:"#E65100" },
+    { key:"hosp_daily",      label:"住院日額+出院",      unit:"元/日",  color:"#F57C00" },
+    { key:"surgery",         label:"手術險(最高)",      unit:"",       color:"#FF9800", isBool:true },
+    { key:"cancer_hosp",     label:"癌症病房(含出院)",  unit:"元/日",  color:"#FFB300" },
+    { key:"cancer_surgery",  label:"癌症手術",          unit:"萬元/次",color:"#E64A19" },
+    { key:"acc_medical",     label:"意外醫療",          unit:"萬/次",  color:"#FFC107" },
+    { key:"acc_hosp",        label:"意外住院",          unit:"元/日",  color:"#FFE082" },
+  ]},
+  { key:"after",  label:"康復療養", arrowLabel:"醫療後期", arrowColor:"#E8638A", color:"#2E7D32", items:[
+    { key:"ltc_disable",         label:"失能一次金",      unit:"萬元",    color:"#1B5E20" },
+    { key:"ltc_support",         label:"失能扶助",        unit:"萬元/月", color:"#2E7D32" },
+    { key:"ltc_care",            label:"長照",            unit:"萬元/月", color:"#43A047" },
+    { key:"cancer_death_hospice",label:"癌症身故/安寧",   unit:"萬元",    color:"#81C784" },
+    { key:"waiver",              label:"保費豁免",        unit:"",        color:"#A5D6A7", isBool:true },
+  ]},
+];
+
+// 精準對應 coverage.html 的資料庫欄位
+var GAP_KEY_MAP_EX = {
+  life_permanent:  { cats:["壽險保障"],          keys:["life_basic"] },
+  life_term:       { cats:["壽險保障"],          keys:["life_term"] },
+  investment:      { cats:["投資型保險"],        keys:[] },
+  savings:         { cats:["儲蓄險","年金險"],   keys:[] },
+  ci_special:      { cats:["重大疾病險","重大傷病險","特定傷病險"], keys:["can_first"] },
+  ci_death:        { cats:["重大疾病險","重大傷病險","特定傷病險"], keys:[] },
+  acc_death_amt:   { cats:["意外險"],            keys:[] },
+  cancer:          { cats:["癌症醫療"],          keys:["can_first"] },
+  hosp_real_room:  { cats:["醫療保障"],          keys:["hosp_room", "hosp_ext_room"] },
+  hosp_daily:      { cats:["醫療保障"],          keys:["daily_room_1_30", "hosp_ext_daily", "daily_discharge"] },
+  surgery:         { cats:["醫療保障","定額手術"], keys:["hosp_surgery", "hosp_ext_surgery", "surg_hosp_max", "surg_opd_max"] },
+  cancer_hosp:     { cats:["癌症醫療"],          keys:["can_hosp", "can_discharge"] },
+  cancer_surgery:  { cats:["癌症醫療"],          keys:["can_surgery"] },
+  acc_medical:     { cats:["意外險"],            keys:["acc_opd"] },
+  acc_hosp:        { cats:["意外險"],            keys:["acc_hosp"] },
+  ltc_disable:     { cats:["失能長照"],          keys:["ltc_dis_amt"] },
+  ltc_support:     { cats:["失能長照"],          keys:["ltc_dis_life", "acc_support", "ltc_life"] },
+  ltc_care:        { cats:["失能長照"],          keys:["ltc_monthly", "ltc_care", "ltc_yr", "ltc_mo"] },
+  // 癌症身故／安寧合併：兩者只要其中一項有資料，加總後就會大於 0，
+  // getItemStatusEx 判斷「current > 0 即算達標」的邏輯自然就是
+  // 「任一項有規劃即可」，不需要額外的特殊判斷
+  cancer_death_hospice: { cats:["癌症醫療"],     keys:["can_death","can_hospice"] },
+  waiver:          { cats:[],                   keys:["ltc_waiver"] },
+};
+
+var COVERAGE_TYPES = [
+  { key:"life",       label:"壽險保障", group:"壽險", color:"#4A90D9", detect:(p,c)=>p.some(x=>x.category==="壽險保障") },
+  { key:"acc_death",  label:"意外身故", group:"意外", color:"#F5A623", detect:(p,c)=>p.some(x=>x.category==="意外險") },
+  { key:"acc_medical",label:"意外醫療", group:"意外", color:"#F08C00", detect:(p,c)=>Object.keys(c).some(k=>k.includes("acc_opd")) },
+  { key:"acc_hosp",   label:"意外住院", group:"意外", color:"#D97706", detect:(p,c)=>Object.keys(c).some(k=>k.includes("daily_room"))&&p.some(x=>x.category==="意外險") },
+  { key:"hosp_real",  label:"實支實付", group:"醫療", color:"#27AE8F", detect:(p,c)=>Object.keys(c).some(k=>k.includes("hosp_room")) },
+  { key:"hosp_daily", label:"住院日額", group:"醫療", color:"#1E8A72", detect:(p,c)=>Object.keys(c).some(k=>k.includes("daily_room")) },
+  { key:"hosp_surg",  label:"手術險",   group:"醫療", color:"#166756", detect:(p,c)=>Object.keys(c).some(k=>k.includes("surg_opd")||k.includes("surg_hosp")) },
+  { key:"ci",         label:"重大疾病", group:"重大", color:"#9B59B6", detect:(p,c)=>p.some(x=>["重大疾病險","重大傷病險","特定傷病險"].includes(x.category)) },
+  { key:"cancer",     label:"癌症險",   group:"癌症", color:"#E74C3C", detect:(p,c)=>Object.keys(c).some(k=>k.includes("can_first")||k.includes("can_hosp")) },
+  { key:"ltc",        label:"長照險",   group:"長照", color:"#27500A", detect:(p,c)=>Object.keys(c).some(k=>k.includes("ltc_monthly")||k.includes("ltc_care")) },
+  { key:"disable",    label:"失能險",   group:"長照", color:"#5BAD6F", detect:(p,c)=>Object.keys(c).some(k=>k.includes("ltc_dis_amt")||k.includes("ltc_dis_life")) },
+  { key:"savings",    label:"儲蓄險",   group:"財務", color:"#E8638A", detect:(p,c)=>p.some(x=>x.category==="儲蓄險") },
+  { key:"annuity",    label:"年金險",   group:"財務", color:"#C0392B", detect:(p,c)=>p.some(x=>x.category==="年金險") },
+  { key:"investment", label:"投資型",   group:"財務", color:"#95A5A6", detect:(p,c)=>p.some(x=>x.category==="投資型保險") },
+];
+
+var GROUP_COLORS = { 壽險:"#4A90D9",意外:"#F5A623",醫療:"#27AE8F",重大:"#9B59B6",癌症:"#E74C3C",長照:"#27500A",財務:"#E8638A" };
+
+var CAT_COLORS = {
+  "壽險保障":"#4A90D9","醫療保障":"#27AE8F","意外險":"#F5A623",
+  "重大疾病險":"#9B59B6","重大傷病險":"#8E44AD","特定傷病險":"#7D3C98",
+  "儲蓄險":"#E8638A","年金險":"#C0392B","投資型保險":"#95A5A6",
+};
+
+var COVERAGE_GROUPS_EX = [
+  { label:"壽險/重大保障(終身/定期)", icon:"🛡️", color:"#4A90D9", items:[
+    { label:"終身壽險", unit:"萬元", compute:function(pols){ return lifeAmountEx(pols, ["壽險保障"], false); } },
+    { label:"定期壽險", unit:"萬元", compute:function(pols){ return lifeAmountEx(pols, ["壽險保障"], true); }, remain:function(pols){ return lifeRemainYearsEx(pols, ["壽險保障"]); } },
+    { label:"投資型(身故金)", unit:"萬元", compute:function(pols){ 
+        let sum=0; pols.filter(p=>p.category==="投資型保險").forEach(p=>{
+            let a=(p.deathBenefit!==undefined&&p.deathBenefit!==null&&p.deathBenefit!=="")?p.deathBenefit:p.insuredAmount;
+            let u=(p.deathBenefit!==undefined&&p.deathBenefit!==null&&p.deathBenefit!=="")?(p.deathBenefitUnit||'萬元'):(p.insuredAmountUnit||'萬元');
+            let w=convertToWanEx(a,u); if(w!==null) sum+=w;
+        }); return sum;
+    } },
+    { label:"儲蓄險(身故金)", unit:"萬元", compute:function(pols){ 
+        let sum=0; pols.filter(p=>["儲蓄險","年金險"].includes(p.category)).forEach(p=>{
+            let a=(p.deathBenefit!==undefined&&p.deathBenefit!==null&&p.deathBenefit!=="")?p.deathBenefit:p.insuredAmount;
+            let u=(p.deathBenefit!==undefined&&p.deathBenefit!==null&&p.deathBenefit!=="")?(p.deathBenefitUnit||'萬元'):(p.insuredAmountUnit||'萬元');
+            let w=convertToWanEx(a,u); if(w!==null) sum+=w;
+        }); return sum;
+    } },
+    { label:"重大終身", unit:"萬元", compute:function(pols){ return lifeAmountEx(pols, ["重大疾病險","重大傷病險","特定傷病險"], false); } },
+    { label:"重大定期", unit:"萬元", compute:function(pols){ return lifeAmountEx(pols, ["重大疾病險","重大傷病險","特定傷病險"], true); }, remain:function(pols){ return lifeRemainYearsEx(pols, ["重大疾病險","重大傷病險","特定傷病險"]); } },
+    { label:"生活扶助金（每月）", keys:["ltc_life"], unit:"萬元/月" },
+    { label:"特定傷病保險金（每年）", keys:["ltc_yr"], unit:"萬元/年" },
+    { label:"特定傷病保險金（每月）", keys:["ltc_mo"], unit:"萬元/月" },
+  ]},
+  { label:"意外險", icon:"⚡", color:"#F5A623", cats:["意外險"], items:[
+    { label:"意外門診", keys:["acc_opd"], unit:"萬元/次" },
+    { label:"意外住院日額", keys:["acc_hosp"], unit:"元/日" },
+    { label:"加護病房", keys:["acc_icu"], unit:"元/日" },
+    { label:"骨折療養金", keys:["acc_fracture_max", "acc_fracture"], unit:"元" },
+    { label:"重大/特定燒燙傷", keys:["acc_burn_max", "acc_burn"], unit:"萬元" },
+    { label:"特定事故加倍", keys:["acc_special_max", "acc_special"], unit:"萬元" },
+    { label:"食物中毒", keys:["acc_food"], unit:"元/次" },
+    { label:"意外失能 (2~11級)", keys:["acc_disable_max", "acc_disable"], unit:"萬元" },
+    { label:"喪失工作能力", keys:["acc_work"], unit:"萬元/月" },
+    { label:"失能扶助金", keys:["acc_support"], unit:"萬元/月" },
+  ]},
+  { label:"住院醫療 (實支實付)", icon:"🏥", color:"#085041", cats:["醫療保障"], items:[
+    { label:"病房費", keys:["hosp_room", "hosp_ext_room"], unit:"元/日" },
+    { label:"手術費", keys:["hosp_surgery", "hosp_ext_surgery"], unit:"元/次" },
+    { label:"醫療雜費", keys:["hosp_misc", "hosp_ext_misc"], unit:"元/次" },
+    { label:"加護病房費", keys:["hosp_icu"], unit:"元/日" },
+    { label:"重大器官移植", keys:["hosp_organ_max", "hosp_organ"], unit:"萬元" },
+    { label:"自負額", keys:["hosp_deduct"], unit:"元" },
+    { label:"每次住院總限額", keys:["hosp_limit_per"], unit:"元/次" },
+    { label:"醫療給付總限額", keys:["hosp_limit_acct"], unit:"萬元" },
+  ]},
+  { label:"日額型住院", icon:"📅", color:"#0C447C", cats:["醫療保障"], items:[
+    { label:"病房費 (1~30日)", keys:["daily_room_1_30", "hosp_ext_daily"], unit:"元/日" },
+    { label:"病房費 (31日起)", keys:["daily_room_31"], unit:"元/日" },
+    { label:"加護病房", keys:["daily_icu"], unit:"元/日" },
+    { label:"燒燙傷中心", keys:["daily_burn"], unit:"元/日" },
+    { label:"老年住院關懷", keys:["daily_senior"], unit:"元/次" },
+    { label:"出院療養金", keys:["daily_discharge"], unit:"元/日" },
+    { label:"住院看護療養", keys:["daily_nurse"], unit:"元/日" },
+    { label:"住院前後門診", keys:["daily_opd"], unit:"元/次" },
+    { label:"住院前急診", keys:["daily_er"], unit:"元/次" },
+    { label:"緊急醫療轉送", keys:["daily_transport"], unit:"元/次" },
+    { label:"特殊醫材補助", keys:["daily_device"], unit:"元/次" },
+    { label:"罹患重大疾病", keys:["daily_major"], unit:"元" },
+    { label:"抗排斥藥物", keys:["daily_antirej"], unit:"元" },
+    { label:"代替手術放射線", keys:["daily_radiation"], unit:"元" },
+    { label:"帳戶金額", keys:["daily_limit"], unit:"萬元" },
+    { label:"給付倍數", keys:["daily_limit_times"], unit:"倍" },
+  ]},
+  { label:"定額手術", icon:"🔪", color:"#3C3489", cats:["醫療保障","定額手術"], items:[
+    { label:"門診手術醫療", keys:["surg_opd_max", "surg_opd"], unit:"元/次" },
+    { label:"特定處置項目", keys:["surg_special_max", "surg_special"], unit:"元/次" },
+    { label:"住院手術醫療", keys:["surg_hosp_max", "surg_hosp"], unit:"元/次" },
+    { label:"手術看護療養金", keys:["surg_nurse_max", "surg_nurse"], unit:"元" },
+    { label:"保險給付限制", keys:["surg_limit"], unit:"萬元" },
+  ]},
+  { label:"癌症醫療", icon:"🎗️", color:"#E74C3C", cats:["癌症醫療"], items:[
+    { label:"低侵襲/特定癌症", keys:["can_low"], unit:"元" },
+    { label:"初次罹癌 (一次)", keys:["can_first"], unit:"萬元" },
+    { label:"癌症手術醫療保險金", keys:["can_surgery"], unit:"萬元/次" },
+    { label:"癌症住院醫療", keys:["can_hosp"], unit:"元/日" },
+    { label:"出院療養", keys:["can_discharge"], unit:"元/日" },
+    { label:"癌症門診醫療", keys:["can_opd"], unit:"元/次" },
+    { label:"癌症質子治療", keys:["can_proton"], unit:"萬元/次" },
+    { label:"放射線治療", keys:["can_radiation"], unit:"元/日" },
+    { label:"癌症基因檢測", keys:["can_gene"], unit:"萬元" },
+    { label:"化學治療", keys:["can_chemo"], unit:"元/日" },
+    { label:"標靶藥物治療", keys:["can_target"], unit:"萬元" },
+    { label:"達文西手術", keys:["can_davinci"], unit:"萬元" },
+    { label:"義乳重建手術", keys:["can_breast"], unit:"萬元" },
+    { label:"自體免疫細胞治療", keys:["can_immune"], unit:"萬元" },
+    { label:"骨髓/幹細胞移植", keys:["can_marrow"], unit:"萬元" },
+    { label:"癌症給付總限額", keys:["can_total"], unit:"萬元" },
+    { label:"安寧照護", keys:["can_hospice"], unit:"萬元" },
+    { label:"癌症身故", keys:["can_death"], unit:"萬元" },
+  ]},
+  { label:"失能長照", icon:"🤝", color:"#27500A", cats:["失能長照"], items:[
+    { label:"長照/長看關懷", keys:["ltc_care"], unit:"萬元" },
+    { label:"長期照護療養 (月)", keys:["ltc_monthly"], unit:"萬元/月" },
+    { label:"失能(殘廢)保險金", keys:["ltc_dis_amt"], unit:"萬元" },
+    { label:"失能生活扶助金", keys:["ltc_dis_life"], unit:"萬元/月" },
+  ]},
+];
+
+var currentUser    = null;
+var familyData     = null;
+var familyFileName = null;
+var personDataMap  = {};
+var currentPersonId = null;
+var overrides      = {};
+var medicalOverrides = {};
+var targets        = {};
+
+// 核心運算引擎：精準抓取資料庫數字
+function getItemCurrentEx(key, policies, coverage, covOverrides) {
+  var map = GAP_KEY_MAP_EX[key];
+  if(!map) return 0;
+
+  var manualKey = currentPersonId+"_"+key;
+  if(covOverrides && covOverrides[manualKey] !== undefined) {
+    return covOverrides[manualKey] ? 1 : 0;
+  }
+
+  if(["waiver"].includes(key)) {
+    if(key==="waiver") return sumCovEx(["ltc_waiver"], policies, coverage) > 0 ? 1 : 0;
+    return 0;
+  }
+
+  // 💡 修正：將投資型與儲蓄險併入金額計算邏輯；重大/特傷/重疾、意外險
+  // 這類保單通常也附帶身故(留愛)給付，family(家庭責任)區塊需要納入這筆
+  // 金額，加總才會等於保戶真正的總身故保障，而不是只算壽險保障類。
+  if (["life_permanent", "life_term", "investment", "savings", "ci_death", "acc_death_amt"].includes(key)) {
+      let amt = 0;
+      var wantTerm = (key === "life_term");
+      var catMap = {
+          "life_permanent": ["壽險保障"],
+          "life_term": ["壽險保障"],
+          "investment": ["投資型保險"],
+          "savings": ["儲蓄險", "年金險"],
+          "ci_death": ["重大疾病險", "重大傷病險", "特定傷病險"],
+          "acc_death_amt": ["意外險"]
+      };
+      var matchedPolicies = policies.filter(p => catMap[key].includes(p.category));
+      
+      matchedPolicies.forEach(p => {
+         // 只有壽險需要區分定期或終身，投資型/儲蓄/重疾/意外身故直接全額加總
+         if (key === "life_permanent" || key === "life_term") {
+             var pt = (p.coverage && p.coverage.protect_period_type) ? p.coverage.protect_period_type : "終身";
+             var isPolTerm = (pt !== "終身");
+             if (isPolTerm !== wantTerm) return;
+         }
+         
+         // 只採用使用者實際填寫的留愛金額(deathBenefit)，不再用保額(insuredAmount)頂替
+         amt += getDeathBenefitAmt(p);
+      });
+      return amt;
+  }
+
+  if (key === "ci_special") {
+      var matchedPolicies = policies.filter(p => map.cats.includes(p.category));
+      var amt = sumCovEx(["ci_major_lump","ci_catastrophic_lump","ci_specific_lump"], matchedPolicies, coverage);
+      if (amt === 0) {
+        matchedPolicies.forEach(p => {
+           var w = convertToWanEx(p.insuredAmount, p.insuredAmountUnit);
+           if (w !== null) amt += w;
+        });
+      }
+      if (amt === 0 && matchedPolicies.length > 0) return 1; 
+      return amt;
+  }
+
+  var NO_FALLBACK_KEYS = [
+    "acc_medical","acc_hosp","hosp_real_room","hosp_daily",
+    "surgery","cancer_hosp","cancer_surgery","ltc_disable","ltc_support",
+    "ltc_care","cancer_death_hospice"
+  ];
+  if (NO_FALLBACK_KEYS.indexOf(key) !== -1) {
+    return sumCovEx(map.keys, policies, coverage);
+  }
+
+  var amt = sumCovEx(map.keys, policies, coverage);
+
+  var matchedPolicies = policies.filter(p => map.cats.includes(p.category));
+  if (amt === 0 && matchedPolicies.length > 0) {
+      matchedPolicies.forEach(p => {
+          var w = convertToWanEx(p.insuredAmount, p.insuredAmountUnit);
+          if (w !== null) amt += w;
+      });
+      if (amt === 0) return 1; 
+  }
+
+  return amt;
+}
+
+function getItemStatusEx(key, policies, coverage, targets, covOverrides) {
+  var item = GAP_GROUPS_EX.flatMap(g=>g.items).find(i=>i.key===key);
+  var current = getItemCurrentEx(key, policies, coverage, covOverrides);
+  var target  = targets[key];
+  var isBool  = item?.isBool;
+  if(!current) return {status:"gap", current:0, target, pct:0};
+  if(!target||isBool) return {status:"ok", current, target:null, pct:1};
+  if(current>=target) return {status:"ok", current, target, pct:1};
+  return {status:"insufficient", current, target, pct:current/target};
+}
+
+function renderTabs() {
+  var members = familyData.members.filter(m=>m.role!=="beneficiary_only");
+  document.getElementById("member-tabs").innerHTML = members.map(m=>`
+    <div class="member-tab ${currentPersonId===m.personId?'active':''}" onclick="switchPerson('${m.personId}')">
+      ${m.name}${getInsAge(m.personId)!==null?' '+getInsAge(m.personId)+'歲':''}
+    </div>`).join("");
+}
+
+function getInsAge(pid) {
+  var p=personDataMap[pid];
+  if(!p) return null;
+  var b=new Date(p.profile.birthDate), a=new Date(p.profile.analysisDate||new Date());
+  var y=a.getFullYear()-b.getFullYear();
+  var mo=(a-new Date(b.getFullYear()+y,b.getMonth(),b.getDate()))/(1000*60*60*24*30.4375);
+  if(mo>=6)y++;
+  return y;
+}
+
+// 西元日期字串轉民國日期顯示文字（例如 2004-04-19 → 93年4月19日）
+function toRocDateStr(dateStr) {
+  if (!dateStr) return null;
+  var d = new Date(dateStr);
+  if (isNaN(d)) return null;
+  return (d.getFullYear()-1911)+"年"+(d.getMonth()+1)+"月"+d.getDate()+"日";
+}
+
+// 計算「某個日期當下」被保險人幾歲（不是現在幾歲，是保單生效日當時幾歲，
+// 也就是投保年齡），沒有出生日期資料就回傳 null
+function getAgeAtDate(birthDateStr, atDateStr) {
+  if (!birthDateStr || !atDateStr) return null;
+  var b = new Date(birthDateStr), a = new Date(atDateStr);
+  if (isNaN(b) || isNaN(a)) return null;
+  var y = a.getFullYear() - b.getFullYear();
+  var mo = (a - new Date(b.getFullYear()+y, b.getMonth(), b.getDate())) / (1000*60*60*24*30.4375);
+  if (mo >= 6) y++;
+  return y >= 0 ? y : null;
+}
+
+// ── 被保險人稱呼、業務員顯示資訊 ──────────────────────────
+// 稱呼依「被保險人」各自儲存（同一個人在不同家庭/不同瀏覽器不會互通，
+// 只存在目前這台裝置的瀏覽器裡）；業務員資訊是整台裝置共用一份。
+function getDisplayName() {
+  var nick = localStorage.getItem("nbs_nickname_" + currentPersonId);
+  return (nick && nick.trim()) ? nick.trim() : pName;
+}
+
+function getWatermarkText() {
+  var agentName = localStorage.getItem("nbs_agent_watermark_name");
+  if (agentName === null) agentName = (typeof currentUser !== "undefined" && currentUser && currentUser.name) || "";
+  var agentContact = localStorage.getItem("nbs_agent_watermark_contact") || "";
+  var parts = ["NBS 雲端保單體檢"];
+  if (agentName) parts.push(agentName);
+  if (agentContact) parts.push(agentContact);
+  parts.push(pDate);
+  parts.push("整理");
+  return parts.join(" ");
+}
+
+function openNicknameModal() {
+  document.getElementById("nickname-modal-title").textContent = "請輸入 " + pName + " 的稱呼";
+  document.getElementById("nickname-modal-input").value = localStorage.getItem("nbs_nickname_" + currentPersonId) || "";
+  document.getElementById("nickname-modal-overlay").classList.add("active");
+}
+function closeNicknameModal() {
+  document.getElementById("nickname-modal-overlay").classList.remove("active");
+}
+function saveNickname() {
+  var v = document.getElementById("nickname-modal-input").value.trim();
+  if (v) localStorage.setItem("nbs_nickname_" + currentPersonId, v);
+  else localStorage.removeItem("nbs_nickname_" + currentPersonId);
+  closeNicknameModal();
+}
+
+function openAgentInfoModal() {
+  var savedName = localStorage.getItem("nbs_agent_watermark_name");
+  if (savedName === null) savedName = (typeof currentUser !== "undefined" && currentUser && currentUser.name) || "";
+  document.getElementById("agent-modal-name").value = savedName;
+  document.getElementById("agent-modal-contact").value = localStorage.getItem("nbs_agent_watermark_contact") || "";
+  document.getElementById("agent-modal-overlay").classList.add("active");
+}
+function closeAgentInfoModal() {
+  document.getElementById("agent-modal-overlay").classList.remove("active");
+}
+function saveAgentInfo() {
+  var n = document.getElementById("agent-modal-name").value.trim();
+  var c = document.getElementById("agent-modal-contact").value.trim();
+  localStorage.setItem("nbs_agent_watermark_name", n);
+  localStorage.setItem("nbs_agent_watermark_contact", c);
+  closeAgentInfoModal();
+}
+
+// ── 區塊標題（預覽 + 實際匯出都用這一份，確保匯出的圖片/PDF
+//    一定會包含標題，不會像之前只有預覽畫面看得到）──────────
+function getBlockTitleHtml(b) {
+  // 使用 Flex 排版，左邊放主標題，右邊放業務員資訊(28px, 黑色)
+  // 加上 flex-wrap:wrap + min-width:0，避免業務員姓名/聯絡方式較長時
+  // 把整條標題列撐爆超出 1200px 容器（flex子項目預設 min-width:auto，
+  // 不會自動換行，會直接把外層畫面往右撐開造成截斷）。
+  return '<div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; padding:14px 16px;background:#f7f7f5;border-bottom:2px solid #e6e6e6;">'+
+    '<div style="font-size:44px;font-weight:700;color:#1a1a2e;min-width:0;overflow-wrap:break-word">'+b.icon+' 【'+getDisplayName()+'】'+b.label+'</div>'+
+    '<div style="font-size:28px;font-weight:700;color:#000000;min-width:0;overflow-wrap:break-word">'+getWatermarkText()+'</div>'+
+  '</div>';
+}
+
+// 判斷保單是「終身」還是「定期」：改讀 coverage.html 裡的
+// protect_period_type（歲/年/終身），不再用容易跟繳費期滿日混淆的
+// 保單保障截止日。isTerm 傳 true 找定期的、false 找終身的。
+function lifeAmountEx(pols, cats, isTerm) {
+  var amt = 0;
+  pols.forEach(function(p){
+    if (cats.indexOf(p.category) === -1) return;
+    // 💡 修正：防呆處理，如果欄位是空字串，強制預設為 "終身"
+    var pt = (p.coverage && p.coverage.protect_period_type) ? p.coverage.protect_period_type : "終身";
+    var isPolTerm = (pt !== "終身");
+    if (isTerm !== isPolTerm) return;
+    
+    // 只加總使用者實際填寫的留愛金額(deathBenefit)，不再用保額(insuredAmount)頂替，
+    // 避免把重疾/意外等非壽險身故給付的保額誤算進終身壽險/重大終身總額。
+    amt += getDeathBenefitAmt(p);
+  });
+  return amt;
+}
+// 定期保單的保障期間顯示文字（保障至X歲／保障X年）
+function lifeRemainYearsEx(pols, cats) {
+  var texts = [];
+  pols.forEach(function(p){
+    if (cats.indexOf(p.category) === -1) return;
+    var pt = (p.coverage && p.coverage.protect_period_type) || "終身";
+    if (pt === "終身") return;
+    var val = p.coverage && p.coverage.protect_period;
+    var text = pt === "歲" ? "保障至"+(val||"—")+"歲" : "保障"+(val||"—")+"年";
+    if (texts.indexOf(text) === -1) texts.push(text);
+  });
+  return texts.length ? texts.join("／") : null;
+}
+
+// ── Phase 0：共用視覺元件（大數字 Stat 卡片）──────────────
+// 設計原則（跟使用者確認過，並依實測回饋修正兩次）：
+// - 底色維持各分類原本的語意色（辨識度優先）。
+// - 【核心原則】每個保障項目都要獨立成一行，不能合併/隱藏——
+//   這份報告的核心用途是業務員跟保戶逐項討論保障缺口，「每一項都
+//   能被單獨指出來」比「版面精簡」更重要。
+// - 有規劃的項目：大數字、彩色，一眼看出金額。
+// - 沒規劃的項目：不用死板的「—」，改用淡灰色圓角「缺口」標籤，
+//   用現代 App 常見的狀態標籤語言，取代 Excel 式的破折號。
+// 產生分組標題旁的「定期/終身」標示：不同分類在 coverage.html 裡，
+// 各自有自己的保障期間欄位（意外險=acc_age、住院醫療=hosp_age、
+// 日額型住院=daily_period_type+daily_period、癌症醫療=can_period_type+
+// can_period），這裡對應讀取正確的欄位，不是保單本身的保障截止日。
+// 定額手術、失能長照目前在 coverage.html 沒有保障期間欄位，回傳空字串。
+var TERM_BADGE_FIELD_MAP = {
+  "意外險":              { ageKey:"acc_age" },
+  "住院醫療 (實支實付)": { ageKey:"hosp_age" },
+  "日額型住院":          { typeKey:"daily_period_type", valKey:"daily_period" },
+  "定額手術":            { typeKey:"surg_period_type", valKey:"surg_period" },
+  "癌症醫療":            { typeKey:"can_period_type", valKey:"can_period" },
+  "失能長照":            { typeKey:"ltc_period_type", valKey:"ltc_period" },
+};
+function getTermBadge(g, policies) {
+  var conf = TERM_BADGE_FIELD_MAP[g.label];
+  if (!conf || !g.cats || !g.cats.length) return "";
+  var matched = policies.filter(function(p){ return g.cats.indexOf(p.category) !== -1; });
+  if (!matched.length) return "";
+
+  var labels = [];
+  matched.forEach(function(p){
+    var cv = p.coverage || {};
+    var text;
+    if (conf.ageKey) {
+      var v = cv[conf.ageKey];
+      text = (!v || v === "終身") ? "終身" : "保障至"+v+"歲";
+    } else {
+      var t = cv[conf.typeKey] || "終身";
+      if (t === "終身") text = "終身";
+      else if (t === "歲") text = "保障至"+(cv[conf.valKey]||"—")+"歲";
+      else text = "保障"+(cv[conf.valKey]||"—")+"年";
+    }
+    if (labels.indexOf(text) === -1) labels.push(text);
+  });
+  return labels.join("／");
+}
+
+function buildStatGroupCard(g, policies, cov3) {
+  var itemsData = g.items.map(function(item){
+    var total, isRange=false, minVal=0, maxVal=0, remainNote="";
+    if (item.compute) {
+      total = item.compute(policies);
+      if (item.remain) {
+        var ry = item.remain(policies);
+        if (ry !== null) remainNote = ' ('+ry+')';
+      }
+    } else {
+      var maxKey = item.keys && item.keys.find(function(k){ return k.endsWith('_max'); });
+      var minKey = maxKey ? maxKey.replace('_max','_min') : null;
+      minVal = minKey ? sumCovEx([minKey],policies,cov3) : 0;
+      maxVal = maxKey ? sumCovEx([maxKey],policies,cov3) : 0;
+      isRange = !!(maxKey && (minVal>0 || maxVal>0));
+      total = isRange ? maxVal : sumCovEx(item.keys,policies,cov3);
+    }
+    return { label:item.label, unit:item.unit, total:total, isRange:isRange, minVal:minVal, maxVal:maxVal, remainNote:remainNote };
+  });
+
+  // 有規劃的排前面方便先看重點，沒規劃的排後面方便接續討論缺口，
+  // 但兩者都是「獨立一行」，資料不刪減、不合併
+  var filled = itemsData.filter(function(x){ return x.total>0; });
+  var empty  = itemsData.filter(function(x){ return !(x.total>0); });
+  var rowsHtml = filled.map(function(x){ return statRowHtml(x, g.color); }).join("")
+               + empty.map(function(x){ return statRowHtml(x, g.color); }).join("");
+
+  var termBadge = getTermBadge(g, policies);
+
+  return '<div style="background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04)">'+
+    // 增加卡片標題的 padding 留白
+    '<div style="padding:18px 20px;background:linear-gradient(135deg,'+g.color+'26,'+g.color+'0A)">'+
+      '<div style="display:flex;align-items:center;gap:12px;min-width:0">'+
+        // 放大前方的圖示 (icon)
+        '<span style="font-size:36px;line-height:1;flex-shrink:0">'+(g.icon||'')+'</span>'+
+        // 放大分類標題 (如：住院醫療)
+        '<span style="font-size:26px;font-weight:800;letter-spacing:.01em;color:'+g.color+';line-height:1.3">'+g.label+'</span>'+
+      '</div>'+
+      // 放大終身/定期標籤
+      (termBadge ? '<div style="margin-top:8px"><span style="font-size:20px;font-weight:800;padding:4px 12px;border-radius:99px;background:#fff;color:'+g.color+';white-space:nowrap">'+termBadge+'</span></div>' : '')+
+    '</div>'+
+    rowsHtml +
+  '</div>';
+}
+function statRowHtml(x, color) {
+  var isFilled = x.total > 0;
+  var valueHtml;
+  if (!isFilled) {
+    // 缺口標籤放大
+    valueHtml = '<span style="font-size:22px;font-weight:800;color:#6b7280;background:#eef0f3;padding:4px 12px;border-radius:99px;white-space:nowrap">缺口</span>';
+  } else if (x.isRange) {
+    // 範圍型數字與單位放大
+    valueHtml = '<span style="font-size:28px;font-weight:800;color:'+color+';font-variant-numeric:tabular-nums">'+
+      x.minVal.toLocaleString()+'<span style="color:#9ca3af;margin:0 2px;font-weight:400">～</span>'+x.maxVal.toLocaleString()+
+      '<span style="font-size:20px;color:#6b7280;font-weight:700;margin-left:4px">'+x.unit+'</span></span>';
+  } else {
+    // 單一數字與單位放大
+    valueHtml = '<span style="font-size:30px;font-weight:800;color:'+color+';font-variant-numeric:tabular-nums">'+x.total.toLocaleString()+
+      '<span style="font-size:20px;color:#6b7280;font-weight:700;margin-left:4px">'+x.unit+'</span></span>';
+  }
+  return '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px 8px;padding:'+(isFilled?'14px':'12px')+' 16px;border-top:1px solid #f2f2f4">'+
+    // 左側保障項目名稱放大
+    '<span style="font-size:24px;color:'+(isFilled?"#555":"#aaacb3")+';font-weight:700">'+x.label+(isFilled?x.remainNote:"")+'</span>'+
+    valueHtml+
+  '</div>';
+}
+
+// 依保單類別，讀取該類別在 coverage.html 裡對應的保障期間欄位，
+// 產生「到期日」顯示文字（跟 getTermBadge 用的是同一批欄位，這裡是
+// 單張保單版本，給保單與受益人整合表逐筆顯示用）
+function getPolicyExpiryDisplay(p) {
+  var cv = p.coverage || {};
+  var cat = p.category;
+  function fmt(typeVal, periodVal) {
+    if (!typeVal || typeVal === "終身") return "終身";
+    return typeVal === "歲" ? "至"+(periodVal||"—")+"歲" : (periodVal||"—")+"年期";
+  }
+  if (cat === "意外險") {
+    var v = cv.acc_age;
+    return (!v || v === "終身") ? "終身" : "至"+v+"歲";
+  }
+  if (cat === "醫療保障" || cat === "定額手術") {
+    if (cv.hosp_age) return (cv.hosp_age === "終身") ? "終身" : "至"+cv.hosp_age+"歲";
+    if (cv.daily_period_type) return fmt(cv.daily_period_type, cv.daily_period);
+    if (cv.surg_period_type) return fmt(cv.surg_period_type, cv.surg_period);
+    return "—";
+  }
+  if (cat === "癌症醫療") return fmt(cv.can_period_type, cv.can_period);
+  if (cat === "失能長照") return fmt(cv.ltc_period_type, cv.ltc_period);
+  if (["壽險保障","重大疾病險","重大傷病險","特定傷病險"].indexOf(cat) !== -1) return fmt(cv.protect_period_type, cv.protect_period);
+  return "—"; // 儲蓄險/投資型/年金險目前沒有保障期間欄位
+}
+
+// 把「保單繳費明細一覽表」拆成頭部（年繳/月均統計+月曆）跟逐組保單
+// 卡片陣列，讓 PDF 匯出可以依保單分組動態分頁，不會為了硬塞進一頁
+// 而把整張圖等比例縮到看不清楚
+function buildPremiumDetailParts() {
+  var active = policies.filter(isPolicyActiveEx); // 自己算，不依賴外層變數，
+                                                    // 確保從 doExportPDF 直接呼叫時也能正確運作
+  var totalTWD_pd=active.reduce(function(s,p){return s+(p.premiumTWD||0);},0);
+  var headerHtml='<div style="padding:14px 12px">';
+
+  // 縮小標題字體與底部留白
+  headerHtml+='<div style="font-size:26px;font-weight:800;color:#444;margin-bottom:8px">年繳保費與月繳費分配</div>';
+  var nowM=new Date().getMonth();
+  var statCells = [
+    // 將 padding 縮小為 8px，字體 38px 縮為 30px
+    '<div style="padding:8px;border-radius:10px;background:linear-gradient(135deg,#E6F1FB,#F0F7FF);text-align:center;box-shadow:0 4px 10px -3px rgba(12,68,124,.18)">'+
+      '<div style="font-size:22px;font-weight:700;color:#5B8DBE">年繳總保費</div>'+
+      '<div style="font-size:30px;font-weight:800;margin-top:2px;color:#0C447C;font-variant-numeric:tabular-nums">'+totalTWD_pd.toLocaleString()+'<span style="font-size:20px;font-weight:700;margin-left:1px">元</span></div>'+
+    '</div>',
+    '<div style="padding:8px;border-radius:10px;background:linear-gradient(135deg,#EAF3DE,#F3F9EC);text-align:center;box-shadow:0 4px 10px -3px rgba(39,80,10,.18)">'+
+      '<div style="font-size:22px;font-weight:700;color:#6B9450">月均保費</div>'+
+      '<div style="font-size:30px;font-weight:800;margin-top:2px;color:#27500A;font-variant-numeric:tabular-nums">'+Math.round(totalTWD_pd/12).toLocaleString()+'<span style="font-size:20px;font-weight:700;margin-left:1px">元</span></div>'+
+    '</div>',
+  ];
+  var monthCells=Array.from({length:12},function(_,mi){
+    var t=0;
+    active.forEach(function(p){
+      var sm=new Date(p.startDate||"2020-01-01").getMonth(),pr=p.premiumTWD||0;
+      if(p.payMode==="月繳")t+=Math.round(pr/12);
+      else if(p.payMode==="季繳"&&(mi-sm+12)%3===0)t+=Math.round(pr/4);
+      else if(p.payMode==="半年繳"&&(mi-sm+12)%6===0)t+=Math.round(pr/2);
+      else if(p.payMode==="年繳"&&mi===sm%12)t+=pr;
+    });
+    var isNow = mi===nowM;
+    // 將 padding 縮小，月份字體 32px 縮為 24px，金額 34px 縮為 26px
+    return'<div style="padding:8px 4px;background:'+(isNow?"linear-gradient(135deg,#378ADD,#4F9AE8)":"#f7f8fa")+';border-radius:10px;text-align:center;'+(isNow?"box-shadow:0 4px 10px -3px rgba(55,138,221,.5)":"")+'">'+
+      '<div style="font-size:24px;font-weight:800;color:'+(isNow?"rgba(255,255,255,.9)":"#6b7280")+'">'+(mi+1)+'月</div>'+
+      '<div style="font-size:26px;font-weight:800;margin-top:2px;color:'+(isNow?"#fff":t>0?"#1a1a1a":"#9ca3af")+';font-variant-numeric:tabular-nums">'+(t>0?t.toLocaleString()+'<span style="font-size:18px;font-weight:700">元</span>':"—")+'</div>'+
+    '</div>';
+  });
+  var cellsPD = [statCells[0]].concat(monthCells.slice(0,6))
+    .concat([statCells[1]]).concat(monthCells.slice(6,12)).join("");
+  headerHtml+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:16px">'+cellsPD+'</div>';
+  headerHtml+='<div style="font-size:30px;font-weight:800;color:#444;margin-bottom:10px">保單與受益人整合表</div>';
+  headerHtml+='</div>';
+
+  var BENEF_RULES_PD = {
+    "壽險保障":   { death:"可設定", live:"不適用" },
+    "意外險":     { death:"可設定", live:"不適用" },
+    "醫療險":     { death:"可設定", live:"不適用" },
+    "癌症醫療":   { death:"可設定", live:"不適用" },
+    "重大疾病險": { death:"可設定", live:"可設定" }, 
+    "重大傷病險": { death:"可設定", live:"可設定" }, 
+    "特定傷病險": { death:"可設定", live:"可設定" }, 
+    "失能長照":   { death:"可設定", live:"可設定" },
+    "儲蓄險":     { death:"可設定", live:"可設定" },
+    "年金險":     { death:"可設定", live:"可設定" },
+    "投資型保險": { death:"可設定", live:"可設定" }
+  };
+
+  var pdGroups=[], pdGroupMap={};
+  policies.forEach(function(p){
+    var k=p.policyNo||p.id;
+    if(!pdGroupMap[k]){ pdGroupMap[k]={key:k,rows:[]}; pdGroups.push(pdGroupMap[k]); }
+    pdGroupMap[k].rows.push(p);
+  });
+
+  var thStylePD = 'padding:10px;text-align:left;font-size:22px;font-weight:800;color:#6b7280;white-space:nowrap;background:#f7f8fa;';
+  var tdStylePD = 'padding:10px;vertical-align:middle;font-size:26px;background:#fff;';
+  // 10 欄固定寬度，header 跟每一列都用同一份，確保不管各自截圖幾張，
+  // 欄位永遠對得整齊
+  // 限制商品名最大寬度為400px，並加寬狀態(130px)與受益人(240px)
+  // 讓商品名改為 1fr 填滿剩餘空白，同時保持狀態與受益人的寬裕空間
+  // 加入 minmax(300px, 1fr) 確保在預覽畫面中商品名不會被擠壓變形
+  var COLS_PD = '60px 110px minmax(300px,1fr) 150px 170px 130px 150px 150px 240px 240px';
+
+  var colHeaderRow =
+    '<div style="display:grid;grid-template-columns:'+COLS_PD+';border-bottom:2px solid #eef0f3">'+
+      '<div style="'+thStylePD+'"></div>'+
+      '<div style="'+thStylePD+'">險種</div>'+
+      '<div style="'+thStylePD+'">商品名</div>'+
+      '<div style="'+thStylePD+'text-align:right">保額</div>'+
+      '<div style="'+thStylePD+'text-align:right">保費</div>'+
+      '<div style="'+thStylePD+'">狀態</div>'+
+      '<div style="'+thStylePD+'">到期日</div>'+
+      '<div style="'+thStylePD+'text-align:right">留愛金額</div>'+
+      '<div style="'+thStylePD+'">身故受益人</div>'+
+      '<div style="'+thStylePD+'">生存/滿期受益人</div>'+
+    '</div>';
+
+  var groupPieces = pdGroups.map(function(grp){
+    var mainPol = grp.rows.find(function(p){return p.isMain===true;}) || grp.rows[0];
+    var riders = grp.rows.filter(function(p){return p!==mainPol;});
+    var ordered = [mainPol].concat(riders);
+    var groupTotalPrem = grp.rows.reduce(function(s,p){return s+(p.premiumTWD||0);},0);
+
+    var startRocText = toRocDateStr(mainPol.startDate);
+    var insAgeAtStart = getAgeAtDate(person.profile && person.profile.birthDate, mainPol.startDate);
+    var startInfoHtml = startRocText
+      ? '<span style="font-size:24px;color:#6b7280;font-weight:600;white-space:nowrap">生效日 '+startRocText+(insAgeAtStart!==null?'　投保年齡 '+insAgeAtStart+'歲':'')+'</span>'
+      : (insAgeAtStart!==null ? '<span style="font-size:24px;color:#6b7280;font-weight:600;white-space:nowrap">投保年齡 '+insAgeAtStart+'歲</span>' : '');
+
+    var cardHeaderHtml =
+      '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;padding:12px 16px;background:linear-gradient(135deg,#EEF4FF,#F7F5FF)">'+
+        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+
+          '<span style="font-family:monospace;font-size:24px;font-weight:700;color:#3B82F6;background:#fff;padding:3px 9px;border-radius:99px">'+grp.key+'</span>'+
+          '<span style="font-size:30px;font-weight:800;color:#374151">'+(mainPol.company||'未知')+'</span>'+
+          startInfoHtml+
+        '</div>'+
+        '<span style="font-size:26px;font-weight:700;color:#6b7280">年繳 NT$'+groupTotalPrem.toLocaleString()+'</span>'+
+      '</div>';
+
+    var rowsHtml = ordered.map(function(p){
+      var cc=CC[p.category]||"#999";
+      var isMR = p===mainPol;
+      var amtText = p.insuredAmount ? p.insuredAmount + " " + (p.insuredAmountUnit || '萬元') : '—';
+      var rule = BENEF_RULES_PD[p.category] || { death:"可設定", live:"可設定" };
+      var ownerName  = p.ownerName  || p.proposer || p.applicant || "—";
+
+      var isFxPD = p.currency && p.currency !== "TWD";
+      var premDisplayPD = isFxPD
+        ? 'NT$'+(p.premiumTWD||0).toLocaleString()+' <span style="font-size:20px;color:#9CA3AF;font-weight:400">(USD '+(p.premiumOrig||0).toLocaleString()+')</span>'
+        : 'NT$'+(p.premiumTWD||0).toLocaleString();
+
+      var dStr = "";
+      if(rule.death === "鎖定本人") { dStr = "被保險人本人 🔒"; }
+      else if(p.beneficiaryDeathText) { dStr = p.beneficiaryDeathText; }
+      else if(p.beneficiaryDeathCustom && p.beneficiaryDeathCustom.length>0) {
+        dStr = p.beneficiaryDeathCustom.map(function(c){ return c.customName || "指定家人"; }).join("、");
+      }
+
+      var lStr = "", mStr = "";
+      if(p.beneficiaryLiveText) lStr = p.beneficiaryLiveText;
+      else if(p.beneficiaryLiveType === "self")  lStr = "被保險人本人";
+      else if(p.beneficiaryLiveType === "owner") lStr = ownerName + " (要保人)";
+      else if(p.beneficiaryLiveType === "other") lStr = p.beneficiaryLiveOther || "指定其他";
+      if(p.beneficiaryMaturityText) mStr = p.beneficiaryMaturityText;
+      else if(p.beneficiaryMaturityType === "self")  mStr = "被保險人本人";
+      else if(p.beneficiaryMaturityType === "owner") mStr = ownerName + " (要保人)";
+      else if(p.beneficiaryMaturityType === "other") mStr = p.beneficiaryMaturityOther || "指定其他";
+      if(p.category === "年金險" || p.category === "投資型保險" || rule.live === "鎖定本人") {
+        lStr = "被保險人本人 🔒"; mStr = "";
+      }
+      var liveDisplay = "—";
+      if(rule.live === "不適用" || p.category === "壽險保障") {
+        liveDisplay = '<span style="color:#9ca3af">不適用</span>';
+      } else if(rule.live === "鎖定本人" || p.category === "年金險" || p.category === "投資型保險") {
+        liveDisplay = '<span style="font-size:22px;background:#f0f0f0;color:#888;padding:2px 6px;border-radius:6px">本人 🔒</span>';
+      } else {
+        var partsPD = [];
+        if(lStr) partsPD.push('<div>生存金：'+lStr+'</div>');
+        if(mStr) partsPD.push('<div>滿期金：'+mStr+'</div>');
+        liveDisplay = partsPD.length ? partsPD.join("") : '<span style="color:#9ca3af">—</span>';
+      }
+      var dColor = !dStr ? "#9ca3af" : "#374151";
+      dStr = dStr || "—";
+
+      // 留愛金額只適用「留給受益人」性質的保障（壽險、意外、重大身故），
+      // 醫療/癌症/手術/日額型住院/失能長照這類理賠對象是被保險人自己
+      // （治療/生活costs)，不是留給受益人的錢，不該出現在這個欄位
+      // 將投資型、儲蓄、年金險加入，讓它們也能在整合表中顯示留愛金額
+      var LEGACY_CATS_PD = ["壽險保障","意外險","重大疾病險","重大傷病險","特定傷病險", "投資型保險", "儲蓄險", "年金險"];
+      var dbText;
+      if (LEGACY_CATS_PD.indexOf(p.category) === -1) {
+        dbText = '—';
+      } else {
+        // 留愛金額只顯示使用者實際填寫的 deathBenefit，不再用保額(insuredAmount)頂替。
+        var dbAmt = getDeathBenefitAmt(p);
+        dbText = (dbAmt && dbAmt > 0) ? (dbAmt + ' 萬元') : '—';
+      }
+      var expiryText = getPolicyExpiryDisplay(p);
+
+      return '<div style="display:grid;grid-template-columns:'+COLS_PD+';border-bottom:1px solid #f2f2f4">'+
+        '<div style="'+tdStylePD+'">'+(isMR?'<span style="font-size:20px;color:#fff;background:#378ADD;padding:2px 7px;border-radius:99px;font-weight:700">主</span>':'<span style="font-size:20px;color:#888;background:#ebebeb;padding:2px 7px;border-radius:99px;font-weight:700">附</span>')+'</div>'+
+        '<div style="'+tdStylePD+'"><span style="font-size:20px;padding:2px 7px;border-radius:99px;background:'+cc+'1A;color:'+cc+';font-weight:700;white-space:nowrap">'+(p.category||'—')+'</span></div>'+
+        '<div style="'+tdStylePD+'font-weight:700;color:#1f2937">'+(p.itemName||'—')+'</div>'+
+        '<div style="'+tdStylePD+'text-align:right;font-weight:800;color:#0C447C;font-variant-numeric:tabular-nums;white-space:nowrap">'+amtText+'</div>'+
+        '<div style="'+tdStylePD+'text-align:right;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums">'+premDisplayPD+'</div>'+
+        '<div style="'+tdStylePD+'"><span style="font-size:20px;padding:2px 7px;border-radius:99px;background:'+(isPolicyActiveEx(p)?"#EAF3DE":"#f0f0f0")+';color:'+(isPolicyActiveEx(p)?"#27500A":"#888")+'">'+(p.status||"有效")+'</span></div>'+
+        '<div style="'+tdStylePD+'font-size:24px;color:'+(expiryText==="終身"?"#374151":expiryText==="—"?"#9ca3af":"#B07000")+';font-weight:700;white-space:nowrap">'+expiryText+'</div>'+
+        '<div style="'+tdStylePD+'text-align:right;font-weight:800;color:#B0466F;font-variant-numeric:tabular-nums;white-space:nowrap">'+dbText+'</div>'+
+        '<div style="'+tdStylePD+'color:'+dColor+';line-height:1.4;font-size:24px">'+dStr+'</div>'+
+        '<div style="'+tdStylePD+'line-height:1.4;font-size:24px">'+liveDisplay+'</div>'+
+      '</div>';
+    });
+
+    var cardWrapOpen  = '<div style="break-inside:avoid;margin-bottom:14px;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04)">';
+    var cardWrapClose = '</div>';
+    var fullHtml = cardWrapOpen + cardHeaderHtml + colHeaderRow + rowsHtml.join("") + cardWrapClose;
+
+    return {
+      key: grp.key,
+      cardHeaderHtml: cardWrapOpen + cardHeaderHtml + colHeaderRow, // 換頁時可以重複印一次，方便閱讀
+      rowsHtml: rowsHtml,
+      cardWrapClose: cardWrapClose,
+      fullHtml: fullHtml
+    };
+  });
+
+  var groupHtmls = groupPieces.map(function(gp){ return gp.fullHtml; });
+
+  return { headerHtml: headerHtml, groupHtmls: groupHtmls, groupPieces: groupPieces };
+}
+
+function switchPerson(pid) {
+  currentPersonId = pid;
+  var p = personDataMap[pid];
+  if (!p) {
+    // 保底：優先用已載入的 personDataMap，沒有的話跟 onMemberChange
+    // 一樣退回讀 sessionStorage 快取
+    try { p = JSON.parse(sessionStorage.getItem("nbs_person_" + pid)); } catch (e) {}
+  }
+  if (p) {
+    person = p;
+    policies = person.policies || [];
+    coverage = person.coverage || {};
+    savings = person.savings || [];
+    pName = (person.profile && person.profile.name) || "—";
+    var ad = person.profile && person.profile.analysisDate;
+    if (ad) {
+      var d = new Date(ad);
+      pDate = (d.getFullYear() - 1911) + "年" + (d.getMonth() + 1) + "月" + d.getDate() + "日";
+    }
+  }
+  renderTabs();
+  updatePrevBtn();
+}
+
+// ── SVG 箭頭列（html2canvas 相容，不使用 clip-path+calc）────────────────
+function buildSvgArrows(phases) {
+  var W=900, H=50, tip=20;
+  var weights=[1,1.4,1], totalW=3.4;
+  var widths=weights.map(function(w){return w/totalW*W;});
+  // 加上 height="85px" 與 preserveAspectRatio="none"，強制鎖死高度以對齊右側
+  var svg='<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="85px" preserveAspectRatio="none" viewBox="0 0 '+W+' '+H+'" style="display:block;margin-bottom:20px">';
+  var x=0;
+  phases.forEach(function(ph,i){
+    var w=widths[i], x0=x, x1=x+w, pts;
+    if(i===0){
+      pts=x0+',0 '+(x1-tip)+',0 '+x1+','+(H/2)+' '+(x1-tip)+','+H+' '+x0+','+H;
+    } else if(i===2){
+      pts=x0+',0 '+x1+',0 '+x1+','+H+' '+x0+','+H+' '+(x0+tip)+','+(H/2);
+    } else {
+      pts=x0+',0 '+(x1-tip)+',0 '+x1+','+(H/2)+' '+(x1-tip)+','+H+' '+x0+','+H+' '+(x0+tip)+','+(H/2);
+    }
+    svg+='<polygon points="'+pts+'" fill="'+ph.color+'"/>';
+    var tx=i===0?x0+(w-tip)/2:i===2?x0+tip+(w-tip)/2:x0+tip+(w-tip*2)/2;
+    // 箭頭內文字放大為 28px
+    svg+='<text x="'+tx+'" y="'+(H/2+8)+'" text-anchor="middle" fill="#fff" font-size="28" font-weight="700" font-family="-apple-system,BlinkMacSystemFont,sans-serif">'+ph.label+'</text>';
+    x+=w;
+  });
+  svg+='</svg>';
+  return svg;
+}
+
+// ── 保障覆蓋率圓餅圖專用：20項合併為12大類 ──────────────────
+// 只影響圓餅圖本身的視覺呈現，跟下方「評估確診/積極修復/康復療養/
+// 家庭責任」四張明細卡片完全獨立（那四張卡片繼續用 GAP_GROUPS_EX
+// 逐項顯示，不受影響），避免合併後看不出每個總數的組成來源。
+var DONUT_CATEGORIES_EX = [
+  { key:"life_permanent", label:"終身壽險",     color:"#1565C0", subKeys:["life_permanent"] },
+  { key:"life_term",      label:"定期壽險",     color:"#1E88E5", subKeys:["life_term"] },
+  { key:"investment",     label:"投資型保險",   color:"#7B1FA2", subKeys:["investment"] },
+  { key:"savings",        label:"儲蓄險",       color:"#E91E8C", subKeys:["savings"] },
+  { key:"acc",            label:"意外險",       color:"#F5A623", subKeys:["acc_death_amt","acc_medical","acc_hosp"] },
+  { key:"ci",             label:"重疾/特傷/重大", color:"#C0392B", subKeys:["ci_special","ci_death"] },
+  { key:"cancer",         label:"癌症險",       color:"#C62828", subKeys:["cancer","cancer_hosp","cancer_surgery","cancer_death_hospice"] },
+  { key:"hosp_real_room", label:"住院醫療",     color:"#E65100", subKeys:["hosp_real_room"] },
+  { key:"hosp_daily",     label:"住院日額",     color:"#F57C00", subKeys:["hosp_daily"] },
+  { key:"surgery",        label:"手術醫療",     color:"#FF9800", subKeys:["surgery"] },
+  { key:"ltc",            label:"失能/長照",    color:"#2E7D32", subKeys:["ltc_disable","ltc_support","ltc_care"] },
+  { key:"waiver",         label:"豁免",         color:"#A5D6A7", subKeys:["waiver"] },
+];
+
+// 合併類別的三態判斷：全部子項目都有 → full(有)；全部都沒有 → none(沒有)；
+// 部分子項目有部分沒有 → partial(部分有)。pct 用子項目「有的比例」畫扇形填色。
+function getDonutCategoryStatusEx(cat, active, coverage, targets, covOverrides) {
+  var n = cat.subKeys.length;
+  var presentCount = 0;
+  cat.subKeys.forEach(function(k){
+    var current = getItemCurrentEx(k, active, coverage, covOverrides);
+    if (current > 0) presentCount++;
+  });
+  var status = presentCount===0 ? "none" : (presentCount===n ? "full" : "partial");
+  return { status: status, pct: n ? presentCount/n : 0 };
+}
+
+function buildDonutChartEx(active, coverage, targets, covOverrides) {
+  var n = DONUT_CATEGORIES_EX.length;
+  
+  // 放大 SVG 畫布座標，容納超大字體
+  var cx=500, cy=350, OR=230, IR=125;
+  var gapA=0.03, sliceA=(Math.PI*2-n*gapA)/n;
+
+  var angle=-Math.PI/2;
+  var paths="";
+  var labels=""; 
+
+  function renderLegend(g) {
+    // 標題放大至 36px
+    var legendHtml = `<div style="font-size:36px;font-weight:800;color:${g.color};margin-bottom:20px;border-bottom:3px solid ${g.color}30;padding-bottom:12px">${g.label}</div>`;
+    
+    g.items.forEach(item => {
+      var {status, pct, current, target} = getItemStatusEx(item.key, active, coverage, targets, covOverrides);
+      var icon = status==="gap"?"❌":status==="insufficient"?"⚠️":"✅";
+      var dotColor = status==="gap"?"#e0e0e0":item.color;
+
+      var amtHtml = "";
+      if (item.isBool) {
+        amtHtml = current > 0 ? `<span style="color:#555;font-size:32px;font-weight:700">有</span>` : `<span style="color:#bbb;font-size:32px;font-weight:700">無</span>`;
+      } else {
+        if (current > 0 || target > 0) {
+          var displayVal = current > 0 ? current.toLocaleString() : "0";
+          if (target > 0) displayVal += ` / ${target.toLocaleString()}`;
+          // 數字放大至 38px
+          amtHtml = `<span style="color:${current>0?'#0C447C':'#888'};font-weight:800;font-size:38px;font-variant-numeric:tabular-nums">${displayVal}<span style="font-size:24px;color:#888;margin-left:6px;font-weight:600">${item.unit}</span></span>`;
+        } else {
+          amtHtml = `<span style="color:#bbb;font-size:32px;font-weight:700">0</span>`;
+        }
+      }
+
+      // 項目文字放大至 30px
+      legendHtml += `<div style="display:flex;align-items:center;gap:14px;font-size:30px;margin-bottom:16px">
+        <div style="width:20px;height:20px;border-radius:6px;background:${dotColor};flex-shrink:0"></div>
+        <span style="color:${status==="gap"?"#bbb":"#444"};font-weight:700;flex:1;white-space:nowrap">${item.label}</span>
+        ${amtHtml}
+        <span style="margin-left:8px;font-size:28px">${icon}</span>
+      </div>`;
+    });
+    return legendHtml;
+  }
+
+  var legendFamily = renderLegend(GAP_GROUPS_EX[0]);
+  var legendBefore = renderLegend(GAP_GROUPS_EX[1]);
+  var legendDuring = renderLegend(GAP_GROUPS_EX[2]);
+  var legendAfter  = renderLegend(GAP_GROUPS_EX[3]);
+
+  var chartCats = DONUT_CATEGORIES_EX;
+  chartCats.forEach(item => {
+    var {status,pct} = getDonutCategoryStatusEx(item, active, coverage, targets, covOverrides);
+    var start = angle+gapA/2;
+    var end   = angle+gapA/2+sliceA;
+    var filledEnd = start + sliceA*pct;
+    var midA  = start + sliceA/2; 
+    angle += sliceA+gapA;
+
+    var px=(r,a)=>cx+r*Math.cos(a), py=(r,a)=>cy+r*Math.sin(a);
+    var donut=(a1,a2,lg,r1,r2)=>`M${px(r1,a1)},${py(r1,a1)} A${r1},${r1} 0 ${lg} 1 ${px(r1,a2)},${py(r1,a2)} L${px(r2,a2)},${py(r2,a2)} A${r2},${r2} 0 ${lg} 0 ${px(r2,a1)},${py(r2,a1)} Z`;
+
+    paths += `<path d="${donut(start,end,sliceA>Math.PI?1:0,OR,IR)}" fill="#f0f0f0"/>`;
+    if(pct>0.01) paths += `<path d="${donut(start,filledEnd,sliceA*pct>Math.PI?1:0,OR,IR)}" fill="${item.color}"/>`;
+    if(status==="partial" && pct<0.99) {
+      var gapSize=sliceA*(1-pct);
+      paths += `<path d="${donut(filledEnd,end,gapSize>Math.PI?1:0,OR,IR)}" fill="none" stroke="${item.color}" stroke-width="4" stroke-dasharray="6 5" opacity="0.45"/>`;
+    }
+
+    var isRight = Math.cos(midA) >= 0; 
+    var x0 = px(OR, midA), y0 = py(OR, midA); 
+    var x1 = px(OR + 26, midA), y1 = py(OR + 26, midA); 
+    var x2 = x1 + (isRight ? 32 : -32), y2 = y1; 
+
+    var textAnchor = isRight ? "start" : "end";
+    var textX = x2 + (isRight ? 8 : -8);
+    var textColor = status === "none" ? "#aaa" : "#555";
+    var fw = status === "full" ? "600" : "500";
+    var prefix = status === "none" ? "❌ " : status === "partial" ? "◐ " : "";
+
+    // 圓餅圖外圍文字放大至 26px
+    labels += `
+      <polyline points="${x0},${y0} ${x1},${y1} ${x2},${y2}" fill="none" stroke="${item.color}60" stroke-width="2"/>
+      <circle cx="${x0}" cy="${y0}" r="4" fill="${item.color}"/>
+      <text x="${textX}" y="${y2+8}" text-anchor="${textAnchor}" style="font-size:26px;fill:${textColor};font-weight:${fw};letter-spacing:0.03em">${prefix}${item.label}</text>
+    `;
+  });
+
+  var okN  = chartCats.filter(item=>getDonutCategoryStatusEx(item,active,coverage,targets,covOverrides).status==="full").length;
+  var gapN = chartCats.filter(item=>getDonutCategoryStatusEx(item,active,coverage,targets,covOverrides).status==="none").length;
+  var insN = chartCats.filter(item=>getDonutCategoryStatusEx(item,active,coverage,targets,covOverrides).status==="partial").length;
+
+  // 圓心文字放大，並改為回傳物件格式以供後續精準排版
+  return {
+    svg: `<svg viewBox="0 0 1000 700" style="width:100%; max-height:620px; height:auto; display:block; margin:0 auto;">
+        ${paths}
+        ${labels}
+        <text x="${cx}" y="${cy-24}" text-anchor="middle" style="font-size:26px;fill:#888">✅ 已規劃</text>
+        <text x="${cx}" y="${cy+18}"  text-anchor="middle" style="font-size:64px;font-weight:bold;fill:#333">${okN}</text>
+        <text x="${cx}" y="${cy+56}" text-anchor="middle" style="font-size:24px;fill:#E74C3C">❌ 缺口 ${gapN}</text>
+        <text x="${cx}" y="${cy+88}" text-anchor="middle" style="font-size:24px;fill:#F5A623">◐ 部分有 ${insN}</text>
+      </svg>`,
+    legendFamily: legendFamily,
+    legendBefore: legendBefore,
+    legendDuring: legendDuring,
+    legendAfter: legendAfter
+  };
+}
+
+// ── 缺口／不足分析 ────────────────────────────────────────
+function buildGapAnalysisEx(active, coverage, targets, covOverrides) {
+  var allItems = GAP_GROUPS_EX.flatMap(g=>g.items);
+  var gaps = [], insufficients = [];
+  allItems.forEach(item => {
+    var s = getItemStatusEx(item.key, active, coverage, targets, covOverrides);
+    if(s.status==="gap") gaps.push({item, ...s});
+    if(s.status==="insufficient") insufficients.push({item, ...s});
+  });
+
+  var html = "";
+
+  if(insufficients.length) {
+    html += `<div style="font-size:17px;font-weight:500;color:#F5A623;margin-bottom:8px">⚠ 規劃不足</div>`;
+    insufficients.forEach(({item,current,target,pct}) => {
+      html += `<div style="margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+          <span style="font-size:16px;color:#555">${item.label}</span>
+          <div style="display:flex;gap:6px;align-items:center">
+            <span style="font-size:17px;color:#555;font-weight:500">${current.toLocaleString()}${item.unit}</span>
+            <span style="font-size:14px;color:#aaa">/ 目標 ${target?.toLocaleString()}${item.unit}</span>
+          </div>
+        </div>
+        <div style="height:7px;background:#f0f0f0;border-radius:99px;overflow:hidden">
+          <div style="height:100%;width:${Math.round(pct*100)}%;background:${item.color};border-radius:99px"></div>
+        </div>
+        <div style="font-size:14px;color:#E74C3C;margin-top:3px">尚不足 ${(target-current).toLocaleString()}${item.unit}（${Math.round(pct*100)}% 達成）</div>
+      </div>`;
+    });
+  }
+
+  if(gaps.length) {
+    html += `<div style="font-size:17px;font-weight:500;color:#E74C3C;margin-bottom:8px;margin-top:${insufficients.length?12:0}px">❌ 尚未規劃</div>`;
+    html += `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">`;
+    gaps.forEach(({item}) => {
+      html += `<span style="padding:3px 10px;background:#FCEBEB;border:1px solid #F0A8BF;border-radius:99px;font-size:14px;color:#791F1F">${item.label}</span>`;
+    });
+    html += `</div><div style="font-size:14px;color:#aaa">💡 可與保戶討論是否有需要規劃</div>`;
+  }
+
+  if(!insufficients.length && !gaps.length) {
+    html += `<div style="font-size:17px;color:#27AE8F;text-align:center;padding:12px 0">🎉 所有已設目標項目均達標！</div>`;
+  }
+
+  return html;
+}
+
+// 註：原本這裡有一段「目標設定 Modal」「手動調整保障有無 Modal」的
+// 複製程式碼（openTargetModal/saveTargets/openModal/toggleOverride/
+// closeModal/handleModalOverlay），已於這次整理移除：
+// - openModal/toggleOverride/closeModal/handleModalOverlay 依賴的
+//   #edit-modal、#modal-types 容器在 export.html 畫面裡並不存在，
+//   屬於無法觸及、觸及就會報錯的死碼。
+// - openTargetModal/saveTargets 雖然本身可以動（自己動態建立彈窗），
+//   但「設定目標保額」這個功能設計上屬於 summary.html（那邊行為完整、
+//   看得到即時反映），搬到匯出頁只會讓人誤以為可以在這裡編輯資料，
+//   且調整的內容不會被保存，因此一併移除，匯出頁維持「只做匯出選擇」
+//   的單純定位。
+
+function goBack() { _goFamily(); }
+
+function callGAS(action, params) {
+  // 統一路由到 nav.js 的 NBS_NAV.callGAS（直連 Drive API，含 OAuth token）
+  if (window.NBS_NAV && typeof NBS_NAV.callGAS === 'function') {
+    return NBS_NAV.callGAS(action, params);
+  }
+  return Promise.reject(new Error('nav.js 未載入，請重新整理頁面'));
+}
+
+// 支援兩種事件：nav.js 自行載入 或 family.html 先載入後通知
+window.addEventListener("nbs_family_loaded", function(e) {
+  if (typeof familyData !== "undefined" && familyData) return; // 已初始化
+  var u = JSON.parse(localStorage.getItem("nbs_user") || "{}");
+  window.dispatchEvent(new CustomEvent("nbs_nav_ready", {
+    detail: {
+      user:            u,
+      familyData:      e.detail.familyData,
+      currentPersonId: e.detail.familyData && e.detail.familyData.members &&
+                       e.detail.familyData.members[0] && e.detail.familyData.members[0].personId,
+      familyFileName:  e.detail.familyFileName
+    }
+  }));
+});
+NBS_NAV.init({ page: "export" });
+
+// ── 渲染各區塊 HTML ───────────────────────────────────────
+function renderBlock(key){
+  var active=policies.filter(isPolicyActiveEx);
+
+  // ▼ ①保險繳費明細一覽表：年繳/月均統計 + 月曆 + 整合表
+  if(key==="premium_detail"){
+    var pdParts = buildPremiumDetailParts();
+    return '<div style="padding:14px 12px 0">'+pdParts.headerHtml+'</div><div style="padding:0 12px 14px">'+pdParts.groupHtmls.join("")+'</div>';
+  }
+
+  // ── 其他原有模塊 ───────────────────────────────────────
+  if(key==="summary"){
+    var cov={};
+    policies.forEach(function(p){
+      Object.entries(p.coverage||{}).forEach(function(e){
+        if(typeof e[1]==="number") cov[e[0]]=(cov[e[0]]||0)+e[1]; else cov[e[0]]=e[1];
+      });
+    });
+
+    var chartParts = buildDonutChartEx(active, cov, {}, {});
+
+    var html='<div style="padding:16px">';
+
+    // ── 第一行：圓餅圖 (左側佔 2 份) + 就醫狀況 (右側佔 3 份) ──
+    html+='<div style="display:grid;grid-template-columns:2fr 3fr;gap:30px;margin-bottom:30px">';
+    
+    // 區塊 1-A：保障覆蓋率(圓餅圖)
+    html+='<div style="background:#fff;border-radius:24px;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);padding:24px;display:flex;flex-direction:column">';
+    html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">';
+    html+='<div style="font-size:36px;font-weight:800;color:#444;">保障覆蓋率</div>';
+    html+='<div style="display:flex;gap:20px;font-size:22px;color:#888;font-weight:600">'+
+      '<span><span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#27AE8F;margin-right:6px"></span>已規劃</span>'+
+      '<span style="color:#F5A623"><span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#F5A623;opacity:.5;margin-right:6px;border:2px dashed #F5A623"></span>部分有</span>'+
+      '<span style="color:#bbb"><span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#e0e0e0;margin-right:6px"></span>缺口</span>'+
+    '</div>';
+    html+='</div>';
+    html+='<div style="flex:1;display:flex;align-items:center;justify-content:center">'+chartParts.svg+'</div>';
+    html+='</div>'; 
+
+    // 區塊 1-B：就醫情況
+    html+='<div style="background:#fff;border-radius:24px;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);padding:24px;display:flex;flex-direction:column">';
+    html+='<div style="font-size:36px;font-weight:800;color:#444;margin-bottom:16px">就醫情況</div>';
+    var baseHosp=sumCovEx(["hosp_room","hosp_ext_room","daily_room_1_30","hosp_ext_daily","daily_discharge"],policies,cov);
+    var visitCats = [
+      { label:"疾病", color:"#27AE8F", bg:"#EAF3DE" },
+      { label:"意外", color:"#F5A623", bg:"#FAEEDA" },
+      { label:"癌症", color:"#E74C3C", bg:"#FCEBEB" },
+    ];
+    html+='<div style="background:#f7f8fa;border-radius:24px;padding:20px;display:grid;grid-template-columns:repeat(3,1fr);gap:18px;flex:1">';
+    visitCats.forEach(function(vc, ci){
+      var ck = ["disease","accident","cancer"][ci];
+      var opdVal="—", opdUnit="", opdIsInsurance=false;
+      if(ck==="disease"){ opdIsInsurance=true; }
+      else if(ck==="accident"){ opdVal=sumCovEx(["acc_opd"],policies,cov)||"—"; opdUnit="萬/次"; }
+      else { opdVal=sumCovEx(["can_opd"],policies,cov)||"—"; opdUnit="元/次"; }
+
+      var hospVal="—", hospUnit="元/日";
+      if(ck==="disease") hospVal=baseHosp||"—";
+      else if(ck==="accident") hospVal=(baseHosp+sumCovEx(["acc_hosp"],policies,cov))||"—";
+      else hospVal=(baseHosp+sumCovEx(["can_hosp","can_discharge"],policies,cov))||"—";
+
+      html+='<div style="background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 3px 10px -3px rgba(0,0,0,.12);display:flex;flex-direction:column">';
+      html+='<div style="padding:14px;background:linear-gradient(135deg,'+vc.color+'26,'+vc.color+'0A);text-align:center">'+
+          '<span style="font-size:46px;font-weight:800;color:'+vc.color+'">'+vc.label+'</span>'+
+        '</div>';
+      
+      html+='<div style="padding:16px 24px;display:flex;justify-content:space-between;align-items:center;border-bottom:2px dashed #f2f2f4;flex:1">';
+      html+='<div style="font-size:26px;color:#6b7280;font-weight:700">門診</div>';
+      if(opdIsInsurance) {
+        html+='<div style="padding:6px 20px;border-radius:12px;background:#EAF3DE"><span style="font-size:28px;font-weight:800;color:#27500A">健保</span></div>';
+      } else {
+        html+='<div style="font-size:36px;font-weight:800;color:'+(opdVal!=="—"?"#1a1a1a":"#9ca3af")+';font-variant-numeric:tabular-nums">'+(typeof opdVal==="number"?opdVal.toLocaleString():opdVal)+(opdVal!=="—"?'<span style="font-size:20px;color:#6b7280;font-weight:700;margin-left:6px">'+opdUnit+'</span>':'')+'</div>';
+      }
+      html+='</div>';
+
+      html+='<div style="padding:16px 24px;display:flex;justify-content:space-between;align-items:center;flex:1">';
+      html+='<div style="font-size:26px;color:#6b7280;font-weight:700">住院</div>';
+      html+='<div style="font-size:36px;font-weight:800;color:'+(hospVal!=="—"?"#1a1a1a":"#9ca3af")+';font-variant-numeric:tabular-nums">'+(typeof hospVal==="number"?hospVal.toLocaleString():hospVal)+(hospVal!=="—"?'<span style="font-size:20px;color:#6b7280;font-weight:700;margin-left:6px">'+hospUnit+'</span>':'')+'</div>';
+      html+='</div>';
+      html+='</div>';
+    });
+    html+='</div>';
+    html+='<div style="font-size:20px;color:#b7bac2;padding:16px 6px 0;text-align:center;font-weight:600">💡 疾病住院＝實支病房＋日額病房＋日額出院療養  💡 意外住院＝疾病住院＋意外日額</div>';
+    html+='</div>'; 
+    html+='</div>'; 
+
+    // ── 第二行：醫療前中後期 (左側 3fr) + 家庭責任 (右側 1fr) ──
+    html+='<div style="display:grid;grid-template-columns:3fr 1fr;gap:30px">';
+    
+    // 區塊 2-A：三個醫療階段
+    html+='<div style="background:#fff;border-radius:24px;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);padding:24px;display:flex;flex-direction:column">';
+    html+= buildSvgArrows([
+      {label:GAP_GROUPS_EX[1].arrowLabel, color:"#4CAF86"},
+      {label:GAP_GROUPS_EX[2].arrowLabel, color:"#378ADD"},
+      {label:GAP_GROUPS_EX[3].arrowLabel, color:"#E87BAD"}
+    ]); 
+    html+='<div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:20px;flex:1">';
+    html+='<div style="background:#fafbfc;padding:24px;border-radius:20px;border:1px solid rgba(0,0,0,.05);display:flex;flex-direction:column">'+chartParts.legendBefore+'</div>';
+    html+='<div style="background:#fafbfc;padding:24px;border-radius:20px;border:1px solid rgba(0,0,0,.05);display:flex;flex-direction:column">'+chartParts.legendDuring+'</div>';
+    html+='<div style="background:#fafbfc;padding:24px;border-radius:20px;border:1px solid rgba(0,0,0,.05);display:flex;flex-direction:column">'+chartParts.legendAfter+'</div>';
+    html+='</div>';
+    html+='</div>'; 
+
+    // 區塊 2-B：家庭責任
+    html+='<div style="background:#fff;border-radius:24px;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);padding:24px;display:flex;flex-direction:column">';
+    // 高度強制鎖死為 85px，與左側 SVG 完全對齊
+    html+='<div style="height:85px;margin-bottom:20px;display:flex;align-items:center;justify-content:center;background:#1565C0;border-radius:8px;color:#fff;font-size:46px;font-weight:700;flex-shrink:0;white-space:nowrap">家庭與傳承</div>';
+    html+='<div style="background:#fafbfc;padding:24px;border-radius:20px;border:1px solid rgba(0,0,0,.05);flex:1">'+chartParts.legendFamily+'</div>';
+    html+='</div>'; 
+    
+    html+='</div>'; 
+    html+='</div>'; 
+    return html;
+  }
+
+  // ▼ ③保單明細一覽表：原「各項保障加總」完全不動，只改外層區塊名稱
+  if(key==="policy_detail"){
+    var cov3={};
+    policies.forEach(function(p){
+      Object.entries(p.coverage||{}).forEach(function(e){
+        if(typeof e[1]==="number") cov3[e[0]]=(cov3[e[0]]||0)+e[1]; else cov3[e[0]]=e[1];
+      });
+    });
+    var html='<div style="padding:20px 16px">';
+    // 放大「各項保障加總」主標題
+    html+='<div style="font-size:38px;font-weight:800;color:#444;margin-bottom:18px">各項保障加總</div>';
+    // 五欄，依指定分組（不是自動順排，是手動指定哪幾類放同一欄）
+    var columnMap = [
+      ["壽險/重大保障(終身/定期)", "意外險"],
+      ["住院醫療 (實支實付)"],
+      ["日額型住院"],
+      ["定額手術", "失能長照"],
+      ["癌症醫療"],
+    ];
+    // 加大五個欄位之間的距離 (gap: 20px)
+    html+='<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:20px;align-items:start">';
+    columnMap.forEach(function(labels){
+      html+='<div style="display:flex;flex-direction:column;gap:12px">';
+      labels.forEach(function(label){
+        var g = COVERAGE_GROUPS_EX.find(function(x){ return x.label===label; });
+        if (g) html += buildStatGroupCard(g, policies, cov3);
+      });
+      html+='</div>';
+    });
+    html+='</div></div>';
+    return html;
+  }
+
+
+  if(key==="savings_timeline"){
+    var now2 = new Date().getFullYear();
+    var pdm2 = {};
+    var fmem2 = (familyData && familyData.members) || [];
+    fmem2.filter(function(m){ return m.role!=="beneficiary_only"; }).forEach(function(m){
+      var cached = sessionStorage.getItem("nbs_person_"+m.personId);
+      if(cached) pdm2[m.personId]=JSON.parse(cached);
+    });
+    return renderSavingsTimeline(pdm2, familyData, now2, now2+14);
+  }
+
+  return'<div style="padding:12px;color:#aaa;font-size:14px">建置中</div>';
+}
+
+// ── 匯出主流程 ────────────────────────────────────────────
+function doExport(){
+  var selBlks=BLOCKS.filter(function(b){return sel[b.key];});
+  var isPdf=fmt.startsWith("pdf");
+  goPage("P_DOING");
+  document.getElementById("EX_ICON").textContent=isPdf?"📄":"🖼️";
+  document.getElementById("EX_MSG").textContent=isPdf?"正在產生 PDF…":fmt==="png_single"?"正在合併圖片…":"正在產生圖片…";
+  document.getElementById("EX_SUB").textContent="共 "+selBlks.length+" 個區塊 "+(fmt==="png_single"?"一張 PNG":fmt==="png_multiple"?selBlks.length+"張 PNG":fmt==="pdf_merge"?"單一 PDF":selBlks.length+" 頁 PDF");
+  document.getElementById("PROG").style.background=isPdf?"var(--accent-pdf)":"var(--primary)";
+  document.getElementById("PROG_PCT").style.color=isPdf?"var(--accent-pdf)":"var(--primary)";
+
+  var div=document.createElement("div");
+  div.style.cssText="position:fixed;left:-9999px;top:0;width:1200px;background:#fff;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;color:#1a1a1a";
+  document.body.appendChild(div);
+
+  var p=(isPdf?doExportPDF(selBlks,div):doExportPNG(selBlks,div));
+  p.then(function(){
+    document.body.removeChild(div);
+    showDone(selBlks);
+  }).catch(function(e){
+    document.body.removeChild(div);
+    alert("匯出失敗："+e.message);
+    doShowSelect();
+  });
+}
+
+function setP(v){
+  document.getElementById("PROG").style.width=v+"%";
+  document.getElementById("PROG_PCT").textContent=v+"%";
+}
+function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
+
+async function doExportPNG(blks,div){
+  var wm = ''; // 業務員資訊已移至上方，這裡留空
+  var disclaimer='<div style="padding:8px 14px;font-size:32px;color:#999;line-height:1.6;text-align:left">⚠️ 本報告彙總之資訊為檢視與討論保障內容的參考藍圖；為守護您的權益，實際理賠給付項目與條件，仍以各家保險公司之最新資料及正式保險契約條款為準。</div>';
+  if(fmt==="png_single"){
+    div.style.width="2400px";
+    div.innerHTML=blks.map(function(b){return'<div style="border-bottom:1px solid #f0f0f0">'+getBlockTitleHtml(b)+renderBlock(b.key)+'</div>';}).join("")+disclaimer+wm;
+    setP(30);await sleep(400);
+    var singleW=Math.max(div.scrollWidth,div.offsetWidth,800);
+    div.style.width=singleW+"px";
+    await sleep(100);
+    var c=await html2canvas(div,{scale:2,useCORS:true,backgroundColor:"#ffffff",
+      width:singleW,windowWidth:singleW});
+    div.style.width="2400px";
+    setP(80);await sleep(100);
+    var a=document.createElement("a");
+    a.download=pName+"_保單體檢_"+pDate+".png";
+    a.href=c.toDataURL("image/png");a.click();
+    setP(100);
+  }else{
+    for(var i=0;i<blks.length;i++){
+      div.style.width="2400px";
+      div.innerHTML=getBlockTitleHtml(blks[i])+renderBlock(blks[i].key)+disclaimer+wm;
+      setP(Math.round(i/blks.length*90));await sleep(300);
+      var actualW=Math.max(div.scrollWidth,div.offsetWidth,800);
+      div.style.width=actualW+"px";
+      await sleep(100);
+      var c2=await html2canvas(div,{scale:2,useCORS:true,backgroundColor:"#ffffff",
+        width:actualW,windowWidth:actualW});
+      div.style.width="2400px";
+      var a2=document.createElement("a");
+      a2.download=pName+"_"+blks[i].label+"_"+pDate+".png";
+      a2.href=c2.toDataURL("image/png");a2.click();
+      await sleep(400);
+    }
+    setP(100);
+  }
+}
+
+async function doExportPDF(blks,div){
+  var J=window.jspdf.jsPDF;
+  var pdf=new J({ orientation:"l", unit:"mm", format:[297,210] });  // 明確指定橫向寬高（297x210mm），避免文字參數解析問題
+  var pageW=297, pageH=210, margin=10, usableW=pageW-margin*2, usableH=pageH-margin*2;
+  var wm = ''; // 業務員資訊已移至上方，這裡留空
+  var disclaimer='<div style="padding:8px 14px;font-size:32px;color:#999;line-height:1.6;text-align:left">⚠️ 本報告彙總之資訊為檢視與討論保障內容的參考藍圖；為守護您的權益，實際理賠給付項目與條件，仍以各家保險公司之最新資料及正式保險契約條款為準</div>';
+  var pageCount=0;
+  var pageLabelCounters = {}; // 每個區塊前綴各自累計頁碼，例如 {"繳費":3,"現金流":2}
+
+  // 供「儲蓄險現金流時間軸」分頁使用的資料（跟 renderBlock 同一套取得方式）
+  var nowYearGlobal = new Date().getFullYear();
+  var pdm2Global = {};
+  ((familyData && familyData.members) || []).filter(function(m){ return m.role!=="beneficiary_only"; }).forEach(function(m){
+    var cached = sessionStorage.getItem("nbs_person_"+m.personId);
+    if(cached) pdm2Global[m.personId]=JSON.parse(cached);
+  });
+
+  // 用 canvas 直接畫文字產生標籤圖片，而不是走 html2canvas 擷取整個 DOM，
+  // 避免多一次昂貴的擷取；canvas 2D fillText 是瀏覽器原生字型渲染，
+  // 中文字不需要額外嵌入字型（這也是 jsPDF 原生 pdf.text() 無法直接顯示
+  // 中文的原因，所以整份報告一律用擷取圖片的方式處理文字）。
+  function makePageLabelImg(text){
+    var c = document.createElement("canvas");
+    c.width = 360; c.height = 72;
+    var ctx = c.getContext("2d");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0,0,c.width,c.height);
+    ctx.fillStyle = "#9CA3AF";
+    ctx.font = "700 38px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+    ctx.textBaseline = "middle";
+    ctx.textAlign = "right";
+    ctx.fillText(text, c.width-12, c.height/2);
+    return c.toDataURL("image/png");
+  }
+
+  // 在頁面右下角（10mm 頁緣留白處，不會跟內容重疊）蓋上「前綴-頁碼」標籤
+  function stampPageLabel(prefix){
+    if(!prefix) return;
+    pageLabelCounters[prefix] = (pageLabelCounters[prefix]||0)+1;
+    var img = makePageLabelImg(prefix+"-"+pageLabelCounters[prefix]);
+    pdf.addImage(img,"PNG", pageW-margin-22, pageH-6, 22, 4.4);
+  }
+
+  function addNewPage(labelPrefix){ if(pageCount>0) pdf.addPage([297,210],"l"); pageCount++; stampPageLabel(labelPrefix); }
+
+  async function captureHtml(html){
+    div.style.width="2400px";
+    div.innerHTML=html;
+    await sleep(150);
+    var aw=Math.max(div.scrollWidth,div.offsetWidth,800);
+    div.style.width=aw+"px";
+    await sleep(80);
+    var c=await html2canvas(div,{scale:2,useCORS:true,backgroundColor:"#ffffff",width:aw,windowWidth:aw});
+    div.style.width="2400px";
+    return c;
+  }
+
+  // 把 canvas 換算成 mm 尺寸，超過最大高度才等比例縮小（避免拉伸變形）
+  function canvasToMM(c, maxW, maxH){
+    var iw=maxW, ih=(c.height/c.width)*iw;
+    if(ih>maxH){ iw=iw*(maxH/ih); ih=maxH; }
+    return {iw:iw, ih:ih};
+  }
+
+  for(var i=0;i<blks.length;i++){
+    var isLast = i===blks.length-1;
+    setP(Math.round(i/blks.length*90));
+
+    if(blks[i].key==="premium_detail"){
+      // ── 保單繳費明細一覽表：依保單分組動態分頁 ──────────
+      // 頭部（統計+月曆）先自成一頁最上方；接著逐組保單依序往下疊，
+      // 每加一組前先估算「現在這頁還放不放得下」，放不下才換頁，
+      // 絕對不會把同一組保單（主約+附約）從中間切成兩半分散兩頁，
+      // 也不會為了硬塞進一頁而把整張圖縮到看不清楚。
+      // 每次換頁，標題都會在新的一頁重新印一次，不會只有第一頁有標題。
+      var parts = buildPremiumDetailParts();
+      var titleC = await captureHtml(getBlockTitleHtml(blks[i]));
+      var titleH = (titleC.height/titleC.width)*usableW;
+
+      // 【修改點 1】提早將「年繳保費與月繳費分配」區塊(headerHtml)轉換為圖片，準備作為每頁重複的列印標題
+      var headerC = await captureHtml(parts.headerHtml);
+      var hd = canvasToMM(headerC, usableW, usableH-titleH-4);
+
+      // 【修改點 2】修改換頁函數，讓每新的一頁都同時印上「主標題」與「保費統計與月曆」
+      async function startNewPagePD(){
+        addNewPage("繳費");
+        // 1. 印上最上方主標題 (【XXX】保單繳費明細一覽表)
+        pdf.addImage(titleC.toDataURL("image/jpeg",0.88),"JPEG",margin,margin,usableW,titleH);
+        // 2. 緊接著印上列印標題 (年繳保費、月繳保費分配、欄位名稱)
+        pdf.addImage(headerC.toDataURL("image/jpeg",0.88),"JPEG",margin,margin+titleH,hd.iw,hd.ih);
+        
+        // 回傳加上列印標題後的新 Y 座標，讓接下來的保單明細從這裡開始往下排
+        return margin+titleH+hd.ih+4; 
+      }
+
+      var y = await startNewPagePD();
+      
+      for(var g=0; g<parts.groupPieces.length; g++){
+        var gp = parts.groupPieces[g];
+        var wholeC = await captureHtml(gp.fullHtml);
+        // 用原始寬高比反推：如果這一整組貼滿版面寬度時的高度，本來就
+        // 超過一整頁能用的高度，代表就算自己獨佔一頁也放不下，要拆成
+        // 「組頭+逐列」個別分頁，而不是硬縮小塞進去
+        var naturalH = (wholeC.height / wholeC.width) * usableW;
+
+        if (naturalH <= usableH) {
+          // 整組放得下：維持原本「一組一張圖」的做法，看目前頁面剩餘
+          // 空間夠不夠，不夠就直接換頁，圖片本身完全不縮小
+          if (y + naturalH > margin+usableH && y > margin+1) { y = await startNewPagePD(); }
+          pdf.addImage(wholeC.toDataURL("image/jpeg",0.88),"JPEG",margin,y,usableW,naturalH);
+          y += naturalH + 3;
+        } else {
+          // 整組太高，連自己獨佔一頁都放不下 → 拆成「組頭+欄位標題」
+          // 跟「逐列」各自截圖、各自分頁，每一列都不會被縮小
+          var chC = await captureHtml(gp.cardHeaderHtml);
+          var chH = (chC.height/chC.width)*usableW;
+          if (y + chH > margin+usableH && y > margin+1) { y = await startNewPagePD(); }
+          pdf.addImage(chC.toDataURL("image/jpeg",0.88),"JPEG",margin,y,usableW,chH);
+          y += chH;
+
+          for (var r=0; r<gp.rowsHtml.length; r++){
+            var rowC = await captureHtml(gp.rowsHtml[r]);
+            var rowH = (rowC.height/rowC.width)*usableW;
+            if (y + rowH > margin+usableH) {
+              y = await startNewPagePD();
+              // 換頁後補印一次「組頭+欄位標題」，方便閱讀接續內容是哪一組保單
+              var chC2 = await captureHtml(gp.cardHeaderHtml);
+              var chH2 = (chC2.height/chC2.width)*usableW;
+              pdf.addImage(chC2.toDataURL("image/jpeg",0.88),"JPEG",margin,y,usableW,chH2);
+              y += chH2;
+            }
+            pdf.addImage(rowC.toDataURL("image/jpeg",0.88),"JPEG",margin,y,usableW,rowH);
+            y += rowH;
+          }
+          y += 3;
+        }
+      }
+
+      if(isLast || fmt==="pdf_pages"){
+        var footerC = await captureHtml(disclaimer+wm);
+        var fd = canvasToMM(footerC, usableW, 40);
+        if(y + fd.ih > margin+usableH){ y = await startNewPagePD(); }
+        pdf.addImage(footerC.toDataURL("image/jpeg",0.88),"JPEG",margin,y,fd.iw,fd.ih);
+      }
+    } else if(blks[i].key==="savings_timeline"){
+      // ── 儲蓄險現金流時間軸：依被保險人分組動態分頁 ──────────
+      // 標題+欄位年份先自成一頁最上方，接著每位被保險人的所有保單
+      // 自成一組，整組放得下就整組印、放不下才換頁，永遠維持滿版
+      // 寬度，不會因為表格太高被迫縮小到看不清楚。
+      var stParts = buildSavingsTimelineParts(pdm2Global, familyData, nowYearGlobal, nowYearGlobal+14);
+      if(!stParts){
+        var emptyC = await captureHtml(getBlockTitleHtml(blks[i])+'<div style="padding:60px;text-align:center;color:#9ca3af;font-size:20px">尚無儲蓄保單設定領回資料</div>'+(isLast||fmt==="pdf_pages"?disclaimer:"")+wm);
+        addNewPage("現金流");
+        pdf.addImage(emptyC.toDataURL("image/jpeg",0.88),"JPEG",margin,margin,ed.iw,ed.ih);
+      } else {
+        var titleC2 = await captureHtml(getBlockTitleHtml(blks[i]));
+        var titleH2 = (titleC2.height/titleC2.width)*usableW;
+        var headC2 = await captureHtml(stParts.headerBandHtml);
+        var hd2 = canvasToMM(headC2, usableW, usableH-titleH2-4);
+
+        async function startNewPageST(){
+          addNewPage("現金流");
+          pdf.addImage(titleC2.toDataURL("image/jpeg",0.88),"JPEG",margin,margin,usableW,titleH2);
+          pdf.addImage(headC2.toDataURL("image/jpeg",0.88),"JPEG",margin,margin+titleH2,hd2.iw,hd2.ih);
+          return margin+titleH2+hd2.ih;
+        }
+
+        var y2 = await startNewPageST();
+        for(var g2=0; g2<stParts.groups.length; g2++){
+          var chunkC = await captureHtml(stParts.buildGroupChunkHtml(stParts.groups[g2]));
+          var chunkH = (chunkC.height/chunkC.width)*usableW;
+          if(y2+chunkH > margin+usableH && y2>margin+1){ y2 = await startNewPageST(); }
+          pdf.addImage(chunkC.toDataURL("image/jpeg",0.88),"JPEG",margin,y2,usableW,chunkH);
+          y2 += chunkH;
+        }
+        var totC = await captureHtml(stParts.totalRowHtml);
+        var totH = (totC.height/totC.width)*usableW;
+        if(y2+totH > margin+usableH){ y2 = await startNewPageST(); }
+        pdf.addImage(totC.toDataURL("image/jpeg",0.88),"JPEG",margin,y2,usableW,totH);
+        y2 += totH;
+
+        if(isLast || fmt==="pdf_pages"){
+          var footC2 = await captureHtml(disclaimer+wm);
+          var fd2 = canvasToMM(footC2, usableW, 40);
+          if(y2+fd2.ih > margin+usableH){ y2 = await startNewPageST(); }
+          pdf.addImage(footC2.toDataURL("image/jpeg",0.88),"JPEG",margin,y2,fd2.iw,fd2.ih);
+        }
+      }
+    } else {
+      // ── 其餘區塊：維持單頁等比例縮放 ──────────────────
+      var PAGE_LABEL_PREFIX = { summary:"彙總", policy_detail:"保障" };
+      var showDisclaimer = fmt==="pdf_pages" ? true : isLast;
+      var c = await captureHtml(getBlockTitleHtml(blks[i])+renderBlock(blks[i].key)+(showDisclaimer?disclaimer:"")+wm);
+      addNewPage(PAGE_LABEL_PREFIX[blks[i].key] || "報告");
+      var d = canvasToMM(c, usableW, usableH);
+      pdf.addImage(c.toDataURL("image/jpeg",0.88),"JPEG",margin,margin,d.iw,d.ih);
+    }
+  }
+  setP(95);
+  pdf.save(pName+"_保單體檢_"+pDate+".pdf");
+  setP(100);
+}
+
+function showDone(blks){
+  var isPdf=fmt.startsWith("pdf");
+  document.getElementById("DONE_MSG").textContent=(isPdf?"PDF":"圖片")+"已下載到您的裝置，可直接傳送給保戶";
+  var h='<div style="font-size:14px;color:#aaa;margin-bottom:6px">下載的檔案</div>';
+  if(fmt==="png_single")h+='<div class="fitem">🖼️ '+pName+'_保單體檢_'+pDate+'.png</div>';
+  else if(fmt==="png_multiple")h+=blks.map(function(b){return'<div class="fitem">🖼️ '+pName+'_'+b.label+'_'+pDate+'.png</div>';}).join("");
+  else h+='<div class="fitem">📄 '+pName+'_保單體檢_'+pDate+'.pdf'+(fmt==="pdf_pages"?" ("+blks.length+"頁)":"")+'</div>';
+  document.getElementById("DONE_FILES").innerHTML=h;
+  goPage("P_DONE");
+}
+
+// ── GAS 呼叫 ─────────────────────────────────────────────
+function gas(action,params){
+  if(action==="saveFile"){
+    return fetch(GAS,{
+      method:"POST",
+      headers:{"Content-Type":"text/plain"},
+      body:JSON.stringify(Object.assign({action:action},params)),
+    }).then(function(r){return r.json();});
+  }
+  var url=new URL(GAS);
+  url.searchParams.set("action",action);
+  Object.entries(params||{}).forEach(function(kv){
+    var k=kv[0],v=kv[1];
+    if(typeof v==="object")url.searchParams.set(k,encodeURIComponent(JSON.stringify(v)));
+    else if(v!==null&&v!==undefined)url.searchParams.set(k,v);
+  });
+  return fetch(url.toString()).then(function(r){return r.json();});
+}
+
+// ── 頁面載入後 ─────────────────────────────────────────
+window.addEventListener("nbs_nav_ready", async function(e) {
+  currentUser       = e.detail.user;
+  familyData        = e.detail.familyData;
+  currentPersonId   = e.detail.currentPersonId;
+  familyFileName    = e.detail.familyFileName;
+
+  // 從 URL ?from= 參數預選對應區塊
+  var fromPage = new URLSearchParams(window.location.search).get("from") || "";
+  var PAGE_TO_BLOCK = {
+    "summary":     ["summary"],
+    "savings":     ["savings_timeline"],
+    "beneficiary": ["premium_detail"],
+    "family":      ["summary"],
+    "policy":      ["premium_detail","policy_detail"],
+    "coverage":    ["summary"],
+  };
+  if (fromPage && PAGE_TO_BLOCK[fromPage]) {
+    PAGE_TO_BLOCK[fromPage].forEach(function(k){ sel[k]=true; });
+  }
+  buildBlocks();
+  buildFmts();
+  var btn=document.getElementById("B_PREV");
+  if(btn){btn.disabled=true;btn.textContent="資料載入中…";btn.style.background="#ccc";}
+
+  try {
+    var pdm = {};
+    var fmem = (familyData && familyData.members) || [];
+    var activeMembers = fmem.filter(function(m) { return m.role !== "beneficiary_only"; });
+
+    var fetchPromises = activeMembers.map(function(mem) {
+      var cacheKey = "nbs_person_" + mem.personId;
+      var cachedData = sessionStorage.getItem(cacheKey);
+
+      if (cachedData) {
+        pdm[mem.personId] = JSON.parse(cachedData);
+        return Promise.resolve();
+      } else {
+        return gas("readFile", {
+          email: currentUser.email,
+          fileType: "persons",
+          fileName: mem.name + "_" + mem.personId + ".json"
+        }).then(function(pr) {
+          if (pr.status === "ok") {
+            pdm[mem.personId] = pr.content;
+            sessionStorage.setItem(cacheKey, JSON.stringify(pr.content));
+          }
+        }).catch(function(err) { console.error("讀取 " + mem.name + " 失敗", err); });
+      }
+    });
+
+    await Promise.all(fetchPromises);
+
+    personDataMap = pdm;
+    person = pdm[currentPersonId] || {};
+    policies = person.policies || [];
+    coverage = person.coverage || {};
+    savings = person.savings || [];
+    pName = (person.profile && person.profile.name) || "—";
+    var ad = person.profile && person.profile.analysisDate;
+    if (ad) {
+      var d = new Date(ad);
+      pDate = (d.getFullYear() - 1911) + "年" + (d.getMonth() + 1) + "月" + d.getDate() + "日";
+    }
+  } catch (ex) { 
+    console.error("export load error", ex); 
+  }
+
+  // SPA 底下，await 期間使用者可能已經切到別頁，DOM 已經被替換掉
+  if (window.NBSRouter && !NBSRouter.isActive("export.html")) return;
+
+  renderTabs();
+  updatePrevBtn();
+
+  // 通知 nav.js 更新側邊欄（nav.js 自己讀 Drive 可能失敗）
+  if (familyData) {
+    window.dispatchEvent(new CustomEvent("nbs_page_data_ready", {
+      detail: { familyData: familyData, currentPersonId: currentPersonId }
+    }));
+  }
+});
+
+// ── NBS 導覽 ──────────────────────────────────────────────
+if (typeof NBS_NAV !== "undefined") { 
+    NBS_NAV.onMemberChange = function(pid) {
+      switchPerson(pid);
+    };
+}
+
+</script>
+<div class="ex-modal-overlay" id="nickname-modal-overlay">
+  <div class="ex-modal-card">
+    <div class="ex-modal-title" id="nickname-modal-title">請輸入稱呼</div>
+    <div class="ex-modal-sub">輸入後會自動儲存，下次不需再填</div>
+    <div class="ex-modal-field">
+      <input class="ex-modal-input" id="nickname-modal-input" placeholder="例如：建明哥、麗敏姐、大哥…" maxlength="20"/>
+    </div>
+    <div class="ex-modal-btns">
+      <button class="ex-modal-btn cancel" onclick="closeNicknameModal()">取消</button>
+      <button class="ex-modal-btn save" onclick="saveNickname()">儲存</button>
+    </div>
+  </div>
+</div>
+
+<div class="ex-modal-overlay" id="agent-modal-overlay">
+  <div class="ex-modal-card">
+    <div class="ex-modal-title">業務員顯示資訊</div>
+    <div class="ex-modal-sub">會顯示在匯出圖片底部的浮水印上，輸入後自動儲存</div>
+    <div class="ex-modal-field">
+      <label>姓名</label>
+      <input class="ex-modal-input" id="agent-modal-name" placeholder="例如：王小明"/>
+    </div>
+    <div class="ex-modal-field">
+      <label>聯絡方式 / LINE ID</label>
+      <input class="ex-modal-input" id="agent-modal-contact" placeholder="例如：0912-345-678 或 LINE ID"/>
+    </div>
+    <div class="ex-modal-btns">
+      <button class="ex-modal-btn cancel" onclick="closeAgentInfoModal()">取消</button>
+      <button class="ex-modal-btn save" onclick="saveAgentInfo()">儲存</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
