@@ -720,6 +720,30 @@
     return (name || "").replace(/〔草案[：:][^〕]*〕/g, "").replace(/〔歷史現況〕/g, "").trim();
   }
 
+  // 全螢幕忙碌中提示：用於「刪除」這類要等後端跑一段時間、
+  // 沒有任何回饋會讓人以為畫面卡住的操作。純內嵌樣式，不依賴
+  // 外部 CSS，任何頁面載入 nav.js 後都能直接使用。
+  function _showBusyOverlay(text) {
+    _hideBusyOverlay();
+    var el = document.createElement("div");
+    el.id = "nbs-busy-overlay";
+    el.style.cssText = "position:fixed;inset:0;background:rgba(30,27,60,.55);backdrop-filter:blur(2px);z-index:99999;display:flex;align-items:center;justify-content:center";
+    el.innerHTML =
+      '<div style="background:#fff;border-radius:16px;padding:28px 36px;display:flex;flex-direction:column;align-items:center;gap:14px;box-shadow:0 12px 40px rgba(0,0,0,.25)">' +
+        '<div style="width:34px;height:34px;border:4px solid #e5e0ff;border-top-color:#7c3aed;border-radius:50%;animation:nbs-spin 0.8s linear infinite"></div>' +
+        '<div style="font-size:14px;font-weight:700;color:#374151">'+(text||"處理中，請稍候...")+'</div>' +
+      '</div>' +
+      '<style>@keyframes nbs-spin{to{transform:rotate(360deg)}}</style>';
+    document.body.appendChild(el);
+  }
+  function _hideBusyOverlay() {
+    var el = document.getElementById("nbs-busy-overlay");
+    if (el) el.remove();
+  }
+
+  global.NBS_NAV._showBusyOverlay = _showBusyOverlay;
+  global.NBS_NAV._hideBusyOverlay = _hideBusyOverlay;
+
   function _duplicateFamilyAsDraft(draftLabel) {
     if (!_family) return Promise.reject(new Error("尚未載入家庭資料"));
     var groupId = _family.familyGroupId || _family.familyId;
@@ -842,10 +866,13 @@
 
   global.NBS_NAV._promptDeleteDraft = function() {
     if (!window.confirm("確定要刪除這份草案嗎？此動作無法復原。")) return;
+    _showBusyOverlay("刪除中，請稍候...");
     _deleteDraftFiles().then(function(){
+      _hideBusyOverlay();
       alert("草案已刪除，即將返回家庭列表。");
       global.NBS_NAV._back();
     }).catch(function(err){
+      _hideBusyOverlay();
       alert("刪除失敗（可能是後端尚未支援刪除功能）："+(err.message||err));
     });
   };
@@ -902,10 +929,13 @@
       alert("輸入的名稱不符，已取消刪除，資料仍然保留。");
       return;
     }
+    _showBusyOverlay("刪除中，請稍候...");
     _deleteEntireFamilyFiles().then(function(){
+      _hideBusyOverlay();
       alert("「"+name+"」已永久刪除，即將返回家庭列表。");
-      global.NBS_NAV._goFamily();
+      global.NBS_NAV._back();
     }).catch(function(err){
+      _hideBusyOverlay();
       alert("刪除失敗（可能是後端尚未支援刪除功能）："+(err.message||err));
     });
   };
