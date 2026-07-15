@@ -531,7 +531,7 @@
   function _renderBottomTab() {
     var el = document.getElementById("nbs-bottom-tab");
     if (!el) return;
-    el.innerHTML = NAV_ITEMS.map(function(item) {
+    var itemsHtml = NAV_ITEMS.map(function(item) {
       var active = _page === item.key;
       return '<div class="nbs-ti'+(active?" nbs-ti-on":"")+'" onclick="NBS_NAV._go(\''+item.href+'\')">' +
         '<span style="font-size:20px">'+item.icon+'</span>' +
@@ -539,7 +539,33 @@
         (active ? '<div class="nbs-tdot"></div>' : '') +
       '</div>';
     }).join("");
+    // 手機版底部列原本只有 8 個核心功能，「返回列表」「版本管理」
+    // 「富壽查詢」這幾個桌面版側欄才有的功能，統一收進「⋯更多」
+    // 彈出選單，避免底部列被塞爆。
+    var moreHtml = '<div class="nbs-ti" onclick="event.stopPropagation();NBS_NAV._toggleBottomMore()">' +
+      '<span style="font-size:20px">⋯</span>' +
+      '<span class="nbs-tl">更多</span>' +
+    '</div>';
+    el.innerHTML = '<div style="display:flex" onclick="event.stopPropagation()">'+itemsHtml+moreHtml+'</div>' +
+      '<div id="nbs-bottom-more-menu" style="display:none">' +
+        '<div class="nbs-ni nbs-ni-sm" onclick="event.stopPropagation();NBS_NAV._back()">' +
+          '<span class="nbs-nicon">←</span><span class="nbs-nlabel">返回列表</span>' +
+        '</div>' +
+        _versionActionsHtml() +
+        _productLinksHtml() +
+      '</div>';
   }
+
+  global.NBS_NAV._toggleBottomMore = function() {
+    var m = document.getElementById("nbs-bottom-more-menu");
+    if (!m) return;
+    var open = m.style.display === "block";
+    m.style.display = open ? "none" : "block";
+  };
+  document.addEventListener("click", function(){
+    var m = document.getElementById("nbs-bottom-more-menu");
+    if (m) m.style.display = "none";
+  });
 
   function _renderMobileHdr() {
     var el = document.getElementById("nbs-mobile-hdr");
@@ -992,6 +1018,7 @@
       ".nbs-nsec{padding:8px 10px;flex:1;overflow-y:auto;min-height:0}",
       "#nbs-mobile-hdr{position:fixed;top:0;left:0;right:0;height:50px;background:rgba(238,244,255,.95);backdrop-filter:blur(14px);border-bottom:1px solid rgba(120,140,255,.13);display:none;align-items:center;gap:8px;padding:0 14px;z-index:200}",
       "#nbs-bottom-tab{position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border-top:1px solid rgba(120,140,255,.12);display:none;z-index:200;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:env(safe-area-inset-bottom,0)}",
+      "#nbs-bottom-more-menu{position:absolute;left:10px;right:10px;bottom:calc(100% + 8px);background:#fff;border-radius:14px;box-shadow:0 -8px 24px rgba(0,0,0,.14);padding:6px;max-height:60vh;overflow-y:auto}",
       ".nbs-fam{padding:8px 14px 6px;border-bottom:1px solid rgba(120,140,255,.10);margin-bottom:4px}",
       ".nbs-fn{font-size:14px;font-weight:800;color:#111827;letter-spacing:-.2px}",
       ".nbs-fd{font-size:11px;color:#9CA3AF;margin-top:2px}",
