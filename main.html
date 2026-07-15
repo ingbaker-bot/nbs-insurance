@@ -165,6 +165,13 @@
     .version-picker.open .version-menu { display: block; }
     .version-opt { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 9px; font-size: 13px; font-weight: 600; color: #374151; white-space: nowrap; cursor: pointer; }
     .version-opt:hover { background: #f5f5ff; }
+    .more-actions { position: relative; flex-shrink: 0; display: flex; align-items: center; }
+    .more-actions-btn { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #9CA3AF; font-size: 18px; font-weight: 700; cursor: pointer; }
+    .more-actions-btn:hover { background: #f3f4f6; color: #374151; }
+    .more-menu { display: none; position: absolute; top: calc(100% + 6px); right: 0; background: #fff; border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.14); padding: 6px; min-width: 160px; z-index: 51; }
+    .more-actions.open .more-menu { display: block; }
+    .more-opt { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 9px; font-size: 13px; font-weight: 600; color: #b91c1c; white-space: nowrap; cursor: pointer; }
+    .more-opt:hover { background: #fef2f2; }
     .version-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
     .add-btn {
@@ -604,6 +611,14 @@
             <div class="family-name">${f.familyName}${hasMultiple ? ` <span class="version-badge">${g.versions.length} 個版本</span>` : ""}</div>
             <div class="family-meta">${f.memberCount || (f.members && f.members.length) || 0} 位成員　·　分析日 ${toRoc(f.analysisDate)}</div>
           </div>
+          <div class="more-actions" onclick="event.stopPropagation();toggleMoreMenu(this)">
+            <div class="more-actions-btn">⋯</div>
+            <div class="more-menu">
+              <div class="more-opt" onclick="event.stopPropagation();promptDeleteEntireFamily('${g.groupId}','${f.familyName.replace(/'/g, "\\'")}')">
+                🗑️ 刪除整個檔案
+              </div>
+            </div>
+          </div>
           ${hasMultiple
             ? `<div class="version-picker" onclick="event.stopPropagation();toggleVersionMenu(this)">
                  <span class="version-picker-label">${roleLabel[f.role]}</span>
@@ -623,7 +638,66 @@
     }
     document.addEventListener("click", function(){
       document.querySelectorAll(".version-picker.open").forEach(function(o){ o.classList.remove("open"); });
+      document.querySelectorAll(".more-actions.open").forEach(function(o){ o.classList.remove("open"); });
     });
+
+    // 「⋯」更多操作選單開合
+    function toggleMoreMenu(el) {
+      document.querySelectorAll(".more-actions.open").forEach(function(o){ if(o!==el) o.classList.remove("open"); });
+      document.querySelectorAll(".version-picker.open").forEach(function(o){ o.classList.remove("open"); });
+      el.classList.toggle("open");
+    }
+
+    // 刪除整個檔案（涵蓋這個家庭的所有版本：現況／草案／歷史現況，
+    // 以及底下所有成員的個人保單檔案）。跟 nav.js 裡「版本管理」的
+    // 同名功能共用同一套後端邏輯，這裡是給家庭列表頁單獨使用的版本，
+    // 差別在於這裡不用重新呼叫 listFamilies，直接用畫面上已經抓好的
+    // allFamilies 找出同一組的所有版本即可。
+    function promptDeleteEntireFamily(groupId, familyName) {
+      if (!window.confirm(
+        "確定要刪除「"+familyName+"」這整個檔案嗎？\n\n" +
+        "這會刪除所有版本（現況／草案／歷史現況）與底下所有成員的保單資料，此動作無法復原。"
+      )) return;
+      var typed = window.prompt("最後確認：請完整輸入家庭名稱「"+familyName+"」以永久刪除：");
+      if (typed === null) return; // 使用者取消
+      if (typed.trim() !== familyName) {
+        alert("輸入的名稱不符，已取消刪除，資料仍然保留。");
+        return;
+      }
+
+      var siblings = allFamilies.filter(function(f){
+        return (f.familyGroupId || f.familyId) === groupId;
+      });
+      if (!siblings.length) { alert("找不到這個家庭的檔案，可能已經被刪除過了。"); return; }
+
+      var personFileNameSet = {};
+      Promise.all(siblings.map(function(f){
+        return callGAS("readFile", { fileType:"families", fileName: f.fileName }).then(function(rf){
+          if (rf && rf.status === "ok" && rf.content && rf.content.members) {
+            rf.content.members.filter(function(m){ return m.role !== "beneficiary_only"; }).forEach(function(m){
+              var nm = m.name || "member";
+              personFileNameSet[nm + "_" + m.personId + ".json"] = true;
+            });
+          }
+          return f.fileName;
+        }).catch(function(){ return f.fileName; });
+      })).then(function(familyFileNames){
+        var deleteFamilies = familyFileNames.map(function(fn){
+          return callGAS("deleteFile", { fileType:"families", fileName: fn }).catch(function(){});
+        });
+        var deletePersons = Object.keys(personFileNameSet).map(function(pfn){
+          return callGAS("deleteFile", { fileType:"persons", fileName: pfn }).catch(function(){});
+        });
+        return Promise.all(deleteFamilies.concat(deletePersons));
+      }).then(function(){
+        alert("「"+familyName+"」已永久刪除。");
+        allFamilies = allFamilies.filter(function(f){ return (f.familyGroupId || f.familyId) !== groupId; });
+        setFamiliesCache(allFamilies);
+        renderFamilies(allFamilies, false);
+      }).catch(function(err){
+        alert("刪除失敗（可能是後端尚未支援刪除功能）："+(err.message||err));
+      });
+    }
 
     // ── 搜尋篩選 ─────────────────────────────────────────────
     function filterFamilies() {
