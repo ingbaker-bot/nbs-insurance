@@ -339,6 +339,13 @@
     tab.id = "nbs-bottom-tab";
     document.body.appendChild(tab);
 
+    // 獨立於 #nbs-bottom-tab 之外，避免被它的 overflow-x:auto
+    // （連帶讓 overflow-y 隱性變成 auto）裁切掉往上長出去的彈出選單
+    var moreMenu = document.createElement("div");
+    moreMenu.id = "nbs-bottom-more-menu";
+    moreMenu.style.display = "none";
+    document.body.appendChild(moreMenu);
+
     var hdr = document.createElement("div");
     hdr.id = "nbs-mobile-hdr";
     document.body.insertBefore(hdr, sidebar.nextSibling);
@@ -546,14 +553,25 @@
       '<span style="font-size:20px">⋯</span>' +
       '<span class="nbs-tl">更多</span>' +
     '</div>';
-    el.innerHTML = '<div style="display:flex">'+itemsHtml+moreHtml+'</div>' +
-      '<div id="nbs-bottom-more-menu" style="display:none">' +
-        '<div class="nbs-ni nbs-ni-sm" onclick="NBS_NAV._back()">' +
-          '<span class="nbs-nicon">←</span><span class="nbs-nlabel">返回列表</span>' +
-        '</div>' +
-        _versionActionsHtml() +
-        _productLinksHtml() +
-      '</div>';
+    el.innerHTML = '<div style="display:flex">'+itemsHtml+moreHtml+'</div>';
+
+    // 這個選單不能放在 #nbs-bottom-tab 裡面當子元素——那個容器有
+    // overflow-x:auto（讓 8 個圖示可以左右滑動），瀏覽器規則是只要設了
+    // overflow-x，overflow-y 也會自動跟著變成裁切模式，選單往上彈出超出
+    // 容器範圍就會被裁掉、變成「點了但看不到」。改成獨立掛在 body 底下、
+    // position:fixed，完全不受任何父層 overflow 影響。
+    var menu = document.getElementById("nbs-bottom-more-menu");
+    if (!menu) {
+      menu = document.createElement("div");
+      menu.id = "nbs-bottom-more-menu";
+      document.body.appendChild(menu);
+    }
+    menu.innerHTML =
+      '<div class="nbs-ni nbs-ni-sm" onclick="NBS_NAV._back()">' +
+        '<span class="nbs-nicon">←</span><span class="nbs-nlabel">返回列表</span>' +
+      '</div>' +
+      _versionActionsHtml() +
+      _productLinksHtml();
   }
 
   global.NBS_NAV._toggleBottomMore = function(e) {
@@ -1023,7 +1041,7 @@
       ".nbs-nsec{padding:8px 10px;flex:1;overflow-y:auto;min-height:0}",
       "#nbs-mobile-hdr{position:fixed;top:0;left:0;right:0;height:50px;background:rgba(238,244,255,.95);backdrop-filter:blur(14px);border-bottom:1px solid rgba(120,140,255,.13);display:none;align-items:center;gap:8px;padding:0 14px;z-index:200}",
       "#nbs-bottom-tab{position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border-top:1px solid rgba(120,140,255,.12);display:none;z-index:200;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:env(safe-area-inset-bottom,0)}",
-      "#nbs-bottom-more-menu{position:absolute;left:10px;right:10px;bottom:calc(100% + 8px);background:#fff;border-radius:14px;box-shadow:0 -8px 24px rgba(0,0,0,.14);padding:6px;max-height:60vh;overflow-y:auto}",
+      "#nbs-bottom-more-menu{display:none;position:fixed;left:10px;right:10px;bottom:calc(66px + env(safe-area-inset-bottom,0));background:#fff;border-radius:14px;box-shadow:0 -8px 24px rgba(0,0,0,.18);padding:6px;max-height:60vh;overflow-y:auto;z-index:210}",
       ".nbs-fam{padding:8px 14px 6px;border-bottom:1px solid rgba(120,140,255,.10);margin-bottom:4px}",
       ".nbs-fn{font-size:14px;font-weight:800;color:#111827;letter-spacing:-.2px}",
       ".nbs-fd{font-size:11px;color:#9CA3AF;margin-top:2px}",
