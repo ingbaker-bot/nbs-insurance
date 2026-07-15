@@ -670,6 +670,8 @@
       });
       if (!siblings.length) { alert("找不到這個家庭的檔案，可能已經被刪除過了。"); return; }
 
+      if (window.NBS_NAV && NBS_NAV._showBusyOverlay) NBS_NAV._showBusyOverlay("刪除中，請稍候...");
+
       var personFileNameSet = {};
       Promise.all(siblings.map(function(f){
         return callGAS("readFile", { fileType:"families", fileName: f.fileName }).then(function(rf){
@@ -690,11 +692,13 @@
         });
         return Promise.all(deleteFamilies.concat(deletePersons));
       }).then(function(){
+        if (window.NBS_NAV && NBS_NAV._hideBusyOverlay) NBS_NAV._hideBusyOverlay();
         alert("「"+familyName+"」已永久刪除。");
         allFamilies = allFamilies.filter(function(f){ return (f.familyGroupId || f.familyId) !== groupId; });
         setFamiliesCache(allFamilies);
         renderFamilies(allFamilies, false);
       }).catch(function(err){
+        if (window.NBS_NAV && NBS_NAV._hideBusyOverlay) NBS_NAV._hideBusyOverlay();
         alert("刪除失敗（可能是後端尚未支援刪除功能）："+(err.message||err));
       });
     }
