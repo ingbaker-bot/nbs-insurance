@@ -830,17 +830,45 @@
   function _deleteDraftFiles() {
     if (!_family || _family.role !== "draft") return Promise.reject(new Error("目前這份不是草案，無法刪除"));
     var fn = localStorage.getItem("nbs_current_family");
-    var personFileNames = (_family.members || [])
+    var groupId = _family.familyGroupId || _family.familyId;
+    var draftPersonIds = (_family.members || [])
       .filter(function(m){ return m.role !== "beneficiary_only"; })
-      .map(function(m){
-        var p = _personsData[m.personId];
-        var nm = (p && p.profile && p.profile.name) || m.name || "member";
-        return nm + "_" + m.personId + ".json";
+      .map(function(m){ return m.personId; });
+
+    // 🛡️ 安全檢查：草案的成員 personId 有可能跟現況/其他版本共用同一份
+    // 個人檔案（例如這份草案不是透過「另存新檔」建立、而是舊資料或手動
+    // 複製出來的，沒有各自獨立的 personId）。逐一讀出同一組的其他存活
+    // 版本，只要有任何一個還在用這個 personId，就絕對不能刪這個人的檔案，
+    // 否則會連現況正在依賴的保單資料一起銷毀。
+    return _gas("listFamilies", {}).then(function(res){
+      var survivors = (res.families || []).filter(function(f){
+        return (f.familyGroupId === groupId || f.familyId === groupId) && f.fileName !== fn;
       });
-    return _gas("deleteFile", { fileType:"families", fileName: fn }).then(function(){
-      return Promise.all(personFileNames.map(function(pfn){
-        return _gas("deleteFile", { fileType:"persons", fileName: pfn }).catch(function(){});
+      return Promise.all(survivors.map(function(f){
+        return _gas("readFile", { fileType:"families", fileName: f.fileName }).then(function(rf){
+          if (rf && rf.status === "ok" && rf.content && rf.content.members) {
+            return rf.content.members.map(function(m){ return m.personId; });
+          }
+          return [];
+        }).catch(function(){ return []; });
       }));
+    }).then(function(survivorPersonIdLists){
+      var stillInUse = {};
+      survivorPersonIdLists.forEach(function(ids){ ids.forEach(function(id){ stillInUse[id] = true; }); });
+
+      var safeToDeletePersonFiles = (_family.members || [])
+        .filter(function(m){ return m.role !== "beneficiary_only" && !stillInUse[m.personId]; })
+        .map(function(m){
+          var p = _personsData[m.personId];
+          var nm = (p && p.profile && p.profile.name) || m.name || "member";
+          return nm + "_" + m.personId + ".json";
+        });
+
+      return _gas("deleteFile", { fileType:"families", fileName: fn }).then(function(){
+        return Promise.all(safeToDeletePersonFiles.map(function(pfn){
+          return _gas("deleteFile", { fileType:"persons", fileName: pfn }).catch(function(){});
+        }));
+      });
     });
   }
 
