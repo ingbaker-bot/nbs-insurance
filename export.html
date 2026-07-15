@@ -21,6 +21,11 @@
     .hdr-title{font-size:18px;font-weight:700;flex:1}
     .hdr-sub{font-size:14px;color:var(--text-muted)}
     .member-tabs{display:flex;gap:8px;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;padding:14px 16px}
+    /* 手機版：nav.js 自己的精簡頭部已經有成員切換+列印功能，
+       這裡桌面樣式的分頁籤列會跟它疊在一起，手機版直接隱藏 */
+    @media (max-width:767px){
+      #member-tabs, #export-settings-row { display:none!important; }
+    }
     .member-tab{padding:8px 18px;border-radius:99px;background:#f1f5f9;cursor:pointer;white-space:nowrap;color:var(--text-muted);font-weight:600;font-size:14px;transition:.2s}
     .member-tab.active{background:var(--primary);color:#fff;box-shadow:0 4px 10px -2px rgba(99,102,241,.5)}
     /* 選項頁保持窄版（手機友好），預覽頁用獨立 class */
