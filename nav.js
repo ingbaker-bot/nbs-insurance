@@ -508,6 +508,10 @@
         '<span class="nbs-nlabel">刪除此草案</span>' +
       '</div>';
     }
+    items += '<div class="nbs-ni nbs-ni-sm" style="color:#b91c1c" onclick="event.stopPropagation();NBS_NAV._promptDeleteEntireFamily()">' +
+      '<span class="nbs-nicon">🗑️</span>' +
+      '<span class="nbs-nlabel">刪除整個檔案</span>' +
+    '</div>';
     return '<div class="nbs-vm">' +
       '<button class="nbs-row2-btn nbs-row2-btn-ghost" onclick="event.stopPropagation();NBS_NAV._toggleVersionMenu(this)">⋯ 版本管理</button>' +
       '<div class="nbs-vm-menu">'+items+'</div>' +
@@ -841,6 +845,66 @@
     _deleteDraftFiles().then(function(){
       alert("草案已刪除，即將返回家庭列表。");
       global.NBS_NAV._back();
+    }).catch(function(err){
+      alert("刪除失敗（可能是後端尚未支援刪除功能）："+(err.message||err));
+    });
+  };
+
+  // 刪除整個檔案：涵蓋這個家庭的所有版本（現況＋所有草案＋所有歷史現況），
+  // 以及底下曾經出現過的每一位成員的個人保單檔案。跟「刪除此草案」不同，
+  // 這是整組一起刪、不限於目前正在看的這個版本。同樣依賴 GAS 後端的
+  // deleteFile 動作。
+  function _deleteEntireFamilyFiles() {
+    if (!_family) return Promise.reject(new Error("尚未載入家庭資料"));
+    var groupId = _family.familyGroupId || _family.familyId;
+    return _gas("listFamilies", {}).then(function(res){
+      var all = (res.families || []).filter(function(f){
+        return f.familyGroupId === groupId || f.familyId === groupId;
+      });
+      if (!all.length) {
+        var fn = localStorage.getItem("nbs_current_family");
+        all = [{ familyId:_family.familyId, fileName: fn }];
+      }
+      var personFileNameSet = {};
+      return Promise.all(all.map(function(f){
+        return _gas("readFile", { fileType:"families", fileName: f.fileName }).then(function(rf){
+          if (rf && rf.status === "ok" && rf.content && rf.content.members) {
+            rf.content.members.filter(function(m){ return m.role !== "beneficiary_only"; }).forEach(function(m){
+              var p = _personsData[m.personId];
+              var nm = (p && p.profile && p.profile.name) || m.name || "member";
+              personFileNameSet[nm + "_" + m.personId + ".json"] = true;
+            });
+          }
+          return f.fileName;
+        }).catch(function(){ return f.fileName; });
+      })).then(function(familyFileNames){
+        var deleteFamilies = familyFileNames.map(function(fn){
+          return _gas("deleteFile", { fileType:"families", fileName: fn }).catch(function(){});
+        });
+        var deletePersons = Object.keys(personFileNameSet).map(function(pfn){
+          return _gas("deleteFile", { fileType:"persons", fileName: pfn }).catch(function(){});
+        });
+        return Promise.all(deleteFamilies.concat(deletePersons));
+      });
+    });
+  }
+
+  global.NBS_NAV._promptDeleteEntireFamily = function() {
+    if (!_family) return;
+    var name = _stripDraftTag(_family.familyName);
+    if (!window.confirm(
+      "確定要刪除「"+name+"」這整個檔案嗎？\n\n" +
+      "這會刪除所有版本（現況／草案／歷史現況）與底下所有成員的保單資料，此動作無法復原。"
+    )) return;
+    var typed = window.prompt("最後確認：請完整輸入家庭名稱「"+name+"」以永久刪除：");
+    if (typed === null) return; // 使用者取消
+    if (typed.trim() !== name) {
+      alert("輸入的名稱不符，已取消刪除，資料仍然保留。");
+      return;
+    }
+    _deleteEntireFamilyFiles().then(function(){
+      alert("「"+name+"」已永久刪除，即將返回家庭列表。");
+      global.NBS_NAV._goFamily();
     }).catch(function(err){
       alert("刪除失敗（可能是後端尚未支援刪除功能）："+(err.message||err));
     });
