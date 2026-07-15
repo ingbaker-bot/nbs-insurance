@@ -599,9 +599,9 @@
     }).join("") + '<option value="__add__">＋ 新增成員</option>';
     el.innerHTML =
       '<img src="https://i.ibb.co/FkVkNhhd/NBS-4F3.jpg" style="height:28px;width:auto;object-fit:contain;flex-shrink:0" onerror="this.style.display=\'none\'"/>' +
-      '<div style="flex:1;min-width:0;font-size:11px;color:rgba(255,255,255,0.5);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+_family.familyName+'</div>' +
-      '<select onchange="NBS_NAV._setPerson(this.value)" style="padding:4px 8px;font-size:12px;border:none;border-radius:99px;background:rgba(255,255,255,0.12);color:#fff;outline:none;cursor:pointer;font-family:inherit">'+opts+'</select>' +
-      '<button onclick="NBS_NAV._print()" style="padding:5px 8px;background:rgba(255,255,255,0.12);border:none;border-radius:6px;color:rgba(255,255,255,0.8);font-size:13px;cursor:pointer">🖨️</button>';
+      '<div style="flex:1;min-width:0;font-size:11px;color:#374151;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+_family.familyName+'</div>' +
+      '<select onchange="NBS_NAV._setPerson(this.value)" style="padding:4px 8px;font-size:12px;border:none;border-radius:99px;background:rgba(109,40,217,0.1);color:#4C1D95;outline:none;cursor:pointer;font-family:inherit;font-weight:600">'+opts+'</select>' +
+      '<button onclick="NBS_NAV._print()" style="padding:5px 8px;background:rgba(109,40,217,0.1);border:none;border-radius:6px;color:#4C1D95;font-size:13px;cursor:pointer">🖨️</button>';
   }
 
   // ==========================================
