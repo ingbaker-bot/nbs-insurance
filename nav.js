@@ -542,13 +542,13 @@
     // 手機版底部列原本只有 8 個核心功能，「返回列表」「版本管理」
     // 「富壽查詢」這幾個桌面版側欄才有的功能，統一收進「⋯更多」
     // 彈出選單，避免底部列被塞爆。
-    var moreHtml = '<div class="nbs-ti" onclick="event.stopPropagation();NBS_NAV._toggleBottomMore()">' +
+    var moreHtml = '<div class="nbs-ti" id="nbs-bottom-more-btn" onclick="NBS_NAV._toggleBottomMore(event)">' +
       '<span style="font-size:20px">⋯</span>' +
       '<span class="nbs-tl">更多</span>' +
     '</div>';
-    el.innerHTML = '<div style="display:flex" onclick="event.stopPropagation()">'+itemsHtml+moreHtml+'</div>' +
+    el.innerHTML = '<div style="display:flex">'+itemsHtml+moreHtml+'</div>' +
       '<div id="nbs-bottom-more-menu" style="display:none">' +
-        '<div class="nbs-ni nbs-ni-sm" onclick="event.stopPropagation();NBS_NAV._back()">' +
+        '<div class="nbs-ni nbs-ni-sm" onclick="NBS_NAV._back()">' +
           '<span class="nbs-nicon">←</span><span class="nbs-nlabel">返回列表</span>' +
         '</div>' +
         _versionActionsHtml() +
@@ -556,15 +556,20 @@
       '</div>';
   }
 
-  global.NBS_NAV._toggleBottomMore = function() {
+  global.NBS_NAV._toggleBottomMore = function(e) {
+    if (e) e.stopPropagation();
     var m = document.getElementById("nbs-bottom-more-menu");
     if (!m) return;
-    var open = m.style.display === "block";
-    m.style.display = open ? "none" : "block";
+    m.style.display = (m.style.display === "block") ? "none" : "block";
   };
-  document.addEventListener("click", function(){
+  // 點選單或按鈕以外的任何地方，才把選單收起來——用明確判斷點擊
+  // 位置是否落在選單/按鈕範圍內，取代容易受事件時序影響的 stopPropagation。
+  document.addEventListener("click", function(e){
     var m = document.getElementById("nbs-bottom-more-menu");
-    if (m) m.style.display = "none";
+    if (!m || m.style.display !== "block") return;
+    var btn = document.getElementById("nbs-bottom-more-btn");
+    if (m.contains(e.target) || (btn && btn.contains(e.target))) return;
+    m.style.display = "none";
   });
 
   function _renderMobileHdr() {
