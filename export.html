@@ -1741,14 +1741,29 @@ function getZodiacSign(birthDateStr){
   if(!birthDateStr) return null;
   var d = new Date(birthDateStr);
   var m = d.getMonth()+1, day = d.getDate();
-  var table = [
-    [1,20,'摩羯座','♑'],[2,19,'水瓶座','♒'],[3,21,'雙魚座','♓'],[4,20,'牡羊座','♈'],
-    [5,21,'金牛座','♉'],[6,21,'雙子座','♊'],[7,23,'巨蟹座','♋'],[8,23,'獅子座','♌'],
-    [9,23,'處女座','♍'],[10,23,'天秤座','♎'],[11,22,'天蠍座','♏'],[12,22,'射手座','♐'],[12,31,'摩羯座','♑']
+  // 用「起訖月/日」區間直接比對，避免月份交界處的日期被漏接
+  var ranges = [
+    {name:'水瓶座',emoji:'♒',from:[1,20],to:[2,18]},
+    {name:'雙魚座',emoji:'♓',from:[2,19],to:[3,20]},
+    {name:'牡羊座',emoji:'♈',from:[3,21],to:[4,19]},
+    {name:'金牛座',emoji:'♉',from:[4,20],to:[5,20]},
+    {name:'雙子座',emoji:'♊',from:[5,21],to:[6,21]},
+    {name:'巨蟹座',emoji:'♋',from:[6,22],to:[7,22]},
+    {name:'獅子座',emoji:'♌',from:[7,23],to:[8,22]},
+    {name:'處女座',emoji:'♍',from:[8,23],to:[9,22]},
+    {name:'天秤座',emoji:'♎',from:[9,23],to:[10,23]},
+    {name:'天蠍座',emoji:'♏',from:[10,24],to:[11,21]},
+    {name:'射手座',emoji:'♐',from:[11,22],to:[12,21]}
   ];
-  for (var i=0;i<table.length;i++){
-    if (m===table[i][0] && day<=table[i][1]) return {name:table[i][2], emoji:table[i][3]};
+  function inRange(fromMD, toMD){
+    var afterStart = (m>fromMD[0]) || (m===fromMD[0] && day>=fromMD[1]);
+    var beforeEnd   = (m<toMD[0])   || (m===toMD[0]   && day<=toMD[1]);
+    return afterStart && beforeEnd;
   }
+  for (var i=0;i<ranges.length;i++){
+    if (inRange(ranges[i].from, ranges[i].to)) return {name:ranges[i].name, emoji:ranges[i].emoji};
+  }
+  // 剩下的就是摩羯座（12/22–12/31 跨到隔年 1/1–1/19）
   return {name:'摩羯座', emoji:'♑'};
 }
 
