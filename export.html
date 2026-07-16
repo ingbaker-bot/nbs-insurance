@@ -895,7 +895,7 @@ function getItemCurrentEx(key, policies, coverage, covOverrides) {
            if (w !== null) amt += w;
         });
       }
-      if (amt === 0 && matchedPolicies.length > 0) return 1; 
+      // 同樣移除「找不到金額就硬回傳 1」的假數字保底邏輯
       return amt;
   }
 
@@ -916,7 +916,9 @@ function getItemCurrentEx(key, policies, coverage, covOverrides) {
           var w = convertToWanEx(p.insuredAmount, p.insuredAmountUnit);
           if (w !== null) amt += w;
       });
-      if (amt === 0) return 1; 
+      // 移除舊有的「找不到金額就硬回傳 1」保底邏輯——那個「1」不是任何
+      // 真實資料，只是為了讓狀態顯示「已規劃」而硬湊的假數字，容易誤導
+      // 保戶跟業務員以為有填某個具體金額。現在老實回傳 0，缺口就顯示缺口。
   }
 
   return amt;
