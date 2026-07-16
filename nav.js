@@ -922,7 +922,8 @@
   }
 
   global.NBS_NAV._promptCreateDraft = function() {
-    var label = window.prompt("請輸入這份草案的名稱（例如：方案A、增加壽險方案）", "草案");
+    var todayStr = new Date().toISOString().slice(0,10);
+    var label = window.prompt("請輸入這份草案的名稱（例如：方案A、增加壽險方案）", "草案 "+todayStr);
     if (label === null) return; // 使用者取消
     _duplicateFamilyAsDraft(label.trim() || "草案").then(function(res){
       alert("已建立草案「"+ (label.trim() || "草案") +"」，可以到家庭列表切換過去編輯。");
