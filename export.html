@@ -619,45 +619,45 @@ function sumCovEx(keys, policies, coverage) {
 
 // ── 保障群組與細項定義 (全新規劃) ─────────────────────────────────────────
 var GAP_GROUPS_EX = [
-  { key:"family", label:"家庭責任", color:"#1565C0", items:[
-    { key:"life_permanent",       label:"終身壽險",    unit:"萬元",   color:"#1565C0" },
-    { key:"life_term",            label:"定期壽險",    unit:"萬元",   color:"#1E88E5" },
+  { key:"family", label:"家庭責任", color:"#312e81", items:[
+    { key:"life_permanent",       label:"終身壽險",    unit:"萬元",   color:"#312e81" },
+    { key:"life_term",            label:"定期壽險",    unit:"萬元",   color:"#4338ca" },
     // 💡 修正：移除 isBool:true，讓投資型與儲蓄險顯示真實數字
-    { key:"investment",           label:"投資型保險",  unit:"萬元",   color:"#7B1FA2" },
-    { key:"savings",              label:"儲蓄險",      unit:"萬元",   color:"#E91E8C" },
+    { key:"investment",           label:"投資型保險",  unit:"萬元",   color:"#4f46e5" },
+    { key:"savings",              label:"儲蓄險",      unit:"萬元",   color:"#6366f1" },
     // 身故保險金：跟評估確診那三項（重大疾病一次金/重大傷病一次金/特定傷病一次金）
     // 讀的是完全不同的欄位（這裡讀 deathBenefit留愛金額），兩邊互不影響。
     // 有些保單設計上確診才賠、沒有身故金，這裡顯示缺口是正確行為。
-    { key:"ci_death_major",        label:"重疾",       unit:"萬元", color:"#C0392B" },
-    { key:"ci_death_specific",     label:"特傷",       unit:"萬元", color:"#D35400" },
-    { key:"ci_death_catastrophic", label:"重傷",       unit:"萬元", color:"#A93226" },
-    { key:"acc_death_amt",        label:"意外身故",    unit:"萬元",   color:"#F5A623" },
+    { key:"ci_death_major",        label:"重疾",       unit:"萬元", color:"#5b21b6" },
+    { key:"ci_death_specific",     label:"特傷",       unit:"萬元", color:"#7c3aed" },
+    { key:"ci_death_catastrophic", label:"重傷",       unit:"萬元", color:"#6d28d9" },
+    { key:"acc_death_amt",        label:"意外身故",    unit:"萬元",   color:"#581c87" },
     // 癌症身故金：藏在癌症險保單的 can_death 欄位裡，需逐張癌症保單檢視填寫，
     // 資料來源跟「癌症險」donut分類共用 can_death，只是顯示位置搬來這裡。
-    { key:"cancer_death",         label:"癌症身故",    unit:"萬元",   color:"#8E44AD" },
+    { key:"cancer_death",         label:"癌症身故",    unit:"萬元",   color:"#6b21a8" },
   ]},
   
-  { key:"before", label:"評估確診", arrowLabel:"醫療前期", arrowColor:"#5BAD6F", color:"#E53935", items:[
-    { key:"ci_major",         label:"重大疾病",   unit:"萬元",   color:"#E53935" },
-    { key:"ci_catastrophic",  label:"重大傷病",   unit:"萬元",   color:"#EC7063" },
-    { key:"ci_specific",      label:"特定傷病",   unit:"萬元",   color:"#CB4335" },
-    { key:"cancer",           label:"初次罹患癌症", unit:"萬元", color:"#C62828" },
+  { key:"before", label:"評估確診", arrowLabel:"醫療前期", arrowColor:"#1e40af", color:"#1e40af", items:[
+    { key:"ci_major",         label:"重大疾病",   unit:"萬元",   color:"#1e40af" },
+    { key:"ci_catastrophic",  label:"重大傷病",   unit:"萬元",   color:"#1d4ed8" },
+    { key:"ci_specific",      label:"特定傷病",   unit:"萬元",   color:"#2563eb" },
+    { key:"cancer",           label:"初次罹患癌症", unit:"萬元", color:"#1e3a8a" },
   ]},
-  { key:"during", label:"積極修復", arrowLabel:"醫療中期", arrowColor:"#378ADD", color:"#FF8F00", items:[
-    { key:"hosp_real_room",  label:"實支病房費",        unit:"元/日",  color:"#E65100" },
-    { key:"hosp_daily",      label:"住院日額+出院",      unit:"元/日",  color:"#F57C00" },
-    { key:"surgery",         label:"手術險(最高)",      unit:"",       color:"#FF9800", isBool:true },
-    { key:"cancer_hosp",     label:"癌症病房(含出院)",  unit:"元/日",  color:"#FFB300" },
-    { key:"cancer_surgery",  label:"癌症手術",          unit:"萬元/次",color:"#E64A19" },
-    { key:"acc_medical",     label:"意外醫療",          unit:"萬/次",  color:"#FFC107" },
-    { key:"acc_hosp",        label:"意外住院",          unit:"元/日",  color:"#FFE082" },
+  { key:"during", label:"積極修復", arrowLabel:"醫療中期", arrowColor:"#0ea5e9", color:"#0ea5e9", items:[
+    { key:"hosp_real_room",  label:"實支病房費",        unit:"元/日",  color:"#0284c7" },
+    { key:"hosp_daily",      label:"住院日額+出院",      unit:"元/日",  color:"#0ea5e9" },
+    { key:"surgery",         label:"手術險(最高)",      unit:"",       color:"#0369a1", isBool:true },
+    { key:"cancer_hosp",     label:"癌症病房(含出院)",  unit:"元/日",  color:"#38bdf8" },
+    { key:"cancer_surgery",  label:"癌症手術",          unit:"萬元/次",color:"#0891b2" },
+    { key:"acc_medical",     label:"意外醫療",          unit:"萬/次",  color:"#06b6d4" },
+    { key:"acc_hosp",        label:"意外住院",          unit:"元/日",  color:"#22d3ee" },
   ]},
-  { key:"after",  label:"康復療養", arrowLabel:"醫療後期", arrowColor:"#E8638A", color:"#2E7D32", items:[
-    { key:"ltc_disable",         label:"失能一次金",      unit:"萬元",    color:"#1B5E20" },
-    { key:"ltc_support",         label:"失能扶助",        unit:"萬元/月", color:"#2E7D32" },
-    { key:"ltc_care",            label:"長照",            unit:"萬元/月", color:"#43A047" },
-    { key:"cancer_hospice",      label:"癌症安寧",        unit:"萬元",    color:"#81C784" },
-    { key:"waiver",              label:"保費豁免",        unit:"",        color:"#A5D6A7", isBool:true },
+  { key:"after",  label:"康復療養", arrowLabel:"醫療後期", arrowColor:"#14b8a6", color:"#14b8a6", items:[
+    { key:"ltc_disable",         label:"失能一次金",      unit:"萬元",    color:"#0f766e" },
+    { key:"ltc_support",         label:"失能扶助",        unit:"萬元/月", color:"#14b8a6" },
+    { key:"ltc_care",            label:"長照",            unit:"萬元/月", color:"#2dd4bf" },
+    { key:"cancer_hospice",      label:"癌症安寧",        unit:"萬元",    color:"#5eead4" },
+    { key:"waiver",              label:"保費豁免",        unit:"",        color:"#0d9488", isBool:true },
   ]},
 ];
 
@@ -1533,7 +1533,19 @@ function buildDonutChartEx(active, coverage, targets, covOverrides) {
 
   // 顏色＝狀態，不再＝類別：跟上方圖例（已規劃=綠／部分有=橘／缺口=灰）
   // 完全對齊，類別的識別改由外圍拉線標籤文字負責，不再靠色相分辨。
-  var STATUS_COLOR_EX = { full:"#27AE8F", partial:"#F5A623", none:"#e0e0e0" };
+  var STATUS_COLOR_EX = { full:"url(#donutGradFull)", partial:"url(#donutGradPartial)", none:"#E2E8F0" };
+  var DONUT_DEFS = '<defs>' +
+    '<radialGradient id="donutGradFull" cx="30%" cy="20%" r="75%">' +
+      '<stop offset="0%" stop-color="#7dd3fc"/>' +
+      '<stop offset="55%" stop-color="#0ea5e9"/>' +
+      '<stop offset="100%" stop-color="#0369a1"/>' +
+    '</radialGradient>' +
+    '<radialGradient id="donutGradPartial" cx="30%" cy="20%" r="75%">' +
+      '<stop offset="0%" stop-color="#fcd34d"/>' +
+      '<stop offset="55%" stop-color="#f59e0b"/>' +
+      '<stop offset="100%" stop-color="#b45309"/>' +
+    '</radialGradient>' +
+  '</defs>';
 
   var chartCats = DONUT_CATEGORIES_EX;
   chartCats.forEach(item => {
@@ -1548,11 +1560,11 @@ function buildDonutChartEx(active, coverage, targets, covOverrides) {
     var px=(r,a)=>cx+r*Math.cos(a), py=(r,a)=>cy+r*Math.sin(a);
     var donut=(a1,a2,lg,r1,r2)=>`M${px(r1,a1)},${py(r1,a1)} A${r1},${r1} 0 ${lg} 1 ${px(r1,a2)},${py(r1,a2)} L${px(r2,a2)},${py(r2,a2)} A${r2},${r2} 0 ${lg} 0 ${px(r2,a1)},${py(r2,a1)} Z`;
 
-    paths += `<path d="${donut(start,end,sliceA>Math.PI?1:0,OR,IR)}" fill="#f0f0f0"/>`;
+    paths += `<path d="${donut(start,end,sliceA>Math.PI?1:0,OR,IR)}" fill="#E2E8F0"/>`;
     if(pct>0.01) paths += `<path d="${donut(start,filledEnd,sliceA*pct>Math.PI?1:0,OR,IR)}" fill="${sColor}"/>`;
     if(status==="partial" && pct<0.99) {
       var gapSize=sliceA*(1-pct);
-      paths += `<path d="${donut(filledEnd,end,gapSize>Math.PI?1:0,OR,IR)}" fill="none" stroke="${sColor}" stroke-width="4" stroke-dasharray="6 5" opacity="0.45"/>`;
+      paths += `<path d="${donut(filledEnd,end,gapSize>Math.PI?1:0,OR,IR)}" fill="none" stroke="#f59e0b" stroke-width="4" stroke-dasharray="6 5" opacity="0.45"/>`;
     }
 
     var isRight = Math.cos(midA) >= 0; 
@@ -1562,14 +1574,15 @@ function buildDonutChartEx(active, coverage, targets, covOverrides) {
 
     var textAnchor = isRight ? "start" : "end";
     var textX = x2 + (isRight ? 8 : -8);
-    var textColor = status === "none" ? "#aaa" : "#555";
+    var textColor = status === "none" ? "#94a3b8" : "#555";
+    var dotColor = status === "full" ? "#0ea5e9" : status === "partial" ? "#f59e0b" : "#94a3b8";
     var fw = status === "full" ? "600" : "500";
     var prefix = status === "none" ? "❌ " : status === "partial" ? "◐ " : "";
 
     // 圓餅圖外圍文字放大至 26px
     labels += `
-      <polyline points="${x0},${y0} ${x1},${y1} ${x2},${y2}" fill="none" stroke="${sColor}60" stroke-width="2"/>
-      <circle cx="${x0}" cy="${y0}" r="4" fill="${sColor}"/>
+      <polyline points="${x0},${y0} ${x1},${y1} ${x2},${y2}" fill="none" stroke="${dotColor}60" stroke-width="2"/>
+      <circle cx="${x0}" cy="${y0}" r="4" fill="${dotColor}"/>
       <text x="${textX}" y="${y2+8}" text-anchor="${textAnchor}" style="font-size:26px;fill:${textColor};font-weight:${fw};letter-spacing:0.03em">${prefix}${item.label}</text>
     `;
   });
@@ -1581,12 +1594,13 @@ function buildDonutChartEx(active, coverage, targets, covOverrides) {
   // 圓心文字放大，並改為回傳物件格式以供後續精準排版
   return {
     svg: `<svg viewBox="0 0 1000 700" style="width:100%; max-height:620px; height:auto; display:block; margin:0 auto;">
+        ${DONUT_DEFS}
         ${paths}
         ${labels}
-        <text x="${cx}" y="${cy-24}" text-anchor="middle" style="font-size:26px;fill:#888">✅ 已規劃</text>
+        <text x="${cx}" y="${cy-24}" text-anchor="middle" style="font-size:26px;fill:#0369a1">✅ 已規劃</text>
         <text x="${cx}" y="${cy+18}"  text-anchor="middle" style="font-size:64px;font-weight:bold;fill:#333">${okN}</text>
         <text x="${cx}" y="${cy+56}" text-anchor="middle" style="font-size:24px;fill:#E74C3C">❌ 缺口 ${gapN}</text>
-        <text x="${cx}" y="${cy+88}" text-anchor="middle" style="font-size:24px;fill:#F5A623">◐ 部分有 ${insN}</text>
+        <text x="${cx}" y="${cy+88}" text-anchor="middle" style="font-size:24px;fill:#b45309">◐ 部分有 ${insN}</text>
       </svg>`,
     legendFamily: legendFamily,
     legendBefore: legendBefore,
@@ -1711,9 +1725,9 @@ function renderBlock(key){
     html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">';
     html+='<div style="font-size:36px;font-weight:800;color:#444;">保障覆蓋率</div>';
     html+='<div style="display:flex;gap:20px;font-size:22px;color:#888;font-weight:600">'+
-      '<span><span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#27AE8F;margin-right:6px"></span>已規劃</span>'+
-      '<span style="color:#F5A623"><span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#F5A623;opacity:.5;margin-right:6px;border:2px dashed #F5A623"></span>部分有</span>'+
-      '<span style="color:#bbb"><span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#e0e0e0;margin-right:6px"></span>缺口</span>'+
+      '<span><span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:radial-gradient(ellipse at 30% 20%,#7dd3fc 0%,#0ea5e9 55%,#0369a1 100%);margin-right:6px"></span>已規劃</span>'+
+      '<span style="color:#b45309"><span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:radial-gradient(ellipse at 30% 20%,#fcd34d 0%,#f59e0b 55%,#b45309 100%);opacity:.7;margin-right:6px;border:2px dashed #f59e0b"></span>部分有</span>'+
+      '<span style="color:#94a3b8"><span style="display:inline-block;width:16px;height:16px;border-radius:4px;background:#E2E8F0;margin-right:6px"></span>缺口</span>'+
     '</div>';
     html+='</div>';
     html+='<div style="flex:1;display:flex;align-items:center;justify-content:center">'+chartParts.svg+'</div>';
@@ -1724,9 +1738,9 @@ function renderBlock(key){
     html+='<div style="font-size:36px;font-weight:800;color:#444;margin-bottom:16px">就醫情況</div>';
     var baseHosp=sumCovEx(["hosp_room","hosp_ext_room","daily_room_1_30","hosp_ext_daily","daily_discharge"],policies,cov);
     var visitCats = [
-      { label:"疾病", color:"#27AE8F", bg:"#EAF3DE" },
-      { label:"意外", color:"#F5A623", bg:"#FAEEDA" },
-      { label:"癌症", color:"#E74C3C", bg:"#FCEBEB" },
+      { label:"疾病", color:"#0369a1", bg:"#e0f2fe" },
+      { label:"意外", color:"#b45309", bg:"#fef3c7" },
+      { label:"癌症", color:"#be123c", bg:"#ffe4e6" },
     ];
     html+='<div style="background:#f7f8fa;border-radius:24px;padding:20px;display:grid;grid-template-columns:repeat(3,1fr);gap:18px;flex:1">';
     visitCats.forEach(function(vc, ci){
@@ -1786,7 +1800,7 @@ function renderBlock(key){
     // 區塊 2-B：家庭責任
     html+='<div style="background:#fff;border-radius:24px;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);padding:24px;display:flex;flex-direction:column">';
     // 高度強制鎖死為 85px，與左側 SVG 完全對齊
-    html+='<div style="height:85px;margin-bottom:20px;display:flex;align-items:center;justify-content:center;background:#1565C0;border-radius:8px;color:#fff;font-size:46px;font-weight:700;flex-shrink:0;white-space:nowrap">家庭與傳承</div>';
+    html+='<div style="height:85px;margin-bottom:20px;display:flex;align-items:center;justify-content:center;background:#312e81;border-radius:8px;color:#fff;font-size:46px;font-weight:700;flex-shrink:0;white-space:nowrap">家庭與傳承</div>';
     html+='<div style="background:#fafbfc;padding:24px;border-radius:20px;border:1px solid rgba(0,0,0,.05);flex:1">'+chartParts.legendFamily+'</div>';
     html+='</div>'; 
     
