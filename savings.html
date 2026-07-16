@@ -98,23 +98,24 @@
 
     /* 時間軸表格：凍結第一欄（成員名稱） */
     .cf-scroll-wrap { overflow-x:auto; position:relative; }
-    .cf-table { border-collapse:separate; border-spacing:0; font-size:14px; }
-    .cf-table th { background:#f7f7f5; padding:7px 10px; text-align:center; font-weight:600; color:#333; border-bottom:1px solid #ebebeb; white-space:nowrap; border-right:1px solid #ebebeb; }
-    .cf-table th:first-child { text-align:left; min-width:88px; width:88px; position:sticky; left:0; z-index:3; background:#f7f7f5; border-right:2px solid #dde8f5; box-shadow:2px 0 4px rgba(0,0,0,0.04); }
+    .cf-table { border-collapse:separate; border-spacing:0; font-size:16px; }
+    .cf-table th { background:#f7f7f5; padding:9px 10px; text-align:center; font-weight:600; color:#333; border-bottom:1px solid #ebebeb; white-space:nowrap; border-right:1px solid #ebebeb; }
+    .cf-table th:first-child { text-align:left; min-width:88px; width:88px; position:sticky; left:0; z-index:3; background:#f7f7f5; border-right:2px solid #dde0f7; box-shadow:2px 0 4px rgba(0,0,0,0.04); }
     .cf-table td { padding:6px 10px; text-align:center; border-bottom:1px solid #f5f5f5; border-right:1px solid #f5f5f5; }
-    .cf-table td:first-child { text-align:left; font-weight:500; color:#1a1a1a; white-space:nowrap; position:sticky; left:0; z-index:2; background:#fff; border-right:2px solid #dde8f5; box-shadow:2px 0 4px rgba(0,0,0,0.04); }
-    .cf-total-row td { background:#f0f6fc; font-weight:600; color:#0C447C; border-top:2px solid #c5ddf5; }
-    .cf-total-row td:first-child { background:#f0f6fc; }
-    .cf-bar { height:26px; border-radius:4px; background:#E6F1FB; display:inline-flex; align-items:center; justify-content:center; min-width:36px; padding:0 6px; }
-    .cf-bar span { font-size:16px; color:#0C447C; white-space:nowrap; font-weight:600; }
-    .cf-amount { font-size:16px; color:#0C447C; font-weight:600; white-space:nowrap; }
+    .cf-table td:first-child { text-align:left; font-weight:500; color:#1a1a1a; white-space:nowrap; position:sticky; left:0; z-index:2; background:#fff; border-right:2px solid #dde0f7; box-shadow:2px 0 4px rgba(0,0,0,0.04); }
+    .cf-total-row td { background:#4c46b8; font-weight:700; color:#fff; border-top:2px solid #3730a3; }
+    .cf-total-row td:first-child { background:#4c46b8; }
+    .cf-bar { height:30px; border-radius:6px; background:radial-gradient(ellipse at 30% 20%,#a5a2d6 0%,#4338ca 55%,#241f6a 100%); display:inline-flex; align-items:center; justify-content:center; min-width:36px; padding:0 6px; }
+    .cf-bar span { font-size:17px; color:#fff; white-space:nowrap; font-weight:700; }
+    .cf-amount { font-size:17px; color:#4338ca; font-weight:700; white-space:nowrap; }
+    .cf-total-row .cf-amount { color:#fff; }
     /* 被保險人分組標題列 */
-    .cf-member-row td { background:#f4f8fd; padding:7px 10px; border-top:2px solid #dde8f5; border-bottom:1px solid #dde8f5; }
+    .cf-member-row td { background:#eef0ff; padding:8px 10px; border-top:3px solid #4338ca; border-bottom:1px solid #dde0f7; }
     /* 保單子列縮排 */
     .cf-policy-row td { background:#fff; }
-    .cf-policy-row:hover td { background:#fafcff; }
+    .cf-policy-row:hover td { background:#fafaff; }
     /* 每人小計列 */
-    .cf-subtotal-row td { background:#f0f6fc; border-top:1px solid #dde8f5; border-bottom:2px solid #c5ddf5; font-weight:600; }
+    .cf-subtotal-row td { background:#eef0ff; border-top:1px solid #dde0f7; border-bottom:2px solid #c7cdf5; font-weight:700; }
     .empty-timeline { text-align:center; padding:40px 20px; color:#bbb; font-size:14px; line-height:1.8; }
     .empty-state { text-align:center; padding:40px 20px; color:#bbb; font-size:14px; }
 
@@ -814,7 +815,7 @@ function renderTimeline() {
 
   // ── 表頭 ──
   const yearHeaders = trimYears.map(y =>
-    `<th>${y}<br><span style="font-size:14px;color:#333;font-weight:700">${y-1911}年</span></th>`
+    `<th><span style="font-size:18px">${y}</span><br><span style="font-size:15px;color:#333;font-weight:700">${y-1911}年</span></th>`
   ).join("");
 
   // ── 分組列 ──
@@ -839,14 +840,9 @@ function renderTimeline() {
         return `<td><div class="cf-bar" style="width:${w}px"><span>${fmtAmt(amt)}</span></div></td>`;
       }).join("");
 
-      // 第一欄：險種 badge + 保單號碼 + 商品名稱
-      const catColors = {
-        "儲蓄險":"#72243E","年金險":"#791F1F","儲蓄年金":"#72243E","投資型保險":"#555"
-      };
-      const catBg = {
-        "儲蓄險":"#FBEAF0","年金險":"#FCEBEB","儲蓄年金":"#FBEAF0","投資型保險":"#f0f0f0"
-      };
-      const badgeStyle = `font-size:14px;padding:1px 5px;border-radius:3px;display:inline-block;background:${catBg[pr.category]||"#f0f0f0"};color:${catColors[pr.category]||"#555"}`;
+      // 第一欄：險種 badge + 保單號碼 + 商品名稱（統一收斂為靛紫色系，
+      // 跟 export.html 的保單明細一覽表/家庭責任配色一致）
+      const badgeStyle = `font-size:14px;padding:1px 5px;border-radius:3px;display:inline-block;background:#e0e7ff;color:#3730a3`;
       // 繳費中但無現金流：標示狀態
       const hasFlow = Object.keys(pr.flows).length > 0;
       const statusTag = !hasFlow
