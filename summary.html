@@ -544,7 +544,7 @@ function getItemCurrent(key, policies, coverage, covOverrides) {
            if (w !== null) amt += w;
         });
       }
-      if (amt === 0 && matchedPolicies.length > 0) return 1; 
+      // 移除舊有「找不到金額就硬回傳 1」的假數字保底邏輯
       return amt;
   }
 
@@ -566,7 +566,7 @@ function getItemCurrent(key, policies, coverage, covOverrides) {
           const w = convertToWan(p.insuredAmount, p.insuredAmountUnit);
           if (w !== null) amt += w;
       });
-      if (amt === 0) return 1; 
+      // 移除舊有「找不到金額就硬回傳 1」的假數字保底邏輯
   }
 
   return amt;
