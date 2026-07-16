@@ -427,9 +427,8 @@ function buildSavingsTimelineParts(pdm3,fData,startYr,endYr){
   });
   if(!groups.length)return null;
 
-  var maxTotal=Math.max.apply(null,Object.values(totalFlows).concat([1]));
-  var catBg={"儲蓄險":"#FBEAF0","年金險":"#FCEBEB","儲蓄年金":"#FBEAF0","投資型保險":"#f0f0f0"};
-  var catCo={"儲蓄險":"#B0466F","年金險":"#C0392B","儲蓄年金":"#B0466F","投資型保險":"#666"};
+  // 儲蓄/年金/投資型保險統一收斂在同一組靛紫色系裡（不再依類別各自上色）
+  var TAG_BG="#e0e7ff", TAG_CO="#3730a3", PILL_GRAD=pearlGradientEx("#4338ca");
 
   // 固定欄寬：第一欄(被保險人/保單)固定，其餘年份欄位平分，
   // 標題表格跟每一組保單表格都套用同一份，確保欄位對齊
@@ -437,13 +436,13 @@ function buildSavingsTimelineParts(pdm3,fData,startYr,endYr){
 
   var yh=years.map(function(y3){
     return '<th style="background:linear-gradient(180deg,#f7f8fa,#fff);padding:10px 6px;text-align:center;font-weight:800;color:#374151;border-bottom:2px solid #e2e5ea;border-left:1px solid #eef0f3;white-space:nowrap">'+
-      '<div style="width:8px;height:8px;border-radius:50%;background:#6366f1;margin:0 auto 5px"></div>'+
+      '<div style="width:8px;height:8px;border-radius:50%;background:#4338ca;margin:0 auto 5px"></div>'+
       y3+'<br><span style="font-size:15px;color:#6b7280;font-weight:600">'+(y3-1911)+'年</span>'+
     '</th>';
   }).join("");
 
   var headerBandHtml =
-    '<div style="background:#fff;border-radius:20px 20px 0 0;overflow:hidden;border:1px solid rgba(0,0,0,.04);border-bottom:none">'+
+    '<div style="background:#fff;border-radius:20px;overflow:hidden;border:1px solid rgba(0,0,0,.04);box-shadow:0 4px 14px -4px rgba(0,0,0,.08)">'+
       '<div style="padding:16px 18px;background:linear-gradient(135deg,#EEF2FF,#F5F3FF);display:flex;align-items:center;gap:10px;flex-wrap:wrap">'+
         '<span style="font-size:20px;font-weight:800;color:#4338ca">📈 未來現金流時間軸</span>'+
         '<span style="font-size:15px;color:#7c7fa0;font-weight:700;background:#fff;padding:4px 12px;border-radius:99px">'+startYr+' － '+endYr+' 年・'+groups.length+' 位被保險人</span>'+
@@ -454,7 +453,7 @@ function buildSavingsTimelineParts(pdm3,fData,startYr,endYr){
 
   function buildGroupChunkHtml(g){
     var pay=g.policies.filter(function(pr){return Object.keys(pr.flows).length===0;}).length;
-    var nr='<tr><td colspan="'+(years.length+1)+'" style="background:linear-gradient(135deg,#EEF4FF,#F7F5FF);padding:12px 16px;font-size:19px;font-weight:800;color:#374151;border-top:2px solid #e2e5ea">'+
+    var nr='<tr><td colspan="'+(years.length+1)+'" style="padding:12px 16px;font-size:19px;font-weight:800;color:#374151">'+
       '👤 '+g.memberName+'<span style="color:#6b7280;font-weight:700;margin-left:9px;font-size:14px">'+g.policies.length+' 張保單</span>'+
       (pay?'<span style="color:#B07000;font-size:14px;margin-left:7px;font-weight:700">（含 '+pay+' 張繳費中）</span>':'')+
     '</td></tr>';
@@ -462,13 +461,12 @@ function buildSavingsTimelineParts(pdm3,fData,startYr,endYr){
       var cells=years.map(function(y4){
         var amt=pr.flows[y4]||0;
         if(!amt)return'<td style="text-align:center;color:#9ca3af;font-size:15px;border-left:1px solid #f5f6f8">—</td>';
-        var bg=catBg[pr.category]||"#eef0f3", co=catCo[pr.category]||"#555";
-        return'<td style="border-left:1px solid #f5f6f8;padding:5px 6px"><div style="height:28px;line-height:28px;border-radius:6px;background:'+bg+';text-align:center;white-space:nowrap"><span style="font-size:15px;color:'+co+';font-weight:800;font-variant-numeric:tabular-nums">'+fmtAmtEx(amt)+'</span></div></td>';
+        return'<td style="border-left:1px solid #f5f6f8;padding:5px 6px"><div style="height:30px;line-height:30px;border-radius:6px;background:'+PILL_GRAD+';text-align:center;white-space:nowrap"><span style="font-size:16px;color:#fff;font-weight:800;font-variant-numeric:tabular-nums">'+fmtAmtEx(amt)+'</span></div></td>';
       }).join("");
       var fc='<td style="padding:9px 6px 9px 14px;border-right:2px solid #e2e5ea">'+
         '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'+
-          '<span style="font-size:13px;font-weight:800;padding:3px 9px;border-radius:99px;background:'+(catBg[pr.category]||"#eef0f3")+';color:'+(catCo[pr.category]||"#555")+'">'+(pr.category)+'</span>'+
-          '<span style="font-size:13px;font-weight:800;color:#6366f1;background:#eef2ff;padding:3px 8px;border-radius:99px;font-variant-numeric:tabular-nums">'+pr.policyNo+'</span>'+
+          '<span style="font-size:13px;font-weight:800;padding:3px 9px;border-radius:99px;background:'+TAG_BG+';color:'+TAG_CO+'">'+(pr.category)+'</span>'+
+          '<span style="font-size:13px;font-weight:800;color:#4338ca;background:#eef2ff;padding:3px 8px;border-radius:99px;font-variant-numeric:tabular-nums">'+pr.policyNo+'</span>'+
           (!Object.keys(pr.flows).length?'<span style="font-size:13px;color:#B07000;font-weight:700">繳費中</span>':'')+
         '</div>'+
         (pr.itemName?'<div style="font-size:15px;color:#444;font-weight:700;margin-top:3px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.3">'+pr.itemName+'</div>':'')+
@@ -476,16 +474,19 @@ function buildSavingsTimelineParts(pdm3,fData,startYr,endYr){
       return'<tr>'+fc+cells+'</tr>';
     }).join("");
     var mf={};g.policies.forEach(function(pr){Object.keys(pr.flows).forEach(function(y5){mf[y5]=(mf[y5]||0)+pr.flows[y5];});});
-    var sub='<tr style="background:#F5F6FF;font-weight:800;color:#4f46e5;border-top:1px solid #e2e5ea"><td style="padding:7px 6px 7px 14px;border-right:2px solid #e2e5ea;font-size:14px">小計</td>'+
+    var sub='<tr style="background:#eef0ff;font-weight:800;color:#4338ca"><td style="padding:7px 6px 7px 14px;border-right:2px solid #e2e5ea;font-size:14px">小計</td>'+
       years.map(function(y6){var a=mf[y6]||0;return a?'<td style="text-align:center;font-size:15px;font-variant-numeric:tabular-nums">'+fmtAmtEx(a)+'</td>':'<td style="text-align:center;color:#9ca3af">—</td>';}).join("")+'</tr>';
-    return '<table style="width:100%;border-collapse:collapse;font-size:16px;table-layout:fixed;background:#fff">'+colgroupHtml+'<tbody>'+nr+pr2+sub+'</tbody></table>';
+    return '<div style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);border-left:8px solid #4338ca">'+
+      '<table style="width:100%;border-collapse:collapse;font-size:16px;table-layout:fixed">'+colgroupHtml+'<tbody>'+nr+pr2+sub+'</tbody></table>'+
+    '</div>';
   }
 
-  var totalRowHtml = '<table style="width:100%;border-collapse:collapse;font-size:16px;table-layout:fixed;background:#fff;border-radius:0 0 20px 20px;overflow:hidden">'+colgroupHtml+
-    '<tbody><tr style="background:linear-gradient(135deg,#EEF2FF,#F5F3FF);font-weight:800;color:#4338ca;border-top:2px solid #c7d2fe">'+
-    '<td style="padding:10px 6px 10px 14px;border-right:2px solid #e2e5ea;font-size:14px">合計現金流</td>'+
-    years.map(function(y7){var a=totalFlows[y7]||0;return a?'<td style="text-align:center;font-size:16px;font-variant-numeric:tabular-nums">'+fmtAmtEx(a)+'</td>':'<td style="text-align:center;color:#9ca3af">—</td>';}).join("")+
-    '</tr></tbody></table>';
+  var totalRowHtml = '<div style="border-radius:16px;overflow:hidden;box-shadow:0 4px 14px -4px rgba(0,0,0,.12)">'+
+    '<table style="width:100%;border-collapse:collapse;font-size:16px;table-layout:fixed;background:#4c46b8">'+colgroupHtml+
+    '<tbody><tr style="color:#fff;font-weight:800">'+
+    '<td style="padding:10px 6px 10px 14px;font-size:15px">合計現金流</td>'+
+    years.map(function(y7){var a=totalFlows[y7]||0;return a?'<td style="text-align:center;font-size:17px;font-variant-numeric:tabular-nums">'+fmtAmtEx(a)+'</td>':'<td style="text-align:center;opacity:.6">—</td>';}).join("")+
+    '</tr></tbody></table></div>';
 
   return { headerBandHtml:headerBandHtml, groups:groups, buildGroupChunkHtml:buildGroupChunkHtml, totalRowHtml:totalRowHtml };
 }
@@ -507,35 +508,49 @@ function renderSavingsTimeline(pdm3,fData,startYr,endYr){
     if(pRows.length)groups.push({memberName:m.name,policies:pRows});
   });
   if(!groups.length)return'<div style="padding:30px;text-align:center;color:#9ca3af;font-size:14px">尚無儲蓄保單設定領回資料</div>';
-  var maxTotal=Math.max.apply(null,Object.values(totalFlows).concat([1]));
-  var catBg={"儲蓄險":"#FBEAF0","年金險":"#FCEBEB","儲蓄年金":"#FBEAF0","投資型保險":"#f0f0f0"};
-  var catCo={"儲蓄險":"#B0466F","年金險":"#C0392B","儲蓄年金":"#B0466F","投資型保險":"#666"};
+
+  // 儲蓄/年金/投資型保險統一收斂在同一組靛紫色系裡（不再依類別各自上色），
+  // 跟家庭責任/保單明細一覽表用的靛紫主題呼應
+  var TAG_BG="#e0e7ff", TAG_CO="#3730a3", PILL_GRAD=pearlGradientEx("#4338ca");
 
   // 年份時間軸節點：由左到右一條時間軸線串起每一年，強調「時間軸」的視覺語言
   var yh=years.map(function(y3,yi){
     return '<th style="background:linear-gradient(180deg,#f7f8fa,#fff);padding:9px 6px;text-align:center;font-weight:800;color:#374151;border-bottom:2px solid #e2e5ea;'+(yi>0?'border-left:1px solid #eef0f3;':'')+'white-space:nowrap;position:relative">'+
-      '<div style="width:7px;height:7px;border-radius:50%;background:#6366f1;margin:0 auto 4px"></div>'+
-      '<span style="font-size:14px">'+y3+'</span><br><span style="font-size:13px;color:#6b7280;font-weight:600">'+(y3-1911)+'年</span>'+
+      '<div style="width:7px;height:7px;border-radius:50%;background:#4338ca;margin:0 auto 4px"></div>'+
+      '<span style="font-size:17px">'+y3+'</span><br><span style="font-size:15px;color:#6b7280;font-weight:600">'+(y3-1911)+'年</span>'+
     '</th>';
   }).join("");
 
-  var gr=groups.map(function(g){
+  // 固定欄寬：第一欄(被保險人/保單)固定，其餘年份欄位平分
+  var colgroupHtml2='<colgroup><col style="width:190px">'+years.map(function(){return'<col>';}).join("")+'</colgroup>';
+
+  var headerBandHtml =
+    '<div style="background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);margin-bottom:14px">'+
+      '<div style="padding:14px 16px;background:linear-gradient(135deg,#EEF2FF,#F5F3FF);display:flex;align-items:center;gap:10px;flex-wrap:wrap">'+
+        '<span style="font-size:17px;font-weight:800;color:#4338ca">📈 未來現金流時間軸</span>'+
+        '<span style="font-size:12px;color:#7c7fa0;font-weight:700;background:#fff;padding:3px 10px;border-radius:99px">'+startYr+' － '+endYr+' 年・'+groups.length+' 位被保險人</span>'+
+      '</div>'+
+      '<table style="width:100%;border-collapse:collapse;table-layout:fixed">'+colgroupHtml2+
+      '<thead><tr><th style="background:#f7f8fa;padding:8px 14px;text-align:left;border-bottom:2px solid #e2e5ea;font-size:14px;font-weight:800;color:#6b7280">被保險人/保單</th>'+yh+'</tr></thead>'+
+      '</table>'+
+    '</div>';
+
+  var groupCards = groups.map(function(g){
     var pay=g.policies.filter(function(pr){return Object.keys(pr.flows).length===0;}).length;
-    var nr='<tr><td colspan="'+(years.length+1)+'" style="background:linear-gradient(135deg,#EEF4FF,#F7F5FF);padding:10px 14px;font-size:16px;font-weight:800;color:#374151;border-top:2px solid #e2e5ea">'+
+    var nr='<tr><td colspan="'+(years.length+1)+'" style="padding:10px 14px;font-size:16px;font-weight:800;color:#374151">'+
       '👤 '+g.memberName+'<span style="color:#6b7280;font-weight:700;margin-left:8px;font-size:12px">'+g.policies.length+' 張保單</span>'+
       (pay?'<span style="color:#B07000;font-size:12px;margin-left:6px;font-weight:700">（含 '+pay+' 張繳費中）</span>':'')+
     '</td></tr>';
     var pr2=g.policies.map(function(pr){
       var cells=years.map(function(y4){
         var amt=pr.flows[y4]||0;
-        if(!amt)return'<td style="text-align:center;color:#9ca3af;font-size:13px;border-left:1px solid #f5f6f8">—</td>';
-        var bg=catBg[pr.category]||"#eef0f3", co=catCo[pr.category]||"#555";
-        return'<td style="border-left:1px solid #f5f6f8;padding:4px 5px"><div style="height:27px;line-height:27px;border-radius:6px;background:'+bg+';text-align:center;white-space:nowrap"><span style="font-size:14px;color:'+co+';font-weight:800;font-variant-numeric:tabular-nums">'+fmtAmtEx(amt)+'</span></div></td>';
+        if(!amt)return'<td style="text-align:center;color:#9ca3af;font-size:14px;border-left:1px solid #f5f6f8">—</td>';
+        return'<td style="border-left:1px solid #f5f6f8;padding:4px 5px"><div style="height:29px;line-height:29px;border-radius:6px;background:'+PILL_GRAD+';text-align:center;white-space:nowrap"><span style="font-size:15px;color:#fff;font-weight:800;font-variant-numeric:tabular-nums">'+fmtAmtEx(amt)+'</span></div></td>';
       }).join("");
       var fc='<td style="padding:8px 6px 8px 14px;border-right:2px solid #e2e5ea">'+
         '<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">'+
-          '<span style="font-size:11px;font-weight:800;padding:2px 8px;border-radius:99px;background:'+(catBg[pr.category]||"#eef0f3")+';color:'+(catCo[pr.category]||"#555")+'">'+(pr.category)+'</span>'+
-          '<span style="font-size:11px;font-weight:800;color:#6366f1;background:#eef2ff;padding:2px 7px;border-radius:99px;font-variant-numeric:tabular-nums">'+pr.policyNo+'</span>'+
+          '<span style="font-size:11px;font-weight:800;padding:2px 8px;border-radius:99px;background:'+TAG_BG+';color:'+TAG_CO+'">'+(pr.category)+'</span>'+
+          '<span style="font-size:11px;font-weight:800;color:#4338ca;background:#eef2ff;padding:2px 7px;border-radius:99px;font-variant-numeric:tabular-nums">'+pr.policyNo+'</span>'+
           (!Object.keys(pr.flows).length?'<span style="font-size:11px;color:#B07000;font-weight:700">繳費中</span>':'')+
         '</div>'+
         (pr.itemName?'<div style="font-size:13px;color:#444;font-weight:700;margin-top:3px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.3">'+pr.itemName+'</div>':'')+
@@ -543,25 +558,23 @@ function renderSavingsTimeline(pdm3,fData,startYr,endYr){
       return'<tr>'+fc+cells+'</tr>';
     }).join("");
     var mf={};g.policies.forEach(function(pr){Object.keys(pr.flows).forEach(function(y5){mf[y5]=(mf[y5]||0)+pr.flows[y5];});});
-    var sub='<tr style="background:#F5F6FF;font-weight:800;color:#4f46e5;border-top:1px solid #e2e5ea"><td style="padding:6px 6px 6px 14px;border-right:2px solid #e2e5ea;font-size:12px">小計</td>'+
-      years.map(function(y6){var a=mf[y6]||0;return a?'<td style="text-align:center;font-size:13px;font-variant-numeric:tabular-nums">'+fmtAmtEx(a)+'</td>':'<td style="text-align:center;color:#9ca3af">—</td>';}).join("")+'</tr>';
-    return nr+pr2+sub;
+    var sub='<tr style="background:#eef0ff;font-weight:800;color:#4338ca"><td style="padding:6px 6px 6px 14px;border-right:2px solid #e2e5ea;font-size:13px">小計</td>'+
+      years.map(function(y6){var a=mf[y6]||0;return a?'<td style="text-align:center;font-size:14px;font-variant-numeric:tabular-nums">'+fmtAmtEx(a)+'</td>':'<td style="text-align:center;color:#9ca3af">—</td>';}).join("")+'</tr>';
+    return '<div style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);border-left:8px solid #4338ca;margin-bottom:14px">'+
+      '<table style="width:100%;border-collapse:collapse;table-layout:fixed">'+colgroupHtml2+'<tbody>'+nr+pr2+sub+'</tbody></table>'+
+    '</div>';
   }).join("");
-  var tot='<tr style="background:linear-gradient(135deg,#EEF2FF,#F5F3FF);font-weight:800;color:#4338ca;border-top:2px solid #c7d2fe"><td style="padding:8px 6px 8px 14px;border-right:2px solid #e2e5ea;font-size:13px">合計現金流</td>'+
-    years.map(function(y7){var a=totalFlows[y7]||0;return a?'<td style="text-align:center;font-size:14px;font-variant-numeric:tabular-nums">'+fmtAmtEx(a)+'</td>':'<td style="text-align:center;color:#9ca3af">—</td>';}).join("")+'</tr>';
-  // 固定欄寬：第一欄(被保險人/保單)固定，其餘年份欄位平分，避免瀏覽器
-  // 把多餘空間全部塞進沒設寬度限制的第一欄，造成大片空白、金額色塊
-  // 反而被壓縮的問題
-  var colgroupHtml2='<colgroup><col style="width:190px">'+years.map(function(){return'<col>';}).join("")+'</colgroup>';
-  return'<div style="background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04)">'+
-    '<div style="padding:14px 16px;background:linear-gradient(135deg,#EEF2FF,#F5F3FF);display:flex;align-items:center;gap:10px;flex-wrap:wrap">'+
-      '<span style="font-size:17px;font-weight:800;color:#4338ca">📈 未來現金流時間軸</span>'+
-      '<span style="font-size:12px;color:#7c7fa0;font-weight:700;background:#fff;padding:3px 10px;border-radius:99px">'+startYr+' － '+endYr+' 年・'+groups.length+' 位被保險人</span>'+
-    '</div>'+
-    '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">'+
-    '<table style="width:100%;border-collapse:collapse;font-size:14px;table-layout:fixed">'+colgroupHtml2+
-    '<thead><tr><th style="background:#f7f8fa;padding:8px 14px;text-align:left;border-bottom:2px solid #e2e5ea;border-right:2px solid #e2e5ea;font-size:12px;font-weight:800;color:#6b7280">被保險人/保單</th>'+yh+'</tr></thead>'+
-    '<tbody>'+gr+tot+'</tbody></table></div></div>';
+
+  var totalHtml =
+    '<div style="border-radius:16px;overflow:hidden;box-shadow:0 4px 14px -4px rgba(0,0,0,.12)">'+
+      '<table style="width:100%;border-collapse:collapse;table-layout:fixed;background:#4c46b8">'+colgroupHtml2+
+      '<tbody><tr style="color:#fff;font-weight:800">'+
+        '<td style="padding:10px 6px 10px 14px;font-size:15px">合計現金流</td>'+
+        years.map(function(y7){var a=totalFlows[y7]||0;return a?'<td style="text-align:center;font-size:16px;font-variant-numeric:tabular-nums">'+fmtAmtEx(a)+'</td>':'<td style="text-align:center;opacity:.6">—</td>';}).join("")+
+      '</tr></tbody></table>'+
+    '</div>';
+
+  return headerBandHtml + groupCards + totalHtml;
 }
 
 
