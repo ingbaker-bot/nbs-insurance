@@ -1794,9 +1794,14 @@ function buildCoverBlockHtml(){
   var BLUE="#0089d1", GREEN="#01b5ae", DEEP="#043b4d";
   var z = getZodiacSign(person.profile && person.profile.birthDate);
   var lp = getLifePathNumber(person.profile && person.profile.birthDate);
-  var agentName    = localStorage.getItem("nbs_agent_watermark_name") || "—";
+  var agentName = localStorage.getItem("nbs_agent_watermark_name");
+  if (agentName === null || agentName === "") {
+    agentName = (typeof currentUser !== "undefined" && currentUser && currentUser.name) || "—";
+  }
   var agentCompany = localStorage.getItem("nbs_agent_watermark_company") || "—";
   var agentContact = localStorage.getItem("nbs_agent_watermark_contact") || "—";
+  var today = new Date();
+  var printDateStr = (today.getFullYear()-1911)+"年"+(today.getMonth()+1)+"月"+today.getDate()+"日";
 
   var starsSvg = '<svg style="position:absolute;left:1180px;top:0px;width:1220px;height:1400px" viewBox="0 0 1220 1400" xmlns="http://www.w3.org/2000/svg">'+
     '<defs>'+
@@ -1848,7 +1853,11 @@ function buildCoverBlockHtml(){
       coverFooterItemHtml('🏢','保險公司',agentCompany)+
       coverFooterItemHtml('📞','聯絡電話',agentContact)+
     '</div>'+
-    '<div style="text-align:right"><div style="font-size:20px;color:#64748b;font-weight:600">整理日期</div><div style="font-size:32px;color:#1e293b;font-weight:800;margin-top:4px">'+(pDate||'—')+'</div></div>'+
+    '<div style="text-align:right">'+
+      '<div style="font-size:20px;color:#64748b;font-weight:600">整理日期</div>'+
+      '<div style="font-size:32px;color:#1e293b;font-weight:800;margin-top:4px">'+(pDate||'—')+'</div>'+
+      '<div style="font-size:18px;color:#94a3b8;font-weight:600;margin-top:10px">列印日期 '+printDateStr+'</div>'+
+    '</div>'+
   '</div>';
 
   return '<div style="width:2400px;height:1697px;position:relative;overflow:hidden;background:linear-gradient(160deg,#fbfcfe 0%,#f6f7fb 55%,#f1f3f9 100%);color:#1e293b">'+
