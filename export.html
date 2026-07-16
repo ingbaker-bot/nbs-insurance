@@ -176,8 +176,9 @@
 // ── 設定 ─────────────────────────────────────────────────
 var   GAS="https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec";
 
-// ▼ 四大匯出區塊（重新拆分）
+// ▼ 五大匯出區塊（新增封面頁，固定排在最前面）
 var   BLOCKS=[
+  {key:"cover",            label:"封面頁",             icon:"🖼️",desc:"保戶姓名、業務員資訊、星座與生命靈數"},
   {key:"premium_detail",   label:"保險繳費明細一覽表", icon:"📅",desc:"年繳/月均統計、月曆、保單與受益人整合表"},
   {key:"summary",          label:"保單彙總一覽表",     icon:"📊",desc:"保障覆蓋率、家庭責任、醫療階段、就醫情況"},
   {key:"policy_detail",    label:"保單明細一覽表",     icon:"📋",desc:"各項保障加總明細"},
@@ -192,7 +193,7 @@ var   FMTS=[
 var   CC={"壽險保障":"#3730a3","醫療保障":"#0284c7","意外險":"#b45309","重大疾病險":"#3730a3","重大傷病險":"#3730a3","特定傷病險":"#3730a3","儲蓄險":"#4338ca","年金險":"#4338ca","投資型保險":"#4338ca","癌症醫療":"#be123c","失能長照":"#0f766e","定額手術":"#0369a1"};
 
 // ── 狀態 ─────────────────────────────────────────────────
-var sel={premium_detail:false,summary:false,policy_detail:false,savings_timeline:false};
+var sel={cover:false,premium_detail:false,summary:false,policy_detail:false,savings_timeline:false};
 var fmt="png_single";
 var fmtOpen="png"; // 手風琴目前展開的區塊，預設展開 PNG
 var person={},policies=[],coverage={},savings=[];
@@ -356,7 +357,7 @@ function doShowPreview(){
     }
     var div=document.createElement("div");
     div.className="pv-blk";
-    div.innerHTML=getBlockTitleHtml(b)+'<div>'+renderBlock(b.key)+'</div>';
+    div.innerHTML=(b.key==="cover"?'':getBlockTitleHtml(b))+'<div>'+renderBlock(b.key)+'</div>';
     c.appendChild(div);
   });
   goPage("P_PREV");
@@ -1012,6 +1013,7 @@ function openAgentInfoModal() {
   var savedName = localStorage.getItem("nbs_agent_watermark_name");
   if (savedName === null) savedName = (typeof currentUser !== "undefined" && currentUser && currentUser.name) || "";
   document.getElementById("agent-modal-name").value = savedName;
+  document.getElementById("agent-modal-company").value = localStorage.getItem("nbs_agent_watermark_company") || "";
   document.getElementById("agent-modal-contact").value = localStorage.getItem("nbs_agent_watermark_contact") || "";
   document.getElementById("agent-modal-overlay").classList.add("active");
 }
@@ -1020,8 +1022,10 @@ function closeAgentInfoModal() {
 }
 function saveAgentInfo() {
   var n = document.getElementById("agent-modal-name").value.trim();
+  var co = document.getElementById("agent-modal-company").value.trim();
   var c = document.getElementById("agent-modal-contact").value.trim();
   localStorage.setItem("nbs_agent_watermark_name", n);
+  localStorage.setItem("nbs_agent_watermark_company", co);
   localStorage.setItem("nbs_agent_watermark_contact", c);
   closeAgentInfoModal();
 }
@@ -1731,9 +1735,127 @@ window.addEventListener("nbs_family_loaded", function(e) {
 });
 NBS_NAV.init({ page: "export" });
 
+// ── 封面頁：星座 / 生命靈數 計算 ────────────────────────────
+// 依生日算星座（西元 yyyy-mm-dd 皆可）
+function getZodiacSign(birthDateStr){
+  if(!birthDateStr) return null;
+  var d = new Date(birthDateStr);
+  var m = d.getMonth()+1, day = d.getDate();
+  var table = [
+    [1,20,'摩羯座','♑'],[2,19,'水瓶座','♒'],[3,21,'雙魚座','♓'],[4,20,'牡羊座','♈'],
+    [5,21,'金牛座','♉'],[6,21,'雙子座','♊'],[7,23,'巨蟹座','♋'],[8,23,'獅子座','♌'],
+    [9,23,'處女座','♍'],[10,23,'天秤座','♎'],[11,22,'天蠍座','♏'],[12,22,'射手座','♐'],[12,31,'摩羯座','♑']
+  ];
+  for (var i=0;i<table.length;i++){
+    if (m===table[i][0] && day<=table[i][1]) return {name:table[i][2], emoji:table[i][3]};
+  }
+  return {name:'摩羯座', emoji:'♑'};
+}
+
+// 生命靈數：出生年月日全部數字相加，反覆縮到個位數（保留 11/22/33 大師數）
+function getLifePathNumber(birthDateStr){
+  if(!birthDateStr) return null;
+  var digits = birthDateStr.replace(/[^0-9]/g,'').split('').map(Number);
+  var sum = digits.reduce(function(a,b){return a+b;},0);
+  function reduce(n){
+    if (n===11||n===22||n===33) return n;
+    if (n<10) return n;
+    var s = String(n).split('').reduce(function(a,b){return a+Number(b);},0);
+    return reduce(s);
+  }
+  return reduce(sum);
+}
+
+// 封面頁單一資訊項（業務員／保險公司／電話 共用的小方塊）
+function coverFooterItemHtml(icon, label, value) {
+  return '<div style="display:flex;align-items:flex-start;gap:16px">'+
+    '<div style="width:56px;height:56px;border-radius:16px;background:#e3f6f4;display:flex;align-items:center;justify-content:center;font-size:30px;flex-shrink:0">'+icon+'</div>'+
+    '<div><div style="font-size:20px;color:#64748b;font-weight:600">'+label+'</div><div style="font-size:32px;color:#1e293b;font-weight:800;margin-top:4px">'+value+'</div></div>'+
+  '</div>';
+}
+
+// 封面頁：延續內頁靛紫→富邦藍綠珍珠光澤語言，主要保戶姓名最大最顯眼，
+// 星座/生命靈數放在右上角獨立資訊牌，底部放業務員/保險公司/電話/整理日期
+function buildCoverBlockHtml(){
+  var BLUE="#0089d1", GREEN="#01b5ae", DEEP="#043b4d";
+  var z = getZodiacSign(person.profile && person.profile.birthDate);
+  var lp = getLifePathNumber(person.profile && person.profile.birthDate);
+  var agentName    = localStorage.getItem("nbs_agent_watermark_name") || "—";
+  var agentCompany = localStorage.getItem("nbs_agent_watermark_company") || "—";
+  var agentContact = localStorage.getItem("nbs_agent_watermark_contact") || "—";
+
+  var starsSvg = '<svg style="position:absolute;left:1180px;top:0px;width:1220px;height:1400px" viewBox="0 0 1220 1400" xmlns="http://www.w3.org/2000/svg">'+
+    '<defs>'+
+      '<radialGradient id="cvGlowBlue" cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#8fd3e8"/><stop offset="55%" stop-color="'+BLUE+'"/><stop offset="100%" stop-color="'+DEEP+'" stop-opacity="0"/></radialGradient>'+
+      '<radialGradient id="cvGlowGreen" cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#9cebdd"/><stop offset="55%" stop-color="'+GREEN+'" stop-opacity=".8"/><stop offset="100%" stop-color="#00786f" stop-opacity="0"/></radialGradient>'+
+      '<linearGradient id="cvLineGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="'+BLUE+'"/><stop offset="100%" stop-color="'+GREEN+'"/></linearGradient>'+
+      '<filter id="cvBlurBig" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="70"/></filter>'+
+      '<filter id="cvBlurStar" x="-160%" y="-160%" width="420%" height="420%"><feGaussianBlur stdDeviation="6"/></filter>'+
+    '</defs>'+
+    '<ellipse cx="680" cy="420" rx="360" ry="300" fill="url(#cvGlowBlue)" opacity=".22" filter="url(#cvBlurBig)"/>'+
+    '<ellipse cx="980" cy="820" rx="320" ry="280" fill="url(#cvGlowGreen)" opacity=".18" filter="url(#cvBlurBig)"/>'+
+    '<ellipse cx="300" cy="120" rx="260" ry="200" fill="url(#cvGlowBlue)" opacity=".10" filter="url(#cvBlurBig)"/>'+
+    '<g fill="'+BLUE+'" opacity=".35"><circle cx="120" cy="200" r="2.2"/><circle cx="220" cy="640" r="1.6"/><circle cx="1080" cy="240" r="2"/><circle cx="1150" cy="500" r="1.6"/><circle cx="880" cy="120" r="2"/><circle cx="60" cy="900" r="1.8"/><circle cx="1050" cy="1100" r="2"/><circle cx="400" cy="980" r="1.6"/><circle cx="760" cy="1220" r="1.8"/><circle cx="180" cy="1080" r="2"/><circle cx="960" cy="60" r="1.6"/></g>'+
+    '<g stroke="url(#cvLineGrad)" stroke-width="2.5" opacity=".35" fill="none" stroke-linecap="round"><path d="M 60 480 Q 220 380 370 300"/><path d="M 370 300 Q 460 230 560 190"/><path d="M 370 300 Q 340 420 440 470"/></g>'+
+    '<g fill="url(#cvLineGrad)" opacity=".5"><circle cx="60" cy="480" r="3.5"/><circle cx="370" cy="300" r="4"/><circle cx="560" cy="190" r="3"/><circle cx="440" cy="470" r="3"/></g>'+
+    '<g stroke="url(#cvLineGrad)" stroke-width="3" opacity=".55" fill="none" stroke-linecap="round">'+
+      '<path d="M 660 500 Q 700 470 740 440"/><path d="M 740 440 Q 730 500 700 550"/><path d="M 700 550 Q 675 520 660 500"/>'+
+      '<path d="M 660 500 Q 590 440 540 400"/><path d="M 660 500 Q 590 560 520 610"/>'+
+      '<path d="M 740 440 Q 800 370 850 330"/><path d="M 740 440 Q 830 460 900 480"/>'+
+      '<path d="M 700 550 Q 780 610 850 660"/><path d="M 700 550 Q 660 640 640 710"/>'+
+      '<path d="M 900 480 Q 970 560 1010 640"/><path d="M 850 660 Q 940 700 1010 640"/>'+
+      '<path d="M 1010 640 Q 1060 750 1090 860"/><path d="M 1090 860 Q 1130 970 1160 1080"/>'+
+    '</g>'+
+    '<g filter="url(#cvBlurStar)"><circle cx="660" cy="500" r="17" fill="url(#cvGlowBlue)"/><circle cx="740" cy="440" r="12" fill="url(#cvGlowBlue)"/><circle cx="700" cy="550" r="10" fill="url(#cvGlowGreen)"/></g>'+
+    '<circle cx="660" cy="500" r="7" fill="#eef2ff"/><circle cx="740" cy="440" r="5" fill="#eef2ff"/><circle cx="700" cy="550" r="4.5" fill="#f0faff"/>'+
+    '<g filter="url(#cvBlurStar)"><circle cx="540" cy="400" r="7" fill="url(#cvGlowBlue)"/><circle cx="520" cy="610" r="7" fill="url(#cvGlowGreen)"/><circle cx="850" cy="330" r="8" fill="url(#cvGlowGreen)"/><circle cx="900" cy="480" r="7" fill="url(#cvGlowBlue)"/><circle cx="850" cy="660" r="7" fill="url(#cvGlowGreen)"/><circle cx="640" cy="710" r="6" fill="url(#cvGlowBlue)"/><circle cx="1010" cy="640" r="8" fill="url(#cvGlowGreen)"/></g>'+
+    '<g fill="#f5f7ff"><circle cx="540" cy="400" r="3"/><circle cx="520" cy="610" r="3"/><circle cx="850" cy="330" r="3.2"/><circle cx="900" cy="480" r="3"/><circle cx="850" cy="660" r="3"/><circle cx="640" cy="710" r="2.6"/><circle cx="1010" cy="640" r="3.2"/></g>'+
+    '<g fill="url(#cvLineGrad)" opacity=".45"><circle cx="1090" cy="860" r="4.5"/><circle cx="1160" cy="1080" r="3"/><circle cx="1200" cy="1250" r="2"/></g>'+
+    '<path d="M 1160 1080 Q 1190 1170 1200 1250" stroke="url(#cvLineGrad)" stroke-width="2" opacity=".25" fill="none" stroke-linecap="round"/>'+
+  '</svg>';
+
+  var infoCard = '<div style="position:absolute;right:150px;top:150px;width:520px;background:rgba(255,255,255,.90);border-radius:32px;border:1px solid rgba(255,255,255,.7);box-shadow:0 24px 48px -20px rgba(4,59,77,.28);overflow:hidden">'+
+    '<div style="height:10px;background:'+pearlGradientEx(BLUE)+'"></div>'+
+    '<div style="padding:38px 42px 30px">'+
+      '<div style="display:flex;align-items:center;gap:24px">'+
+        '<div style="width:88px;height:88px;border-radius:24px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:52px;font-weight:800;color:#fff;background:'+pearlGradientEx(GREEN)+'">'+(z?z.emoji:'✨')+'</div>'+
+        '<div><div style="font-size:34px;font-weight:800;color:#1e293b">'+(z?z.name:'—')+'</div><div style="font-size:21px;font-weight:600;color:#64748b;margin-top:6px">穩定務實．溫柔守護</div></div>'+
+      '</div>'+
+      '<div style="display:flex;align-items:center;gap:24px;margin-top:26px;padding-top:26px;border-top:1px solid rgba(0,137,209,.12)">'+
+        '<div style="width:88px;height:88px;border-radius:24px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:52px;font-weight:800;color:#fff;background:'+pearlGradientEx(BLUE)+'">'+(lp!==null?lp:'—')+'</div>'+
+        '<div><div style="font-size:34px;font-weight:800;color:#1e293b">生命靈數 '+(lp!==null?lp:'—')+'</div><div style="font-size:21px;font-weight:600;color:#64748b;margin-top:6px">溫暖表達．重視關係</div></div>'+
+      '</div>'+
+    '</div>'+
+  '</div>';
+
+  var footer = '<div style="position:absolute;left:0;bottom:0;width:100%;height:230px;border-top:2px solid rgba(0,137,209,.18);display:flex;align-items:center;justify-content:space-between;padding:0 150px">'+
+    '<div style="display:flex;gap:80px">'+
+      coverFooterItemHtml('👤','業務員',agentName)+
+      coverFooterItemHtml('🏢','保險公司',agentCompany)+
+      coverFooterItemHtml('📞','聯絡電話',agentContact)+
+    '</div>'+
+    '<div style="text-align:right"><div style="font-size:20px;color:#64748b;font-weight:600">整理日期</div><div style="font-size:32px;color:#1e293b;font-weight:800;margin-top:4px">'+(pDate||'—')+'</div></div>'+
+  '</div>';
+
+  return '<div style="width:2400px;height:1697px;position:relative;overflow:hidden;background:linear-gradient(160deg,#fbfcfe 0%,#f6f7fb 55%,#f1f3f9 100%);color:#1e293b">'+
+    starsSvg+
+    '<div style="position:absolute;left:150px;top:260px;font-size:42px;font-weight:600;color:#64748b;letter-spacing:.02em">這份報告，是為</div>'+
+    '<div style="position:absolute;left:146px;top:308px;font-size:180px;font-weight:900;line-height:1;letter-spacing:.01em;background:linear-gradient(135deg,'+DEEP+' 0%,'+BLUE+' 60%,#079fb8 100%);-webkit-background-clip:text;background-clip:text;color:transparent">'+pName+'</div>'+
+    '<div style="position:absolute;left:150px;top:510px;font-size:56px;font-weight:800;color:#03648a;letter-spacing:.04em">整理的專屬保障健診</div>'+
+    '<div style="position:absolute;left:150px;top:610px;font-size:34px;font-weight:500;color:#64748b;max-width:920px;line-height:1.6">把每一份牽掛，安放進看得懂、說得清的保障地圖裡。</div>'+
+    infoCard+
+    footer+
+  '</div>';
+}
+
 // ── 渲染各區塊 HTML ───────────────────────────────────────
 function renderBlock(key){
   var active=policies.filter(isPolicyActiveEx);
+
+  // ▼ 封面頁：獨立設計版面，不套用一般區塊的標題列
+  if(key==="cover"){
+    return buildCoverBlockHtml();
+  }
 
   // ▼ ①保險繳費明細一覽表：年繳/月均統計 + 月曆 + 整合表
   if(key==="premium_detail"){
@@ -1931,7 +2053,7 @@ async function doExportPNG(blks,div){
   var disclaimer='<div style="padding:8px 14px;font-size:32px;color:#999;line-height:1.6;text-align:left">⚠️ 本報告彙總之資訊為檢視與討論保障內容的參考藍圖；為守護您的權益，實際理賠給付項目與條件，仍以各家保險公司之最新資料及正式保險契約條款為準。</div>';
   if(fmt==="png_single"){
     div.style.width="2400px";
-    div.innerHTML=blks.map(function(b){return'<div style="border-bottom:1px solid #f0f0f0">'+getBlockTitleHtml(b)+renderBlock(b.key)+'</div>';}).join("")+disclaimer+wm;
+    div.innerHTML=blks.map(function(b){return'<div style="border-bottom:1px solid #f0f0f0">'+(b.key==="cover"?'':getBlockTitleHtml(b))+renderBlock(b.key)+'</div>';}).join("")+disclaimer+wm;
     setP(30);await sleep(400);
     var singleW=Math.max(div.scrollWidth,div.offsetWidth,800);
     div.style.width=singleW+"px";
@@ -1947,7 +2069,7 @@ async function doExportPNG(blks,div){
   }else{
     for(var i=0;i<blks.length;i++){
       div.style.width="2400px";
-      div.innerHTML=getBlockTitleHtml(blks[i])+renderBlock(blks[i].key)+disclaimer+wm;
+      div.innerHTML=(blks[i].key==="cover"?'':getBlockTitleHtml(blks[i]))+renderBlock(blks[i].key)+disclaimer+wm;
       setP(Math.round(i/blks.length*90));await sleep(300);
       var actualW=Math.max(div.scrollWidth,div.offsetWidth,800);
       div.style.width=actualW+"px";
@@ -2154,9 +2276,10 @@ async function doExportPDF(blks,div){
       }
     } else {
       // ── 其餘區塊：維持單頁等比例縮放 ──────────────────
-      var PAGE_LABEL_PREFIX = { summary:"彙總", policy_detail:"保障" };
-      var showDisclaimer = fmt==="pdf_pages" ? true : isLast;
-      var c = await captureHtml(getBlockTitleHtml(blks[i])+renderBlock(blks[i].key)+(showDisclaimer?disclaimer:"")+wm);
+      var PAGE_LABEL_PREFIX = { summary:"彙總", policy_detail:"保障", cover:"封面" };
+      var isCover = blks[i].key==="cover";
+      var showDisclaimer = isCover ? false : (fmt==="pdf_pages" ? true : isLast);
+      var c = await captureHtml((isCover?'':getBlockTitleHtml(blks[i]))+renderBlock(blks[i].key)+(showDisclaimer?disclaimer:"")+(isCover?'':wm));
       addNewPage(PAGE_LABEL_PREFIX[blks[i].key] || "報告");
       var d = canvasToMM(c, usableW, usableH);
       pdf.addImage(c.toDataURL("image/jpeg",0.88),"JPEG",margin,margin,d.iw,d.ih);
@@ -2308,6 +2431,10 @@ if (typeof NBS_NAV !== "undefined") {
     <div class="ex-modal-field">
       <label>姓名</label>
       <input class="ex-modal-input" id="agent-modal-name" placeholder="例如：王小明"/>
+    </div>
+    <div class="ex-modal-field">
+      <label>保險公司</label>
+      <input class="ex-modal-input" id="agent-modal-company" placeholder="例如：富邦人壽"/>
     </div>
     <div class="ex-modal-field">
       <label>聯絡方式 / LINE ID</label>
