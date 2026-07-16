@@ -1245,10 +1245,20 @@ function buildPremiumDetailParts() {
       '<div style="font-size:30px;font-weight:800;margin-top:2px;color:#27500A;font-variant-numeric:tabular-nums">'+Math.round(totalTWD_pd/12).toLocaleString()+'<span style="font-size:20px;font-weight:700;margin-left:1px">元</span></div>'+
     '</div>',
   ];
+  // 建立「保單群組 → 主約生效日」對照表：附約如果自己的生效日欄位是空的，
+  // 應該跟著同一張保單的主約走，而不是被程式悄悄代入一個看不出來源、
+  // 跟這張保單完全無關的預設日期（之前是硬寫 2020-01-01）。
+  var groupMainStartDatePD = {};
+  active.forEach(function(p){
+    if(p.isMain===true && p.startDate){
+      groupMainStartDatePD[p.policyNo||p.id] = p.startDate;
+    }
+  });
   var monthCells=Array.from({length:12},function(_,mi){
     var t=0;
     active.forEach(function(p){
-      var sm=new Date(p.startDate||"2020-01-01").getMonth(),pr=p.premiumTWD||0;
+      var effDate = p.startDate || groupMainStartDatePD[p.policyNo||p.id] || "2020-01-01";
+      var sm=new Date(effDate).getMonth(),pr=p.premiumTWD||0;
       if(p.payMode==="月繳")t+=Math.round(pr/12);
       else if(p.payMode==="季繳"&&(mi-sm+12)%3===0)t+=Math.round(pr/4);
       else if(p.payMode==="半年繳"&&(mi-sm+12)%6===0)t+=Math.round(pr/2);
