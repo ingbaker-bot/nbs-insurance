@@ -1986,19 +1986,21 @@ function buildCoverBlockHtml(){
   var line3Left = NAME_BASE_LEFT + line3IndentChars * NAME_CHAR_PITCH;
 
   // 1. 先預設沒有大頭照（給空字串）
+// 1. 先預設沒有大頭照（給空字串）
 var agentPhoto = "";
 
-// 2. 判斷：如果 agentPhotoDataUrl 有值，且「不是」我們用來覆蓋的 1x1 透明圖
+// 2. 判斷：如果有照片，且不是我們用來覆蓋的 1x1 透明圖
 if (agentPhotoDataUrl && agentPhotoDataUrl !== EMPTY_TRANSPARENT_IMG) {
-    
-    // 3. 只有在有真實照片時，才產生這個帶有白色底圖與陰影的 <div> 區塊
-    // (請將下面單引號內的 HTML 替換成您系統中原本大頭照 <div> 的樣式)
+    // 只有在有真實照片時，才產生這個帶有白色底圖與陰影的 <div> 區塊
+    // (您可以依據原本的設計，微調這裡的 width, height, border-radius 等數值)
     agentPhoto = '<div style="position:absolute; left:190px; top:800px; width:400px; height:400px; background:#fff; border-radius:30px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,0.1);"><img src="' + agentPhotoDataUrl + '" style="width:100%; height:100%; object-fit:cover;"></div>';
 }
 
-// 組合最終 HTML 時，若沒有照片，agentPhoto 就會是空的，完全不會產生白色區塊
-var html = ... +
-           '<div style="position:absolute;left:190px;top:650px;font-size:34px;font-weight:500;color:#64748b;max-width:920px;line-height:1.6">把每一份牽掛，安放進看得懂、說得清的保障地圖裡。</div>' +
+// 3. 組合最終的封面 HTML (已拿掉導致錯誤的 ...)
+var html = '<div style="position:absolute;left:190px;top:260px;font-size:42px;font-weight:600;color:#64748b;letter-spacing:.02em;">這份報告，是為</div>'+
+           '<div style="position:absolute;left:190px;top:340px;font-size:180px;font-weight:700;line-height:1;letter-spacing:.15em;color:'+DEEP+'">'+pName+'</div>'+
+           '<div style="position:absolute;left:'+line3Left+'px;top:550px;font-size:56px;font-weight:800;color:#03648a;letter-spacing:.04em">整理的專屬保障健診</div>'+
+           '<div style="position:absolute;left:190px;top:650px;font-size:34px;font-weight:500;color:#64748b;max-width:920px;line-height:1.6">把每一份牽掛，安放進看得懂、說得清的保障地圖裡。</div>'+
            agentPhoto + 
            footer;
 
