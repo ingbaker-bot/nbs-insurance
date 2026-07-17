@@ -1877,10 +1877,13 @@ function buildCoverBlockHtml(){
   // 資訊牌的漸層色帶就是靠這個方式正常顯示的），取代原本 SVG 濾鏡模糊
   // （html2canvas 幾乎不支援 feGaussianBlur，之前匯出圖片會整片消失
   // 就是這個原因）。
-  var ambientWash =
-    '<div style="position:absolute;left:1050px;top:-260px;width:1500px;height:1300px;background:radial-gradient(circle at 42% 38%,rgba(0,137,209,.40) 0%,rgba(0,137,209,0) 66%)"></div>'+
-    '<div style="position:absolute;left:1350px;top:420px;width:1300px;height:1300px;background:radial-gradient(circle at 55% 55%,rgba(1,181,174,.34) 0%,rgba(1,181,174,0) 66%)"></div>'+
-    '<div style="position:absolute;left:-300px;top:-320px;width:900px;height:900px;background:radial-gradient(circle at 50% 50%,rgba(4,59,77,.10) 0%,rgba(4,59,77,0) 70%)"></div>';
+  // 背景氛圍光暈：全部合併寫進「同一個」外層容器的 background 裡
+  // （見下方 return 那行），不要用好幾個各自獨立的矩形 div 疊圖——
+  // 分開的矩形色塊，邊界互相切齊時會產生一條可見的接縫（像被切開
+  // 一樣），合併成同一份 background 就不會有這個邊界問題，而且順
+  // 便把資訊牌那個角落也一起罩進暈染範圍，中段的空白也補一層更淡
+  // 的暈染，資訊牌才不會看起來像浮空的。
+  var ambientWash = "";
 
   // 左側色帶：藍→綠漸層的滿版直條，取代原本拿掉的頂部標籤，
   // 讓封面一眼就有明確的科技識別色，不會整頁太蒼白
@@ -1978,7 +1981,12 @@ function buildCoverBlockHtml(){
     ? '<img src="'+agentPhotoDataUrl+'" style="position:absolute;left:190px;top:720px;width:720px;height:720px;border-radius:40px;object-fit:contain;background:#ffffff;border:1px solid rgba(255,255,255,.7);box-shadow:0 24px 48px -20px rgba(4,59,77,.28)"/>'
     : '';
 
-  return '<div style="width:2400px;height:1697px;position:relative;overflow:hidden;background:linear-gradient(160deg,#eef5fa 0%,#eef7f5 55%,#eaf3f6 100%);color:#1e293b">'+
+  return '<div style="width:2400px;height:1697px;position:relative;overflow:hidden;background:'+
+    'radial-gradient(circle at 80% 12%, rgba(0,137,209,.40) 0%, rgba(0,137,209,0) 42%),'+
+    'radial-gradient(circle at 92% 45%, rgba(1,181,174,.34) 0%, rgba(1,181,174,0) 40%),'+
+    'radial-gradient(circle at 63% 58%, rgba(0,137,209,.20) 0%, rgba(0,137,209,0) 38%),'+
+    'radial-gradient(circle at 2% -4%, rgba(4,59,77,.08) 0%, rgba(4,59,77,0) 26%),'+
+    'linear-gradient(160deg,#eef5fa 0%,#eef7f5 55%,#eaf3f6 100%);color:#1e293b">'+
     ambientWash+
     sideSpine+
     starsSvg+
