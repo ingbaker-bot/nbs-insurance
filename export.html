@@ -2007,7 +2007,7 @@ var agentPhoto = "";
 if (agentPhotoDataUrl && agentPhotoDataUrl !== EMPTY_TRANSPARENT_IMG) {
     // 只有在有真實照片時，才產生這個帶有白色底圖與陰影的 <div> 區塊
     // (您可以依據原本的設計，微調這裡的 width, height, border-radius 等數值)
-    agentPhoto = '<div style="position:absolute; left:190px; top:800px; width:400px; height:400px; background:#fff; border-radius:30px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,0.1);"><img src="' + agentPhotoDataUrl + '" style="width:100%; height:100%; object-fit:cover;"></div>';
+    agentPhoto = '<div style="position:absolute; left:190px; top:720px; width:720px; height:720px; background:#fff; border-radius:40px; overflow:hidden; box-shadow:0 24px 48px -20px rgba(4,59,77,.35);"><img src="' + agentPhotoDataUrl + '" style="width:100%; height:100%; object-fit:contain;"></div>';
 }
 
 // 3. 組合最終的封面 HTML (已拿掉導致錯誤的 ...)
