@@ -198,6 +198,7 @@ var fmt="png_single";
 var fmtOpen="png"; // 手風琴目前展開的區塊，預設展開 PNG
 var person={},policies=[],coverage={},savings=[];
 var pName="",pDate="";
+var agentPhotoDataUrl=null; // 業務員大頭照（封面用），頁面載入時預先抓好，避免組封面時要等非同步
 
 // ── 按鈕綁定 ─────────────────────────────────────────────
 function _goFamily() {
@@ -1009,17 +1010,62 @@ function saveNickname() {
   closeNicknameModal();
 }
 
+var _pendingAgentPhotoDataUrl = null; // 使用者這次在彈窗裡新選的照片（還沒按儲存前，先暫存在這）
+
 function openAgentInfoModal() {
   var savedName = localStorage.getItem("nbs_agent_watermark_name");
   if (savedName === null) savedName = (typeof currentUser !== "undefined" && currentUser && currentUser.name) || "";
   document.getElementById("agent-modal-name").value = savedName;
   document.getElementById("agent-modal-company").value = localStorage.getItem("nbs_agent_watermark_company") || "";
   document.getElementById("agent-modal-contact").value = localStorage.getItem("nbs_agent_watermark_contact") || "";
+  _pendingAgentPhotoDataUrl = null;
+  document.getElementById("agent-modal-photo-status").textContent = "";
+  // 用頁面載入時預抓好的照片先顯示；如果那次還沒抓完/沒有照片，就再問一次
+  if (agentPhotoDataUrl) {
+    var pv = document.getElementById("agent-modal-photo-preview");
+    pv.src = agentPhotoDataUrl; pv.style.display = "block";
+  } else {
+    gas("getPhoto", {}).then(function(r){
+      if (r && r.status === "ok" && r.dataUrl) {
+        agentPhotoDataUrl = r.dataUrl;
+        var pv = document.getElementById("agent-modal-photo-preview");
+        pv.src = r.dataUrl; pv.style.display = "block";
+      }
+    }).catch(function(){});
+  }
   document.getElementById("agent-modal-overlay").classList.add("active");
 }
 function closeAgentInfoModal() {
   document.getElementById("agent-modal-overlay").classList.remove("active");
 }
+
+// 選好照片後：先在瀏覽器端縮圖／壓縮（最長邊 800px），
+// 存進 _pendingAgentPhotoDataUrl，按「儲存」才會真的上傳，
+// 避免使用者選了照片又按取消，卻已經傳到 Drive 去
+function onAgentPhotoSelected(input) {
+  var file = input.files && input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = new Image();
+    img.onload = function() {
+      var maxSide = 800;
+      var scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+      var canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+      var dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+      _pendingAgentPhotoDataUrl = dataUrl;
+      var pv = document.getElementById("agent-modal-photo-preview");
+      pv.src = dataUrl; pv.style.display = "block";
+      document.getElementById("agent-modal-photo-status").textContent = "已選擇新照片，按「儲存」才會真正上傳並替換封面照片";
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
 function saveAgentInfo() {
   var n = document.getElementById("agent-modal-name").value.trim();
   var co = document.getElementById("agent-modal-company").value.trim();
@@ -1027,7 +1073,24 @@ function saveAgentInfo() {
   localStorage.setItem("nbs_agent_watermark_name", n);
   localStorage.setItem("nbs_agent_watermark_company", co);
   localStorage.setItem("nbs_agent_watermark_contact", c);
-  closeAgentInfoModal();
+
+  if (_pendingAgentPhotoDataUrl) {
+    document.getElementById("agent-modal-photo-status").textContent = "上傳中…";
+    gas("savePhoto", { dataUrl: _pendingAgentPhotoDataUrl }).then(function(r){
+      if (r && r.status === "ok") {
+        agentPhotoDataUrl = _pendingAgentPhotoDataUrl; // 這次匯出馬上就能用到新照片
+        _pendingAgentPhotoDataUrl = null;
+      } else {
+        alert("照片上傳失敗：" + (r && r.message || "未知錯誤"));
+      }
+      closeAgentInfoModal();
+    }).catch(function(err){
+      alert("照片上傳失敗：" + (err.message || err));
+      closeAgentInfoModal();
+    });
+  } else {
+    closeAgentInfoModal();
+  }
 }
 
 // ── 區塊標題（預覽 + 實際匯出都用這一份，確保匯出的圖片/PDF
@@ -1860,12 +1923,19 @@ function buildCoverBlockHtml(){
     '</div>'+
   '</div>';
 
+  // 業務員大頭照：放在左下角，保戶姓名區塊跟底部業務員資訊列中間的留白處。
+  // 沒有照片（還沒上傳過）就完全不渲染，不留破圖示。
+  var agentPhoto = agentPhotoDataUrl
+    ? '<img src="'+agentPhotoDataUrl+'" style="position:absolute;left:150px;top:960px;width:240px;height:240px;border-radius:32px;object-fit:cover;border:1px solid rgba(255,255,255,.7);box-shadow:0 24px 48px -20px rgba(4,59,77,.28)"/>'
+    : '';
+
   return '<div style="width:2400px;height:1697px;position:relative;overflow:hidden;background:linear-gradient(160deg,#fbfcfe 0%,#f6f7fb 55%,#f1f3f9 100%);color:#1e293b">'+
     starsSvg+
     '<div style="position:absolute;left:150px;top:260px;font-size:42px;font-weight:600;color:#64748b;letter-spacing:.02em">這份報告，是為</div>'+
     '<div style="position:absolute;left:146px;top:308px;font-size:180px;font-weight:900;line-height:1;letter-spacing:.01em;background:linear-gradient(135deg,'+DEEP+' 0%,'+BLUE+' 60%,#079fb8 100%);-webkit-background-clip:text;background-clip:text;color:transparent">'+pName+'</div>'+
     '<div style="position:absolute;left:150px;top:510px;font-size:56px;font-weight:800;color:#03648a;letter-spacing:.04em">整理的專屬保障健診</div>'+
     '<div style="position:absolute;left:150px;top:610px;font-size:34px;font-weight:500;color:#64748b;max-width:920px;line-height:1.6">把每一份牽掛，安放進看得懂、說得清的保障地圖裡。</div>'+
+    agentPhoto+
     infoCard+
     footer+
   '</div>';
@@ -2326,7 +2396,7 @@ function showDone(blks){
 
 // ── GAS 呼叫 ─────────────────────────────────────────────
 function gas(action,params){
-  if(action==="saveFile"){
+  if(action==="saveFile"||action==="savePhoto"){
     return fetch(GAS,{
       method:"POST",
       headers:{"Content-Type":"text/plain"},
@@ -2349,6 +2419,11 @@ window.addEventListener("nbs_nav_ready", async function(e) {
   familyData        = e.detail.familyData;
   currentPersonId   = e.detail.currentPersonId;
   familyFileName    = e.detail.familyFileName;
+
+  // 預先抓一次業務員大頭照（封面要用），失敗或沒有照片都不影響其他流程
+  gas("getPhoto", {}).then(function(r){
+    if (r && r.status === "ok" && r.dataUrl) agentPhotoDataUrl = r.dataUrl;
+  }).catch(function(){ /* 沒有照片或抓取失敗，封面就不放照片，不影響其他功能 */ });
 
   // 從 URL ?from= 參數預選對應區塊
   var fromPage = new URLSearchParams(window.location.search).get("from") || "";
@@ -2462,6 +2537,14 @@ if (typeof NBS_NAV !== "undefined") {
     <div class="ex-modal-field">
       <label>聯絡方式 / LINE ID</label>
       <input class="ex-modal-input" id="agent-modal-contact" placeholder="例如：0912-345-678 或 LINE ID"/>
+    </div>
+    <div class="ex-modal-field">
+      <label>大頭照（顯示在封面上）</label>
+      <div style="display:flex;align-items:center;gap:14px">
+        <img id="agent-modal-photo-preview" style="display:none;width:64px;height:64px;border-radius:14px;object-fit:cover;border:1px solid #e2e8f0"/>
+        <input type="file" accept="image/*" id="agent-modal-photo-input" onchange="onAgentPhotoSelected(this)"/>
+      </div>
+      <div id="agent-modal-photo-status" style="font-size:12px;color:#94a3b8;margin-top:6px"></div>
     </div>
     <div class="ex-modal-btns">
       <button class="ex-modal-btn cancel" onclick="closeAgentInfoModal()">取消</button>
