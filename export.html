@@ -1082,37 +1082,34 @@ function saveAgentInfo() {
   localStorage.setItem("nbs_agent_watermark_company", co);
   localStorage.setItem("nbs_agent_watermark_contact", c);
 
-  // === 💡 關鍵快取修正區：徹底移除照片 ===
-  if (_pendingAgentPhotoDataUrl === "REMOVE") {
-    document.getElementById("agent-modal-photo-status").textContent = "正在雲端及快取中移除照片…";
+  // 💡 【核心修復機制】：直接抓取畫面上預覽圖片的 style 狀態與 src
+  var pv = document.getElementById("agent-modal-photo-preview");
+  var isPhotoHidden = (!pv || pv.style.display === "none" || pv.src === "" || pv.src === window.location.href);
+
+  // 狀況 A：不論使用者之前有沒有按按鈕，只要目前畫面上「沒有顯示預覽圖」，就代表要徹底移除雲端照片！
+  if (_pendingAgentPhotoDataUrl === "REMOVE" || isPhotoHidden) {
+    document.getElementById("agent-modal-photo-status").textContent = "正在同步清除雲端照片…";
     
-    // 1. 清空目前的本地全域變數
+    // 徹底斬草除根，清空本地記憶體變數
     agentPhotoDataUrl = null; 
     _pendingAgentPhotoDataUrl = null;
 
-    // 2. 【核心修復】清除登入快取中的照片資訊，防止重新登入後死灰復燃
+    // 清除 nbs_user 登入快取中的照片紀錄，防止死灰復燃
     try {
       var cachedUser = localStorage.getItem("nbs_user");
       if (cachedUser) {
         var userObj = JSON.parse(cachedUser);
-        
-        // 檢查並清空常見的快取照片欄位（依您系統實際欄位防呆清空）
         if (userObj.photo) userObj.photo = "";
         if (userObj.photoUrl) userObj.photoUrl = "";
         if (userObj.avatar) userObj.avatar = "";
         if (userObj.agentPhoto) userObj.agentPhoto = "";
-        
-        // 將擦乾淨的物件重新寫回快取
         localStorage.setItem("nbs_user", JSON.stringify(userObj));
       }
-    } catch (e) {
-      console.error("更新登入快取失敗:", e);
-    }
+    } catch (e) {}
 
-    // 3. 呼叫後端 GAS 刪除雲端硬碟的實體檔案
+    // 強制發送空字串給後端，命令雲端 Drive 實體刪除照片檔案
     gas("savePhoto", { email: currentUser.email, dataUrl: "" }).then(function(r){
       closeAgentInfoModal();
-      // 成功後強制刷新預覽畫面，確保乾淨
       if (typeof doShowPreview === "function" && (sel.cover || document.getElementById("P_PREV").classList.contains("act"))) {
         doShowPreview(); 
       }
@@ -1120,15 +1117,14 @@ function saveAgentInfo() {
       closeAgentInfoModal();
     });
   } 
-  // === 原本的上傳新照片邏輯 ===
-  else if (_pendingAgentPhotoDataUrl) {
+  // 狀況 B：使用者有選擇新照片，執行上傳
+  else if (_pendingAgentPhotoDataUrl && _pendingAgentPhotoDataUrl !== "REMOVE") {
     document.getElementById("agent-modal-photo-status").textContent = "上傳中…";
     gas("savePhoto", { email: currentUser.email, dataUrl: _pendingAgentPhotoDataUrl }).then(function(r){
       if (r && r.status === "ok") {
         agentPhotoDataUrl = _pendingAgentPhotoDataUrl;
         _pendingAgentPhotoDataUrl = null;
         
-        // 【防呆優化】上傳新照片時，同步更新登入快取，確保兩端一致
         try {
           var cachedUser = localStorage.getItem("nbs_user");
           if (cachedUser) {
@@ -1145,7 +1141,9 @@ function saveAgentInfo() {
       alert("照片上傳失敗：" + (err.message || err));
       closeAgentInfoModal();
     });
-  } else {
+  } 
+  // 狀況 C：原本有照片，且畫面預覽依然存在，使用者也沒刪除（單純改保險公司或聯絡方式）
+  else {
     closeAgentInfoModal();
   }
 }
