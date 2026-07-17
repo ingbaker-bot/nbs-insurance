@@ -2326,8 +2326,8 @@ async function doExportPNG(blks,div){
     div.style.width="2400px";
     setP(80);await sleep(100);
     var a=document.createElement("a");
-    a.download=pName+"_保單體檢_"+pDate+".png";
-    a.href=c.toDataURL("image/png");a.click();
+    a.download=pName+"_保單體檢_"+pDate+".jpg";
+    a.href=c.toDataURL("image/jpeg",0.92);a.click();
     setP(100);
   }else{
     for(var i=0;i<blks.length;i++){
@@ -2341,8 +2341,8 @@ async function doExportPNG(blks,div){
         width:actualW,windowWidth:actualW});
       div.style.width="2400px";
       var a2=document.createElement("a");
-      a2.download=pName+"_"+blks[i].label+"_"+pDate+".png";
-      a2.href=c2.toDataURL("image/png");a2.click();
+      a2.download=pName+"_"+blks[i].label+"_"+pDate+".jpg";
+      a2.href=c2.toDataURL("image/jpeg",0.92);a2.click();
       await sleep(400);
     }
     setP(100);
