@@ -1933,7 +1933,7 @@ function buildCoverBlockHtml(){
   // 業務員大頭照：放在左下角，保戶姓名區塊跟底部業務員資訊列中間的留白處。
   // 沒有照片（還沒上傳過）就完全不渲染，不留破圖示。
   var agentPhoto = agentPhotoDataUrl
-    ? '<img src="'+agentPhotoDataUrl+'" style="position:absolute;left:150px;top:960px;width:240px;height:240px;border-radius:32px;object-fit:cover;border:1px solid rgba(255,255,255,.7);box-shadow:0 24px 48px -20px rgba(4,59,77,.28)"/>'
+    ? '<img src="'+agentPhotoDataUrl+'" style="position:absolute;left:150px;top:960px;width:240px;height:240px;border-radius:32px;object-fit:contain;background:#ffffff;border:1px solid rgba(255,255,255,.7);box-shadow:0 24px 48px -20px rgba(4,59,77,.28)"/>'
     : '';
 
   return '<div style="width:2400px;height:1697px;position:relative;overflow:hidden;background:linear-gradient(160deg,#fbfcfe 0%,#f6f7fb 55%,#f1f3f9 100%);color:#1e293b">'+
