@@ -1886,30 +1886,55 @@ function buildCoverBlockHtml(){
   // 讓封面一眼就有明確的科技識別色，不會整頁太蒼白
   var sideSpine = '<div style="position:absolute;left:0;top:0;width:16px;height:100%;background:linear-gradient(180deg,'+BLUE+' 0%,'+GREEN+' 100%)"></div>';
 
-  var starsSvg = '<svg style="position:absolute;left:1180px;top:0px;width:1220px;height:1400px" viewBox="0 0 1220 1400" xmlns="http://www.w3.org/2000/svg">'+
-    '<defs>'+
-      '<radialGradient id="cvGlowBlue" cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#8fd3e8"/><stop offset="55%" stop-color="'+BLUE+'"/><stop offset="100%" stop-color="'+DEEP+'" stop-opacity="0"/></radialGradient>'+
-      '<radialGradient id="cvGlowGreen" cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#9cebdd"/><stop offset="55%" stop-color="'+GREEN+'" stop-opacity=".8"/><stop offset="100%" stop-color="#00786f" stop-opacity="0"/></radialGradient>'+
-      '<linearGradient id="cvLineGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="'+BLUE+'"/><stop offset="100%" stop-color="'+GREEN+'"/></linearGradient>'+
-    '</defs>'+
-    '<g fill="'+BLUE+'" opacity=".4"><circle cx="120" cy="200" r="2.2"/><circle cx="220" cy="640" r="1.6"/><circle cx="1080" cy="240" r="2"/><circle cx="1150" cy="500" r="1.6"/><circle cx="880" cy="120" r="2"/><circle cx="60" cy="900" r="1.8"/><circle cx="1050" cy="1100" r="2"/><circle cx="400" cy="980" r="1.6"/><circle cx="760" cy="1220" r="1.8"/><circle cx="180" cy="1080" r="2"/><circle cx="960" cy="60" r="1.6"/></g>'+
-    '<g stroke="url(#cvLineGrad)" stroke-width="2.5" opacity=".4" fill="none" stroke-linecap="round"><path d="M 60 480 Q 220 380 370 300"/><path d="M 370 300 Q 460 230 560 190"/><path d="M 370 300 Q 340 420 440 470"/></g>'+
-    '<g fill="url(#cvLineGrad)" opacity=".55"><circle cx="60" cy="480" r="3.5"/><circle cx="370" cy="300" r="4"/><circle cx="560" cy="190" r="3"/><circle cx="440" cy="470" r="3"/></g>'+
-    '<g stroke="url(#cvLineGrad)" stroke-width="3" opacity=".6" fill="none" stroke-linecap="round">'+
-      '<path d="M 660 500 Q 700 470 740 440"/><path d="M 740 440 Q 730 500 700 550"/><path d="M 700 550 Q 675 520 660 500"/>'+
-      '<path d="M 660 500 Q 590 440 540 400"/><path d="M 660 500 Q 590 560 520 610"/>'+
-      '<path d="M 740 440 Q 800 370 850 330"/><path d="M 740 440 Q 830 460 900 480"/>'+
-      '<path d="M 700 550 Q 780 610 850 660"/><path d="M 700 550 Q 660 640 640 710"/>'+
-      '<path d="M 900 480 Q 970 560 1010 640"/><path d="M 850 660 Q 940 700 1010 640"/>'+
-      '<path d="M 1010 640 Q 1060 750 1090 860"/><path d="M 1090 860 Q 1130 970 1160 1080"/>'+
-    '</g>'+
-    '<circle cx="660" cy="500" r="20" fill="url(#cvGlowBlue)"/><circle cx="740" cy="440" r="15" fill="url(#cvGlowBlue)"/><circle cx="700" cy="550" r="13" fill="url(#cvGlowGreen)"/>'+
-    '<circle cx="660" cy="500" r="7" fill="#eef2ff"/><circle cx="740" cy="440" r="5" fill="#eef2ff"/><circle cx="700" cy="550" r="4.5" fill="#f0faff"/>'+
-    '<circle cx="540" cy="400" r="10" fill="url(#cvGlowBlue)"/><circle cx="520" cy="610" r="10" fill="url(#cvGlowGreen)"/><circle cx="850" cy="330" r="11" fill="url(#cvGlowGreen)"/><circle cx="900" cy="480" r="10" fill="url(#cvGlowBlue)"/><circle cx="850" cy="660" r="10" fill="url(#cvGlowGreen)"/><circle cx="640" cy="710" r="9" fill="url(#cvGlowBlue)"/><circle cx="1010" cy="640" r="11" fill="url(#cvGlowGreen)"/>'+
-    '<g fill="#f5f7ff"><circle cx="540" cy="400" r="3"/><circle cx="520" cy="610" r="3"/><circle cx="850" cy="330" r="3.2"/><circle cx="900" cy="480" r="3"/><circle cx="850" cy="660" r="3"/><circle cx="640" cy="710" r="2.6"/><circle cx="1010" cy="640" r="3.2"/></g>'+
-    '<g fill="url(#cvLineGrad)" opacity=".5"><circle cx="1090" cy="860" r="4.5"/><circle cx="1160" cy="1080" r="3"/><circle cx="1200" cy="1250" r="2"/></g>'+
-    '<path d="M 1160 1080 Q 1190 1170 1200 1250" stroke="url(#cvLineGrad)" stroke-width="2" opacity=".3" fill="none" stroke-linecap="round"/>'+
-  '</svg>';
+  // 星圖改用純 CSS div 實作（小圓點 + rotate 線段），不用 SVG。
+  // html2canvas 對 SVG 漸層/濾鏡的支援很不完整，連沒有濾鏡的線條、
+  // 圓點都常常直接消失；純 CSS 的 background/box-shadow/transform
+  // 這幾個屬性是 html2canvas 支援最穩定的，用這個重做才不會再消失。
+  var OX = 1180; // 星圖整體在頁面上的 X 偏移
+  function starDot(x,y,r,color,glow){
+    return '<div style="position:absolute;left:'+(OX+x-r)+'px;top:'+(y-r)+'px;width:'+(2*r)+'px;height:'+(2*r)+'px;border-radius:50%;background:'+color+';box-shadow:0 0 '+Math.round(r*1.6)+'px '+Math.round(r*0.5)+'px '+glow+'"></div>';
+  }
+  function starCore(x,y,r,color){
+    return '<div style="position:absolute;left:'+(OX+x-r)+'px;top:'+(y-r)+'px;width:'+(2*r)+'px;height:'+(2*r)+'px;border-radius:50%;background:'+color+'"></div>';
+  }
+  function starLine(x1,y1,x2,y2,opacity,width){
+    var dx=x2-x1, dy=y2-y1;
+    var len=Math.sqrt(dx*dx+dy*dy);
+    var angle=Math.atan2(dy,dx)*180/Math.PI;
+    return '<div style="position:absolute;left:'+(OX+x1)+'px;top:'+(y1-width/2)+'px;width:'+Math.round(len)+'px;height:'+width+'px;background:linear-gradient(90deg,'+BLUE+','+GREEN+');opacity:'+opacity+';border-radius:'+(width/2)+'px;transform-origin:0% 50%;transform:rotate('+angle.toFixed(2)+'deg)"></div>';
+  }
+  function dustDot(x,y,r){
+    return '<div style="position:absolute;left:'+(OX+x-r)+'px;top:'+(y-r)+'px;width:'+(2*r)+'px;height:'+(2*r)+'px;border-radius:50%;background:'+BLUE+';opacity:.4"></div>';
+  }
+
+  var starsSvg =
+    // 背景細碎星塵
+    dustDot(120,200,2.2)+dustDot(220,640,1.6)+dustDot(1080,240,2)+dustDot(1150,500,1.6)+
+    dustDot(880,120,2)+dustDot(60,900,1.8)+dustDot(1050,1100,2)+dustDot(400,980,1.6)+
+    dustDot(760,1220,1.8)+dustDot(180,1080,2)+dustDot(960,60,1.6)+
+    // 左上延伸的小星群
+    starLine(60,480,370,300,.45,2.5)+starLine(370,300,560,190,.45,2.5)+starLine(370,300,440,470,.45,2.5)+
+    starLine(440,470,540,400,.4,2)+
+    starCore(60,480,3.5,BLUE)+starCore(370,300,4,BLUE)+starCore(560,190,3,GREEN)+starCore(440,470,3,GREEN)+
+    // 家庭核心三星 + 放射守護網
+    starLine(660,500,740,440,.6,3)+starLine(740,440,700,550,.6,3)+starLine(700,550,660,500,.6,3)+
+    starLine(660,500,540,400,.55,2.5)+starLine(660,500,520,610,.55,2.5)+
+    starLine(740,440,850,330,.55,2.5)+starLine(740,440,900,480,.55,2.5)+
+    starLine(700,550,850,660,.55,2.5)+starLine(700,550,640,710,.55,2.5)+
+    starLine(900,480,1010,640,.55,2.5)+starLine(850,660,1010,640,.55,2.5)+
+    starLine(1010,640,1090,860,.5,2.5)+starLine(1090,860,1160,1080,.5,2.5)+starLine(1160,1080,1200,1250,.4,2)+
+    // 核心三星（大，帶光暈）
+    starDot(660,500,20,BLUE,'rgba(0,137,209,.5)')+starDot(740,440,15,BLUE,'rgba(0,137,209,.45)')+starDot(700,550,13,GREEN,'rgba(1,181,174,.45)')+
+    starCore(660,500,7,'#eef2ff')+starCore(740,440,5,'#eef2ff')+starCore(700,550,4.5,'#f0faff')+
+    // 周邊守護星
+    starDot(540,400,10,BLUE,'rgba(0,137,209,.4)')+starDot(520,610,10,GREEN,'rgba(1,181,174,.4)')+
+    starDot(850,330,11,GREEN,'rgba(1,181,174,.4)')+starDot(900,480,10,BLUE,'rgba(0,137,209,.4)')+
+    starDot(850,660,10,GREEN,'rgba(1,181,174,.4)')+starDot(640,710,9,BLUE,'rgba(0,137,209,.4)')+
+    starDot(1010,640,11,GREEN,'rgba(1,181,174,.4)')+
+    starCore(540,400,3,'#f5f7ff')+starCore(520,610,3,'#f5f7ff')+starCore(850,330,3.2,'#f5f7ff')+
+    starCore(900,480,3,'#f5f7ff')+starCore(850,660,3,'#f5f7ff')+starCore(640,710,2.6,'#f5f7ff')+starCore(1010,640,3.2,'#f5f7ff')+
+    // 向右下延伸淡出
+    starCore(1090,860,4.5,GREEN)+starCore(1160,1080,3,GREEN)+starCore(1200,1250,2,GREEN);
 
   var infoCard = '<div style="position:absolute;right:150px;top:150px;width:520px;background:rgba(255,255,255,.90);border-radius:32px;border:1px solid rgba(255,255,255,.7);box-shadow:0 24px 48px -20px rgba(4,59,77,.28);overflow:hidden">'+
     '<div style="height:10px;background:'+pearlGradientEx(BLUE)+'"></div>'+
@@ -1949,7 +1974,9 @@ function buildCoverBlockHtml(){
     sideSpine+
     starsSvg+
     '<div style="position:absolute;left:190px;top:260px;font-size:42px;font-weight:600;color:#64748b;letter-spacing:.02em">這份報告，是為</div>'+
-    '<div style="position:absolute;left:186px;top:308px;font-size:180px;font-weight:900;line-height:1;letter-spacing:.01em;color:'+DEEP+'">'+pName+'</div>'+
+    '<div style="position:absolute;left:186px;top:308px;font-size:180px;font-weight:800;line-height:1;letter-spacing:.02em;color:'+DEEP+';transform:rotate(-1.2deg);transform-origin:left center">'+pName+
+      '<span style="display:inline-block;width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,'+BLUE+','+GREEN+');margin-left:18px;vertical-align:middle;transform:rotate(1.2deg)"></span>'+
+    '</div>'+
     '<div style="position:absolute;left:190px;top:510px;font-size:56px;font-weight:800;color:#03648a;letter-spacing:.04em">整理的專屬保障健診</div>'+
     '<div style="position:absolute;left:190px;top:610px;font-size:34px;font-weight:500;color:#64748b;max-width:920px;line-height:1.6">把每一份牽掛，安放進看得懂、說得清的保障地圖裡。</div>'+
     agentPhoto+
