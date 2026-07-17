@@ -1920,13 +1920,17 @@ function buildCoverBlockHtml(){
     ? '<img src="'+agentPhotoDataUrl+'" style="position:absolute;left:190px;top:720px;width:720px;height:720px;border-radius:40px;object-fit:contain;background:#ffffff;border:1px solid rgba(255,255,255,.85);box-shadow:0 24px 48px -20px rgba(4,59,77,.35)"/>'
     : '';
 
-  // 封面底圖：使用者提供的 AI 生成素材，整頁滿版鋪底
-  // （沒有這張圖時退回原本的淺色漸層，避免圖片載入失敗整頁空白）
+  // 封面底圖：使用者提供的 AI 生成素材，整頁滿版鋪底。
+  // 改用 <img> 標籤鋪滿整頁（不用 CSS background-image）——
+  // html2canvas 對 background-image 支援不穩定，常常直接不渲染；
+  // <img> 標籤是 html2canvas 支援最可靠的方式，業務員照片一直都
+  // 是用這個做法、也一直正常顯示，這裡比照辦理。
   var bgLayer = COVER_BG_IMG_
-    ? 'url("'+COVER_BG_IMG_+'") center / cover no-repeat, linear-gradient(160deg,#eef5fa 0%,#eef7f5 55%,#eaf3f6 100%)'
-    : 'linear-gradient(160deg,#eef5fa 0%,#eef7f5 55%,#eaf3f6 100%)';
+    ? '<img src="'+COVER_BG_IMG_+'" style="position:absolute;left:0;top:0;width:2400px;height:1697px;object-fit:cover;z-index:0"/>'
+    : '';
 
-  return '<div style="width:2400px;height:1697px;position:relative;overflow:hidden;background:'+bgLayer+';color:#1e293b">'+
+  return '<div style="width:2400px;height:1697px;position:relative;overflow:hidden;background:linear-gradient(160deg,#eef5fa 0%,#eef7f5 55%,#eaf3f6 100%);color:#1e293b">'+
+    bgLayer+
     sideSpine+
     infoCard+
     '<div style="position:absolute;left:190px;top:260px;font-size:42px;font-weight:600;color:#64748b;letter-spacing:.02em">這份報告，是為</div>'+
