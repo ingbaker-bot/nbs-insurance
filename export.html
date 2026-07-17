@@ -1965,6 +1965,15 @@ function buildCoverBlockHtml(){
 
   // 業務員大頭照：放在左下角，保戶姓名區塊跟底部業務員資訊列中間的留白處。
   // 沒有照片（還沒上傳過）就完全不渲染，不留破圖示。
+  // 「整理的專屬保障健診」這行的起始位置，動態對齊到姓名倒數第二個
+  // 字下方（例如「李丞敏」→對齊「丞」），不管姓名是幾個字都會自動
+  // 算對，不是寫死給「李丞敏」這個特定名字用的座標。
+  var NAME_FONT_SIZE = 180, NAME_LETTER_SPACING_EM = 0.15, NAME_BASE_LEFT = 190;
+  var NAME_CHAR_PITCH = NAME_FONT_SIZE * (1 + NAME_LETTER_SPACING_EM);
+  var nameLen = (pName || "").length;
+  var line3IndentChars = Math.max(0, nameLen - 2);
+  var line3Left = NAME_BASE_LEFT + line3IndentChars * NAME_CHAR_PITCH;
+
   var agentPhoto = agentPhotoDataUrl
     ? '<img src="'+agentPhotoDataUrl+'" style="position:absolute;left:190px;top:880px;width:480px;height:480px;border-radius:40px;object-fit:contain;background:#ffffff;border:1px solid rgba(255,255,255,.7);box-shadow:0 24px 48px -20px rgba(4,59,77,.28)"/>'
     : '';
@@ -1974,10 +1983,8 @@ function buildCoverBlockHtml(){
     sideSpine+
     starsSvg+
     '<div style="position:absolute;left:190px;top:260px;font-size:42px;font-weight:600;color:#64748b;letter-spacing:.02em">這份報告，是為</div>'+
-    '<div style="position:absolute;left:186px;top:308px;font-size:180px;font-weight:800;line-height:1;letter-spacing:.02em;color:'+DEEP+';transform:rotate(-1.2deg);transform-origin:left center">'+pName+
-      '<span style="display:inline-block;width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,'+BLUE+','+GREEN+');margin-left:18px;vertical-align:middle;transform:rotate(1.2deg)"></span>'+
-    '</div>'+
-    '<div style="position:absolute;left:190px;top:510px;font-size:56px;font-weight:800;color:#03648a;letter-spacing:.04em">整理的專屬保障健診</div>'+
+    '<div style="position:absolute;left:190px;top:308px;font-size:180px;font-weight:700;line-height:1;letter-spacing:.15em;color:'+DEEP+'">'+pName+'</div>'+
+    '<div style="position:absolute;left:'+line3Left+'px;top:510px;font-size:56px;font-weight:800;color:#03648a;letter-spacing:.04em">整理的專屬保障健診</div>'+
     '<div style="position:absolute;left:190px;top:610px;font-size:34px;font-weight:500;color:#64748b;max-width:920px;line-height:1.6">把每一份牽掛，安放進看得懂、說得清的保障地圖裡。</div>'+
     agentPhoto+
     infoCard+
