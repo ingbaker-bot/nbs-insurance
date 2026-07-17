@@ -1853,15 +1853,16 @@ function getLifePathNumber(birthDateStr){
 // 封面頁單一資訊項（業務員／保險公司／電話 共用的小方塊）
 function coverFooterItemHtml(icon, label, value) {
   return '<div style="display:flex;align-items:flex-start;gap:16px">'+
-    '<div style="width:56px;height:56px;border-radius:16px;background:#e3f6f4;display:flex;align-items:center;justify-content:center;font-size:30px;flex-shrink:0">'+icon+'</div>'+
-    '<div><div style="font-size:20px;color:#64748b;font-weight:600">'+label+'</div><div style="font-size:32px;color:#1e293b;font-weight:800;margin-top:4px">'+value+'</div></div>'+
+    '<div style="width:56px;height:56px;border-radius:16px;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font-size:30px;flex-shrink:0">'+icon+'</div>'+
+    '<div><div style="font-size:20px;color:#9fb8d6;font-weight:600">'+label+'</div><div style="font-size:32px;color:#f3f8fd;font-weight:800;margin-top:4px">'+value+'</div></div>'+
   '</div>';
 }
 
 // 封面頁：延續內頁靛紫→富邦藍綠珍珠光澤語言，主要保戶姓名最大最顯眼，
 // 星座/生命靈數放在右上角獨立資訊牌，底部放業務員/保險公司/電話/整理日期
 function buildCoverBlockHtml(){
-  var BLUE="#0089d1", GREEN="#01b5ae", DEEP="#043b4d";
+  var BLUE="#5ec8f5", BLUE_DEEP="#0089d1", GREEN="#4be0d1", GREEN_DEEP="#01b5ae";
+  var TEXT_LIGHT="#f3f8fd", TEXT_MUTED="#9fb8d6";
   var z = getZodiacSign(person.profile && person.profile.birthDate);
   var lp = getLifePathNumber(person.profile && person.profile.birthDate);
   var agentName = localStorage.getItem("nbs_agent_watermark_name");
@@ -1873,104 +1874,113 @@ function buildCoverBlockHtml(){
   var today = new Date();
   var printDateStr = (today.getFullYear()-1911)+"年"+(today.getMonth()+1)+"月"+today.getDate()+"日";
 
-  // 背景氛圍光暈：改用純 CSS radial-gradient（html2canvas 完全支援，
-  // 資訊牌的漸層色帶就是靠這個方式正常顯示的），取代原本 SVG 濾鏡模糊
-  // （html2canvas 幾乎不支援 feGaussianBlur，之前匯出圖片會整片消失
-  // 就是這個原因）。
-  // 背景氛圍光暈：全部合併寫進「同一個」外層容器的 background 裡
-  // （見下方 return 那行），不要用好幾個各自獨立的矩形 div 疊圖——
-  // 分開的矩形色塊，邊界互相切齊時會產生一條可見的接縫（像被切開
-  // 一樣），合併成同一份 background 就不會有這個邊界問題，而且順
-  // 便把資訊牌那個角落也一起罩進暈染範圍，中段的空白也補一層更淡
-  // 的暈染，資訊牌才不會看起來像浮空的。
-  var ambientWash = "";
-
-  // 左側色帶：藍→綠漸層的滿版直條，取代原本拿掉的頂部標籤，
-  // 讓封面一眼就有明確的科技識別色，不會整頁太蒼白
-  var sideSpine = '<div style="position:absolute;left:0;top:0;width:16px;height:100%;background:linear-gradient(180deg,'+BLUE+' 0%,'+GREEN+' 100%)"></div>';
-
-  // 星圖改用純 CSS div 實作（小圓點 + rotate 線段），不用 SVG。
-  // html2canvas 對 SVG 漸層/濾鏡的支援很不完整，連沒有濾鏡的線條、
-  // 圓點都常常直接消失；純 CSS 的 background/box-shadow/transform
-  // 這幾個屬性是 html2canvas 支援最穩定的，用這個重做才不會再消失。
-  var OX = 1180; // 星圖整體在頁面上的 X 偏移
+  // 星圖／星塵：純 CSS div 實作（不用 SVG，html2canvas 對 SVG 濾鏡/漸層
+  // 支援不穩定，之前已經證實純 CSS 的 background/box-shadow/transform
+  // 這幾個屬性才是匯出後不會消失的做法）。
   function starDot(x,y,r,color,glow){
-    return '<div style="position:absolute;left:'+(OX+x-r)+'px;top:'+(y-r)+'px;width:'+(2*r)+'px;height:'+(2*r)+'px;border-radius:50%;background:'+color+';box-shadow:0 0 '+Math.round(r*1.6)+'px '+Math.round(r*0.5)+'px '+glow+'"></div>';
+    return '<div style="position:absolute;left:'+(x-r)+'px;top:'+(y-r)+'px;width:'+(2*r)+'px;height:'+(2*r)+'px;border-radius:50%;background:'+color+';box-shadow:0 0 '+Math.round(r*1.6)+'px '+Math.round(r*0.5)+'px '+glow+'"></div>';
   }
   function starCore(x,y,r,color){
-    return '<div style="position:absolute;left:'+(OX+x-r)+'px;top:'+(y-r)+'px;width:'+(2*r)+'px;height:'+(2*r)+'px;border-radius:50%;background:'+color+'"></div>';
+    return '<div style="position:absolute;left:'+(x-r)+'px;top:'+(y-r)+'px;width:'+(2*r)+'px;height:'+(2*r)+'px;border-radius:50%;background:'+color+'"></div>';
   }
-  function starLine(x1,y1,x2,y2,opacity,width){
+  function starLine(x1,y1,x2,y2,opacity,width,colorA,colorB){
     var dx=x2-x1, dy=y2-y1;
     var len=Math.sqrt(dx*dx+dy*dy);
     var angle=Math.atan2(dy,dx)*180/Math.PI;
-    return '<div style="position:absolute;left:'+(OX+x1)+'px;top:'+(y1-width/2)+'px;width:'+Math.round(len)+'px;height:'+width+'px;background:linear-gradient(90deg,'+BLUE+','+GREEN+');opacity:'+opacity+';border-radius:'+(width/2)+'px;transform-origin:0% 50%;transform:rotate('+angle.toFixed(2)+'deg)"></div>';
+    return '<div style="position:absolute;left:'+x1+'px;top:'+(y1-width/2)+'px;width:'+Math.round(len)+'px;height:'+width+'px;background:linear-gradient(90deg,'+(colorA||BLUE)+','+(colorB||GREEN)+');opacity:'+opacity+';border-radius:'+(width/2)+'px;transform-origin:0% 50%;transform:rotate('+angle.toFixed(2)+'deg)"></div>';
   }
-  function dustDot(x,y,r){
-    return '<div style="position:absolute;left:'+(OX+x-r)+'px;top:'+(y-r)+'px;width:'+(2*r)+'px;height:'+(2*r)+'px;border-radius:50%;background:'+BLUE+';opacity:.4"></div>';
+  function dustDot(x,y,r,op,color){
+    return '<div style="position:absolute;left:'+(x-r)+'px;top:'+(y-r)+'px;width:'+(2*r)+'px;height:'+(2*r)+'px;border-radius:50%;background:'+(color||'#ffffff')+';opacity:'+op+'"></div>';
   }
 
-  var starsSvg =
-    // 背景細碎星塵
-    dustDot(120,200,2.2)+dustDot(220,640,1.6)+dustDot(1080,240,2)+dustDot(1150,500,1.6)+
-    dustDot(880,120,2)+dustDot(60,900,1.8)+dustDot(1050,1100,2)+dustDot(400,980,1.6)+
-    dustDot(760,1220,1.8)+dustDot(180,1080,2)+dustDot(960,60,1.6)+
-    // 左上延伸的小星群
-    starLine(60,480,370,300,.45,2.5)+starLine(370,300,560,190,.45,2.5)+starLine(370,300,440,470,.45,2.5)+
-    starLine(440,470,540,400,.4,2)+
-    starCore(60,480,3.5,BLUE)+starCore(370,300,4,BLUE)+starCore(560,190,3,GREEN)+starCore(440,470,3,GREEN)+
-    // 家庭核心三星 + 放射守護網
-    starLine(660,500,740,440,.6,3)+starLine(740,440,700,550,.6,3)+starLine(700,550,660,500,.6,3)+
-    starLine(660,500,540,400,.55,2.5)+starLine(660,500,520,610,.55,2.5)+
-    starLine(740,440,850,330,.55,2.5)+starLine(740,440,900,480,.55,2.5)+
-    starLine(700,550,850,660,.55,2.5)+starLine(700,550,640,710,.55,2.5)+
-    starLine(900,480,1010,640,.55,2.5)+starLine(850,660,1010,640,.55,2.5)+
-    starLine(1010,640,1090,860,.5,2.5)+starLine(1090,860,1160,1080,.5,2.5)+starLine(1160,1080,1200,1250,.4,2)+
-    // 核心三星（大，帶光暈）
-    starDot(660,500,20,BLUE,'rgba(0,137,209,.5)')+starDot(740,440,15,BLUE,'rgba(0,137,209,.45)')+starDot(700,550,13,GREEN,'rgba(1,181,174,.45)')+
-    starCore(660,500,7,'#eef2ff')+starCore(740,440,5,'#eef2ff')+starCore(700,550,4.5,'#f0faff')+
-    // 周邊守護星
-    starDot(540,400,10,BLUE,'rgba(0,137,209,.4)')+starDot(520,610,10,GREEN,'rgba(1,181,174,.4)')+
-    starDot(850,330,11,GREEN,'rgba(1,181,174,.4)')+starDot(900,480,10,BLUE,'rgba(0,137,209,.4)')+
-    starDot(850,660,10,GREEN,'rgba(1,181,174,.4)')+starDot(640,710,9,BLUE,'rgba(0,137,209,.4)')+
-    starDot(1010,640,11,GREEN,'rgba(1,181,174,.4)')+
-    starCore(540,400,3,'#f5f7ff')+starCore(520,610,3,'#f5f7ff')+starCore(850,330,3.2,'#f5f7ff')+
-    starCore(900,480,3,'#f5f7ff')+starCore(850,660,3,'#f5f7ff')+starCore(640,710,2.6,'#f5f7ff')+starCore(1010,640,3.2,'#f5f7ff')+
-    // 向右下延伸淡出
-    starCore(1090,860,4.5,GREEN)+starCore(1160,1080,3,GREEN)+starCore(1200,1250,2,GREEN);
+  // 大範圍稀疏星塵，鋪滿整個夜空（比先前密很多，呼應參考圖的銀河感）
+  var farStars = "";
+  var farStarSeeds = [
+    [150,90],[420,60],[720,140],[980,50],[1250,110],[1480,70],[1720,160],[1980,90],[2220,130],
+    [90,340],[330,420],[600,380],[860,460],[1120,330],[1360,410],[1600,360],[1850,440],[2100,380],[2320,420],
+    [200,650],[500,720],[780,660],[1050,760],[1300,690],[1560,740],[1830,700],[2080,760],[2300,650],
+    [140,980],[400,1040],[680,990],[950,1080],[1220,1010],[1480,1070],[1740,1000],[2000,1060],[2260,990],
+    [260,1280],[560,1340],[860,1290],[1140,1360],[1420,1300],[1700,1350],[1980,1290],[2260,1330],
+    [180,1520],[460,1580],[760,1530],[1060,1590],[1360,1540],[1660,1600],[1960,1540],[2260,1590]
+  ];
+  for (var i=0;i<farStarSeeds.length;i++){
+    var sx=farStarSeeds[i][0], sy=farStarSeeds[i][1];
+    var rr = (i%5===0)?1.8:(i%3===0?1.4:1);
+    var op = (i%7===0)?0.9:(i%4===0?0.7:0.4);
+    farStars += dustDot(sx,sy,rr,op,(i%9===0?BLUE:'#ffffff'));
+  }
+  // 幾顆比較亮、有光暈的「大星星」點綴在銀河帶周圍
+  var brightStars =
+    starDot(760,220,3,'#ffffff','rgba(255,255,255,.5)')+
+    starDot(1360,120,2.6,'#ffffff','rgba(255,255,255,.45)')+
+    starDot(1980,300,3.2,BLUE,'rgba(94,200,245,.55)')+
+    starDot(2180,540,2.4,'#ffffff','rgba(255,255,255,.4)')+
+    starDot(620,900,2.6,GREEN,'rgba(75,224,209,.4)')+
+    starDot(1500,980,2.2,'#ffffff','rgba(255,255,255,.4)');
 
-  var infoCard = '<div style="position:absolute;right:150px;top:150px;width:520px;background:rgba(255,255,255,.90);border-radius:32px;border:1px solid rgba(255,255,255,.7);box-shadow:0 24px 48px -20px rgba(4,59,77,.28);overflow:hidden">'+
-    '<div style="height:10px;background:'+pearlGradientEx(BLUE)+'"></div>'+
-    '<div style="padding:38px 42px 30px">'+
-      '<div style="display:flex;align-items:center;gap:24px">'+
-        '<div style="width:88px;height:88px;border-radius:24px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:52px;font-weight:800;color:#fff;background:'+pearlGradientEx(GREEN)+'">'+(z?z.emoji:'✨')+'</div>'+
-        '<div><div style="font-size:34px;font-weight:800;color:#1e293b">'+(z?z.name:'—')+'</div><div style="font-size:21px;font-weight:600;color:#64748b;margin-top:6px">穩定務實．溫柔守護</div></div>'+
-      '</div>'+
-      '<div style="display:flex;align-items:center;gap:24px;margin-top:26px;padding-top:26px;border-top:1px solid rgba(0,137,209,.12)">'+
-        '<div style="width:88px;height:88px;border-radius:24px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:52px;font-weight:800;color:#fff;background:'+pearlGradientEx(BLUE)+'">'+(lp!==null?lp:'—')+'</div>'+
-        '<div><div style="font-size:34px;font-weight:800;color:#1e293b">生命靈數 '+(lp!==null?lp:'—')+'</div><div style="font-size:21px;font-weight:600;color:#64748b;margin-top:6px">溫暖表達．重視關係</div></div>'+
-      '</div>'+
+  // 家庭守護星群：維持原本的星座連線意象，改用淺色系呼應深色底
+  var familyConstellation =
+    starLine(1720,560,1800,500,.5,2.5,BLUE,GREEN)+starLine(1800,500,1760,610,.5,2.5,BLUE,GREEN)+starLine(1760,610,1720,560,.5,2.5,BLUE,GREEN)+
+    starLine(1720,560,1620,470,.42,2,BLUE,GREEN)+starLine(1720,560,1610,650,.42,2,BLUE,GREEN)+
+    starLine(1800,500,1900,400,.42,2,BLUE,GREEN)+starLine(1800,500,1950,540,.42,2,BLUE,GREEN)+
+    starLine(1760,610,1880,700,.42,2,BLUE,GREEN)+starLine(1760,610,1660,740,.42,2,BLUE,GREEN)+
+    starDot(1720,560,16,BLUE,'rgba(94,200,245,.5)')+starDot(1800,500,12,BLUE,'rgba(94,200,245,.45)')+starDot(1760,610,11,GREEN,'rgba(75,224,209,.45)')+
+    starCore(1720,560,6,'#ffffff')+starCore(1800,500,4.5,'#ffffff')+starCore(1760,610,4,'#ffffff')+
+    starDot(1620,470,8,BLUE,'rgba(94,200,245,.4)')+starDot(1610,650,8,GREEN,'rgba(75,224,209,.4)')+
+    starDot(1900,400,9,GREEN,'rgba(75,224,209,.4)')+starDot(1950,540,8,BLUE,'rgba(94,200,245,.4)')+
+    starDot(1880,700,8,GREEN,'rgba(75,224,209,.4)')+starDot(1660,740,7,BLUE,'rgba(94,200,245,.4)')+
+    starCore(1620,470,2.6,'#eef7ff')+starCore(1610,650,2.6,'#eef7ff')+starCore(1900,400,2.8,'#eef7ff')+
+    starCore(1950,540,2.6,'#eef7ff')+starCore(1880,700,2.6,'#eef7ff')+starCore(1660,740,2.3,'#eef7ff');
+
+  // 盾牌＋家庭剪影：簡化版意象（emoji + CSS 拼接，精緻度有限，但足以
+  // 傳達「守護家庭」的概念），中心約落在 (1900, 950)
+  var shieldCX=1900, shieldCY=950;
+  var shieldGlow = '<div style="position:absolute;left:'+(shieldCX-360)+'px;top:'+(shieldCY-360)+'px;width:720px;height:720px;border-radius:50%;background:radial-gradient(circle,rgba(94,200,245,.28) 0%,rgba(94,200,245,0) 68%)"></div>';
+  var shieldIcon = '<div style="position:absolute;left:'+(shieldCX-160)+'px;top:'+(shieldCY-190)+'px;width:320px;height:320px;font-size:300px;line-height:1;text-align:center;opacity:.92">🛡️</div>';
+  var familyIcon = '<div style="position:absolute;left:'+(shieldCX-95)+'px;top:'+(shieldCY-120)+'px;width:190px;height:190px;font-size:118px;line-height:1;text-align:center">👨‍👩‍👧</div>';
+
+  // 盾牌下方三個小徽章（健康／守護／規劃），用連線接回盾牌中心
+  var badgeY = shieldCY+330;
+  var badges = [
+    {x:shieldCX-260,icon:'❤️',color:GREEN_DEEP},
+    {x:shieldCX,     icon:'☂️',color:BLUE_DEEP},
+    {x:shieldCX+260,icon:'📋',color:GREEN_DEEP}
+  ];
+  var badgesHtml = "";
+  badges.forEach(function(b){
+    badgesHtml += starLine(shieldCX,shieldCY+280,b.x,badgeY-40,.35,2,BLUE,GREEN);
+    badgesHtml += '<div style="position:absolute;left:'+(b.x-44)+'px;top:'+(badgeY-44)+'px;width:88px;height:88px;border-radius:24px;display:flex;align-items:center;justify-content:center;font-size:40px;background:'+pearlGradientEx(b.color)+';box-shadow:0 12px 28px -10px rgba(0,0,0,.5)">'+b.icon+'</div>';
+  });
+
+  // 星座／生命靈數：直接融入插畫（純文字＋icon，不用白色卡片），
+  // 放在盾牌左上方，呼應參考圖的排法
+  var zodiacBlock =
+    '<div style="position:absolute;left:'+(shieldCX-560)+'px;top:'+(shieldCY-560)+'px;display:flex;align-items:center;gap:18px">'+
+      '<div style="font-size:52px;line-height:1">'+(z?z.emoji:'✨')+'</div>'+
+      '<div><div style="font-size:32px;font-weight:800;color:'+TEXT_LIGHT+'">'+(z?z.name:'—')+'</div><div style="font-size:19px;font-weight:600;color:'+TEXT_MUTED+';margin-top:2px">穩定務實．溫柔守護</div></div>'+
     '</div>'+
-  '</div>';
+    '<div style="position:absolute;left:'+(shieldCX-560)+'px;top:'+(shieldCY-460)+'px;display:flex;align-items:center;gap:18px">'+
+      '<div style="width:52px;height:52px;border-radius:50%;background:'+pearlGradientEx(BLUE_DEEP)+';display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;color:#fff">'+(lp!==null?lp:'—')+'</div>'+
+      '<div><div style="font-size:32px;font-weight:800;color:'+TEXT_LIGHT+'">生命靈數 '+(lp!==null?lp:'—')+'</div><div style="font-size:19px;font-weight:600;color:'+TEXT_MUTED+';margin-top:2px">溫暖表達．重視關係</div></div>'+
+    '</div>';
 
-  var footer = '<div style="position:absolute;left:0;bottom:0;width:100%;height:230px;border-top:2px solid rgba(0,137,209,.18);display:flex;align-items:center;justify-content:space-between;padding:0 190px">'+
+  // 左側色帶：藍→綠漸層滿版直條，維持科技識別色
+  var sideSpine = '<div style="position:absolute;left:0;top:0;width:16px;height:100%;background:linear-gradient(180deg,'+BLUE_DEEP+' 0%,'+GREEN_DEEP+' 100%)"></div>';
+
+  var footer = '<div style="position:absolute;left:0;bottom:0;width:100%;height:230px;border-top:2px solid rgba(255,255,255,.14);display:flex;align-items:center;justify-content:space-between;padding:0 190px">'+
     '<div style="display:flex;gap:80px">'+
       coverFooterItemHtml('👤','業務員',agentName)+
       coverFooterItemHtml('🏢','保險公司',agentCompany)+
       coverFooterItemHtml('📞','聯絡電話',agentContact)+
     '</div>'+
     '<div style="text-align:right">'+
-      '<div style="font-size:20px;color:#64748b;font-weight:600">整理日期</div>'+
-      '<div style="font-size:32px;color:#1e293b;font-weight:800;margin-top:4px">'+(pDate||'—')+'</div>'+
-      '<div style="font-size:18px;color:#94a3b8;font-weight:600;margin-top:10px">列印日期 '+printDateStr+'</div>'+
+      '<div style="font-size:20px;color:'+TEXT_MUTED+';font-weight:600">整理日期</div>'+
+      '<div style="font-size:32px;color:'+TEXT_LIGHT+';font-weight:800;margin-top:4px">'+(pDate||'—')+'</div>'+
+      '<div style="font-size:18px;color:#7692b4;font-weight:600;margin-top:10px">列印日期 '+printDateStr+'</div>'+
     '</div>'+
   '</div>';
 
-  // 業務員大頭照：放在左下角，保戶姓名區塊跟底部業務員資訊列中間的留白處。
-  // 沒有照片（還沒上傳過）就完全不渲染，不留破圖示。
-  // 「整理的專屬保障健診」這行的起始位置，動態對齊到姓名倒數第二個
-  // 字下方（例如「李丞敏」→對齊「丞」），不管姓名是幾個字都會自動
-  // 算對，不是寫死給「李丞敏」這個特定名字用的座標。
+  // 「整理的專屬保障健診」動態對齊姓名倒數第二個字下方（任何姓名長度都會自動算對）
   var NAME_FONT_SIZE = 180, NAME_LETTER_SPACING_EM = 0.15, NAME_BASE_LEFT = 190;
   var NAME_CHAR_PITCH = NAME_FONT_SIZE * (1 + NAME_LETTER_SPACING_EM);
   var nameLen = (pName || "").length;
@@ -1978,24 +1988,24 @@ function buildCoverBlockHtml(){
   var line3Left = NAME_BASE_LEFT + line3IndentChars * NAME_CHAR_PITCH;
 
   var agentPhoto = agentPhotoDataUrl
-    ? '<img src="'+agentPhotoDataUrl+'" style="position:absolute;left:190px;top:720px;width:720px;height:720px;border-radius:40px;object-fit:contain;background:#ffffff;border:1px solid rgba(255,255,255,.7);box-shadow:0 24px 48px -20px rgba(4,59,77,.28)"/>'
+    ? '<img src="'+agentPhotoDataUrl+'" style="position:absolute;left:190px;top:720px;width:720px;height:720px;border-radius:40px;object-fit:contain;background:#ffffff;border:1px solid rgba(255,255,255,.85);box-shadow:0 24px 48px -20px rgba(0,0,0,.6)"/>'
     : '';
 
   return '<div style="width:2400px;height:1697px;position:relative;overflow:hidden;background:'+
-    'radial-gradient(circle at 80% 12%, rgba(0,137,209,.40) 0%, rgba(0,137,209,0) 42%),'+
-    'radial-gradient(circle at 92% 45%, rgba(1,181,174,.34) 0%, rgba(1,181,174,0) 40%),'+
-    'radial-gradient(circle at 63% 58%, rgba(0,137,209,.20) 0%, rgba(0,137,209,0) 38%),'+
-    'radial-gradient(circle at 2% -4%, rgba(4,59,77,.08) 0%, rgba(4,59,77,0) 26%),'+
-    'linear-gradient(160deg,#eef5fa 0%,#eef7f5 55%,#eaf3f6 100%);color:#1e293b">'+
-    ambientWash+
+    'radial-gradient(ellipse at 68% 14%, rgba(180,150,255,.16) 0%, rgba(180,150,255,0) 30%),'+
+    'radial-gradient(circle at 88% 8%, rgba(255,255,255,.10) 0%, rgba(255,255,255,0) 22%),'+
+    'radial-gradient(circle at 90% 55%, rgba(94,200,245,.22) 0%, rgba(94,200,245,0) 42%),'+
+    'linear-gradient(135deg,#050e1f 0%,#0d2242 35%,#123561 65%,#1c4d82 100%);color:'+TEXT_LIGHT+'">'+
+    farStars+brightStars+
     sideSpine+
-    starsSvg+
-    '<div style="position:absolute;left:190px;top:260px;font-size:42px;font-weight:600;color:#64748b;letter-spacing:.02em">這份報告，是為</div>'+
-    '<div style="position:absolute;left:190px;top:308px;font-size:180px;font-weight:700;line-height:1;letter-spacing:.15em;color:'+DEEP+'">'+pName+'</div>'+
-    '<div style="position:absolute;left:'+line3Left+'px;top:510px;font-size:56px;font-weight:800;color:#03648a;letter-spacing:.04em">整理的專屬保障健診</div>'+
-    '<div style="position:absolute;left:190px;top:610px;font-size:34px;font-weight:500;color:#64748b;max-width:920px;line-height:1.6">把每一份牽掛，安放進看得懂、說得清的保障地圖裡。</div>'+
+    familyConstellation+
+    shieldGlow+shieldIcon+familyIcon+badgesHtml+
+    zodiacBlock+
+    '<div style="position:absolute;left:190px;top:260px;font-size:42px;font-weight:600;color:'+TEXT_MUTED+';letter-spacing:.02em">這份報告，是為</div>'+
+    '<div style="position:absolute;left:190px;top:308px;font-size:180px;font-weight:700;line-height:1;letter-spacing:.15em;color:'+TEXT_LIGHT+'">'+pName+'</div>'+
+    '<div style="position:absolute;left:'+line3Left+'px;top:510px;font-size:56px;font-weight:800;color:'+BLUE+';letter-spacing:.04em">整理的專屬保障健診</div>'+
+    '<div style="position:absolute;left:190px;top:610px;font-size:34px;font-weight:500;color:'+TEXT_MUTED+';max-width:920px;line-height:1.6">把每一份牽掛，安放進看得懂、說得清的保障地圖裡。</div>'+
     agentPhoto+
-    infoCard+
     footer+
   '</div>';
 }
