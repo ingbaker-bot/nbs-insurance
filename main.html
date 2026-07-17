@@ -898,7 +898,18 @@
 
     // ── 登出 ──────────────────────────────────────────────────
     function logout() {
+      // 這裡不能只清 nbs_user——nbs_shell_url 是「上一個帳號」的專屬
+      // Shell 網址，如果沒清掉，下一個登入的帳號會誤用這個舊網址去打
+      // 資料，抓回上一個帳號的家庭清單（真實發生過的資料外洩案例）。
+      // 保險起見，跟帳號/家庭/個人資料快取有關的 key 全部清乾淨。
       localStorage.removeItem("nbs_user");
+      localStorage.removeItem("nbs_shell_url");
+      localStorage.removeItem("nbs_current_family");
+      localStorage.removeItem("nbs_current_family_name");
+      localStorage.removeItem("nbs_agent_watermark_name");
+      localStorage.removeItem("nbs_agent_watermark_company");
+      localStorage.removeItem("nbs_agent_watermark_contact");
+      sessionStorage.clear(); // nbs_person_<id> 這類個人資料快取也一併清掉
       window.location.href = "index.html";
     }
 
