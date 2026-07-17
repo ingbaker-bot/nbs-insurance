@@ -1082,33 +1082,61 @@ function saveAgentInfo() {
   localStorage.setItem("nbs_agent_watermark_company", co);
   localStorage.setItem("nbs_agent_watermark_contact", c);
 
-  // 當偵測到變數被標記為 REMOVE 時，執行徹底刪除
+  // === 💡 關鍵快取修正區：徹底移除照片 ===
   if (_pendingAgentPhotoDataUrl === "REMOVE") {
-    document.getElementById("agent-modal-photo-status").textContent = "正在雲端移除照片…";
+    document.getElementById("agent-modal-photo-status").textContent = "正在雲端及快取中移除照片…";
     
-    // 同步清空本地端的照片變數，確保目前報表及封面頁立刻失效
+    // 1. 清空目前的本地全域變數
     agentPhotoDataUrl = null; 
     _pendingAgentPhotoDataUrl = null;
 
-    // 呼叫後端 GAS 刪除雲端硬碟的實體檔案
+    // 2. 【核心修復】清除登入快取中的照片資訊，防止重新登入後死灰復燃
+    try {
+      var cachedUser = localStorage.getItem("nbs_user");
+      if (cachedUser) {
+        var userObj = JSON.parse(cachedUser);
+        
+        // 檢查並清空常見的快取照片欄位（依您系統實際欄位防呆清空）
+        if (userObj.photo) userObj.photo = "";
+        if (userObj.photoUrl) userObj.photoUrl = "";
+        if (userObj.avatar) userObj.avatar = "";
+        if (userObj.agentPhoto) userObj.agentPhoto = "";
+        
+        // 將擦乾淨的物件重新寫回快取
+        localStorage.setItem("nbs_user", JSON.stringify(userObj));
+      }
+    } catch (e) {
+      console.error("更新登入快取失敗:", e);
+    }
+
+    // 3. 呼叫後端 GAS 刪除雲端硬碟的實體檔案
     gas("savePhoto", { email: currentUser.email, dataUrl: "" }).then(function(r){
-      // 刪除完成後關閉視窗
       closeAgentInfoModal();
-      // 💡 進階優化：如果封面頁在畫面上，強迫重新整理預覽，讓照片立刻消失
-      if (typeof doShowPreview === "function" && sel.cover) {
-        // 如果目前勾選了封面，可以考慮重整或讓使用者手動點擊預覽重刷
+      // 成功後強制刷新預覽畫面，確保乾淨
+      if (typeof doShowPreview === "function" && (sel.cover || document.getElementById("P_PREV").classList.contains("act"))) {
+        doShowPreview(); 
       }
     }).catch(function(){
       closeAgentInfoModal();
     });
   } 
-  // 原本的上傳新照片邏輯
+  // === 原本的上傳新照片邏輯 ===
   else if (_pendingAgentPhotoDataUrl) {
     document.getElementById("agent-modal-photo-status").textContent = "上傳中…";
     gas("savePhoto", { email: currentUser.email, dataUrl: _pendingAgentPhotoDataUrl }).then(function(r){
       if (r && r.status === "ok") {
         agentPhotoDataUrl = _pendingAgentPhotoDataUrl;
         _pendingAgentPhotoDataUrl = null;
+        
+        // 【防呆優化】上傳新照片時，同步更新登入快取，確保兩端一致
+        try {
+          var cachedUser = localStorage.getItem("nbs_user");
+          if (cachedUser) {
+            var userObj = JSON.parse(cachedUser);
+            if (userObj.hasOwnProperty("photo")) userObj.photo = agentPhotoDataUrl;
+            localStorage.setItem("nbs_user", JSON.stringify(userObj));
+          }
+        } catch(e){}
       } else {
         alert("照片上傳失敗：" + (r && r.message || "未知錯誤"));
       }
