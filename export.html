@@ -2002,12 +2002,15 @@ function buildCoverBlockHtml(){
     bgLayer+
     sideSpine+
     infoCard+
-    '<div style="position:absolute;left:190px;top:260px;font-size:42px;font-weight:600;color:#64748b;letter-spacing:.02em;margin-bottom: 16px;">這份報告，是為</div>'+
-    '<div style="position:absolute;left:190px;top:308px;font-size:180px;font-weight:700;line-height:1;letter-spacing:.15em;color:'+DEEP+'">'+pName+'</div>'+
-    '<div style="position:absolute;left:'+line3Left+'px;top:510px;font-size:56px;font-weight:800;color:#03648a;letter-spacing:.04em">整理的專屬保障健診</div>'+
-    '<div style="position:absolute;left:190px;top:610px;font-size:34px;font-weight:500;color:#64748b;max-width:920px;line-height:1.6">把每一份牽掛，安放進看得懂、說得清的保障地圖裡。</div>'+
-    agentPhoto+
-    footer+
+    '<div style="position:absolute;left:190px;top:260px;font-size:42px;font-weight:600;color:#64748b;letter-spacing:.02em;">這份報告，是為</div>'+
+// 💡 名字往下推：top 從 308px 改為 340px
+'<div style="position:absolute;left:190px;top:340px;font-size:180px;font-weight:700;line-height:1;letter-spacing:.15em;color:'+DEEP+'">'+pName+'</div>'+
+// 💡 第三行跟著往下推：top 從 510px 改為 550px
+'<div style="position:absolute;left:'+line3Left+'px;top:550px;font-size:56px;font-weight:800;color:#03648a;letter-spacing:.04em">整理的專屬保障健診</div>'+
+// 💡 第四行也跟著往下推：top 從 610px 改為 650px
+'<div style="position:absolute;left:190px;top:650px;font-size:34px;font-weight:500;color:#64748b;max-width:920px;line-height:1.6">把每一份牽掛，安放進看得懂、說得清的保障地圖裡。</div>'+
+agentPhoto+
+footer+
   '</div>';
 }
 
