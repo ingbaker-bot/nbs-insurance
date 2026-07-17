@@ -177,7 +177,7 @@
 // 舊寫死網址保留當「安裝流程還沒完成、拿不到專屬網址」時的備援，
 // 正常情況下一律優先使用 localStorage 裡存的業務員專屬 Shell 網址
 // （跟 nav.js 的 _gas() 用同一個 key，行為保持一致）。
-var   GAS_FALLBACK_="https://script.google.com/macros/s/AKfycbzML8PBPSfNIzLx9TT_MgrdQ43yFQmQJy17hLJqTieVPOYnHk6ZYunXkIAYX1653Kbgjg/exec";
+var   GAS_FALLBACK_="https://script.google.com/macros/s/AKfycbwzDwyZy09189eOJOs-zEwkZOml2_pJOq15nYGtHF2Kyrtv6ag5VY-I2M8sDyrt0iPdZQ/exec";
 var   GAS=(function(){
   var shellUrl = localStorage.getItem("nbs_shell_url");
   return (shellUrl && shellUrl.startsWith("https://")) ? shellUrl : GAS_FALLBACK_;
