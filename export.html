@@ -207,7 +207,9 @@ var fmtOpen="png"; // 手風琴目前展開的區塊，預設展開 PNG
 var person={},policies=[],coverage={},savings=[];
 var pName="",pDate="";
 var agentPhotoDataUrl=null; // 業務員大頭照（封面用），頁面載入時預先抓好，避免組封面時要等非同步
-
+// 建立一張 1x1 像素的完全透明圖片 (Base64)，用來覆蓋後端舊檔案
+var EMPTY_TRANSPARENT_IMG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+  
 // ── 按鈕綁定 ─────────────────────────────────────────────
 function _goFamily() {
   if (window.NBSRouter && typeof NBSRouter.navigate === "function") {
@@ -1028,19 +1030,38 @@ function openAgentInfoModal() {
   document.getElementById("agent-modal-contact").value = localStorage.getItem("nbs_agent_watermark_contact") || "";
   _pendingAgentPhotoDataUrl = null;
   document.getElementById("agent-modal-photo-status").textContent = "";
-  // 用頁面載入時預抓好的照片先顯示；如果那次還沒抓完/沒有照片，就再問一次
-  if (agentPhotoDataUrl) {
-    var pv = document.getElementById("agent-modal-photo-preview");
-    pv.src = agentPhotoDataUrl; pv.style.display = "block";
-  } else {
+  
+  var pv = document.getElementById("agent-modal-photo-preview");
+  var isCleared = localStorage.getItem("nbs_agent_photo_cleared") === "true";
+
+  // 1. 如果本地有清除記號，或記憶體裡的圖片就是透明圖 -> 直接隱藏
+  if (isCleared || agentPhotoDataUrl === EMPTY_TRANSPARENT_IMG) {
+    pv.src = ""; 
+    pv.style.display = "none";
+  } 
+  // 2. 如果有正常圖片 -> 顯示出來
+  else if (agentPhotoDataUrl && agentPhotoDataUrl !== EMPTY_TRANSPARENT_IMG) {
+    pv.src = agentPhotoDataUrl; 
+    pv.style.display = "block";
+  } 
+  // 3. 都沒有時，跟後端討資料
+  else {
     gas("getPhoto", { email: currentUser.email }).then(function(r){
       if (r && r.status === "ok" && r.dataUrl) {
-        agentPhotoDataUrl = r.dataUrl;
-        var pv = document.getElementById("agent-modal-photo-preview");
-        pv.src = r.dataUrl; pv.style.display = "block";
+        // 判斷後端丟過來的是不是我們偷偷塞的透明圖
+        if (r.dataUrl === EMPTY_TRANSPARENT_IMG) {
+          agentPhotoDataUrl = null;
+          localStorage.setItem("nbs_agent_photo_cleared", "true");
+        } else {
+          agentPhotoDataUrl = r.dataUrl;
+          pv.src = r.dataUrl; 
+          pv.style.display = "block";
+          localStorage.removeItem("nbs_agent_photo_cleared");
+        }
       }
     }).catch(function(){});
   }
+  
   document.getElementById("agent-modal-overlay").classList.add("active");
 }
 function closeAgentInfoModal() {
@@ -1082,33 +1103,21 @@ function saveAgentInfo() {
   localStorage.setItem("nbs_agent_watermark_company", co);
   localStorage.setItem("nbs_agent_watermark_contact", c);
 
-  // 💡 【核心修復機制】：直接抓取畫面上預覽圖片的 style 狀態與 src
   var pv = document.getElementById("agent-modal-photo-preview");
   var isPhotoHidden = (!pv || pv.style.display === "none" || pv.src === "" || pv.src === window.location.href);
 
-  // 狀況 A：不論使用者之前有沒有按按鈕，只要目前畫面上「沒有顯示預覽圖」，就代表要徹底移除雲端照片！
+  // 💡 狀況 A：執行徹底清除照片
   if (_pendingAgentPhotoDataUrl === "REMOVE" || isPhotoHidden) {
-    document.getElementById("agent-modal-photo-status").textContent = "正在同步清除雲端照片…";
+    document.getElementById("agent-modal-photo-status").textContent = "正在覆蓋並清除雲端照片…";
     
-    // 徹底斬草除根，清空本地記憶體變數
     agentPhotoDataUrl = null; 
     _pendingAgentPhotoDataUrl = null;
 
-    // 清除 nbs_user 登入快取中的照片紀錄，防止死灰復燃
-    try {
-      var cachedUser = localStorage.getItem("nbs_user");
-      if (cachedUser) {
-        var userObj = JSON.parse(cachedUser);
-        if (userObj.photo) userObj.photo = "";
-        if (userObj.photoUrl) userObj.photoUrl = "";
-        if (userObj.avatar) userObj.avatar = "";
-        if (userObj.agentPhoto) userObj.agentPhoto = "";
-        localStorage.setItem("nbs_user", JSON.stringify(userObj));
-      }
-    } catch (e) {}
+    // 【雙重保險】：在本地瀏覽器做一個「已清除」的記號
+    localStorage.setItem("nbs_agent_photo_cleared", "true");
 
-    // 強制發送空字串給後端，命令雲端 Drive 實體刪除照片檔案
-    gas("savePhoto", { email: currentUser.email, dataUrl: "" }).then(function(r){
+    // 【終極絕招】：改傳 1x1 透明圖片，強迫後端雲端硬碟覆蓋舊檔案！
+    gas("savePhoto", { email: currentUser.email, dataUrl: EMPTY_TRANSPARENT_IMG }).then(function(r){
       closeAgentInfoModal();
       if (typeof doShowPreview === "function" && (sel.cover || document.getElementById("P_PREV").classList.contains("act"))) {
         doShowPreview(); 
@@ -1117,22 +1126,17 @@ function saveAgentInfo() {
       closeAgentInfoModal();
     });
   } 
-  // 狀況 B：使用者有選擇新照片，執行上傳
+  // 💡 狀況 B：上傳新照片
   else if (_pendingAgentPhotoDataUrl && _pendingAgentPhotoDataUrl !== "REMOVE") {
     document.getElementById("agent-modal-photo-status").textContent = "上傳中…";
+    
+    // 清除「已刪除」的記號
+    localStorage.removeItem("nbs_agent_photo_cleared");
+
     gas("savePhoto", { email: currentUser.email, dataUrl: _pendingAgentPhotoDataUrl }).then(function(r){
       if (r && r.status === "ok") {
         agentPhotoDataUrl = _pendingAgentPhotoDataUrl;
         _pendingAgentPhotoDataUrl = null;
-        
-        try {
-          var cachedUser = localStorage.getItem("nbs_user");
-          if (cachedUser) {
-            var userObj = JSON.parse(cachedUser);
-            if (userObj.hasOwnProperty("photo")) userObj.photo = agentPhotoDataUrl;
-            localStorage.setItem("nbs_user", JSON.stringify(userObj));
-          }
-        } catch(e){}
       } else {
         alert("照片上傳失敗：" + (r && r.message || "未知錯誤"));
       }
@@ -1142,7 +1146,7 @@ function saveAgentInfo() {
       closeAgentInfoModal();
     });
   } 
-  // 狀況 C：原本有照片，且畫面預覽依然存在，使用者也沒刪除（單純改保險公司或聯絡方式）
+  // 💡 狀況 C：單純修改文字，照片不變
   else {
     closeAgentInfoModal();
   }
