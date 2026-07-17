@@ -2403,7 +2403,7 @@ function showDone(blks){
 
 // ── GAS 呼叫 ─────────────────────────────────────────────
 function gas(action,params){
-  if(action==="saveFile"||action==="savePhoto"){
+  if(action==="saveFile"||action==="savePhoto"||action==="getPhoto"){
     return fetch(GAS,{
       method:"POST",
       headers:{"Content-Type":"text/plain"},
