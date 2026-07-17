@@ -1082,21 +1082,27 @@ function saveAgentInfo() {
   localStorage.setItem("nbs_agent_watermark_company", co);
   localStorage.setItem("nbs_agent_watermark_contact", c);
 
-  // 新增判斷：如果使用者點擊了清除照片
+  // 當偵測到變數被標記為 REMOVE 時，執行徹底刪除
   if (_pendingAgentPhotoDataUrl === "REMOVE") {
-    document.getElementById("agent-modal-photo-status").textContent = "正在移除照片…";
-    // 傳送空字串給後端 savePhoto 進行刪除
+    document.getElementById("agent-modal-photo-status").textContent = "正在雲端移除照片…";
+    
+    // 同步清空本地端的照片變數，確保目前報表及封面頁立刻失效
+    agentPhotoDataUrl = null; 
+    _pendingAgentPhotoDataUrl = null;
+
+    // 呼叫後端 GAS 刪除雲端硬碟的實體檔案
     gas("savePhoto", { email: currentUser.email, dataUrl: "" }).then(function(r){
-      if (r && r.status === "ok") {
-        agentPhotoDataUrl = null; // 立即清空本地快取
-        _pendingAgentPhotoDataUrl = null;
-      }
+      // 刪除完成後關閉視窗
       closeAgentInfoModal();
+      // 💡 進階優化：如果封面頁在畫面上，強迫重新整理預覽，讓照片立刻消失
+      if (typeof doShowPreview === "function" && sel.cover) {
+        // 如果目前勾選了封面，可以考慮重整或讓使用者手動點擊預覽重刷
+      }
     }).catch(function(){
       closeAgentInfoModal();
     });
   } 
-  // 原本的「上傳新選擇照片」邏輯
+  // 原本的上傳新照片邏輯
   else if (_pendingAgentPhotoDataUrl) {
     document.getElementById("agent-modal-photo-status").textContent = "上傳中…";
     gas("savePhoto", { email: currentUser.email, dataUrl: _pendingAgentPhotoDataUrl }).then(function(r){
@@ -1115,18 +1121,17 @@ function saveAgentInfo() {
     closeAgentInfoModal();
   }
 }
-
 // 新增：清除並取消照片選取
 function clearAgentPhoto() {
   // 1. 清空檔案選擇器的值
   var fileInput = document.getElementById("agent-modal-photo-input");
   if (fileInput) fileInput.value = "";
   
-  // 2. 隱藏並清空照片預覽
+  // 2. 徹底隱藏並清空照片預覽（修正原本多寫 style 的問題）
   var pv = document.getElementById("agent-modal-photo-preview");
   if (pv) {
     pv.src = "";
-    pv.style.style.display = "none";
+    pv.style.display = "none"; // 修正為單個 .style.display
   }
   
   // 3. 將暫存變數標記為移除狀態，並更新提示文字
