@@ -1873,21 +1873,29 @@ function buildCoverBlockHtml(){
   var today = new Date();
   var printDateStr = (today.getFullYear()-1911)+"年"+(today.getMonth()+1)+"月"+today.getDate()+"日";
 
+  // 背景氛圍光暈：改用純 CSS radial-gradient（html2canvas 完全支援，
+  // 資訊牌的漸層色帶就是靠這個方式正常顯示的），取代原本 SVG 濾鏡模糊
+  // （html2canvas 幾乎不支援 feGaussianBlur，之前匯出圖片會整片消失
+  // 就是這個原因）。
+  var ambientWash =
+    '<div style="position:absolute;left:1050px;top:-260px;width:1500px;height:1300px;background:radial-gradient(circle at 42% 38%,rgba(0,137,209,.40) 0%,rgba(0,137,209,0) 66%)"></div>'+
+    '<div style="position:absolute;left:1350px;top:420px;width:1300px;height:1300px;background:radial-gradient(circle at 55% 55%,rgba(1,181,174,.34) 0%,rgba(1,181,174,0) 66%)"></div>'+
+    '<div style="position:absolute;left:-300px;top:-320px;width:900px;height:900px;background:radial-gradient(circle at 50% 50%,rgba(4,59,77,.10) 0%,rgba(4,59,77,0) 70%)"></div>';
+
+  // 左側色帶：藍→綠漸層的滿版直條，取代原本拿掉的頂部標籤，
+  // 讓封面一眼就有明確的科技識別色，不會整頁太蒼白
+  var sideSpine = '<div style="position:absolute;left:0;top:0;width:16px;height:100%;background:linear-gradient(180deg,'+BLUE+' 0%,'+GREEN+' 100%)"></div>';
+
   var starsSvg = '<svg style="position:absolute;left:1180px;top:0px;width:1220px;height:1400px" viewBox="0 0 1220 1400" xmlns="http://www.w3.org/2000/svg">'+
     '<defs>'+
       '<radialGradient id="cvGlowBlue" cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#8fd3e8"/><stop offset="55%" stop-color="'+BLUE+'"/><stop offset="100%" stop-color="'+DEEP+'" stop-opacity="0"/></radialGradient>'+
       '<radialGradient id="cvGlowGreen" cx="35%" cy="30%" r="70%"><stop offset="0%" stop-color="#9cebdd"/><stop offset="55%" stop-color="'+GREEN+'" stop-opacity=".8"/><stop offset="100%" stop-color="#00786f" stop-opacity="0"/></radialGradient>'+
       '<linearGradient id="cvLineGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="'+BLUE+'"/><stop offset="100%" stop-color="'+GREEN+'"/></linearGradient>'+
-      '<filter id="cvBlurBig" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="70"/></filter>'+
-      '<filter id="cvBlurStar" x="-160%" y="-160%" width="420%" height="420%"><feGaussianBlur stdDeviation="6"/></filter>'+
     '</defs>'+
-    '<ellipse cx="680" cy="420" rx="360" ry="300" fill="url(#cvGlowBlue)" opacity=".22" filter="url(#cvBlurBig)"/>'+
-    '<ellipse cx="980" cy="820" rx="320" ry="280" fill="url(#cvGlowGreen)" opacity=".18" filter="url(#cvBlurBig)"/>'+
-    '<ellipse cx="300" cy="120" rx="260" ry="200" fill="url(#cvGlowBlue)" opacity=".10" filter="url(#cvBlurBig)"/>'+
-    '<g fill="'+BLUE+'" opacity=".35"><circle cx="120" cy="200" r="2.2"/><circle cx="220" cy="640" r="1.6"/><circle cx="1080" cy="240" r="2"/><circle cx="1150" cy="500" r="1.6"/><circle cx="880" cy="120" r="2"/><circle cx="60" cy="900" r="1.8"/><circle cx="1050" cy="1100" r="2"/><circle cx="400" cy="980" r="1.6"/><circle cx="760" cy="1220" r="1.8"/><circle cx="180" cy="1080" r="2"/><circle cx="960" cy="60" r="1.6"/></g>'+
-    '<g stroke="url(#cvLineGrad)" stroke-width="2.5" opacity=".35" fill="none" stroke-linecap="round"><path d="M 60 480 Q 220 380 370 300"/><path d="M 370 300 Q 460 230 560 190"/><path d="M 370 300 Q 340 420 440 470"/></g>'+
-    '<g fill="url(#cvLineGrad)" opacity=".5"><circle cx="60" cy="480" r="3.5"/><circle cx="370" cy="300" r="4"/><circle cx="560" cy="190" r="3"/><circle cx="440" cy="470" r="3"/></g>'+
-    '<g stroke="url(#cvLineGrad)" stroke-width="3" opacity=".55" fill="none" stroke-linecap="round">'+
+    '<g fill="'+BLUE+'" opacity=".4"><circle cx="120" cy="200" r="2.2"/><circle cx="220" cy="640" r="1.6"/><circle cx="1080" cy="240" r="2"/><circle cx="1150" cy="500" r="1.6"/><circle cx="880" cy="120" r="2"/><circle cx="60" cy="900" r="1.8"/><circle cx="1050" cy="1100" r="2"/><circle cx="400" cy="980" r="1.6"/><circle cx="760" cy="1220" r="1.8"/><circle cx="180" cy="1080" r="2"/><circle cx="960" cy="60" r="1.6"/></g>'+
+    '<g stroke="url(#cvLineGrad)" stroke-width="2.5" opacity=".4" fill="none" stroke-linecap="round"><path d="M 60 480 Q 220 380 370 300"/><path d="M 370 300 Q 460 230 560 190"/><path d="M 370 300 Q 340 420 440 470"/></g>'+
+    '<g fill="url(#cvLineGrad)" opacity=".55"><circle cx="60" cy="480" r="3.5"/><circle cx="370" cy="300" r="4"/><circle cx="560" cy="190" r="3"/><circle cx="440" cy="470" r="3"/></g>'+
+    '<g stroke="url(#cvLineGrad)" stroke-width="3" opacity=".6" fill="none" stroke-linecap="round">'+
       '<path d="M 660 500 Q 700 470 740 440"/><path d="M 740 440 Q 730 500 700 550"/><path d="M 700 550 Q 675 520 660 500"/>'+
       '<path d="M 660 500 Q 590 440 540 400"/><path d="M 660 500 Q 590 560 520 610"/>'+
       '<path d="M 740 440 Q 800 370 850 330"/><path d="M 740 440 Q 830 460 900 480"/>'+
@@ -1895,12 +1903,12 @@ function buildCoverBlockHtml(){
       '<path d="M 900 480 Q 970 560 1010 640"/><path d="M 850 660 Q 940 700 1010 640"/>'+
       '<path d="M 1010 640 Q 1060 750 1090 860"/><path d="M 1090 860 Q 1130 970 1160 1080"/>'+
     '</g>'+
-    '<g filter="url(#cvBlurStar)"><circle cx="660" cy="500" r="17" fill="url(#cvGlowBlue)"/><circle cx="740" cy="440" r="12" fill="url(#cvGlowBlue)"/><circle cx="700" cy="550" r="10" fill="url(#cvGlowGreen)"/></g>'+
+    '<circle cx="660" cy="500" r="20" fill="url(#cvGlowBlue)"/><circle cx="740" cy="440" r="15" fill="url(#cvGlowBlue)"/><circle cx="700" cy="550" r="13" fill="url(#cvGlowGreen)"/>'+
     '<circle cx="660" cy="500" r="7" fill="#eef2ff"/><circle cx="740" cy="440" r="5" fill="#eef2ff"/><circle cx="700" cy="550" r="4.5" fill="#f0faff"/>'+
-    '<g filter="url(#cvBlurStar)"><circle cx="540" cy="400" r="7" fill="url(#cvGlowBlue)"/><circle cx="520" cy="610" r="7" fill="url(#cvGlowGreen)"/><circle cx="850" cy="330" r="8" fill="url(#cvGlowGreen)"/><circle cx="900" cy="480" r="7" fill="url(#cvGlowBlue)"/><circle cx="850" cy="660" r="7" fill="url(#cvGlowGreen)"/><circle cx="640" cy="710" r="6" fill="url(#cvGlowBlue)"/><circle cx="1010" cy="640" r="8" fill="url(#cvGlowGreen)"/></g>'+
+    '<circle cx="540" cy="400" r="10" fill="url(#cvGlowBlue)"/><circle cx="520" cy="610" r="10" fill="url(#cvGlowGreen)"/><circle cx="850" cy="330" r="11" fill="url(#cvGlowGreen)"/><circle cx="900" cy="480" r="10" fill="url(#cvGlowBlue)"/><circle cx="850" cy="660" r="10" fill="url(#cvGlowGreen)"/><circle cx="640" cy="710" r="9" fill="url(#cvGlowBlue)"/><circle cx="1010" cy="640" r="11" fill="url(#cvGlowGreen)"/>'+
     '<g fill="#f5f7ff"><circle cx="540" cy="400" r="3"/><circle cx="520" cy="610" r="3"/><circle cx="850" cy="330" r="3.2"/><circle cx="900" cy="480" r="3"/><circle cx="850" cy="660" r="3"/><circle cx="640" cy="710" r="2.6"/><circle cx="1010" cy="640" r="3.2"/></g>'+
-    '<g fill="url(#cvLineGrad)" opacity=".45"><circle cx="1090" cy="860" r="4.5"/><circle cx="1160" cy="1080" r="3"/><circle cx="1200" cy="1250" r="2"/></g>'+
-    '<path d="M 1160 1080 Q 1190 1170 1200 1250" stroke="url(#cvLineGrad)" stroke-width="2" opacity=".25" fill="none" stroke-linecap="round"/>'+
+    '<g fill="url(#cvLineGrad)" opacity=".5"><circle cx="1090" cy="860" r="4.5"/><circle cx="1160" cy="1080" r="3"/><circle cx="1200" cy="1250" r="2"/></g>'+
+    '<path d="M 1160 1080 Q 1190 1170 1200 1250" stroke="url(#cvLineGrad)" stroke-width="2" opacity=".3" fill="none" stroke-linecap="round"/>'+
   '</svg>';
 
   var infoCard = '<div style="position:absolute;right:150px;top:150px;width:520px;background:rgba(255,255,255,.90);border-radius:32px;border:1px solid rgba(255,255,255,.7);box-shadow:0 24px 48px -20px rgba(4,59,77,.28);overflow:hidden">'+
@@ -1917,7 +1925,7 @@ function buildCoverBlockHtml(){
     '</div>'+
   '</div>';
 
-  var footer = '<div style="position:absolute;left:0;bottom:0;width:100%;height:230px;border-top:2px solid rgba(0,137,209,.18);display:flex;align-items:center;justify-content:space-between;padding:0 150px">'+
+  var footer = '<div style="position:absolute;left:0;bottom:0;width:100%;height:230px;border-top:2px solid rgba(0,137,209,.18);display:flex;align-items:center;justify-content:space-between;padding:0 190px">'+
     '<div style="display:flex;gap:80px">'+
       coverFooterItemHtml('👤','業務員',agentName)+
       coverFooterItemHtml('🏢','保險公司',agentCompany)+
@@ -1933,15 +1941,17 @@ function buildCoverBlockHtml(){
   // 業務員大頭照：放在左下角，保戶姓名區塊跟底部業務員資訊列中間的留白處。
   // 沒有照片（還沒上傳過）就完全不渲染，不留破圖示。
   var agentPhoto = agentPhotoDataUrl
-    ? '<img src="'+agentPhotoDataUrl+'" style="position:absolute;left:150px;top:880px;width:480px;height:480px;border-radius:40px;object-fit:contain;background:#ffffff;border:1px solid rgba(255,255,255,.7);box-shadow:0 24px 48px -20px rgba(4,59,77,.28)"/>'
+    ? '<img src="'+agentPhotoDataUrl+'" style="position:absolute;left:190px;top:880px;width:480px;height:480px;border-radius:40px;object-fit:contain;background:#ffffff;border:1px solid rgba(255,255,255,.7);box-shadow:0 24px 48px -20px rgba(4,59,77,.28)"/>'
     : '';
 
-  return '<div style="width:2400px;height:1697px;position:relative;overflow:hidden;background:linear-gradient(160deg,#fbfcfe 0%,#f6f7fb 55%,#f1f3f9 100%);color:#1e293b">'+
+  return '<div style="width:2400px;height:1697px;position:relative;overflow:hidden;background:linear-gradient(160deg,#eef5fa 0%,#eef7f5 55%,#eaf3f6 100%);color:#1e293b">'+
+    ambientWash+
+    sideSpine+
     starsSvg+
-    '<div style="position:absolute;left:150px;top:260px;font-size:42px;font-weight:600;color:#64748b;letter-spacing:.02em">這份報告，是為</div>'+
-    '<div style="position:absolute;left:146px;top:308px;font-size:180px;font-weight:900;line-height:1;letter-spacing:.01em;background:linear-gradient(135deg,'+DEEP+' 0%,'+BLUE+' 60%,#079fb8 100%);-webkit-background-clip:text;background-clip:text;color:transparent">'+pName+'</div>'+
-    '<div style="position:absolute;left:150px;top:510px;font-size:56px;font-weight:800;color:#03648a;letter-spacing:.04em">整理的專屬保障健診</div>'+
-    '<div style="position:absolute;left:150px;top:610px;font-size:34px;font-weight:500;color:#64748b;max-width:920px;line-height:1.6">把每一份牽掛，安放進看得懂、說得清的保障地圖裡。</div>'+
+    '<div style="position:absolute;left:190px;top:260px;font-size:42px;font-weight:600;color:#64748b;letter-spacing:.02em">這份報告，是為</div>'+
+    '<div style="position:absolute;left:186px;top:308px;font-size:180px;font-weight:900;line-height:1;letter-spacing:.01em;color:'+DEEP+'">'+pName+'</div>'+
+    '<div style="position:absolute;left:190px;top:510px;font-size:56px;font-weight:800;color:#03648a;letter-spacing:.04em">整理的專屬保障健診</div>'+
+    '<div style="position:absolute;left:190px;top:610px;font-size:34px;font-weight:500;color:#64748b;max-width:920px;line-height:1.6">把每一份牽掛，安放進看得懂、說得清的保障地圖裡。</div>'+
     agentPhoto+
     infoCard+
     footer+
