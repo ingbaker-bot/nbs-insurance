@@ -1985,9 +1985,22 @@ function buildCoverBlockHtml(){
   var line3IndentChars = Math.max(0, nameLen - 2);
   var line3Left = NAME_BASE_LEFT + line3IndentChars * NAME_CHAR_PITCH;
 
-  var agentPhoto = agentPhotoDataUrl
-    ? '<img src="'+agentPhotoDataUrl+'" style="position:absolute;left:190px;top:720px;width:720px;height:720px;border-radius:40px;object-fit:contain;background:#ffffff;border:1px solid rgba(255,255,255,.85);box-shadow:0 24px 48px -20px rgba(4,59,77,.35)"/>'
-    : '';
+  // 1. 先預設沒有大頭照（給空字串）
+var agentPhoto = "";
+
+// 2. 判斷：如果 agentPhotoDataUrl 有值，且「不是」我們用來覆蓋的 1x1 透明圖
+if (agentPhotoDataUrl && agentPhotoDataUrl !== EMPTY_TRANSPARENT_IMG) {
+    
+    // 3. 只有在有真實照片時，才產生這個帶有白色底圖與陰影的 <div> 區塊
+    // (請將下面單引號內的 HTML 替換成您系統中原本大頭照 <div> 的樣式)
+    agentPhoto = '<div style="position:absolute; left:190px; top:800px; width:400px; height:400px; background:#fff; border-radius:30px; overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,0.1);"><img src="' + agentPhotoDataUrl + '" style="width:100%; height:100%; object-fit:cover;"></div>';
+}
+
+// 組合最終 HTML 時，若沒有照片，agentPhoto 就會是空的，完全不會產生白色區塊
+var html = ... +
+           '<div style="position:absolute;left:190px;top:650px;font-size:34px;font-weight:500;color:#64748b;max-width:920px;line-height:1.6">把每一份牽掛，安放進看得懂、說得清的保障地圖裡。</div>' +
+           agentPhoto + 
+           footer;
 
   // 封面底圖：使用者提供的 AI 生成素材，整頁滿版鋪底。
   // 改用 <img> 標籤鋪滿整頁（不用 CSS background-image）——
