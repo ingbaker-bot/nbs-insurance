@@ -1032,7 +1032,7 @@ function openAgentInfoModal() {
     var pv = document.getElementById("agent-modal-photo-preview");
     pv.src = agentPhotoDataUrl; pv.style.display = "block";
   } else {
-    gas("getPhoto", {}).then(function(r){
+    gas("getPhoto", { email: currentUser.email }).then(function(r){
       if (r && r.status === "ok" && r.dataUrl) {
         agentPhotoDataUrl = r.dataUrl;
         var pv = document.getElementById("agent-modal-photo-preview");
@@ -1083,7 +1083,7 @@ function saveAgentInfo() {
 
   if (_pendingAgentPhotoDataUrl) {
     document.getElementById("agent-modal-photo-status").textContent = "上傳中…";
-    gas("savePhoto", { dataUrl: _pendingAgentPhotoDataUrl }).then(function(r){
+    gas("savePhoto", { email: currentUser.email, dataUrl: _pendingAgentPhotoDataUrl }).then(function(r){
       if (r && r.status === "ok") {
         agentPhotoDataUrl = _pendingAgentPhotoDataUrl; // 這次匯出馬上就能用到新照片
         _pendingAgentPhotoDataUrl = null;
@@ -2428,7 +2428,7 @@ window.addEventListener("nbs_nav_ready", async function(e) {
   familyFileName    = e.detail.familyFileName;
 
   // 預先抓一次業務員大頭照（封面要用），失敗或沒有照片都不影響其他流程
-  gas("getPhoto", {}).then(function(r){
+  gas("getPhoto", { email: currentUser.email }).then(function(r){
     if (r && r.status === "ok" && r.dataUrl) agentPhotoDataUrl = r.dataUrl;
   }).catch(function(){ /* 沒有照片或抓取失敗，封面就不放照片，不影響其他功能 */ });
 
