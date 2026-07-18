@@ -822,12 +822,18 @@ function renderPolicies() {
 
     // 渲染群組標題 (點擊可展開/收合附約)
     const groupColor = policyGroupColor(policyNo);
+    const insuredName = member ? member.name : "—";
+    const ownerName = rows[0].owner || "";
+    // 要保人如果剛好也是家庭成員，顏色跟他被保險人時用的顏色一致方便對照；
+    // 不是家庭成員（舊資料、外部人員）也還是用姓名字串算一個固定顏色。
+    const ownerPersonId = (familyData.members.find(fm => fm.name === ownerName) || {}).personId || ownerName;
     html += `<div class="policy-group" style="border-left:6px solid ${groupColor};">
-      <div class="group-header" onclick="toggleRiders('${safeId}')" style="cursor:pointer; display:flex; align-items:center;">
+      <div class="group-header" onclick="toggleRiders('${safeId}')" style="cursor:pointer; display:flex; align-items:center; flex-wrap:wrap; row-gap:4px;">
         <span class="expand-icon" id="icon-${safeId}" style="margin-right:8px; font-size: 14px; transition:transform 0.2s; color:#999;">▶</span>
         <span class="policy-no-badge" style="background:${groupColor}1A;color:${groupColor};border:1px solid ${groupColor}55;">${policyNo}</span>
         <span class="group-company" style="margin-left:8px;">${rows[0].company||'—'}</span>
-        ${currentTab==='all' && member ? `<span class="group-member-badge" style="margin-left:8px;background:${personBadgeColor(member.personId)}1A;color:${personBadgeColor(member.personId)};border:1px solid ${personBadgeColor(member.personId)}55;">${member.name}</span>` : ''}
+        ${currentTab==='all' && member ? `<span class="group-member-badge" title="被保險人" style="margin-left:8px;background:${personBadgeColor(member.personId)};color:#fff;border:1px solid ${personBadgeColor(member.personId)};">被保 ${member.name}</span>` : ''}
+        ${(ownerName && ownerName !== insuredName) ? `<span title="要保人（與被保險人不同人，請留意保單帳戶價值/解約權利歸屬）" style="margin-left:6px;font-size:12px;font-weight:600;padding:2px 8px;border-radius:99px;background:#fff;color:${personBadgeColor(ownerPersonId)};border:1.5px solid ${personBadgeColor(ownerPersonId)};white-space:nowrap;">要保 ${ownerName}</span>` : ''}
         ${effDate ? `<span style="margin-left:8px;font-size:13px;color:#999;white-space:nowrap;">生效日 ${toRoc(effDate)}</span>` : ''}
         <span class="group-total">年繳 NT${groupTotal.toLocaleString()}</span>
       </div>`;
