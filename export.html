@@ -1457,6 +1457,89 @@ function getPolicyExpiryDisplay(p) {
 // 把「保單繳費明細一覽表」拆成頭部（年繳/月均統計+月曆）跟逐組保單
 // 卡片陣列，讓 PDF 匯出可以依保單分組動態分頁，不會為了硬塞進一頁
 // 而把整張圖等比例縮到看不清楚
+// ── 全家保費總表：每個家庭成員的年繳/月繳保費彙整成一張總表 ──
+// 跟下面 buildPremiumDetailParts() 裡「單一成員」的月繳分配算法邏輯
+// 完全一樣，只是這裡是對「每一個成員」各自算一次，再加總成全家的
+// 數字，個別成員自己的月繳分配還是留著，不會被合計數字取代掉。
+function computeMonthlyDistributionEx(activePolicies){
+  var groupMainStartDate = {};
+  activePolicies.forEach(function(p){
+    if(p.isMain===true && p.startDate) groupMainStartDate[p.policyNo||p.id] = p.startDate;
+  });
+  return Array.from({length:12}, function(_, mi){
+    var t = 0;
+    activePolicies.forEach(function(p){
+      var effDate = p.startDate || groupMainStartDate[p.policyNo||p.id] || "2020-01-01";
+      var sm = new Date(effDate).getMonth(), pr = p.premiumTWD || 0;
+      if(p.payMode==="月繳") t += Math.round(pr/12);
+      else if(p.payMode==="季繳" && (mi-sm+12)%3===0) t += Math.round(pr/4);
+      else if(p.payMode==="半年繳" && (mi-sm+12)%6===0) t += Math.round(pr/2);
+      else if(p.payMode==="年繳" && mi===sm%12) t += pr;
+    });
+    return t;
+  });
+}
+
+function buildFamilyPremiumSummaryHtml(){
+  var fmem = (familyData && familyData.members) || [];
+  var activeFmem = fmem.filter(function(m){ return m.role !== "beneficiary_only"; });
+
+  var perMember = activeFmem.map(function(m){
+    var p = personDataMap[m.personId];
+    var pols = ((p && p.policies) || []).filter(isPolicyActiveEx);
+    var total = pols.reduce(function(s,pp){ return s+(pp.premiumTWD||0); }, 0);
+    return { name: m.name, total: total, monthly: computeMonthlyDistributionEx(pols) };
+  });
+
+  var familyTotal = perMember.reduce(function(s,m){ return s+m.total; }, 0);
+  var familyMonthly = Array.from({length:12}, function(_,mi){
+    return perMember.reduce(function(s,m){ return s+m.monthly[mi]; }, 0);
+  });
+
+  var html = '<div style="padding:14px 12px">';
+  html += '<div style="font-size:30px;font-weight:800;color:#444;margin-bottom:10px">全家保費總表</div>';
+
+  // 全家合計兩張卡片
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px">'+
+    '<div style="padding:10px;border-radius:10px;background:linear-gradient(135deg,#E6F1FB,#F0F7FF);text-align:center;box-shadow:0 4px 10px -3px rgba(12,68,124,.18)">'+
+      '<div style="font-size:24px;font-weight:700;color:#5B8DBE">全家年繳總保費</div>'+
+      '<div style="font-size:36px;font-weight:800;margin-top:2px;color:#0C447C;font-variant-numeric:tabular-nums">'+familyTotal.toLocaleString()+'<span style="font-size:22px;font-weight:700;margin-left:1px">元</span></div>'+
+    '</div>'+
+    '<div style="padding:10px;border-radius:10px;background:linear-gradient(135deg,#EAF3DE,#F3F9EC);text-align:center;box-shadow:0 4px 10px -3px rgba(39,80,10,.18)">'+
+      '<div style="font-size:24px;font-weight:700;color:#6B9450">全家月均保費</div>'+
+      '<div style="font-size:36px;font-weight:800;margin-top:2px;color:#27500A;font-variant-numeric:tabular-nums">'+Math.round(familyTotal/12).toLocaleString()+'<span style="font-size:22px;font-weight:700;margin-left:1px">元</span></div>'+
+    '</div>'+
+  '</div>';
+
+  // 月份 × 成員 明細表（跟原始保單健檢報告的「每月保費一覽表」同款：
+  // 每個成員各一欄，最後加一欄合計）
+  var thStyleFP = 'padding:10px;text-align:right;font-size:20px;font-weight:800;color:#6b7280;white-space:nowrap;background:#f7f8fa;';
+  var tdStyleFP = 'padding:10px;text-align:right;font-size:22px;font-variant-numeric:tabular-nums;background:#fff;';
+  var nCols = perMember.length + 2; // 月份欄 + 各成員 + 合計
+  var colTemplate = '110px ' + perMember.map(function(){return '1fr';}).join(' ') + ' 1fr';
+
+  html += '<div style="display:grid;grid-template-columns:'+colTemplate+';border-bottom:2px solid #eef0f3">'+
+    '<div style="'+thStyleFP+'text-align:left">月份</div>'+
+    perMember.map(function(m){ return '<div style="'+thStyleFP+'">'+m.name+'</div>'; }).join('')+
+    '<div style="'+thStyleFP+'color:#0C447C">合計</div>'+
+  '</div>';
+
+  for (var mi=0; mi<12; mi++){
+    var rowBg = mi%2===0 ? '#fff' : '#fbfbfc';
+    html += '<div style="display:grid;grid-template-columns:'+colTemplate+';border-bottom:1px solid #f0f0f0;background:'+rowBg+'">'+
+      '<div style="'+tdStyleFP+'text-align:left;font-weight:700;color:#444">'+(mi+1)+'月</div>'+
+      perMember.map(function(m){
+        var v = m.monthly[mi];
+        return '<div style="'+tdStyleFP+'color:'+(v>0?'#1a1a1a':'#c0c0c0')+'">'+(v>0?v.toLocaleString():'—')+'</div>';
+      }).join('')+
+      '<div style="'+tdStyleFP+'font-weight:800;color:#0C447C">'+(familyMonthly[mi]>0?familyMonthly[mi].toLocaleString():'—')+'</div>'+
+    '</div>';
+  }
+
+  html += '</div>';
+  return html;
+}
+
 function buildPremiumDetailParts() {
   var active = policies.filter(isPolicyActiveEx); // 自己算，不依賴外層變數，
                                                     // 確保從 doExportPDF 直接呼叫時也能正確運作
@@ -2148,8 +2231,10 @@ function renderBlock(key){
 
   // ▼ ①保險繳費明細一覽表：年繳/月均統計 + 月曆 + 整合表
   if(key==="premium_detail"){
+    var famSummaryHtml = buildFamilyPremiumSummaryHtml();
     var pdParts = buildPremiumDetailParts();
-    return '<div style="padding:14px 12px 0">'+pdParts.headerHtml+'</div><div style="padding:0 12px 14px">'+pdParts.groupHtmls.join("")+'</div>';
+    return '<div style="padding:14px 12px">'+famSummaryHtml+'</div>'+
+      '<div style="padding:14px 12px 0;border-top:8px solid #f0f0f0">'+pdParts.headerHtml+'</div><div style="padding:0 12px 14px">'+pdParts.groupHtmls.join("")+'</div>';
   }
 
   // ── 其他原有模塊 ───────────────────────────────────────
@@ -2447,6 +2532,13 @@ async function doExportPDF(blks,div){
     setP(Math.round(i/blks.length*90));
 
     if(blks[i].key==="premium_detail"){
+      // ── 全家保費總表：不管這次匯出的是哪一位成員，最前面固定先加
+      //    這一頁，呈現全家所有成員的年繳/月繳保費彙整 ──────────
+      var famC = await captureHtml(buildFamilyPremiumSummaryHtml());
+      var famMM = canvasToMM(famC, usableW, usableH);
+      addNewPage("總表");
+      pdf.addImage(famC.toDataURL("image/jpeg",0.88),"JPEG",margin,margin,famMM.iw,famMM.ih);
+
       // ── 保單繳費明細一覽表：依保單分組動態分頁 ──────────
       // 頭部（統計+月曆）先自成一頁最上方；接著逐組保單依序往下疊，
       // 每加一組前先估算「現在這頁還放不放得下」，放不下才換頁，
