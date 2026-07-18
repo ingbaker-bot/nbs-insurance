@@ -417,6 +417,27 @@
 </div><!-- /main wrapper -->
 
 <!-- 表單 Modal -->
+<!-- PDF 密碼輸入彈窗（取代不可靠的原生 prompt()，很多手機瀏覽器/內嵌 webview 會封鎖或直接回傳空值）-->
+<div class="modal-overlay" id="pdf-pwd-modal" onclick="if(event.target===this) cancelPdfPassword()">
+  <div class="modal" style="max-width:360px;">
+    <div class="modal-title">
+      <span>🔒 這份 PDF 有密碼保護</span>
+    </div>
+    <div class="field">
+      <label id="pdf-pwd-hint">請輸入開啟密碼：</label>
+      <input type="password" id="pdf-pwd-input" placeholder="密碼"
+        style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:15px;box-sizing:border-box;"
+        onkeydown="if(event.key==='Enter') confirmPdfPassword();" />
+    </div>
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button type="button" onclick="cancelPdfPassword()"
+        style="flex:1;padding:10px;background:#eee;color:#666;border:none;border-radius:6px;cursor:pointer;">取消</button>
+      <button type="button" onclick="confirmPdfPassword()"
+        style="flex:1;padding:10px;background:#378ADD;color:#fff;border:none;border-radius:6px;cursor:pointer;">🔓 解鎖</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="form-modal" onclick="handleOverlayClick(event)">
   <div class="modal">
     <div class="modal-title">
@@ -1598,25 +1619,56 @@ function callGAS(action, params) {
 // ── PDF 密碼保護支援 ──────────────────────────────────────
 // pdf.js 讀取到有密碼保護的 PDF 時，會透過 onPassword 這個 callback
 // 通知我們（而不是直接丟例外），reason=1 是第一次要求輸入密碼，
-// reason=2 是上次密碼輸入錯誤、要求重新輸入。這裡用 prompt() 讓
-// 業務員直接輸入密碼，輸入正確後 pdf.js 會自動繼續解密／解析。
+// reason=2 是上次密碼輸入錯誤、要求重新輸入。
+//
+// 原本用瀏覽器原生 prompt() 讓使用者輸入密碼，但很多手機瀏覽器／
+// App 內嵌的 webview 會直接封鎖 prompt()（靜默回傳空值，對話框根本
+// 不會跳出來），導致「No password given」。改用自製的頁面內彈窗
+// （#pdf-pwd-modal），不依賴瀏覽器原生對話框，任何環境都能正常運作。
+let _pdfPwdResolve = null;
+let _pdfPwdReject = null;
+
+function askPdfPassword(isRetry) {
+  return new Promise((resolve, reject) => {
+    _pdfPwdResolve = resolve;
+    _pdfPwdReject = reject;
+    document.getElementById("pdf-pwd-hint").textContent = isRetry
+      ? "密碼不正確，請重新輸入這份 PDF 的開啟密碼："
+      : "請輸入開啟密碼：";
+    const input = document.getElementById("pdf-pwd-input");
+    input.value = "";
+    document.getElementById("pdf-pwd-modal").classList.add("active");
+    setTimeout(() => input.focus(), 50);
+  });
+}
+
+function confirmPdfPassword() {
+  const pwd = document.getElementById("pdf-pwd-input").value;
+  document.getElementById("pdf-pwd-modal").classList.remove("active");
+  if (!pwd) {
+    if (_pdfPwdReject) _pdfPwdReject(new Error("請輸入密碼"));
+    return;
+  }
+  if (_pdfPwdResolve) _pdfPwdResolve(pwd);
+}
+
+function cancelPdfPassword() {
+  document.getElementById("pdf-pwd-modal").classList.remove("active");
+  if (_pdfPwdReject) _pdfPwdReject(new Error("已取消輸入密碼，無法解析這份加密 PDF"));
+}
+
 function loadPdfWithPassword(arrayBuffer, btn) {
   return new Promise((resolve, reject) => {
     const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
     loadingTask.onPassword = function(updatePassword, reason) {
       const isRetry = reason === 2; // 2 = INCORRECT_PASSWORD
-      const pwd = prompt(
-        isRetry
-          ? "密碼不正確，請重新輸入這份 PDF 的開啟密碼："
-          : "這份 PDF 有密碼保護，請輸入開啟密碼："
-      );
-      if (!pwd) {
+      askPdfPassword(isRetry).then((pwd) => {
+        if (btn) btn.textContent = "🔓 正在驗證密碼...";
+        updatePassword(pwd);
+      }).catch((err) => {
         loadingTask.destroy();
-        reject(new Error("已取消輸入密碼，無法解析這份加密 PDF"));
-        return;
-      }
-      if (btn) btn.textContent = "🔓 正在驗證密碼...";
-      updatePassword(pwd);
+        reject(err);
+      });
     };
     loadingTask.promise.then(resolve).catch(reject);
   });
