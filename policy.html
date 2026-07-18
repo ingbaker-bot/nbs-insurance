@@ -807,7 +807,7 @@ function renderPolicies() {
         <span class="expand-icon" id="icon-${safeId}" style="margin-right:8px; font-size: 14px; transition:transform 0.2s; color:#999;">▶</span>
         <span class="policy-no-badge" style="background:${groupColor}1A;color:${groupColor};border:1px solid ${groupColor}55;">${policyNo}</span>
         <span class="group-company" style="margin-left:8px;">${rows[0].company||'—'}</span>
-        ${currentTab==='all' && member ? `<span class="group-member-badge" style="margin-left:8px;">${member.name}</span>` : ''}
+        ${currentTab==='all' && member ? `<span class="group-member-badge" style="margin-left:8px;background:${personBadgeColor(member.personId)}1A;color:${personBadgeColor(member.personId)};border:1px solid ${personBadgeColor(member.personId)}55;">${member.name}</span>` : ''}
         ${effDate ? `<span style="margin-left:8px;font-size:13px;color:#999;white-space:nowrap;">生效日 ${toRoc(effDate)}</span>` : ''}
         <span class="group-total">年繳 NT${groupTotal.toLocaleString()}</span>
       </div>`;
@@ -1562,6 +1562,28 @@ function policyGroupColor(policyNo) {
     hash = (hash * 31 + s.charCodeAt(i)) >>> 0;
   }
   return POLICY_GROUP_COLORS[hash % POLICY_GROUP_COLORS.length];
+}
+
+// ── 依「被保險人」分配固定顏色，用另一套色盤（比較沉穩、跟保單側邊
+//    的鮮豔色區隔開），這樣一行保單同時看得出「哪一組保單」（側邊色）
+//    跟「被保險人是誰」（姓名徽章顏色），兩者不會互相混淆。 ──
+const PERSON_BADGE_COLORS = [
+  "#0F766E", // 深青
+  "#B45309", // 深橙棕
+  "#6D28D9", // 深紫
+  "#BE123C", // 深玫瑰
+  "#1D4ED8", // 深藍
+  "#4D7C0F", // 深橄欖綠
+  "#A16207", // 深黃棕
+  "#7C2D12", // 深磚紅
+];
+function personBadgeColor(personIdOrName) {
+  const s = String(personIdOrName || "");
+  let hash = 0;
+  for (let i = 0; i < s.length; i++) {
+    hash = (hash * 37 + s.charCodeAt(i)) >>> 0;
+  }
+  return PERSON_BADGE_COLORS[hash % PERSON_BADGE_COLORS.length];
 }
 
 function goBack() { window.location.href = "family.html"; }
