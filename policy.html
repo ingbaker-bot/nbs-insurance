@@ -801,10 +801,11 @@ function renderPolicies() {
     const effDate = mainPol.startDate || rows[0].startDate;
 
     // 渲染群組標題 (點擊可展開/收合附約)
-    html += `<div class="policy-group">
+    const groupColor = policyGroupColor(policyNo);
+    html += `<div class="policy-group" style="border-left:6px solid ${groupColor};">
       <div class="group-header" onclick="toggleRiders('${safeId}')" style="cursor:pointer; display:flex; align-items:center;">
         <span class="expand-icon" id="icon-${safeId}" style="margin-right:8px; font-size: 14px; transition:transform 0.2s; color:#999;">▶</span>
-        <span class="policy-no-badge">${policyNo}</span>
+        <span class="policy-no-badge" style="background:${groupColor}1A;color:${groupColor};border:1px solid ${groupColor}55;">${policyNo}</span>
         <span class="group-company" style="margin-left:8px;">${rows[0].company||'—'}</span>
         ${currentTab==='all' && member ? `<span class="group-member-badge" style="margin-left:8px;">${member.name}</span>` : ''}
         ${effDate ? `<span style="margin-left:8px;font-size:13px;color:#999;white-space:nowrap;">生效日 ${toRoc(effDate)}</span>` : ''}
@@ -1537,6 +1538,30 @@ function toRoc(dateStr) {
   const d = new Date(dateStr);
   if (isNaN(d)) return "—";
   return (d.getFullYear()-1911)+"年"+(d.getMonth()+1)+"月"+d.getDate()+"日";
+}
+
+// ── 依保單號碼分配固定顏色，讓不同保單在畫面上一眼就能分辨開來 ──
+// 用字串 hash 挑色而不是用陣列索引，這樣同一張保單不管排序怎麼變、
+// 或是切到不同分頁重新渲染，顏色都會維持一致，不會忽然跳色讓人誤會。
+const POLICY_GROUP_COLORS = [
+  "#3B82F6", // 藍
+  "#F59E0B", // 橙
+  "#10B981", // 綠
+  "#EC4899", // 粉
+  "#8B5CF6", // 紫
+  "#EF4444", // 紅
+  "#06B6D4", // 青
+  "#84CC16", // 黃綠
+  "#F97316", // 深橙
+  "#6366F1", // 靛
+];
+function policyGroupColor(policyNo) {
+  const s = String(policyNo || "");
+  let hash = 0;
+  for (let i = 0; i < s.length; i++) {
+    hash = (hash * 31 + s.charCodeAt(i)) >>> 0;
+  }
+  return POLICY_GROUP_COLORS[hash % POLICY_GROUP_COLORS.length];
 }
 
 function goBack() { window.location.href = "family.html"; }
