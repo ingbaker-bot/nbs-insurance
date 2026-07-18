@@ -980,6 +980,21 @@ function toRocDateStr(dateStr) {
   return (d.getFullYear()-1911)+"年"+(d.getMonth()+1)+"月"+d.getDate()+"日";
 }
 
+// ── 依「要保人」姓名分配固定顏色，跟 policy.html/summary.html 用同一套
+//    色盤與雜湊邏輯，確保同一個人在三個頁面看到的顏色是一致的。 ──
+var PERSON_BADGE_COLORS_EX = [
+  "#0F766E", "#B45309", "#6D28D9", "#BE123C",
+  "#1D4ED8", "#4D7C0F", "#A16207", "#7C2D12",
+];
+function personBadgeColor(personIdOrName) {
+  var s = String(personIdOrName || "");
+  var hash = 0;
+  for (var i = 0; i < s.length; i++) {
+    hash = (hash * 37 + s.charCodeAt(i)) >>> 0;
+  }
+  return PERSON_BADGE_COLORS_EX[hash % PERSON_BADGE_COLORS_EX.length];
+}
+
 // 計算「某個日期當下」被保險人幾歲（不是現在幾歲，是保單生效日當時幾歲，
 // 也就是投保年齡），沒有出生日期資料就回傳 null
 function getAgeAtDate(birthDateStr, atDateStr) {
@@ -1550,11 +1565,22 @@ function buildPremiumDetailParts() {
       ? '<span style="font-size:24px;color:#6b7280;font-weight:600;white-space:nowrap">生效日 '+startRocText+(insAgeAtStart!==null?'　投保年齡 '+insAgeAtStart+'歲':'')+'</span>'
       : (insAgeAtStart!==null ? '<span style="font-size:24px;color:#6b7280;font-weight:600;white-space:nowrap">投保年齡 '+insAgeAtStart+'歲</span>' : '');
 
+    // 要保人（owner）如果跟被保險人（這份報表本人）不同人，特別標示出來，
+    // 因為保單帳戶價值／解約權利是屬於要保人，不是被保險人。
+    var ownerNamePD = mainPol.owner || "";
+    var insuredNamePD = (person.profile && person.profile.name) || "";
+    var ownerBadgeHtml = "";
+    if (ownerNamePD && ownerNamePD !== insuredNamePD) {
+      var ownerColorPD = personBadgeColor(ownerNamePD);
+      ownerBadgeHtml = '<span title="要保人" style="font-size:22px;font-weight:700;padding:3px 12px;border-radius:99px;background:#fff;color:'+ownerColorPD+';border:2px solid '+ownerColorPD+';white-space:nowrap">要保人 '+ownerNamePD+'</span>';
+    }
+
     var cardHeaderHtml =
       '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;padding:12px 16px;background:linear-gradient(135deg,#EEF4FF,#F7F5FF)">'+
         '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+
           '<span style="font-family:monospace;font-size:24px;font-weight:700;color:#3B82F6;background:#fff;padding:3px 9px;border-radius:99px">'+grp.key+'</span>'+
           '<span style="font-size:30px;font-weight:800;color:#374151">'+(mainPol.company||'未知')+'</span>'+
+          ownerBadgeHtml+
           startInfoHtml+
         '</div>'+
         '<span style="font-size:26px;font-weight:700;color:#6b7280">年繳 NT$'+groupTotalPrem.toLocaleString()+'</span>'+
