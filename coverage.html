@@ -629,7 +629,7 @@ function renderHospitalize(cov,pid){
     <div class="field field-full">
       <label>保障類型</label>
       <div class="type-row">
-        ${["一般","增高保障","延長保障"].map(t=>`<button class="qbtn ${hospType===t?'on-hosp':''}" onclick="setVal('hosp_type','${t}','${pid}')">${t}</button>`).join("")}
+        ${["一般","增高保障","延長保障"].map(t=>`<button class="qbtn ${hospType===t?'on-hosp':''}" onclick="toggleVal('hosp_type','${t}','${pid}')">${t}</button>`).join("")}
       </div>
       ${hospType==="增高保障"?'<div class="note green">📌 增高保障：與另一張實支實付搭配，理賠時各自給付，在保障總覽分別標示</div>':""}
       ${hospType==="延長保障"?'<div class="note green">📌 延長保障：舊保單有效期間此保單給付日額，舊保單到齡後此保單接續實支實付</div>':""}
@@ -669,11 +669,11 @@ function renderDaily(cov,pid){
       </div>
       ${periodType==="終身"?'<div class="note blue">終身保障</div>':`
       <div class="quick-btns">
-        ${periodType==="歲"?[70,75,80,85].map(a=>`<button class="qbtn ${period==a?'on-daily':''}" onclick="setVal('daily_period',${a},'${pid}')">${a}歲</button>`).join(""):
-          [10,15,20,30].map(a=>`<button class="qbtn ${period==a?'on-daily':''}" onclick="setVal('daily_period',${a},'${pid}')">${a}年</button>`).join("")}
+        ${periodType==="歲"?[70,75,80,85].map(a=>`<button class="qbtn ${period==a?'on-daily':''}" onclick="setVal('daily_period_type','${periodType}','${pid}');setVal('daily_period',${a},'${pid}')">${a}歲</button>`).join(""):
+          [10,15,20,30].map(a=>`<button class="qbtn ${period==a?'on-daily':''}" onclick="setVal('daily_period_type','${periodType}','${pid}');setVal('daily_period',${a},'${pid}')">${a}年</button>`).join("")}
         <input type="number" id="cov_daily_period_custom" placeholder="${periodType==='歲'?'自填歲':'自填年'}" value="${period}"
           style="width:72px;padding:4px 7px;font-size:14px;border:1px solid #ddd;border-radius:99px;outline:none;font-family:inherit"
-          oninput="setVal('daily_period',this.value,'${pid}');markDirty()"/>
+          oninput="setVal('daily_period_type','${periodType}','${pid}');setVal('daily_period',this.value,'${pid}');markDirty()"/>
       </div>`}
     </div>
     <div class="sub-title blue">住院日額</div>
@@ -783,6 +783,24 @@ function setVal(key,val,policyId){
   if(!policy) return;
   if(!policy.coverage) policy.coverage={};
   policy.coverage[key]=isNaN(val)?val:Number(val);
+  dirty=true;
+  renderEdit(policy);
+}
+
+// ── 像「保障類型：一般/增高保障/延長保障」這種單選按鈕群組，
+//    再點一次「目前已選中的那個」就會取消選擇（清空回到未選狀態），
+//    避免誤點之後卡住、沒辦法清掉的問題。
+function toggleVal(key,val,policyId){
+  const person=personDataMap[currentPersonId];
+  if(!person) return;
+  const policy = person?.policies?.find(p=>p.id===policyId) ;
+  if(!policy) return;
+  if(!policy.coverage) policy.coverage={};
+  if(policy.coverage[key]===val){
+    delete policy.coverage[key];
+  } else {
+    policy.coverage[key]=isNaN(val)?val:Number(val);
+  }
   dirty=true;
   renderEdit(policy);
 }
