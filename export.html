@@ -75,7 +75,7 @@
     @keyframes sp{to{transform:rotate(360deg)}}
     .ex-modal-overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:400;align-items:center;justify-content:center;padding:20px}
     .ex-modal-overlay.active{display:flex}
-    .ex-modal-card{background:var(--surface);border-radius:24px;padding:26px;width:100%;max-width:420px;box-shadow:0 20px 40px -8px rgba(0,0,0,.25)}
+    .ex-modal-card{background:var(--surface);border-radius:24px;padding:26px;width:100%;max-width:420px;max-height:calc(100vh - 40px);overflow-y:auto;box-shadow:0 20px 40px -8px rgba(0,0,0,.25)}
     .ex-modal-title{font-size:19px;font-weight:700;color:var(--text);margin-bottom:4px}
     .ex-modal-sub{font-size:13px;color:var(--text-muted);margin-bottom:18px}
     .ex-modal-field{margin-bottom:14px}
