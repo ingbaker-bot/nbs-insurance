@@ -1453,10 +1453,13 @@ function getPolicyExpiryDisplay(p) {
   if (cat === "失能長照") return fmt(cv.ltc_period_type, cv.ltc_period);
   if (["壽險保障","重大疾病險","重大傷病險","特定傷病險"].indexOf(cat) !== -1) return fmt(cv.protect_period_type, cv.protect_period);
   // 儲蓄險/投資型/年金險目前在 coverage.html 裡沒有「保障到幾歲」這種
-  // 專屬欄位可以填，改用保單本身「保障期滿日」（policy.html 裡 f-covend
-  // 那個欄位，存成 covEndDate）來判斷；這個日期本來就已經存在，只是
-  // 之前這裡沒有讀取它。沒填的話才顯示「—」。
-  if (p.covEndDate) return toRocDateStr(p.covEndDate) || "—";
+  // 專屬欄位可以填，改用保單本身「保障期滿日」來判斷。
+  // 注意：policy.html 存檔時，如果這欄位打的是「終身」這種非數字文字，
+  // rocToWestern() 轉換會直接回傳 null（無法解析成日期），所以
+  // covEndDate 這時候其實是空的；真正保留住「終身」這兩個字的，是
+  // 沒經過轉換的原始文字欄位 covEndRaw，要優先看這個才對。
+  if (p.covEndRaw === "終身") return "終身";
+  if (p.covEndDate) { var rocText = toRocDateStr(p.covEndDate); if (rocText) return rocText; }
   return "—";
 }
 
