@@ -42,6 +42,7 @@
     .group-icon{font-size:19px}
     .group-title{font-size:17px;font-weight:500}
     .group-count{font-size:14px;padding:2px 7px;border-radius:99px;background:#f0f0f0;color:#888}
+    .group-warn{font-size:13px;font-weight:700;padding:2px 9px;border-radius:99px;background:#FFF3E0;color:#B45309;white-space:nowrap}
     .group-chevron{font-size:19px;color:#ccc;transition:transform 0.2s}
     .group-chevron.open{transform:rotate(90deg)}
     .group-body{padding:14px;border-top:1px solid #f0f0f0}
@@ -315,6 +316,7 @@ function showListView(){
     const filledCount=countFilled(cov);
     const hasCov=filledCount>0;
     const gColor = policyGroupColor(p.policyNo || p.id);
+    const hasMissingPeriod = GROUPS.some(g => groupMissingPeriod(g, countGroupFilled(g,cov), cov));
     html+=`<div onclick="openCoverageEdit('${p.id}')"
       style="background:rgba(255,255,255,.85);border:1px solid rgba(120,140,255,.12);border-left:4px solid ${gColor};border-radius:13px;padding:13px 16px;margin-bottom:8px;cursor:pointer;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(100,120,255,.05);transition:all .15s">
       <div style="flex:1;min-width:0;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
@@ -326,6 +328,7 @@ function showListView(){
         <span style="font-family:monospace;font-size:14px;background:${gColor}1A;color:${gColor};border:1px solid ${gColor}55;padding:2px 9px;border-radius:99px;white-space:nowrap">${p.policyNo||p.id}</span>
         <span style="font-size:17px;font-weight:700;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.itemName||"—"}</span>
         ${p.insuredAmount ? `<span style="font-size:15px;font-weight:600;color:#3B82F6;white-space:nowrap">保額 ${p.insuredAmount} ${p.insuredAmountUnit||"萬元"}</span>` : ""}
+        ${hasMissingPeriod ? '<span class="group-warn" title="這張保單有分類填了資料但保障期間還是空的，點進去檢查">⚠️ 未填保障期間</span>' : ''}
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
         <span style="font-size:14px;padding:3px 10px;border-radius:99px;background:${hasCov?"#D1FAE5":"#F3F4F6"};color:${hasCov?"#065F46":"#9CA3AF"};font-weight:600;white-space:nowrap">${filledCount} 項已填</span>
@@ -422,6 +425,7 @@ function renderEdit(policy){
   let html=``;
   GROUPS.forEach(g=>{
     const filledCount=countGroupFilled(g,cov);
+    const missingPeriod=groupMissingPeriod(g,filledCount,cov);
     const isOpen=openGroups[g.key];
     html+=`<div class="group-block">
       <div class="group-header" onclick="toggleGroup('${policy.id}','${g.key}')" style="background:${isOpen?g.bg:"#fff"}">
@@ -429,6 +433,7 @@ function renderEdit(policy){
           <span class="group-icon">${g.icon}</span>
           <span class="group-title" style="color:${g.color}">${g.label}</span>
           <span class="group-count">${filledCount} 已填</span>
+          ${missingPeriod?'<span class="group-warn" title="這個分類已經有填其他資料，但「保障期間／保障到幾歲」還是空的，匯出時到期日欄位會顯示空白">⚠️ 未填保障期間</span>':''}
         </div>
         <span class="group-chevron ${isOpen?"open":""}">›</span>
       </div>
@@ -438,6 +443,18 @@ function renderEdit(policy){
   document.getElementById("loading").style.display="none";
   document.getElementById("content").style.display="block";
   document.getElementById("content").innerHTML=html;
+}
+
+// ── 判斷「這個分類已經填了其他資料，但保障期間相關欄位還是空的」──
+// 用來在畫面上提醒使用者，避免像這次一樣，匯出後才發現到期日空白。
+// 完全沒填過的分類（filledCount===0）不算，那只是還沒開始填而已。
+function groupMissingPeriod(g,filledCount,cov){
+  if(filledCount===0) return false;
+  if(g.type==="accident")     return !cov.acc_age;
+  if(g.type==="hospitalize")  return !cov.hosp_age;
+  if(g.type==="daily")        return !cov.daily_period_type;
+  if(g.periodKey)             return !cov[g.periodKey+"_period_type"];
+  return false;
 }
 
 function countGroupFilled(g,cov){
