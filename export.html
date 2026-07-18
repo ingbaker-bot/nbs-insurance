@@ -2714,7 +2714,7 @@ if (typeof NBS_NAV !== "undefined") {
     <img id="agent-modal-photo-preview" src="" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; display: none; flex-shrink: 0;" />
     
     <!-- 選擇檔案欄位 (請加上 id="agent-modal-photo-input") -->
-    <input type="file" id="agent-modal-photo-input" accept="image/*" onchange="onAgentPhotoSelected(this)" style="font-size: 14px; flex: 1 1 auto; min-width: 140px;" />
+    <input type="file" id="agent-modal-photo-input" accept="image/*" onchange="onAgentPhotoSelected(this)" style="font-size: 14px; flex: 0 1 auto; min-width: 0;" />
     
     <!-- 新增的：取消/清除照片按鈕 -->
     <button type="button" onclick="clearAgentPhoto()" style="padding: 6px 12px; font-size: 13px; font-weight: 600; border: none; border-radius: 99px; background: #fee2e2; color: #ef4444; cursor: pointer; font-family: inherit; white-space: nowrap; flex-shrink: 0;">❌ 清除照片</button>
@@ -2737,7 +2737,7 @@ if (typeof NBS_NAV !== "undefined") {
       <label>上傳自訂底圖</label>
       <div style="display:flex;align-items:center;gap:12px;margin-top:6px;flex-wrap:wrap;">
         <img id="agent-modal-bg-preview" src="" style="width:84px;height:60px;object-fit:cover;border-radius:8px;display:none;border:1px solid #e2e8f0;flex-shrink:0;" />
-        <input type="file" id="agent-modal-bg-input" accept="image/*" onchange="onCoverBgSelected(this)" style="font-size:14px;flex:1 1 auto;min-width:140px;" />
+        <input type="file" id="agent-modal-bg-input" accept="image/*" onchange="onCoverBgSelected(this)" style="font-size:14px;flex:0 1 auto;min-width:0;" />
         <button type="button" onclick="clearCoverBg()" style="padding:6px 12px;font-size:13px;font-weight:600;border:none;border-radius:99px;background:#fee2e2;color:#ef4444;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;">❌ 清除底圖</button>
       </div>
       <div id="agent-modal-bg-status" style="font-size:13px;color:#64748b;margin-top:4px;">建議上傳橫式圖片，會自動壓縮，不會塞進共用工具檔案裡</div>
