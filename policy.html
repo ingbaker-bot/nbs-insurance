@@ -1163,6 +1163,18 @@ function parseDate(inputId, hintId) {
   hint.textContent = "";
 }
 
+// ── AI 匯入比對用：把項目名稱正規化，忽略空白/標點差異 ──
+// 例如「AD&D 意外身故及殘廢保險附約」跟「AD&D意外身故及殘廢保險附約」
+// 這種只差一個空格的情況，正規化後應該視為同一筆，避免誤判成新資料
+// 而重複新增。
+function normalizeItemName(s) {
+  if (!s) return "";
+  return String(s)
+    .toLowerCase()
+    .replace(/[\s\u3000]+/g, "")           // 去除所有空白（含全形空白）
+    .replace(/[，,。.、\-—_（）()「」『』:：;；!！?？'"'"""]/g, ""); // 去除常見標點
+}
+
 // 日期字串轉西元
 // AI 匯入保單時，把 PDF 上看到的原始保費（可能是月繳/季繳/半年繳的
 // 單期金額）依繳費方式換算成正確的「年繳總額」。「年繳保費」欄位設計
@@ -1450,11 +1462,30 @@ async function analyzePolicyText() {
   
 // ── 刪除保單 ─────────────────────────────────────────────
 async function deletePolicy() {
-  if (!editingPolicy || !confirm("確定要刪除這筆保單？")) return;
+  if (!editingPolicy) return;
+
+  const person = personDataMap[editingPersonId];
+  const isMain = editingPolicy.isMain !== false; // 向下相容舊資料：沒有 isMain 欄位的視為主約
+
+  // 主約：同一個保單號碼底下的附約也要一起列出來，讓使用者清楚知道會連帶刪除
+  const riderCount = isMain
+    ? person.policies.filter(p => p.policyNo === editingPolicy.policyNo && p.id !== editingPolicy.id).length
+    : 0;
+
+  const confirmMsg = isMain && riderCount > 0
+    ? `這是主約，底下還有 ${riderCount} 筆附約。\n\n刪除主約會把主約＋這 ${riderCount} 筆附約「整組」一起刪除，確定要刪除嗎？`
+    : "確定要刪除這筆保單？";
+
+  if (!confirm(confirmMsg)) return;
 
   try {
-    const person = personDataMap[editingPersonId];
-    person.policies = person.policies.filter(p => p.id !== editingPolicy.id);
+    if (isMain) {
+      // 刪主約：整組（同保單號碼的主約＋所有附約）一起刪
+      person.policies = person.policies.filter(p => p.policyNo !== editingPolicy.policyNo);
+    } else {
+      // 刪附約：只刪這一筆
+      person.policies = person.policies.filter(p => p.id !== editingPolicy.id);
+    }
     person.updatedAt = new Date().toISOString();
 
     const member = familyData.members.find(m => m.personId === editingPersonId);
@@ -1565,7 +1596,7 @@ async function handlePDFUpload() {
 
     aiPolicies.forEach(aiPol => {
       const existingIdx = person.policies.findIndex(p => 
-        p.policyNo === aiPol.policyNo && p.itemName === aiPol.itemName
+        p.policyNo === aiPol.policyNo && normalizeItemName(p.itemName) === normalizeItemName(aiPol.itemName)
       );
 
       if (existingIdx >= 0) {
