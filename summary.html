@@ -400,6 +400,21 @@ var CAT_COLORS = {
   "儲蓄險":"#E8638A","年金險":"#C0392B","投資型保險":"#95A5A6",
 };
 
+// ── 依保單號碼分配固定顏色，跟 policy.html 用同一套色盤與雜湊邏輯，
+//    確保同一張保單在兩個頁面看到的側邊顏色是一致的，方便對照。 ──
+const POLICY_GROUP_COLORS = [
+  "#3B82F6", "#F59E0B", "#10B981", "#EC4899", "#8B5CF6",
+  "#EF4444", "#06B6D4", "#84CC16", "#F97316", "#6366F1",
+];
+function policyGroupColor(policyNo) {
+  const s = String(policyNo || "");
+  let hash = 0;
+  for (let i = 0; i < s.length; i++) {
+    hash = (hash * 31 + s.charCodeAt(i)) >>> 0;
+  }
+  return POLICY_GROUP_COLORS[hash % POLICY_GROUP_COLORS.length];
+}
+
 var COVERAGE_GROUPS = [
   { label:"壽險/重大保障(終身/定期)", icon:"🛡️", color:"#4A90D9", cats:["壽險保障","重大疾病險","重大傷病險","特定傷病險"], items:[
     { label:"終身壽險", unit:"萬元", compute:function(pols){ return lifeAmount(pols, ["壽險保障"], false); } },
@@ -720,9 +735,10 @@ function renderContent() {
   policies.forEach(p=>{ const k=p.policyNo||p.id; if(!groups[k]) groups[k]=[]; groups[k].push(p); });
   Object.entries(groups).forEach(([no,rows],gi)=>{
     const groupTotal=rows.reduce((s,p)=>s+(p.premiumTWD||0),0);
-    html+=`<div style="border-top:${gi>0?'1px solid #f0f0f0':'none'}">
+    const groupColor = policyGroupColor(no);
+    html+=`<div style="border-top:${gi>0?'1px solid #f0f0f0':'none'};border-left:6px solid ${groupColor};">
       <div class="group-header">
-        <span class="policy-no-badge">${no}</span>
+        <span class="policy-no-badge" style="background:${groupColor}1A;color:${groupColor};border:1px solid ${groupColor}55;">${no}</span>
         <span class="group-company">${rows[0].company || '未知'}</span>
         <span class="group-total">年繳 NT$${groupTotal.toLocaleString()}</span>
       </div>`;
