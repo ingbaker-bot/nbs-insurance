@@ -1510,6 +1510,12 @@ async function deletePolicy() {
       );
     }
 
+    // 🌟 補上：刪除後也要同步更新 nbs_person_ 這把快取！
+    // summary.html / export.html 讀取個人資料時，是「sessionStorage 有就直接用，
+    // 不會再去 Drive 確認新舊」，如果這裡不更新，即使 Drive 上已經正確刪除，
+    // 這兩頁還是會一直顯示刪除前的舊資料（直到分頁關閉或快取被清除為止）。
+    sessionStorage.setItem("nbs_person_" + editingPersonId, JSON.stringify(person));
+
     if (window.NBS_NAV && typeof NBS_NAV.invalidateBundleCache === 'function') {
       NBS_NAV.invalidateBundleCache();
     } else {
