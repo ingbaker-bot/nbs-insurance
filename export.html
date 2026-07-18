@@ -192,6 +192,7 @@ var   GAS=(function(){
 // ▼ 五大匯出區塊（新增封面頁，固定排在最前面）
 var   BLOCKS=[
   {key:"cover",            label:"封面頁",             icon:"🖼️",desc:"保戶姓名、業務員資訊、星座與生命靈數"},
+  {key:"family_premium_summary", label:"全家保費總表", icon:"👨‍👩‍👧‍👦",desc:"全家年繳/月繳保費彙整，各成員分欄＋合計"},
   {key:"premium_detail",   label:"保險繳費明細一覽表", icon:"📅",desc:"年繳/月均統計、月曆、保單與受益人整合表"},
   {key:"summary",          label:"保單彙總一覽表",     icon:"📊",desc:"保障覆蓋率、家庭責任、醫療階段、就醫情況"},
   {key:"policy_detail",    label:"保單明細一覽表",     icon:"📋",desc:"各項保障加總明細"},
@@ -206,7 +207,7 @@ var   FMTS=[
 var   CC={"壽險保障":"#3730a3","醫療保障":"#0284c7","意外險":"#b45309","重大疾病險":"#3730a3","重大傷病險":"#3730a3","特定傷病險":"#3730a3","儲蓄險":"#4338ca","年金險":"#4338ca","投資型保險":"#4338ca","癌症醫療":"#be123c","失能長照":"#0f766e","定額手術":"#0369a1"};
 
 // ── 狀態 ─────────────────────────────────────────────────
-var sel={cover:false,premium_detail:false,summary:false,policy_detail:false,savings_timeline:false};
+var sel={cover:false,family_premium_summary:false,premium_detail:false,summary:false,policy_detail:false,savings_timeline:false};
 var fmt="png_single";
 var fmtOpen="png"; // 手風琴目前展開的區塊，預設展開 PNG
 var person={},policies=[],coverage={},savings=[];
@@ -2230,11 +2231,13 @@ function renderBlock(key){
   }
 
   // ▼ ①保險繳費明細一覽表：年繳/月均統計 + 月曆 + 整合表
+  if(key==="family_premium_summary"){
+    return '<div style="padding:14px 12px">'+buildFamilyPremiumSummaryHtml()+'</div>';
+  }
+
   if(key==="premium_detail"){
-    var famSummaryHtml = buildFamilyPremiumSummaryHtml();
     var pdParts = buildPremiumDetailParts();
-    return '<div style="padding:14px 12px">'+famSummaryHtml+'</div>'+
-      '<div style="padding:14px 12px 0;border-top:8px solid #f0f0f0">'+pdParts.headerHtml+'</div><div style="padding:0 12px 14px">'+pdParts.groupHtmls.join("")+'</div>';
+    return '<div style="padding:14px 12px 0">'+pdParts.headerHtml+'</div><div style="padding:0 12px 14px">'+pdParts.groupHtmls.join("")+'</div>';
   }
 
   // ── 其他原有模塊 ───────────────────────────────────────
@@ -2532,13 +2535,6 @@ async function doExportPDF(blks,div){
     setP(Math.round(i/blks.length*90));
 
     if(blks[i].key==="premium_detail"){
-      // ── 全家保費總表：不管這次匯出的是哪一位成員，最前面固定先加
-      //    這一頁，呈現全家所有成員的年繳/月繳保費彙整 ──────────
-      var famC = await captureHtml(buildFamilyPremiumSummaryHtml());
-      var famMM = canvasToMM(famC, usableW, usableH);
-      addNewPage("總表");
-      pdf.addImage(famC.toDataURL("image/jpeg",0.88),"JPEG",margin,margin,famMM.iw,famMM.ih);
-
       // ── 保單繳費明細一覽表：依保單分組動態分頁 ──────────
       // 頭部（統計+月曆）先自成一頁最上方；接著逐組保單依序往下疊，
       // 每加一組前先估算「現在這頁還放不放得下」，放不下才換頁，
@@ -2660,7 +2656,7 @@ async function doExportPDF(blks,div){
       }
     } else {
       // ── 其餘區塊：維持單頁等比例縮放 ──────────────────
-      var PAGE_LABEL_PREFIX = { summary:"彙總", policy_detail:"保障", cover:"封面" };
+      var PAGE_LABEL_PREFIX = { summary:"彙總", policy_detail:"保障", cover:"封面", family_premium_summary:"總表" };
       var isCover = blks[i].key==="cover";
       var showDisclaimer = isCover ? false : (fmt==="pdf_pages" ? true : isLast);
       var c = await captureHtml((isCover?'':getBlockTitleHtml(blks[i]))+renderBlock(blks[i].key)+(showDisclaimer?disclaimer:"")+(isCover?'':wm));
