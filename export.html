@@ -2415,7 +2415,10 @@ async function doExportPDF(blks,div){
     if(!prefix) return;
     pageLabelCounters[prefix] = (pageLabelCounters[prefix]||0)+1;
     var img = makePageLabelImg(prefix+"-"+pageLabelCounters[prefix]);
-    pdf.addImage(img,"PNG", pageW-margin-22, pageH-6, 22, 4.4);
+    // 位置抓更保守一點：離紙張邊緣至少 15mm 淨空（原本 10mm 對某些
+    // 印表機的實際可列印邊界來說可能還是不夠，這只是個小小的頁碼
+    // 參考標籤，寧可位置往內縮一點，也不要冒風險被裁掉）。
+    pdf.addImage(img,"PNG", pageW-margin-22, pageH-15-4.4, 22, 4.4);
   }
 
   function addNewPage(labelPrefix){ if(pageCount>0) pdf.addPage([297,210],"l"); pageCount++; stampPageLabel(labelPrefix); }
