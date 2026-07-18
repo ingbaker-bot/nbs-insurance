@@ -314,15 +314,16 @@ function showListView(){
     const cov=p.coverage||{};
     const filledCount=countFilled(cov);
     const hasCov=filledCount>0;
+    const gColor = policyGroupColor(p.policyNo || p.id);
     html+=`<div onclick="openCoverageEdit('${p.id}')"
-      style="background:rgba(255,255,255,.85);border:1px solid rgba(120,140,255,.12);border-left:4px solid ${hasCov?"#22C55E":"rgba(120,140,255,.20)"};border-radius:13px;padding:13px 16px;margin-bottom:8px;cursor:pointer;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(100,120,255,.05);transition:all .15s">
+      style="background:rgba(255,255,255,.85);border:1px solid rgba(120,140,255,.12);border-left:4px solid ${gColor};border-radius:13px;padding:13px 16px;margin-bottom:8px;cursor:pointer;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(100,120,255,.05);transition:all .15s">
       <div style="flex:1;min-width:0;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         ${p.isMain===true
           ? '<span style="font-size:14px;color:#fff;background:#378ADD;padding:2px 8px;border-radius:99px;white-space:nowrap;font-weight:600">主</span>'
           : '<span style="font-size:14px;color:#888;background:#ebebeb;padding:2px 8px;border-radius:99px;white-space:nowrap;font-weight:600">附</span>'}
         <span style="font-size:17px;color:#9CA3AF;white-space:nowrap">${p.company||"—"}</span>
         <span style="font-size:14px;padding:2px 9px;border-radius:99px;background:#f0f0f0;color:#555;white-space:nowrap">${p.category||"儲蓄險"}</span>
-        <span style="font-family:monospace;font-size:14px;background:#EEF4FF;color:#3B82F6;padding:2px 9px;border-radius:99px;white-space:nowrap">${p.policyNo||p.id}</span>
+        <span style="font-family:monospace;font-size:14px;background:${gColor}1A;color:${gColor};border:1px solid ${gColor}55;padding:2px 9px;border-radius:99px;white-space:nowrap">${p.policyNo||p.id}</span>
         <span style="font-size:17px;font-weight:700;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.itemName||"—"}</span>
         ${p.insuredAmount ? `<span style="font-size:15px;font-weight:600;color:#3B82F6;white-space:nowrap">保額 ${p.insuredAmount} ${p.insuredAmountUnit||"萬元"}</span>` : ""}
       </div>
@@ -333,6 +334,21 @@ function showListView(){
     </div>`;
   });
   document.getElementById("content").innerHTML=html;
+}
+
+// ── 依保單號碼分配固定顏色，跟 policy.html/summary.html 用同一套
+//    色盤與雜湊邏輯，確保同一張保單在三個頁面看到的顏色是一致的。 ──
+const POLICY_GROUP_COLORS = [
+  "#3B82F6", "#F59E0B", "#10B981", "#EC4899", "#8B5CF6",
+  "#EF4444", "#06B6D4", "#84CC16", "#F97316", "#6366F1",
+];
+function policyGroupColor(policyNo) {
+  const s = String(policyNo || "");
+  let hash = 0;
+  for (let i = 0; i < s.length; i++) {
+    hash = (hash * 31 + s.charCodeAt(i)) >>> 0;
+  }
+  return POLICY_GROUP_COLORS[hash % POLICY_GROUP_COLORS.length];
 }
 
 function countFilled(cov){
