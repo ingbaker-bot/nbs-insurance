@@ -531,8 +531,13 @@
       </div>
 
       <div class="field">
-        <label>出生日期</label>
-        <input type="date" id="new-birth" oninput="updateNewAge()" />
+        <label>出生日期（民國）</label>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <input type="number" id="new-birth-y" placeholder="年" min="1" max="200" style="width:70px" oninput="onNewBirthRocChange()" />年
+          <input type="number" id="new-birth-m" placeholder="月" min="1" max="12" style="width:56px" oninput="onNewBirthRocChange()" />月
+          <input type="number" id="new-birth-d" placeholder="日" min="1" max="31" style="width:56px" oninput="onNewBirthRocChange()" />日
+        </div>
+        <input type="hidden" id="new-birth" />
         <div class="hint" id="new-age-hint"></div>
       </div>
 
@@ -572,8 +577,13 @@
       </div>
 
       <div class="field">
-        <label>出生日期</label>
-        <input type="date" id="edit-birth" oninput="updateEditAge()" />
+        <label>出生日期（民國）</label>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <input type="number" id="edit-birth-y" placeholder="年" min="1" max="200" style="width:70px" oninput="onEditBirthRocChange()" />年
+          <input type="number" id="edit-birth-m" placeholder="月" min="1" max="12" style="width:56px" oninput="onEditBirthRocChange()" />月
+          <input type="number" id="edit-birth-d" placeholder="日" min="1" max="31" style="width:56px" oninput="onEditBirthRocChange()" />日
+        </div>
+        <input type="hidden" id="edit-birth" />
         <div class="hint" id="edit-age-hint"></div>
       </div>
 
@@ -804,6 +814,9 @@
       document.getElementById("add-member-modal").classList.add("active");
       document.getElementById("new-name").value = "";
       document.getElementById("new-birth").value = "";
+      document.getElementById("new-birth-y").value = "";
+      document.getElementById("new-birth-m").value = "";
+      document.getElementById("new-birth-d").value = "";
       document.getElementById("new-age-hint").textContent = "";
       document.getElementById("add-member-btn").disabled = true;
     }
@@ -912,6 +925,10 @@
       if (!person) return;
       document.getElementById("edit-name").value = person.profile.name || "";
       document.getElementById("edit-birth").value = person.profile.birthDate || "";
+      const rocParts = isoToRocParts(person.profile.birthDate);
+      document.getElementById("edit-birth-y").value = rocParts.y;
+      document.getElementById("edit-birth-m").value = rocParts.m;
+      document.getElementById("edit-birth-d").value = rocParts.d;
       document.getElementById("edit-analysis").value = person.profile.analysisDate || "";
       document.getElementById("edit-address").value = person.profile.address || "";
       updateEditAge();
@@ -1040,6 +1057,43 @@
       const d = new Date(dateStr);
       if (isNaN(d)) return "—";
       return (d.getFullYear()-1911) + "年" + (d.getMonth()+1) + "月" + d.getDate() + "日";
+    }
+
+    // ── 民國年/月/日 ↔ 西元 ISO 日期字串（YYYY-MM-DD）互轉 ──
+    // 內部儲存與所有計算（保險年齡、星座、生命靈數等）都還是用西元 ISO，
+    // 只有輸入介面改成民國年，減少業務員自己心算換算的麻煩。
+    function rocToIso(rocYear, month, day) {
+      rocYear = parseInt(rocYear, 10);
+      month   = parseInt(month, 10);
+      day     = parseInt(day, 10);
+      if (!rocYear || !month || !day) return "";
+      const adYear = rocYear + 1911;
+      const mm = String(month).padStart(2, "0");
+      const dd = String(day).padStart(2, "0");
+      return adYear + "-" + mm + "-" + dd;
+    }
+
+    function isoToRocParts(iso) {
+      if (!iso) return { y: "", m: "", d: "" };
+      const d = new Date(iso);
+      if (isNaN(d)) return { y: "", m: "", d: "" };
+      return { y: d.getFullYear() - 1911, m: d.getMonth() + 1, d: d.getDate() };
+    }
+
+    function onNewBirthRocChange() {
+      const y = document.getElementById("new-birth-y").value;
+      const m = document.getElementById("new-birth-m").value;
+      const d = document.getElementById("new-birth-d").value;
+      document.getElementById("new-birth").value = rocToIso(y, m, d);
+      updateNewAge();
+    }
+
+    function onEditBirthRocChange() {
+      const y = document.getElementById("edit-birth-y").value;
+      const m = document.getElementById("edit-birth-m").value;
+      const d = document.getElementById("edit-birth-d").value;
+      document.getElementById("edit-birth").value = rocToIso(y, m, d);
+      updateEditAge();
     }
 
     function calcInsAge(birthDate, analysisDate) {
