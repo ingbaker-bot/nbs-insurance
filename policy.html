@@ -1595,6 +1595,33 @@ function callGAS(action, params) {
   return Promise.reject(new Error('nav.js 未載入'));
 }
 
+// ── PDF 密碼保護支援 ──────────────────────────────────────
+// pdf.js 讀取到有密碼保護的 PDF 時，會透過 onPassword 這個 callback
+// 通知我們（而不是直接丟例外），reason=1 是第一次要求輸入密碼，
+// reason=2 是上次密碼輸入錯誤、要求重新輸入。這裡用 prompt() 讓
+// 業務員直接輸入密碼，輸入正確後 pdf.js 會自動繼續解密／解析。
+function loadPdfWithPassword(arrayBuffer, btn) {
+  return new Promise((resolve, reject) => {
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+    loadingTask.onPassword = function(updatePassword, reason) {
+      const isRetry = reason === 2; // 2 = INCORRECT_PASSWORD
+      const pwd = prompt(
+        isRetry
+          ? "密碼不正確，請重新輸入這份 PDF 的開啟密碼："
+          : "這份 PDF 有密碼保護，請輸入開啟密碼："
+      );
+      if (!pwd) {
+        loadingTask.destroy();
+        reject(new Error("已取消輸入密碼，無法解析這份加密 PDF"));
+        return;
+      }
+      if (btn) btn.textContent = "🔓 正在驗證密碼...";
+      updatePassword(pwd);
+    };
+    loadingTask.promise.then(resolve).catch(reject);
+  });
+}
+
 // ═══════════════════════════════════════════════════════
 //  PDF 上傳、萃取文字、並自動呼叫 API1 AI 解析
 // ═══════════════════════════════════════════════════════
@@ -1626,7 +1653,7 @@ async function handlePDFUpload() {
     } else {
       btn.textContent = "📄 正在本機萃取 PDF 文字...";
       const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+      const pdf = await loadPdfWithPassword(arrayBuffer, btn);
       let fullText = "";
       for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
         const page = await pdf.getPage(pageNum);
