@@ -602,23 +602,27 @@ async function initPage(detail) {
     
     const fetchPromises = activeMembers.map(m => {
       const cacheKey = "nbs_person_" + m.personId;
-      const cachedData = sessionStorage.getItem(cacheKey);
-
-      if (cachedData) {
-        personDataMap[m.personId] = JSON.parse(cachedData);
-        return Promise.resolve();
-      } else {
-        return callGAS("readFile", {
-          email: currentUser.email,
-          fileType: "persons",
-          fileName: m.name + "_" + m.personId + ".json"
-        }).then(pr => {
-          if (pr.status === "ok") {
-            personDataMap[m.personId] = pr.content;
-            sessionStorage.setItem(cacheKey, JSON.stringify(pr.content));
-          }
-        }).catch(err => console.error("讀取 " + m.name + " 失敗", err));
-      }
+      // 修正：改成「優先向 Drive 要最新資料，讀取成功一律覆蓋快取」，
+      // 只有讀取失敗（離線、網路異常）時才退回使用舊快取墊著。
+      // 原本是「快取存在就永遠相信、不會發現資料已經被別的頁面改過」，
+      // 導致刪除/修改保單後，這頁還是一直顯示舊資料。
+      return callGAS("readFile", {
+        email: currentUser.email,
+        fileType: "persons",
+        fileName: m.name + "_" + m.personId + ".json"
+      }).then(pr => {
+        if (pr.status === "ok") {
+          personDataMap[m.personId] = pr.content;
+          sessionStorage.setItem(cacheKey, JSON.stringify(pr.content));
+        } else {
+          const cachedData = sessionStorage.getItem(cacheKey);
+          if (cachedData) personDataMap[m.personId] = JSON.parse(cachedData);
+        }
+      }).catch(err => {
+        console.error("讀取 " + m.name + " 失敗，改用舊快取墊著", err);
+        const cachedData = sessionStorage.getItem(cacheKey);
+        if (cachedData) personDataMap[m.personId] = JSON.parse(cachedData);
+      });
     });
 
     await Promise.all(fetchPromises);
