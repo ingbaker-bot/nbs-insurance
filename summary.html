@@ -415,6 +415,21 @@ function policyGroupColor(policyNo) {
   return POLICY_GROUP_COLORS[hash % POLICY_GROUP_COLORS.length];
 }
 
+// ── 依「被保險人/要保人」姓名分配固定顏色，跟 policy.html 用同一套
+//    色盤與雜湊邏輯，確保同一個人在兩個頁面看到的顏色是一致的。 ──
+const PERSON_BADGE_COLORS = [
+  "#0F766E", "#B45309", "#6D28D9", "#BE123C",
+  "#1D4ED8", "#4D7C0F", "#A16207", "#7C2D12",
+];
+function personBadgeColor(personIdOrName) {
+  const s = String(personIdOrName || "");
+  let hash = 0;
+  for (let i = 0; i < s.length; i++) {
+    hash = (hash * 37 + s.charCodeAt(i)) >>> 0;
+  }
+  return PERSON_BADGE_COLORS[hash % PERSON_BADGE_COLORS.length];
+}
+
 var COVERAGE_GROUPS = [
   { label:"壽險/重大保障(終身/定期)", icon:"🛡️", color:"#4A90D9", cats:["壽險保障","重大疾病險","重大傷病險","特定傷病險"], items:[
     { label:"終身壽險", unit:"萬元", compute:function(pols){ return lifeAmount(pols, ["壽險保障"], false); } },
@@ -733,13 +748,18 @@ function renderContent() {
   html += `<div class="policy-group-block">`;
   const groups={};
   policies.forEach(p=>{ const k=p.policyNo||p.id; if(!groups[k]) groups[k]=[]; groups[k].push(p); });
+  const insuredNameForTab = (person && person.profile && person.profile.name) || "";
   Object.entries(groups).forEach(([no,rows],gi)=>{
     const groupTotal=rows.reduce((s,p)=>s+(p.premiumTWD||0),0);
     const groupColor = policyGroupColor(no);
+    const ownerName = rows[0].owner || "";
+    const ownerPersonId = (familyData.members.find(fm => fm.name === ownerName) || {}).personId || ownerName;
+    const showOwnerBadge = ownerName && ownerName !== insuredNameForTab;
     html+=`<div style="border-top:${gi>0?'1px solid #f0f0f0':'none'};border-left:6px solid ${groupColor};">
       <div class="group-header">
         <span class="policy-no-badge" style="background:${groupColor}1A;color:${groupColor};border:1px solid ${groupColor}55;">${no}</span>
         <span class="group-company">${rows[0].company || '未知'}</span>
+        ${showOwnerBadge ? `<span title="要保人（與被保險人不同人，請留意保單帳戶價值/解約權利歸屬）" style="margin-left:6px;font-size:12px;font-weight:600;padding:2px 8px;border-radius:99px;background:#fff;color:${personBadgeColor(ownerPersonId)};border:1.5px solid ${personBadgeColor(ownerPersonId)};white-space:nowrap;">要保 ${ownerName}</span>` : ''}
         <span class="group-total">年繳 NT$${groupTotal.toLocaleString()}</span>
       </div>`;
     rows.forEach(p=>{
