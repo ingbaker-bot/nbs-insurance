@@ -418,17 +418,16 @@
 
 <!-- 表單 Modal -->
 <!-- PDF 密碼輸入彈窗（取代不可靠的原生 prompt()，很多手機瀏覽器/內嵌 webview 會封鎖或直接回傳空值）-->
-<div class="modal-overlay" id="pdf-pwd-modal" onclick="if(event.target===this) cancelPdfPassword()">
+<div class="modal-overlay" id="pdf-pwd-modal" style="z-index:500;" onclick="if(event.target===this) cancelPdfPassword()">
   <div class="modal" style="max-width:360px;">
     <div class="modal-title">
       <span>🔒 這份 PDF 有密碼保護</span>
     </div>
-    <div class="field">
+    <form class="field" onsubmit="event.preventDefault(); confirmPdfPassword();">
       <label id="pdf-pwd-hint">請輸入開啟密碼：</label>
-      <input type="password" id="pdf-pwd-input" placeholder="密碼"
-        style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:15px;box-sizing:border-box;"
-        onkeydown="if(event.key==='Enter') confirmPdfPassword();" />
-    </div>
+      <input type="password" id="pdf-pwd-input" placeholder="密碼" autocomplete="current-password"
+        style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:15px;box-sizing:border-box;" />
+    </form>
     <div style="display:flex;gap:8px;margin-top:14px;">
       <button type="button" onclick="cancelPdfPassword()"
         style="flex:1;padding:10px;background:#eee;color:#666;border:none;border-radius:6px;cursor:pointer;">取消</button>
