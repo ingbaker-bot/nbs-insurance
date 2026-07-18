@@ -1585,106 +1585,141 @@ async function handlePDFUpload() {
       throw new Error((aiResponse && aiResponse.message) || "AI 解析回傳異常");
     }
 
-    // 🌟 2. 核心智慧疊加邏輯 (Upsert)
+    // 🌟 2. 依「被保險人姓名」把每一筆保單分別歸戶到正確的家庭成員，
+    //     而不是整批都塞進目前分頁這個人（同一保單號碼下主約/附約
+    //     被保險人可能不同，例如主約是本人、附約是眷屬）。
     const aiPolicies = aiResponse.data;
-    const person = personDataMap[editingPersonId || currentPersonId];
-    if (!person) throw new Error("找不到目前被保險人資料空間");
-    if (!person.policies) person.policies = [];
+    const fallbackPersonId = editingPersonId || currentPersonId;
+
+    // 姓名 → personId 對照表
+    const nameToPersonId = {};
+    familyData.members.forEach(m => { nameToPersonId[m.name.trim()] = m.personId; });
+
+    // 依被保險人分組；找不到對應成員的，退回目前分頁的人，並記錄姓名做提醒
+    const groupsByPerson = {};
+    const unmatchedNames = new Set();
+    aiPolicies.forEach(aiPol => {
+      const insuredName = String(aiPol.insuredName || aiPol.insured || "").trim();
+      let targetPersonId = insuredName ? nameToPersonId[insuredName] : null;
+      if (!targetPersonId) {
+        targetPersonId = fallbackPersonId;
+        if (insuredName) unmatchedNames.add(insuredName);
+      }
+      if (!groupsByPerson[targetPersonId]) groupsByPerson[targetPersonId] = [];
+      groupsByPerson[targetPersonId].push(aiPol);
+    });
 
     let updateCount = 0;
     let insertCount = 0;
+    const savedPersonNames = [];
 
-    aiPolicies.forEach(aiPol => {
-      const existingIdx = person.policies.findIndex(p => 
-        p.policyNo === aiPol.policyNo && normalizeItemName(p.itemName) === normalizeItemName(aiPol.itemName)
-      );
+    for (const personId of Object.keys(groupsByPerson)) {
+      const person = personDataMap[personId];
+      if (!person) continue; // 這個成員可能還沒有個人資料檔（例如僅受益人），先跳過
+      if (!person.policies) person.policies = [];
 
-      if (existingIdx >= 0) {
-        const oldPol = person.policies[existingIdx];
-        if (aiPol.beneficiary && aiPol.beneficiary.death && Array.isArray(aiPol.beneficiary.death)) {
-          oldPol.beneficiaryDeathText = aiPol.beneficiary.death
-            .map(b => `${b.rank ? b.rank+'：' : ''}${b.name}(${b.relation})`)
-            .join('\n');
+      groupsByPerson[personId].forEach(aiPol => {
+        const existingIdx = person.policies.findIndex(p =>
+          p.policyNo === aiPol.policyNo && normalizeItemName(p.itemName) === normalizeItemName(aiPol.itemName)
+        );
+
+        if (existingIdx >= 0) {
+          const oldPol = person.policies[existingIdx];
+          if (aiPol.beneficiary && aiPol.beneficiary.death && Array.isArray(aiPol.beneficiary.death)) {
+            oldPol.beneficiaryDeathText = aiPol.beneficiary.death
+              .map(b => `${b.rank ? b.rank+'：' : ''}${b.name}(${b.relation})`)
+              .join('\n');
+          }
+          const mergedCoverage = Object.assign({}, oldPol.coverage || {}, aiPol.coverage || {});
+          const newPayModeU = aiPol.payMode || oldPol.payMode;
+          const annualPremiumU = aiPol.premium !== null ? annualizePremium(aiPol.premium, newPayModeU) : null;
+
+          person.policies[existingIdx] = {
+            ...oldPol,
+            id: oldPol.id,
+            isMain: aiPol.isMain !== null ? aiPol.isMain : oldPol.isMain,
+            category: aiPol.category || oldPol.category,
+            amount: aiPol.amount || oldPol.amount,
+            insuredAmountUnit: aiPol.amountUnit || oldPol.insuredAmountUnit || "萬元",
+            deathBenefit: aiPol.deathBenefit !== undefined ? aiPol.deathBenefit : oldPol.deathBenefit,
+            deathBenefitUnit: aiPol.deathBenefitUnit || oldPol.deathBenefitUnit || "萬元",
+            payMode: newPayModeU,
+            status: aiPol.status || oldPol.status,
+            startDateRaw: aiPol.startDate || oldPol.startDateRaw,
+            payEndRaw: aiPol.payEndDate || oldPol.payEndRaw,
+            covEndRaw: aiPol.covEndDate || oldPol.covEndRaw,
+            premiumOrig: annualPremiumU !== null ? annualPremiumU : oldPol.premiumOrig,
+            premiumTWD: annualPremiumU !== null ? annualPremiumU : oldPol.premiumTWD,
+            beneficiaryDeathText: aiPol.beneficiaryDeathText || oldPol.beneficiaryDeathText,
+            beneficiaryLiveText: aiPol.beneficiaryLiveText || oldPol.beneficiaryLiveText,
+            beneficiaryMaturityText: aiPol.beneficiaryMaturityText || oldPol.beneficiaryMaturityText,
+            coverage: mergedCoverage,
+            updatedAt: new Date().toISOString()
+          };
+          updateCount++;
+        } else {
+          const newPayModeN = aiPol.payMode || "年繳";
+          const annualPremiumN = annualizePremium(aiPol.premium, newPayModeN);
+          person.policies.push({
+            id: "pol_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
+            isMain: aiPol.isMain,
+            policyNo: aiPol.policyNo,
+            company: aiPol.company || "富邦人壽",
+            itemName: aiPol.itemName,
+            category: aiPol.category,
+            insuredAmount: aiPol.amount,
+            insuredAmountUnit: aiPol.amountUnit || "萬元",
+            deathBenefit: aiPol.deathBenefit || null,
+            deathBenefitUnit: aiPol.deathBenefitUnit || "萬元",
+            payMode: newPayModeN,
+            status: aiPol.status || "有效",
+            startDateRaw: aiPol.startDate,
+            payEndRaw: aiPol.payEndDate,
+            covEndRaw: aiPol.covEndDate,
+            premiumOrig: annualPremiumN,
+            premiumTWD: annualPremiumN,
+            currency: "TWD",
+            coverage: aiPol.coverage || {},
+            updatedAt: new Date().toISOString()
+          });
+          insertCount++;
         }
-        const mergedCoverage = Object.assign({}, oldPol.coverage || {}, aiPol.coverage || {});
-        const newPayModeU = aiPol.payMode || oldPol.payMode;
-        const annualPremiumU = aiPol.premium !== null ? annualizePremium(aiPol.premium, newPayModeU) : null;
+      });
 
-        person.policies[existingIdx] = {
-          ...oldPol,
-          id: oldPol.id, 
-          isMain: aiPol.isMain !== null ? aiPol.isMain : oldPol.isMain,
-          category: aiPol.category || oldPol.category,
-          amount: aiPol.amount || oldPol.amount,
-          insuredAmountUnit: aiPol.amountUnit || oldPol.insuredAmountUnit || "萬元", 
-          deathBenefit: aiPol.deathBenefit !== undefined ? aiPol.deathBenefit : oldPol.deathBenefit,
-          deathBenefitUnit: aiPol.deathBenefitUnit || oldPol.deathBenefitUnit || "萬元",
-          payMode: newPayModeU,
-          status: aiPol.status || oldPol.status,
-          startDateRaw: aiPol.startDate || oldPol.startDateRaw,
-          payEndRaw: aiPol.payEndDate || oldPol.payEndRaw,
-          covEndRaw: aiPol.covEndDate || oldPol.covEndRaw,
-          premiumOrig: annualPremiumU !== null ? annualPremiumU : oldPol.premiumOrig,
-          premiumTWD: annualPremiumU !== null ? annualPremiumU : oldPol.premiumTWD,
-          beneficiaryDeathText: aiPol.beneficiaryDeathText || oldPol.beneficiaryDeathText,
-          beneficiaryLiveText: aiPol.beneficiaryLiveText || oldPol.beneficiaryLiveText,
-          beneficiaryMaturityText: aiPol.beneficiaryMaturityText || oldPol.beneficiaryMaturityText,
-          coverage: mergedCoverage,
-          updatedAt: new Date().toISOString()
-        };
-        updateCount++;
-      } else {
-        const newPayModeN = aiPol.payMode || "年繳";
-        const annualPremiumN = annualizePremium(aiPol.premium, newPayModeN);
-        person.policies.push({
-          id: "pol_" + Date.now() + "_" + Math.random().toString(36).substr(2, 5),
-          isMain: aiPol.isMain,
-          policyNo: aiPol.policyNo,
-          company: aiPol.company || "富邦人壽",
-          itemName: aiPol.itemName,
-          category: aiPol.category,
-          insuredAmount: aiPol.amount,
-          insuredAmountUnit: aiPol.amountUnit || "萬元", 
-          deathBenefit: aiPol.deathBenefit || null,
-          deathBenefitUnit: aiPol.deathBenefitUnit || "萬元",
-          payMode: newPayModeN,
-          status: aiPol.status || "有效",
-          startDateRaw: aiPol.startDate,
-          payEndRaw: aiPol.payEndDate,
-          covEndRaw: aiPol.covEndDate,
-          premiumOrig: annualPremiumN,
-          premiumTWD: annualPremiumN,
-          currency: "TWD",
-          coverage: aiPol.coverage || {},
-          updatedAt: new Date().toISOString()
-        });
-        insertCount++;
+      // 4. 這位成員處理完，馬上落地存檔至雲端 Drive（每位成員各自存一次）
+      person.updatedAt = new Date().toISOString();
+      const member = familyData.members.find(m => m.personId === personId);
+      if (!member) continue;
+
+      const saveResult = await callGAS("saveFile", {
+        email: currentUser.email,
+        fileType: "persons",
+        fileId: personId,
+        fileName: member.name + "_" + personId + ".json",
+        content: person,
+      });
+
+      if (!saveResult || saveResult.status === "error") {
+        throw new Error("雲端硬碟寫入失敗（" + member.name + "）");
       }
-    });
 
-    // 4. 自動落地存檔至雲端 Drive
-    btn.textContent = "💾 疊加成功！正在自動同步至雲端硬碟...";
-    person.updatedAt = new Date().toISOString();
-    
-    const member = familyData.members.find(m => m.personId === (editingPersonId || currentPersonId));
-    const saveResult = await callGAS("saveFile", {
-      email: currentUser.email,
-      fileType: "persons",
-      fileId: (editingPersonId || currentPersonId),
-      fileName: member.name + "_" + (editingPersonId || currentPersonId) + ".json",
-      content: person,
-    });
+      sessionStorage.setItem("nbs_person_" + personId, JSON.stringify(person));
+      savedPersonNames.push(member.name);
+    }
 
-    if (!saveResult || saveResult.status === "error") throw new Error("雲端硬碟寫入失敗");
-    // 🌟 新增這行：強制將最新資料寫回網頁本機暫存，讓其他頁面讀得到！
-    sessionStorage.setItem("nbs_person_" + (editingPersonId || currentPersonId), JSON.stringify(person));
     if (window.NBS_NAV && typeof NBS_NAV.invalidateBundleCache === 'function') {
       NBS_NAV.invalidateBundleCache();
     }
-    
-    btn.textContent = `✅ 存檔成功！新增 ${insertCount} 筆 / 更新 ${updateCount} 筆`;
+
+    btn.textContent = `✅ 存檔成功！新增 ${insertCount} 筆 / 更新 ${updateCount} 筆（歸戶：${savedPersonNames.join('、')}）`;
     btn.style.background = "#27AE8F";
-    
+
+    if (unmatchedNames.size > 0) {
+      msgEl.textContent = "⚠️ 以下被保險人姓名在家庭成員中找不到對應的人，已暫時歸到目前分頁：" +
+        Array.from(unmatchedNames).join('、') + "。請確認是否為家庭成員姓名打法不同，或需要先新增這位成員。";
+      msgEl.style.display = "block";
+    }
+
     setTimeout(() => {
       closeForm();
       renderTabs();
