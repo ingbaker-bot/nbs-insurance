@@ -95,11 +95,11 @@
 <div style="display:none" id="HDR_SUB"></div>
 <button style="display:none" id="B_BACK"></button>
 <div style="display:none" id="HDR_TITLE"></div>
-<div style="display:flex; align-items:center; justify-content:space-between; background:var(--surface); border-bottom:1px solid var(--border);">
-  <div class="member-tabs" id="member-tabs" style="border-bottom:none; flex:1;"></div>
-  <div id="export-settings-row" style="display:flex; gap:8px; padding:0 16px;">
-    <button onclick="openNicknameModal()" style="font-size:13px;font-weight:600;padding:6px 14px;border:none;border-radius:99px;background:var(--primary-light);color:var(--primary-dark);cursor:pointer;font-family:inherit">✏️ 稱呼設定</button>
-    <button onclick="openAgentInfoModal()" style="font-size:13px;font-weight:600;padding:6px 14px;border:none;border-radius:99px;background:var(--primary-light);color:var(--primary-dark);cursor:pointer;font-family:inherit">⚙️ 業務員資訊</button>
+<div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; background:var(--surface); border-bottom:1px solid var(--border);">
+  <div class="member-tabs" id="member-tabs" style="border-bottom:none; flex:1; min-width:0;"></div>
+  <div id="export-settings-row" style="display:flex; gap:8px; padding:8px 16px; flex-wrap:wrap;">
+    <button onclick="openNicknameModal()" style="font-size:13px;font-weight:600;padding:6px 14px;border:none;border-radius:99px;background:var(--primary-light);color:var(--primary-dark);cursor:pointer;font-family:inherit;white-space:nowrap">✏️ 稱呼設定</button>
+    <button onclick="openAgentInfoModal()" style="font-size:13px;font-weight:600;padding:6px 14px;border:none;border-radius:99px;background:var(--primary-light);color:var(--primary-dark);cursor:pointer;font-family:inherit;white-space:nowrap">⚙️ 業務員資訊</button>
   </div>
 </div>
 
@@ -2270,8 +2270,9 @@ function renderBlock(key){
     var pdm2 = {};
     var fmem2 = (familyData && familyData.members) || [];
     fmem2.filter(function(m){ return m.role!=="beneficiary_only"; }).forEach(function(m){
-      var cached = sessionStorage.getItem("nbs_person_"+m.personId);
-      if(cached) pdm2[m.personId]=JSON.parse(cached);
+      // 改用已經在頁面載入時就抓好、跟 Drive 同步過的 personDataMap，
+      // 不再獨立重新讀一次 sessionStorage（避免跟主要載入邏輯脫節、各自為政）
+      if (personDataMap[m.personId]) pdm2[m.personId] = personDataMap[m.personId];
     });
     return renderSavingsTimeline(pdm2, familyData, now2, now2+14);
   }
@@ -2362,8 +2363,7 @@ async function doExportPDF(blks,div){
   var nowYearGlobal = new Date().getFullYear();
   var pdm2Global = {};
   ((familyData && familyData.members) || []).filter(function(m){ return m.role!=="beneficiary_only"; }).forEach(function(m){
-    var cached = sessionStorage.getItem("nbs_person_"+m.personId);
-    if(cached) pdm2Global[m.personId]=JSON.parse(cached);
+    if (personDataMap[m.personId]) pdm2Global[m.personId] = personDataMap[m.personId];
   });
 
   // 用 canvas 直接畫文字產生標籤圖片，而不是走 html2canvas 擷取整個 DOM，
@@ -2619,23 +2619,27 @@ window.addEventListener("nbs_nav_ready", async function(e) {
 
     var fetchPromises = activeMembers.map(function(mem) {
       var cacheKey = "nbs_person_" + mem.personId;
-      var cachedData = sessionStorage.getItem(cacheKey);
-
-      if (cachedData) {
-        pdm[mem.personId] = JSON.parse(cachedData);
-        return Promise.resolve();
-      } else {
-        return gas("readFile", {
-          email: currentUser.email,
-          fileType: "persons",
-          fileName: mem.name + "_" + mem.personId + ".json"
-        }).then(function(pr) {
-          if (pr.status === "ok") {
-            pdm[mem.personId] = pr.content;
-            sessionStorage.setItem(cacheKey, JSON.stringify(pr.content));
-          }
-        }).catch(function(err) { console.error("讀取 " + mem.name + " 失敗", err); });
-      }
+      // 修正：改成「優先向 Drive 要最新資料，讀取成功一律覆蓋快取」，
+      // 只有在讀取失敗（離線、網路異常）時才退回使用舊快取墊著，
+      // 避免像之前那樣「快取存在就永遠相信、不會發現資料已經被別的
+      // 頁面改過」，導致 summary/export 一直顯示已經刪除掉的舊保單。
+      return gas("readFile", {
+        email: currentUser.email,
+        fileType: "persons",
+        fileName: mem.name + "_" + mem.personId + ".json"
+      }).then(function(pr) {
+        if (pr.status === "ok") {
+          pdm[mem.personId] = pr.content;
+          sessionStorage.setItem(cacheKey, JSON.stringify(pr.content));
+        } else {
+          var cachedData = sessionStorage.getItem(cacheKey);
+          if (cachedData) pdm[mem.personId] = JSON.parse(cachedData);
+        }
+      }).catch(function(err) {
+        console.error("讀取 " + mem.name + " 失敗，改用舊快取墊著", err);
+        var cachedData = sessionStorage.getItem(cacheKey);
+        if (cachedData) pdm[mem.personId] = JSON.parse(cachedData);
+      });
     });
 
     await Promise.all(fetchPromises);
