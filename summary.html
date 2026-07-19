@@ -320,8 +320,8 @@ var GAP_GROUPS = [
   { key:"family", label:"家庭責任", color:"#1565C0", items:[
     { key:"life_permanent", label:"終身壽險",    unit:"萬元",   color:"#1565C0" },
     { key:"life_term",      label:"定期壽險",    unit:"萬元",   color:"#1E88E5" },
-    { key:"investment",     label:"投資型保險",  unit:"萬元",   color:"#7B1FA2" },
-    { key:"savings",        label:"儲蓄險",      unit:"萬元",   color:"#E91E8C" },
+    { key:"investment",     label:"投資型保險",  unit:"萬元",   color:"#7B1FA2", isBool:true },
+    { key:"savings",        label:"儲蓄險",      unit:"萬元",   color:"#E91E8C", isBool:true },
     { key:"ci_death",       label:"重大/特傷/重疾", unit:"萬元", color:"#C0392B" },
     { key:"acc_death_amt",  label:"意外身故",     unit:"萬元",   color:"#F5A623" },
   ]},
@@ -523,6 +523,10 @@ var currentPersonId = null;
 var overrides      = {};
 var medicalOverrides = {};
 var targets        = {};
+// 投資型／儲蓄險不再比對金額，改用「有無填寫領回設定或留愛金額」來判斷
+// 顏色狀態（有／部分有／沒有），這裡存放目前這位成員的領回設定資料，
+// 在 renderContent() 裡從 person.savings 讀進來。
+var savingsArr     = [];
 
 // 核心運算引擎：精準抓取資料庫數字
 function getItemCurrent(key, policies, coverage, covOverrides) {
@@ -605,8 +609,43 @@ function getItemCurrent(key, policies, coverage, covOverrides) {
   return amt;
 }
 
+// ── 投資型／儲蓄險的「有／部分有／沒有」三態判斷 ─────────────
+// 不比金額，只看：這張保單有沒有被填過任何看得出「已經規劃」的資料
+// ──留愛金額(deathBenefit)，或是 savings.html 填過的領回設定金額。
+function savingsEntryHasAmount(s) {
+  if (!s) return false;
+  var tk = s.type || "1";
+  if (tk === "6") { // 逐年領回明細
+    return Array.isArray(s.yearlyAmts) && s.yearlyAmts.some(function(r){ return parseFloat(r.amt) > 0; });
+  }
+  var da = parseFloat(s.duringAmt) || 0;
+  var aa = parseFloat(s.afterAmt)  || 0;
+  return da > 0 || aa > 0;
+}
+function getSavingsPieStatus(key, policies, covOverrides) {
+  const manualKey = currentPersonId + "_" + key;
+  if (covOverrides && covOverrides[manualKey] !== undefined) {
+    const on = !!covOverrides[manualKey];
+    return { status: on ? "ok" : "gap", current: on?1:0, target:null, pct: on?1:0 };
+  }
+  const cats = key === "investment" ? ["投資型保險"] : ["儲蓄險","年金險"];
+  const matched = policies.filter(p => cats.includes(p.category));
+  if (!matched.length) return { status:"gap", current:0, target:null, pct:0 };
+  const hasList = matched.map(function(p){
+    const db = parseFloat(p.deathBenefit);
+    if (!isNaN(db) && db > 0) return true;
+    const s = savingsArr.find(function(sv){ return sv.policyId === p.id; });
+    return savingsEntryHasAmount(s);
+  });
+  if (hasList.every(Boolean)) return { status:"ok", current:1, target:null, pct:1 };
+  return { status:"insufficient", current:0.5, target:null, pct:0.5 }; // 保單存在，但資料還沒填完整＝部分有
+}
+
 function getItemStatus(key, policies, coverage, targets, covOverrides) {
   const item = GAP_GROUPS.flatMap(g=>g.items).find(i=>i.key===key);
+  if (key === "investment" || key === "savings") {
+    return getSavingsPieStatus(key, policies, covOverrides);
+  }
   const current = getItemCurrent(key, policies, coverage, covOverrides);
   const target  = targets[key];
   const isBool  = item?.isBool;
@@ -710,6 +749,7 @@ function renderContent() {
   const policies= person?.policies||[];
   const active  = policies.filter(isPolicyActive);
   const totalTWD= active.reduce((s,p)=>s+(p.premiumTWD||0),0);
+  savingsArr = person?.savings || [];
 
   const coverage = {};
   Object.entries(person?.coverage||{}).forEach(([k,v])=>{
@@ -880,7 +920,15 @@ function buildDonutChart(active, coverage, targets, covOverrides) {
 
       let amtHtml = "";
       if (item.isBool) {
-        amtHtml = current > 0 ? `<span style="color:#555;font-size:14px">有</span>` : `<span style="color:#bbb;font-size:14px">無</span>`;
+        if (item.key === "investment" || item.key === "savings") {
+          amtHtml = status==="ok"
+            ? `<span style="color:#0C447C;font-size:14px;font-weight:600">有</span>`
+            : status==="insufficient"
+              ? `<span style="color:#B7791F;font-size:14px;font-weight:600">部分有</span>`
+              : `<span style="color:#bbb;font-size:14px">沒有</span>`;
+        } else {
+          amtHtml = current > 0 ? `<span style="color:#555;font-size:14px">有</span>` : `<span style="color:#bbb;font-size:14px">無</span>`;
+        }
       } else {
         if (current > 0 || target > 0) {
           let displayVal = current > 0 ? current.toLocaleString() : "0";
@@ -1011,14 +1059,30 @@ function buildDonutChart(active, coverage, targets, covOverrides) {
 // ── 缺口／不足分析 ────────────────────────────────────────
 function buildGapAnalysis(active, coverage, targets, covOverrides) {
   const allItems = GAP_GROUPS.flatMap(g=>g.items);
-  const gaps = [], insufficients = [];
+  const gaps = [], insufficients = [], boolPartials = [];
   allItems.forEach(item => {
     const s = getItemStatus(item.key, active, coverage, targets, covOverrides);
+    if (item.key === "investment" || item.key === "savings") {
+      // 這兩項只看有／部分有／沒有，不套用金額目標比對邏輯，
+      // 「部分有」另外分流，避免跟下面的數字型不足清單混在一起。
+      if (s.status === "gap") gaps.push({item, ...s});
+      if (s.status === "insufficient") boolPartials.push({item, ...s});
+      return;
+    }
     if(s.status==="gap") gaps.push({item, ...s});
     if(s.status==="insufficient") insufficients.push({item, ...s});
   });
 
   let html = "";
+
+  if (boolPartials.length) {
+    html += `<div style="font-size:17px;font-weight:500;color:#B7791F;margin-bottom:8px">⚠ 部分規劃（保單已存在，但資料尚未填寫完整）</div>`;
+    html += `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">`;
+    boolPartials.forEach(({item}) => {
+      html += `<span style="padding:4px 12px;background:#FAEEDA;border:1px solid #EF9F27;border-radius:99px;font-size:14px;color:#633806">${item.label}</span>`;
+    });
+    html += `</div>`;
+  }
 
   if(insufficients.length) {
     html += `<div style="font-size:17px;font-weight:500;color:#F5A623;margin-bottom:8px">⚠ 規劃不足</div>`;
@@ -1048,7 +1112,7 @@ function buildGapAnalysis(active, coverage, targets, covOverrides) {
     html += `</div><div style="font-size:14px;color:#aaa">💡 可與保戶討論是否有需要規劃</div>`;
   }
 
-  if(!insufficients.length && !gaps.length) {
+  if(!insufficients.length && !gaps.length && !boolPartials.length) {
     html += `<div style="font-size:17px;color:#27AE8F;text-align:center;padding:12px 0">🎉 所有已設目標項目均達標！</div>`;
   }
 
