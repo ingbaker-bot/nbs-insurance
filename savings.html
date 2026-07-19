@@ -880,11 +880,21 @@ function renderTimeline() {
     `<th><span style="font-size:18px">${y}</span><br><span style="font-size:15px;color:#333;font-weight:700">${y-1911}年</span></th>`
   ).join("");
 
+  // 領回金額色塊改用交錯色盤，不然每張保單都有領回時整張表會變成一片深藍，
+  // 分不出是哪張保單。用淺一點的漸層，依保單列的順序輪流套用。
+  const BAR_PALETTE = [
+    "radial-gradient(ellipse at 30% 20%,#a5c4f5 0%,#3B82F6 55%,#1e3a8a 100%)",
+    "radial-gradient(ellipse at 30% 20%,#c9b8f5 0%,#7C3AED 55%,#3c1e6e 100%)",
+    "radial-gradient(ellipse at 30% 20%,#9fe1cb 0%,#0F9E75 55%,#04342c 100%)",
+    "radial-gradient(ellipse at 30% 20%,#f0c599 0%,#D97706 55%,#5c3208 100%)",
+  ];
+  let barColorIdx = 0;
+
   // ── 分組列 ──
   const groupRows = groups.map(g => {
     // 被保險人名稱列（分組標題）
     const nameRow = `<tr class="cf-member-row">
-      <td colspan="${trimYears.length + 1}">
+      <td colspan="${trimYears.length + 2}">
         <span style="font-size:16px;font-weight:600;color:#1a1a1a">${g.memberName}</span>
         <span style="font-size:14px;color:#555;font-weight:500;margin-left:6px">${g.policies.length} 張保單</span>
         ${g.policies.filter(p=>p.stillPaying).length > 0
@@ -895,11 +905,15 @@ function renderTimeline() {
 
     // 各保單列
     const policyRowsHtml = g.policies.map(pr => {
+      const barBg = BAR_PALETTE[barColorIdx % BAR_PALETTE.length];
+      barColorIdx++;
       const cells = trimYears.map(yr => {
         const amt = pr.flows[yr] || 0;
         if (!amt) return `<td><span style="color:#888;font-size:14px;font-weight:500">—</span></td>`;
         const w = Math.max(34, Math.round((amt / maxTotal) * 80));
-        return `<td><div class="cf-bar" style="width:${w}px"><span>${fmtAmt(amt)}</span></div></td>`;
+        // 用 min-width 而非 width：數字比計算出來的比例寬度還長時，
+        // 讓色塊自己撐開，不要讓文字溢出色塊外面。
+        return `<td><div class="cf-bar" style="min-width:${w}px;background:${barBg}"><span>${fmtAmt(amt)}</span></div></td>`;
       }).join("");
 
       // 第一欄：險種 badge + 保單號碼 + 商品名稱（統一收斂為靛紫色系，
@@ -917,10 +931,15 @@ function renderTimeline() {
           ${statusTag}
         </div>
         ${pr.itemName ? `<div style="font-size:16px;color:#444;font-weight:500;margin-top:2px;white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis">${pr.itemName}</div>` : ""}
-        ${pr.accountValue ? `<div style="font-size:13px;color:#185FA5;font-weight:600;margin-top:3px;white-space:nowrap">現況 ${fmtAmt(parseFloat(pr.accountValue)||0)}${pr.accountValueDate?`（${pr.accountValueDate}）`:""}</div>` : ""}
       </td>`;
 
-      return `<tr class="cf-policy-row">${firstCell}${cells}</tr>`;
+      // 獨立的「保單現金價值」欄，跟後面每年排定要領的錢分開放，
+      // 不再擠在第一欄的商品名稱下面當附註文字。
+      const cvCell = pr.accountValue
+        ? `<td style="text-align:center"><div style="font-size:16px;color:#185FA5;font-weight:700">${fmtAmt(parseFloat(pr.accountValue)||0)}</div><div style="font-size:12px;color:#9aa0ac">${pr.accountValueDate||""}</div></td>`
+        : `<td style="text-align:center"><span style="color:#c7c9d1;font-size:14px">—</span></td>`;
+
+      return `<tr class="cf-policy-row">${firstCell}${cvCell}${cells}</tr>`;
     }).join("");
 
     // 小計列：各保單已換算台幣，直接加總
@@ -932,6 +951,7 @@ function renderTimeline() {
     });
     const subtotalRows = `<tr class="cf-subtotal-row">
       <td style="padding-left:18px">小計（台幣）</td>
+      <td></td>
       ${trimYears.map(yr => {
         const amt = memberFlows[yr] || 0;
         if (!amt) return `<td><span style="color:#999;font-size:14px">—</span></td>`;
@@ -945,6 +965,7 @@ function renderTimeline() {
   // ── 合計列（統一台幣）──
   const totalRow = `<tr class="cf-total-row">
     <td>合計現金流（台幣）</td>
+    <td></td>
     ${trimYears.map(yr => {
       const amt = totalFlows[yr] || 0;
       if (!amt) return `<td><span style="color:#999;font-size:14px">—</span></td>`;
@@ -960,7 +981,7 @@ function renderTimeline() {
       </div>
       <div class="cf-scroll-wrap">
         <table class="cf-table">
-          <thead><tr><th>被保險人 / 保單號碼</th>${yearHeaders}</tr></thead>
+          <thead><tr><th>被保險人 / 保單號碼</th><th>保單現金價值</th>${yearHeaders}</tr></thead>
           <tbody>${groupRows}${totalRow}</tbody>
         </table>
       </div>
