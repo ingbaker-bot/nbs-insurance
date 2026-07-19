@@ -702,13 +702,32 @@ function _refreshAccountValueHint(pid) {
 
 // ── 儲存 ─────────────────────────────────────────────────
 async function saveAll() {
+  const person = personDataMap[currentPersonId];
+  if (!person) return;
+
+  // 安全防呆：儲存前先確認 settings 有沒有涵蓋這個人「應該要有」的保單數量。
+  // 如果兜不起來（例如頁面資料還沒載入完成、或成員剛切換過去），代表
+  // settings 是不完整或空的，這時候絕對不能拿去覆蓋後端已經存好的資料——
+  // 不然會把之前存過的內容整個蓋成空的，造成資料看起來憑空消失。
+  const expectedPolicies = (person.policies || []).filter(p =>
+    ["儲蓄險","年金險","儲蓄年金","投資型保險"].includes(p.category));
+  const settingsCount = Object.keys(settings).length;
+  if (expectedPolicies.length > 0 && settingsCount < expectedPolicies.length) {
+    alert(
+      "⚠ 儲存已中止\n\n" +
+      "畫面資料看起來還沒完全載入完成（這位成員應該有 " + expectedPolicies.length +
+      " 張儲蓄／投資型保單，但目前偵測到 " + settingsCount + " 張）。\n\n" +
+      "為了不覆蓋掉已經存過的資料，這次不會執行儲存，請重新整理頁面、" +
+      "等資料完全載入後再試一次。"
+    );
+    return;
+  }
+
   const hint = document.getElementById("saved-hint");
   hint.innerHTML = '<span class="spinner"></span>儲存中…';
   hint.style.background = "rgba(245,166,35,0.95)";
   hint.style.display = "block";
 
-  const person = personDataMap[currentPersonId];
-  if (!person) return;
   person.savings   = Object.values(settings);
   person.updatedAt = new Date().toISOString();
 
