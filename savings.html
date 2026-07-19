@@ -30,9 +30,11 @@
     .card-header { padding:12px 14px; border-bottom:1px solid #f0f0f0; }
     .card-no { font-size:14px; font-weight:500; font-family:monospace; background:#FBEAF0; color:#72243E; padding:1px 7px; border-radius:99px; display:inline-block; margin-bottom:4px; }
     .cat-badge { font-size:14px; padding:1px 6px; border-radius:99px; margin-left:6px; }
-    .cat-儲蓄險 { background:#FBEAF0; color:#72243E; }
-    .cat-年金險 { background:#FCEBEB; color:#791F1F; }
-    .cat-投資型保險 { background:#f0f0f0; color:#555; }
+    /* 跟 export.html「保單與受益人整合表」、現金流時間軸同一套險種色盤 */
+    .cat-儲蓄險 { background:#DCFCE7; color:#15803D; }
+    .cat-年金險 { background:#CCFBF1; color:#0F766E; }
+    .cat-投資型保險 { background:#EDE9FE; color:#6D28D9; }
+    .cat-儲蓄年金 { background:#DCFCE7; color:#15803D; }
     .card-name { font-size:17px; font-weight:500; margin:4px 0 2px; }
     .card-dates { font-size:14px; color:#bbb; margin-top:2px; }
 
@@ -965,9 +967,9 @@ function renderTimeline() {
         return `<td><div class="cf-bar" style="min-width:${w}px;background:${pColor.grad}"><span>${fmtAmt(amt)}</span></div></td>`;
       }).join("");
 
-      // 第一欄：險種 badge + 保單號碼 + 商品名稱（統一收斂為靛紫色系，
-      // 跟 export.html 的保單明細一覽表/家庭責任配色一致）
-      const badgeStyle = `font-size:14px;padding:1px 5px;border-radius:3px;display:inline-block;background:#e0e7ff;color:#3730a3`;
+      // 第一欄：險種 badge + 保單號碼 + 商品名稱（badge 用險種專屬顏色，
+      // 跟左側色條、金額色塊同一套顏色，不再是固定不變的靛紫色）
+      const badgeStyle = `font-size:14px;padding:1px 5px;border-radius:3px;display:inline-block;background:${pColor.solid}1A;color:${pColor.solid}`;
       // 繳費中標籤：現在改用真正的繳費期滿日判斷，不再用「有沒有現金流」誤判
       const statusTag = pr.stillPaying
         ? `<span style="font-size:14px;color:#888;font-weight:500;margin-left:4px">（繳費中）</span>`
