@@ -391,7 +391,7 @@ function renderSettings() {
             </div>
             <div class="card-name">${p.itemName||"—"}</div>
             ${dateStr?`<div class="card-dates">${dateStr}</div>`:""}
-            ${s.accountValue?`<div class="card-dates" style="color:#185FA5;font-weight:600">目前帳戶價值：${fmtAmt(parseFloat(s.accountValue)||0)}${s.accountValueDate?`（${s.accountValueDate} 登錄）`:""}</div>`:""}
+            ${s.accountValue?`<div class="card-dates" style="color:#185FA5;font-weight:600">目前帳戶價值：${fmtAccountValue(s.accountValue, s.currency, s.exchangeRate)}${s.accountValueDate?`（${s.accountValueDate} 登錄）`:""}</div>`:""}
           </div>
         </div>
         <div class="card-summary" id="summary-${p.id}">${buildCardSummary(s)}</div>
@@ -400,14 +400,17 @@ function renderSettings() {
       <!-- 展開內容 -->
       <div class="card-body" id="body-${p.id}" style="display:${isConfigured?'block':'none'}">
       <!-- 目前帳戶價值：跟下面的「領回方式」是兩個不同概念——這裡填的是
-           現在帳戶裡已經累積多少錢，領回方式填的是未來排定怎麼領。 -->
+           現在帳戶裡已經累積多少錢，領回方式填的是未來排定怎麼領。
+           外幣保單這裡要填「原幣」金額（跟保單本身的幣別一致），不是台幣，
+           不然會跟其他台幣保單的金額混在一起、加總會算錯。 -->
       <div class="adv-block" style="margin-bottom:12px;border-color:#B5D4F4">
         <div class="adv-block-title" style="color:#0C447C">目前帳戶價值（選填）</div>
         <div class="adv-row">
           <div class="field">
-            <label>帳戶價值（元）</label>
+            <label>帳戶價值${isFx?`（原幣：${s.currency}）`:"（元）"}</label>
             <input type="number" id="accountValue-${p.id}" value="${s.accountValue}"
-                   placeholder="如：2020000" oninput="updateSetting('${p.id}','accountValue',this.value)" />
+                   placeholder="${isFx?"請填原幣金額，如：10000":"如：2020000"}" oninput="updateSetting('${p.id}','accountValue',this.value);_refreshAccountValueHint('${p.id}')" />
+            ${isFx?`<div id="accountValueHint-${p.id}" style="font-size:12px;color:#9aa0ac;margin-top:3px">${s.accountValue?("≈ 台幣 "+fmtAmt((parseFloat(s.accountValue)||0)*(parseFloat(s.exchangeRate)||1))):""}</div>`:""}
           </div>
           <div class="field">
             <label>登錄日期</label>
@@ -443,7 +446,7 @@ function renderSettings() {
           </label>
           <input type="number" id="exrate-${p.id}" value="${s.exchangeRate||''}"
                  step="0.01" placeholder="如美元填 32.0"
-                 oninput="updateSetting('${p.id}','exchangeRate',parseFloat(this.value)||1)" />
+                 oninput="updateSetting('${p.id}','exchangeRate',parseFloat(this.value)||1);_refreshAccountValueHint('${p.id}')" />
         </div>` : ""}
         <div class="field" style="margin-top:10px">
           <label>備註</label>
@@ -686,6 +689,17 @@ function updateSetting(pid, field, val) {
   if (settings[pid]) settings[pid][field] = val;
 }
 
+// 外幣保單填帳戶價值或改匯率時，即時更新旁邊「≈ 台幣 XX」的提示文字，
+// 不用等存檔或重新整理才看得到換算結果。
+function _refreshAccountValueHint(pid) {
+  const s = settings[pid];
+  const hintEl = document.getElementById("accountValueHint-" + pid);
+  if (!s || !hintEl) return;
+  hintEl.textContent = s.accountValue
+    ? "≈ 台幣 " + fmtAmt((parseFloat(s.accountValue) || 0) * (parseFloat(s.exchangeRate) || 1))
+    : "";
+}
+
 // ── 儲存 ─────────────────────────────────────────────────
 async function saveAll() {
   const hint = document.getElementById("saved-hint");
@@ -860,6 +874,7 @@ function renderTimeline() {
         itemName:  p.itemName || "",
         category:  p.category || "",
         currency:  p.currency || "TWD",
+        exchangeRate: s.exchangeRate || 1,
         colorIdx:  pIdx,
         accountValue:     s.accountValue     || "",
         accountValueDate: s.accountValueDate || "",
@@ -945,7 +960,7 @@ function renderTimeline() {
       // 獨立的「保單現金價值」欄，跟後面每年排定要領的錢分開放，
       // 不再擠在第一欄的商品名稱下面當附註文字。
       const cvCell = pr.accountValue
-        ? `<td style="text-align:center"><div style="font-size:16px;color:#185FA5;font-weight:700">${fmtAmt(parseFloat(pr.accountValue)||0)}</div><div style="font-size:12px;color:#9aa0ac">${pr.accountValueDate||""}</div></td>`
+        ? `<td style="text-align:center"><div style="font-size:16px;color:#185FA5;font-weight:700">${fmtAccountValue(pr.accountValue, pr.currency, pr.exchangeRate)}</div><div style="font-size:12px;color:#9aa0ac">${pr.accountValueDate||""}</div></td>`
         : `<td style="text-align:center"><span style="color:#c7c9d1;font-size:14px">—</span></td>`;
 
       return `<tr class="cf-policy-row">${firstCell}${cvCell}${cells}</tr>`;
@@ -1010,6 +1025,18 @@ function fmtForeign(amt, cur) {
   const sym = CUR_SYMBOL[cur] || cur + " ";
   if (cur === "JPY") return sym + Math.round(amt).toLocaleString();
   return sym + (amt >= 10000 ? (amt/10000).toFixed(1)+"萬" : amt.toLocaleString());
+}
+
+// 帳戶價值的顯示：外幣保單填的是「原幣」金額（跟保單本身的幣別欄位一致），
+// 不能直接當台幣用 fmtAmt 顯示——否則會誤會成台幣金額，而且沒辦法跟其他
+// 台幣保單的現金流加總。外幣保單改成顯示「原幣金額（≈換算後台幣）」，
+// 換算用的匯率沿用這張保單在領回設定裡已經填的匯率。
+function fmtAccountValue(rawValue, currency, exchangeRate) {
+  const amt = parseFloat(rawValue) || 0;
+  const cur = currency || "TWD";
+  if (cur === "TWD") return fmtAmt(amt);
+  const rate = parseFloat(exchangeRate) || 1;
+  return fmtForeign(amt, cur) + `<span style="color:#9aa0ac;font-weight:500">（≈${fmtAmt(amt*rate)}台幣）</span>`;
 }
 
 function escHtml(s) {
