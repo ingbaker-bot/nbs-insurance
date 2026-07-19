@@ -311,6 +311,19 @@ function switchMember(pid) {
 }
 
 // ── 保單設定渲染 ──────────────────────────────────────────
+// 保單專屬色盤：讓同一張保單在「保單設定」卡片側邊條、跟「現金流時間軸」
+// 的列側邊條／領回金額色塊都用同一個顏色，方便業務員對照是哪張保單。
+// solid 給卡片側邊條/列側邊條用，grad 給時間軸的金額色塊用。
+var POLICY_COLORS = [
+  { solid:"#3B82F6", grad:"radial-gradient(ellipse at 30% 20%,#a5c4f5 0%,#3B82F6 55%,#1e3a8a 100%)" },
+  { solid:"#7C3AED", grad:"radial-gradient(ellipse at 30% 20%,#c9b8f5 0%,#7C3AED 55%,#3c1e6e 100%)" },
+  { solid:"#0F9E75", grad:"radial-gradient(ellipse at 30% 20%,#9fe1cb 0%,#0F9E75 55%,#04342c 100%)" },
+  { solid:"#D97706", grad:"radial-gradient(ellipse at 30% 20%,#f0c599 0%,#D97706 55%,#5c3208 100%)" },
+  { solid:"#DB2777", grad:"radial-gradient(ellipse at 30% 20%,#f6b8d3 0%,#DB2777 55%,#6b0f3d 100%)" },
+  { solid:"#0891B2", grad:"radial-gradient(ellipse at 30% 20%,#a0e4f0 0%,#0891B2 55%,#0a3f4a 100%)" },
+];
+function getPolicyColor(idx) { return POLICY_COLORS[idx % POLICY_COLORS.length]; }
+
 function renderSettings() {
   const person = personDataMap[currentPersonId];
   if (!person) return;
@@ -324,7 +337,7 @@ function renderSettings() {
   }
 
   let html = "";
-  policies.forEach(p => {
+  policies.forEach((p, pIdx) => {
     if (!settings[p.id]) {
       const sv = (person.savings || []).find(s => s.policyId === p.id) || {};
       // 從 policy 本身讀取幣別和匯率
@@ -365,7 +378,8 @@ function renderSettings() {
     // 已設定過的保單預設展開，新保單預設收合
     // 用 s（settings[p.id]）判斷，sv 可能不在 scope 內
     const isConfigured = !!(s.type && s.type !== "1") || !!(s.afterAmt) || !!(s.duringAmt) || !!(s.yearlyAmts && s.yearlyAmts.length) || !!(s.accountValue);
-    html += `<div class="savings-card ${isConfigured?'card-open':''}" data-pid="${p.id}">
+    const pColor = getPolicyColor(pIdx).solid;
+    html += `<div class="savings-card ${isConfigured?'card-open':''}" data-pid="${p.id}" style="border-left:6px solid ${pColor}">
       <div class="card-header card-toggle" onclick="toggleCard('${p.id}')">
         <div style="display:flex;align-items:center;gap:6px;flex:1">
           <span class="card-chevron" id="chevron-${p.id}">${isConfigured?'▾':'▸'}</span>
@@ -824,7 +838,7 @@ function renderTimeline() {
     if (!savingPolicies.length) return;
 
     const policyRows = [];
-    savingPolicies.forEach(p => {
+    savingPolicies.forEach((p, pIdx) => {
       const s = settings[p.id] ||
                 (person.savings || []).find(sv => sv.policyId === p.id) ||
                 { type:"1" };
@@ -846,6 +860,7 @@ function renderTimeline() {
         itemName:  p.itemName || "",
         category:  p.category || "",
         currency:  p.currency || "TWD",
+        colorIdx:  pIdx,
         accountValue:     s.accountValue     || "",
         accountValueDate: s.accountValueDate || "",
         stillPaying,
@@ -883,16 +898,6 @@ function renderTimeline() {
     `<th><span style="font-size:18px">${y}</span><br><span style="font-size:15px;color:#333;font-weight:700">${y-1911}年</span></th>`
   ).join("");
 
-  // 領回金額色塊改用交錯色盤，不然每張保單都有領回時整張表會變成一片深藍，
-  // 分不出是哪張保單。用淺一點的漸層，依保單列的順序輪流套用。
-  const BAR_PALETTE = [
-    "radial-gradient(ellipse at 30% 20%,#a5c4f5 0%,#3B82F6 55%,#1e3a8a 100%)",
-    "radial-gradient(ellipse at 30% 20%,#c9b8f5 0%,#7C3AED 55%,#3c1e6e 100%)",
-    "radial-gradient(ellipse at 30% 20%,#9fe1cb 0%,#0F9E75 55%,#04342c 100%)",
-    "radial-gradient(ellipse at 30% 20%,#f0c599 0%,#D97706 55%,#5c3208 100%)",
-  ];
-  let barColorIdx = 0;
-
   // ── 分組列 ──
   const groupRows = groups.map(g => {
     // 被保險人名稱列（分組標題）
@@ -906,17 +911,17 @@ function renderTimeline() {
       </td>
     </tr>`;
 
-    // 各保單列
+    // 各保單列：顏色用 pr.colorIdx（跟保單設定頁同一張保單同一個顏色，
+    // 方便業務員在兩個分頁之間對照是哪一張）
     const policyRowsHtml = g.policies.map(pr => {
-      const barBg = BAR_PALETTE[barColorIdx % BAR_PALETTE.length];
-      barColorIdx++;
+      const pColor = getPolicyColor(pr.colorIdx);
       const cells = trimYears.map(yr => {
         const amt = pr.flows[yr] || 0;
         if (!amt) return `<td><span style="color:#888;font-size:14px;font-weight:500">—</span></td>`;
         const w = Math.max(34, Math.round((amt / maxTotal) * 80));
         // 用 min-width 而非 width：數字比計算出來的比例寬度還長時，
         // 讓色塊自己撐開，不要讓文字溢出色塊外面。
-        return `<td><div class="cf-bar" style="min-width:${w}px;background:${barBg}"><span>${fmtAmt(amt)}</span></div></td>`;
+        return `<td><div class="cf-bar" style="min-width:${w}px;background:${pColor.grad}"><span>${fmtAmt(amt)}</span></div></td>`;
       }).join("");
 
       // 第一欄：險種 badge + 保單號碼 + 商品名稱（統一收斂為靛紫色系，
@@ -926,8 +931,9 @@ function renderTimeline() {
       const statusTag = pr.stillPaying
         ? `<span style="font-size:14px;color:#888;font-weight:500;margin-left:4px">（繳費中）</span>`
         : "";
-      // 第一欄：改為兩行——行1: badge + 號碼，行2: 險種名稱
-      const firstCell = `<td style="padding-left:14px;min-width:160px;padding-top:5px;padding-bottom:5px">
+      // 第一欄：改為兩行——行1: badge + 號碼，行2: 險種名稱；左側加色條
+      // 跟「保單設定」頁的卡片顏色對應，方便對照是哪一張保單
+      const firstCell = `<td style="padding-left:11px;min-width:160px;padding-top:5px;padding-bottom:5px;border-left:5px solid ${pColor.solid}">
         <div style="display:flex;align-items:center;gap:5px;white-space:nowrap">
           <span style="${badgeStyle}">${pr.category}</span>
           <span style="font-size:14px;font-weight:700;color:#1a1a1a;font-family:monospace">${pr.policyNo}</span>
