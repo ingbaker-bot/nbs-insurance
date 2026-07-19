@@ -898,17 +898,52 @@ function renderContent() {
   document.getElementById("content").innerHTML = html;
 }
 
+// ── 甜甜圈圖分類：把個別細項合併成大類別，扇形不再逐項化（跟 export.html
+// 的 DONUT_CATEGORIES_EX 對齊），圖例仍保留逐項明細，不受影響。 ──
+var DONUT_CATEGORIES = [
+  { key:"life_permanent", label:"終身壽險",     subKeys:["life_permanent"] },
+  { key:"life_term",      label:"定期壽險",     subKeys:["life_term"] },
+  { key:"investment",     label:"投資型保險",   subKeys:["investment"] },
+  { key:"savings",        label:"儲蓄險",       subKeys:["savings"] },
+  { key:"acc",            label:"意外險",       subKeys:["acc_death_amt","acc_medical","acc_hosp"] },
+  { key:"ci",             label:"重疾/特傷/重大", subKeys:["ci_major","ci_catastrophic","ci_specific","ci_death"] },
+  { key:"cancer",         label:"癌症險",       subKeys:["cancer","cancer_hosp","cancer_surgery","cancer_death_hospice"] },
+  { key:"hosp_real_room", label:"住院醫療",     subKeys:["hosp_real_room"] },
+  { key:"hosp_daily",     label:"住院日額",     subKeys:["hosp_daily"] },
+  { key:"surgery",        label:"手術醫療",     subKeys:["surgery"] },
+  { key:"ltc",            label:"失能/長照",    subKeys:["ltc_disable","ltc_support","ltc_care"] },
+  { key:"waiver",         label:"豁免",         subKeys:["waiver"] },
+];
+
+// 合併類別的三態判斷：全部子項目都有 → full(有)；全部都沒有 → none(沒有)；
+// 部分子項目有部分沒有 → partial(部分有)。投資型／儲蓄險走專屬的三態判斷。
+function getDonutCategoryStatus(cat, active, coverage, targets, covOverrides) {
+  if (cat.key === "investment" || cat.key === "savings") {
+    const s = getSavingsPieStatus(cat.key, active, covOverrides);
+    const statusMap = { gap:"none", insufficient:"partial", ok:"full" };
+    return { status: statusMap[s.status], pct: s.pct };
+  }
+  const n = cat.subKeys.length;
+  let presentCount = 0;
+  cat.subKeys.forEach(function(k){
+    const current = getItemCurrent(k, active, coverage, covOverrides);
+    if (current > 0) presentCount++;
+  });
+  const status = presentCount===0 ? "none" : (presentCount===n ? "full" : "partial");
+  return { status: status, pct: n ? presentCount/n : 0 };
+}
+
 // ── 環形圓餅圖與圖例 ────────────────────────────────────────────
 function buildDonutChart(active, coverage, targets, covOverrides) {
-  const allItems = GAP_GROUPS.flatMap(g=>g.items);
-  const n = allItems.length;
-  
+  const chartCats = DONUT_CATEGORIES;              // 扇形改用合併後的大類別
+  const n = chartCats.length;
+
   const cx=220, cy=150, OR=100, IR=54;
   const gapA=0.03, sliceA=(Math.PI*2-n*gapA)/n;
 
   let angle=-Math.PI/2;
   let paths="";
-  let labels=""; 
+  let labels="";
 
   function renderLegend(g) {
     let legendHtml = `<div style="font-size:17px;font-weight:500;color:${g.color};margin-bottom:8px;border-bottom:1px solid ${g.color}30;padding-bottom:4px">${g.label}</div>`;
@@ -955,8 +990,25 @@ function buildDonutChart(active, coverage, targets, covOverrides) {
   const legendDuring = renderLegend(GAP_GROUPS[2]);
   const legendAfter  = renderLegend(GAP_GROUPS[3]);
 
-  allItems.forEach(item => {
-    const {status,pct} = getItemStatus(item.key, active, coverage, targets, covOverrides);
+  // 顏色＝狀態，不再＝類別（跟 export.html 對齊）：已規劃=藍色漸層／
+  // 部分有=橘色漸層／缺口=灰色，類別的識別改由外圍拉線標籤文字負責。
+  const STATUS_COLOR = { full:"url(#donutGradFull)", partial:"url(#donutGradPartial)", none:"#E2E8F0" };
+  const DONUT_DEFS = '<defs>' +
+    '<radialGradient id="donutGradFull" cx="30%" cy="20%" r="75%">' +
+      '<stop offset="0%" stop-color="#7dd3fc"/>' +
+      '<stop offset="55%" stop-color="#0ea5e9"/>' +
+      '<stop offset="100%" stop-color="#0369a1"/>' +
+    '</radialGradient>' +
+    '<radialGradient id="donutGradPartial" cx="30%" cy="20%" r="75%">' +
+      '<stop offset="0%" stop-color="#fcd34d"/>' +
+      '<stop offset="55%" stop-color="#f59e0b"/>' +
+      '<stop offset="100%" stop-color="#b45309"/>' +
+    '</radialGradient>' +
+  '</defs>';
+
+  chartCats.forEach(item => {
+    const {status,pct} = getDonutCategoryStatus(item, active, coverage, targets, covOverrides);
+    const sColor = STATUS_COLOR[status];
     const start = angle+gapA/2;
     const end   = angle+gapA/2+sliceA;
     const filledEnd = start + sliceA*pct;
@@ -966,11 +1018,11 @@ function buildDonutChart(active, coverage, targets, covOverrides) {
     const px=(r,a)=>cx+r*Math.cos(a), py=(r,a)=>cy+r*Math.sin(a);
     const donut=(a1,a2,lg,r1,r2)=>`M${px(r1,a1)},${py(r1,a1)} A${r1},${r1} 0 ${lg} 1 ${px(r1,a2)},${py(r1,a2)} L${px(r2,a2)},${py(r2,a2)} A${r2},${r2} 0 ${lg} 0 ${px(r2,a1)},${py(r2,a1)} Z`;
 
-    paths += `<path d="${donut(start,end,sliceA>Math.PI?1:0,OR,IR)}" fill="#f0f0f0"/>`;
-    if(pct>0.01) paths += `<path d="${donut(start,filledEnd,sliceA*pct>Math.PI?1:0,OR,IR)}" fill="${item.color}"/>`;
-    if(status==="insufficient" && pct<0.99) {
+    paths += `<path d="${donut(start,end,sliceA>Math.PI?1:0,OR,IR)}" fill="#E2E8F0"/>`;
+    if(pct>0.01) paths += `<path d="${donut(start,filledEnd,sliceA*pct>Math.PI?1:0,OR,IR)}" fill="${sColor}"/>`;
+    if(status==="partial" && pct<0.99) {
       const gapSize=sliceA*(1-pct);
-      paths += `<path d="${donut(filledEnd,end,gapSize>Math.PI?1:0,OR,IR)}" fill="none" stroke="${item.color}" stroke-width="2.5" stroke-dasharray="4 3" opacity="0.45"/>`;
+      paths += `<path d="${donut(filledEnd,end,gapSize>Math.PI?1:0,OR,IR)}" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-dasharray="4 3" opacity="0.45"/>`;
     }
 
     const isRight = Math.cos(midA) >= 0; 
@@ -980,30 +1032,32 @@ function buildDonutChart(active, coverage, targets, covOverrides) {
 
     const textAnchor = isRight ? "start" : "end";
     const textX = x2 + (isRight ? 4 : -4);
-    const textColor = status === "gap" ? "#aaa" : "#555";
-    const fw = status === "ok" ? "500" : "400";
-    const prefix = status === "gap" ? "❌ " : status === "insufficient" ? "⚠️ " : "";
+    const textColor = status === "none" ? "#94a3b8" : "#555";
+    const dotColor = status === "full" ? "#0ea5e9" : status === "partial" ? "#f59e0b" : "#94a3b8";
+    const fw = status === "full" ? "600" : "500";
+    const prefix = status === "partial" ? "◐ " : "";
 
     labels += `
-      <polyline points="${x0},${y0} ${x1},${y1} ${x2},${y2}" fill="none" stroke="${item.color}60" stroke-width="1.2"/>
-      <circle cx="${x0}" cy="${y0}" r="2" fill="${item.color}"/>
-      <text x="${textX}" y="${y2+4}" text-anchor="${textAnchor}" style="font-size:14px;fill:${textColor};font-weight:${fw};letter-spacing:0.03em">${prefix}${item.label}</text>
+      <polyline points="${x0},${y0} ${x1},${y1} ${x2},${y2}" fill="none" stroke="${dotColor}60" stroke-width="1.2"/>
+      <circle cx="${x0}" cy="${y0}" r="2" fill="${dotColor}"/>
+      <text x="${textX}" y="${y2+4}" text-anchor="${textAnchor}" style="font-size:13px;fill:${textColor};font-weight:${fw};letter-spacing:0.03em">${prefix}${item.label}</text>
     `;
   });
 
-  const okN = allItems.filter(item=>getItemStatus(item.key,active,coverage,targets,covOverrides).status==="ok").length;
-  const gapN = allItems.filter(item=>getItemStatus(item.key,active,coverage,targets,covOverrides).status==="gap").length;
-  const insN = allItems.filter(item=>getItemStatus(item.key,active,coverage,targets,covOverrides).status==="insufficient").length;
+  const okN  = chartCats.filter(item=>getDonutCategoryStatus(item,active,coverage,targets,covOverrides).status==="full").length;
+  const gapN = chartCats.filter(item=>getDonutCategoryStatus(item,active,coverage,targets,covOverrides).status==="none").length;
+  const insN = chartCats.filter(item=>getDonutCategoryStatus(item,active,coverage,targets,covOverrides).status==="partial").length;
 
   return `<div style="display:flex;flex-direction:column;width:100%">
     <div style="display:flex;align-items:center;justify-content:center;gap:20px;flex-wrap:wrap;margin-bottom:20px;padding:0">
       <svg viewBox="0 0 440 300" style="width:100%; max-width:480px; flex-shrink:0;">
+        ${DONUT_DEFS}
         ${paths}
         ${labels}
-        <text x="${cx}" y="${cy-16}" text-anchor="middle" style="font-size:14px;fill:#888">✅ 達標</text>
-        <text x="${cx}" y="${cy+6}"  text-anchor="middle" style="font-size:19px;font-weight:bold;fill:#333">${okN}</text>
-        <text x="${cx}" y="${cy+24}" text-anchor="middle" style="font-size:14px;fill:#E74C3C">❌ 缺口 ${gapN}</text>
-        <text x="${cx}" y="${cy+40}" text-anchor="middle" style="font-size:14px;fill:#F5A623">⚠ 不足 ${insN}</text>
+        <text x="${cx}" y="${cy-16}" text-anchor="middle" style="font-size:13px;fill:#0369a1">✅ 已規劃</text>
+        <text x="${cx}" y="${cy+8}"  text-anchor="middle" style="font-size:28px;font-weight:bold;fill:#333">${okN}</text>
+        <text x="${cx}" y="${cy+26}" text-anchor="middle" style="font-size:12px;fill:#E74C3C">❌ 缺口 ${gapN}</text>
+        <text x="${cx}" y="${cy+42}" text-anchor="middle" style="font-size:12px;fill:#b45309">◐ 部分有 ${insN}</text>
       </svg>
       <div style="min-width:170px;background:#fafafa;padding:12px 16px;border-radius:10px;border:1px solid #f0f0f0">
         ${legendFamily}
