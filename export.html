@@ -7,6 +7,7 @@
   <title>NBS - 匯出圖片</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <style>
     :root{
       --primary:#6366f1; --primary-dark:#4f46e5; --primary-light:#eef2ff;
@@ -109,18 +110,18 @@
       <button id="B_TOGALL" style="font-size:13px;font-weight:600;padding:5px 14px;border:none;border-radius:99px;background:#eef1f6;color:var(--text-muted);cursor:pointer;font-family:inherit">全部取消</button>
     </div>
     <div id="BLKLIST"></div>
-    <div class="fmt-section-hdr" id="FMT_HDR_png" onclick="toggleFmtSection('png')">
-      <span style="flex:1">🖼️ 圖檔（PNG）</span>
-      <span class="fmt-hdr-sel" id="FMT_SEL_png"></span>
-      <span class="fmt-chevron" id="FMT_CHEV_png">▾</span>
-    </div>
-    <div class="fmt-grid" id="FMT_PNG"></div>
     <div class="fmt-section-hdr is-pdf" id="FMT_HDR_pdf" onclick="toggleFmtSection('pdf')">
       <span style="flex:1">📄 文件（PDF）</span>
       <span class="fmt-hdr-sel" id="FMT_SEL_pdf"></span>
       <span class="fmt-chevron" id="FMT_CHEV_pdf">▾</span>
     </div>
     <div class="fmt-grid" id="FMT_PDF"></div>
+    <div class="fmt-section-hdr" id="FMT_HDR_png" onclick="toggleFmtSection('png')">
+      <span style="flex:1">🖼️ 圖檔（PNG）</span>
+      <span class="fmt-hdr-sel" id="FMT_SEL_png"></span>
+      <span class="fmt-chevron" id="FMT_CHEV_png">▾</span>
+    </div>
+    <div class="fmt-grid" id="FMT_PNG"></div>
     <div class="brow">
       <div class="brow-inner">
         <button class="pbtn" id="B_PREV" style="background:var(--primary)">預覽區塊</button>
@@ -208,8 +209,8 @@ var   CC={"壽險保障":"#3730a3","醫療保障":"#0284c7","意外險":"#b45309
 
 // ── 狀態 ─────────────────────────────────────────────────
 var sel={cover:false,family_premium_summary:false,premium_detail:false,summary:false,policy_detail:false,savings_timeline:false};
-var fmt="png_single";
-var fmtOpen="png"; // 手風琴目前展開的區塊，預設展開 PNG
+var fmt="pdf_merge";
+var fmtOpen="pdf"; // 手風琴目前展開的區塊，預設展開 PDF
 var person={},policies=[],coverage={},savings=[];
 var pName="",pDate="";
 var agentPhotoDataUrl=null; // 業務員大頭照（封面用），頁面載入時預先抓好，避免組封面時要等非同步
@@ -2578,6 +2579,10 @@ async function doExportPNG(blks,div){
     a.href=c.toDataURL("image/jpeg",0.92);a.click();
     setP(100);
   }else{
+    // 分張圖檔改成打包成單一 zip 一次下載，不要對每張圖片各自觸發一次
+    // a.click()——瀏覽器對「短時間內連續觸發多次下載」有防護機制，常常
+    // 只有第一張真的下載成功，其餘被靜默擋掉，使用者只會看到一張圖。
+    var zip = new JSZip();
     for(var i=0;i<blks.length;i++){
       div.style.width="2400px";
       div.innerHTML=(blks[i].key==="cover"?'':getBlockTitleHtml(blks[i]))+renderBlock(blks[i].key)+disclaimer+wm;
@@ -2588,11 +2593,15 @@ async function doExportPNG(blks,div){
       var c2=await html2canvas(div,{scale:2,useCORS:true,backgroundColor:"#ffffff",
         width:actualW,windowWidth:actualW});
       div.style.width="2400px";
-      var a2=document.createElement("a");
-      a2.download=pName+"_"+blks[i].label+"_"+pDate+".jpg";
-      a2.href=c2.toDataURL("image/jpeg",0.92);a2.click();
-      await sleep(400);
+      var blob2=await new Promise(function(resolve){ c2.toBlob(resolve,"image/jpeg",0.92); });
+      zip.file(pName+"_"+blks[i].label+"_"+pDate+".jpg", blob2);
+      await sleep(100);
     }
+    setP(95);
+    var zipBlob=await zip.generateAsync({type:"blob"});
+    var a2=document.createElement("a");
+    a2.download=pName+"_保單體檢_"+pDate+"_圖檔.zip";
+    a2.href=URL.createObjectURL(zipBlob);a2.click();
     setP(100);
   }
 }
@@ -2807,8 +2816,8 @@ function showDone(blks){
   var isPdf=fmt.startsWith("pdf");
   document.getElementById("DONE_MSG").textContent=(isPdf?"PDF":"圖片")+"已下載到您的裝置，可直接傳送給保戶";
   var h='<div style="font-size:14px;color:#aaa;margin-bottom:6px">下載的檔案</div>';
-  if(fmt==="png_single")h+='<div class="fitem">🖼️ '+pName+'_保單體檢_'+pDate+'.png</div>';
-  else if(fmt==="png_multiple")h+=blks.map(function(b){return'<div class="fitem">🖼️ '+pName+'_'+b.label+'_'+pDate+'.png</div>';}).join("");
+  if(fmt==="png_single")h+='<div class="fitem">🖼️ '+pName+'_保單體檢_'+pDate+'.jpg</div>';
+  else if(fmt==="png_multiple")h+='<div class="fitem">🗂️ '+pName+'_保單體檢_'+pDate+'_圖檔.zip（內含 '+blks.length+' 張圖片）</div>';
   else h+='<div class="fitem">📄 '+pName+'_保單體檢_'+pDate+'.pdf'+(fmt==="pdf_pages"?" ("+blks.length+"頁)":"")+'</div>';
   document.getElementById("DONE_FILES").innerHTML=h;
   goPage("P_DONE");
