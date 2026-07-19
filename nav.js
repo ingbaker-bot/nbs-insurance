@@ -397,15 +397,17 @@
     modal.onclick = function(e){ if(e.target===modal) NBS_NAV._closeMemberModal(); };
     document.body.appendChild(modal);
 
-    // 浮動圓形導覽選單（測試版，僅電腦／平板顯示，手機版沿用底部 tab）
+    // 浮動圓形導覽選單（可拖曳＋依位置動態決定展開角度，僅電腦／平板顯示）
     var floatNav = document.createElement("div");
     floatNav.id = "nbs-float-nav";
     floatNav.innerHTML =
       '<div id="nbs-float-items"></div>' +
-      '<button id="nbs-float-fab" onclick="NBS_NAV._toggleFloatNav()" aria-label="展開導覽選單">' +
+      '<button id="nbs-float-fab" aria-label="展開導覽選單，可拖曳移動位置">' +
         '<span id="nbs-float-fab-icon">☰</span>' +
       '</button>';
     document.body.appendChild(floatNav);
+    _initFloatNavPosition();
+    _initFloatNavDrag();
     document.addEventListener("click", function(e){
       var wrap = document.getElementById("nbs-float-nav");
       if (!wrap || !_floatNavOpen) return;
@@ -422,7 +424,13 @@
     // 浮動圓形選單目前只在電腦／平板測試，手機版先隱藏、沿用底部 tab
     if (floatNav) {
       floatNav.style.display = mobile ? "none" : "block";
-      if (mobile) NBS_NAV._closeFloatNav();
+      if (mobile) {
+        NBS_NAV._closeFloatNav();
+      } else {
+        var fr = floatNav.getBoundingClientRect();
+        _applyFloatNavPos(fr.left, fr.top);
+        _renderFloatNav();
+      }
     }
     if (!sidebar) return;
     if (mobile) {
@@ -621,19 +629,129 @@
     m.style.display = "none";
   });
 
-  // 浮動圓形導覽選單：扇形從水平（180°，正左）展開到垂直（270°，正上），
-  // 因為按鈕固定在右下角，這樣展開才不會被螢幕邊界擋住。
+  // ── 浮動選單定位（可拖曳、記憶位置）──────────────────────
+  // 座標概念：#nbs-float-nav 本身是一個 0 大小的錨點，固定在
+  // (left, top)；fab 用 right:0;bottom:0 貼齊這個錨點，等於錨點
+  // 就是 fab 的右下角。拖曳只是改變這個錨點座標。
+  function _clampFloatPos(left, top) {
+    var minL = 64, maxL = window.innerWidth - 8;
+    var minT = 64, maxT = window.innerHeight - 8;
+    return {
+      left: Math.max(minL, Math.min(maxL, left)),
+      top:  Math.max(minT, Math.min(maxT, top))
+    };
+  }
+  function _loadFloatNavPos() {
+    try {
+      var raw = localStorage.getItem("nbs_float_nav_pos");
+      if (!raw) return null;
+      var p = JSON.parse(raw);
+      if (typeof p.left !== "number" || typeof p.top !== "number") return null;
+      return p;
+    } catch (e) { return null; }
+  }
+  function _saveFloatNavPos(left, top) {
+    try { localStorage.setItem("nbs_float_nav_pos", JSON.stringify({ left: left, top: top })); }
+    catch (e) {}
+  }
+  function _applyFloatNavPos(left, top) {
+    var wrap = document.getElementById("nbs-float-nav");
+    if (!wrap) return;
+    var p = _clampFloatPos(left, top);
+    wrap.style.left = p.left + "px";
+    wrap.style.top  = p.top + "px";
+  }
+  function _initFloatNavPosition() {
+    var saved = _loadFloatNavPos();
+    if (saved) { _applyFloatNavPos(saved.left, saved.top); return; }
+    _applyFloatNavPos(window.innerWidth - 28, window.innerHeight - 28);
+  }
+  function _initFloatNavDrag() {
+    var fab  = document.getElementById("nbs-float-fab");
+    var wrap = document.getElementById("nbs-float-nav");
+    if (!fab || !wrap) return;
+    var dragging = false, moved = false, startX, startY, origLeft, origTop;
+    fab.addEventListener("pointerdown", function(e) {
+      if (_floatNavOpen) return; // 展開狀態下不拖曳，避免跟點選項目衝突
+      dragging = true; moved = false;
+      var r = wrap.getBoundingClientRect();
+      origLeft = r.left; origTop = r.top;
+      startX = e.clientX; startY = e.clientY;
+      try { fab.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+    fab.addEventListener("pointermove", function(e) {
+      if (!dragging) return;
+      var dx = e.clientX - startX, dy = e.clientY - startY;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) moved = true;
+      if (!moved) return;
+      _applyFloatNavPos(origLeft + dx, origTop + dy);
+    });
+    function endDrag() {
+      if (!dragging) return;
+      dragging = false;
+      if (moved) {
+        var r = wrap.getBoundingClientRect();
+        _saveFloatNavPos(r.left, r.top);
+        _renderFloatNav(); // 位置變了，重新計算展開角度
+      }
+    }
+    fab.addEventListener("pointerup", endDrag);
+    fab.addEventListener("pointercancel", endDrag);
+    fab.addEventListener("click", function(e) {
+      if (moved) { e.preventDefault(); e.stopPropagation(); moved = false; return; }
+      NBS_NAV._toggleFloatNav();
+    });
+  }
+
+  // ── 依 fab 目前位置，動態決定扇形展開的起訖角度 ──────────────
+  // 角度定義：0°=右、90°=下、180°=左、270°=上（沿順時針）。
+  // 靠邊角只給 90°、貼單邊給 180°、四周都空曠就給滿 360°。
+  function _computeFloatArc() {
+    var wrap = document.getElementById("nbs-float-nav");
+    if (!wrap) return { start: 180, end: 270 };
+    var r = wrap.getBoundingClientRect();
+    var left = r.left, top = r.top;
+    var threshold = 150; // 半徑 + 圖示半寬 + 安全間距
+    var canRight = (window.innerWidth  - left) >= threshold;
+    var canLeft  = (left - 56)                 >= threshold;
+    var canDown  = (window.innerHeight - top)  >= threshold;
+    var canUp    = (top - 56)                  >= threshold;
+    var count = [canLeft, canRight, canUp, canDown].filter(Boolean).length;
+
+    if (count >= 4) return { start: -90, end: 270 }; // 四周都空曠：整圈 360°
+    if (count === 3) {
+      if (!canRight) return { start: 90,  end: 270 };
+      if (!canLeft)  return { start: -90, end: 90  };
+      if (!canUp)    return { start: 0,   end: 180 };
+      if (!canDown)  return { start: 180, end: 360 };
+    }
+    if (count === 2) {
+      if (!canRight && !canDown) return { start: 180, end: 270 }; // 右下角
+      if (!canLeft  && !canDown) return { start: 270, end: 360 }; // 左下角
+      if (!canRight && !canUp)   return { start: 90,  end: 180 }; // 右上角
+      if (!canLeft  && !canUp)   return { start: 0,   end: 90  }; // 左上角
+    }
+    if (count === 1) {
+      var center = canRight ? 0 : canDown ? 90 : canLeft ? 180 : 270;
+      return { start: center - 45, end: center + 45 };
+    }
+    return { start: 180, end: 270 }; // 極端情況（例如卡在窄欄中間）的保底扇形
+  }
+
   function _renderFloatNav() {
     var wrap = document.getElementById("nbs-float-items");
     if (!wrap) return;
+    var arc    = _computeFloatArc();
+    var span   = arc.end - arc.start;
+    var isFull = span >= 359; // 整圈時頭尾角度重疊，要用 n 等分而非 n-1
     var n = FLOAT_NAV_ITEMS.length;
     var radius = 108;
-    var startDeg = 180, endDeg = 270;
     wrap.innerHTML = FLOAT_NAV_ITEMS.map(function(item, i) {
-      var deg = n > 1 ? startDeg + (endDeg - startDeg) * (i / (n - 1)) : (startDeg + endDeg) / 2;
+      var t   = isFull ? (i / n) : (n > 1 ? i / (n - 1) : 0.5);
+      var deg = arc.start + span * t;
       var rad = deg * Math.PI / 180;
-      var tx = Math.round(Math.cos(rad) * radius);
-      var ty = Math.round(Math.sin(rad) * radius);
+      var tx  = Math.round(Math.cos(rad) * radius);
+      var ty  = Math.round(Math.sin(rad) * radius);
       var active = _page === item.key;
       return '<div class="nbs-float-item'+(active?" nbs-float-item-on":"")+'" style="--tx:'+tx+'px;--ty:'+ty+'px" onclick="NBS_NAV._go(\''+item.href+'\');NBS_NAV._closeFloatNav()" title="'+item.label+'">' +
         '<span class="nbs-float-icon">'+item.icon+'</span>' +
@@ -646,6 +764,7 @@
     _floatNavOpen = !_floatNavOpen;
     var wrap = document.getElementById("nbs-float-nav");
     var icon = document.getElementById("nbs-float-fab-icon");
+    if (_floatNavOpen) _renderFloatNav(); // 展開當下才重算角度，確保拖曳後的位置生效
     if (wrap) wrap.classList.toggle("nbs-float-open", _floatNavOpen);
     if (icon) icon.textContent = _floatNavOpen ? "✕" : "☰";
   };
@@ -1167,8 +1286,9 @@
       ".nbs-ef-btns{display:flex;gap:8px;margin-top:4px}",
       ".nbs-ef-cancel{flex:1;padding:9px;background:transparent;color:#666;border:1px solid #ddd;border-radius:7px;cursor:pointer;font-family:inherit;font-size:13px}",
       ".nbs-ef-save{flex:2;padding:9px;background:linear-gradient(90deg,#3B82F6,#7C3AED);color:#fff;border:none;border-radius:9px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600}",
-      "#nbs-float-nav{position:fixed;right:28px;bottom:28px;width:1px;height:1px;z-index:300}",
-      "#nbs-float-fab{position:absolute;right:0;bottom:0;width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;background:linear-gradient(135deg,#3B82F6,#7C3AED);box-shadow:0 6px 18px rgba(76,29,149,.28);display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;transition:transform .2s}",
+      "#nbs-float-nav{position:fixed;width:1px;height:1px;z-index:300}",
+      "#nbs-float-fab{position:absolute;right:0;bottom:0;width:56px;height:56px;border-radius:50%;border:none;cursor:grab;background:linear-gradient(135deg,#3B82F6,#7C3AED);box-shadow:0 6px 18px rgba(76,29,149,.28);display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;transition:transform .2s;touch-action:none}",
+      "#nbs-float-fab:active{cursor:grabbing}",
       "#nbs-float-fab:hover{transform:scale(1.05)}",
       "#nbs-float-nav.nbs-float-open #nbs-float-fab{transform:rotate(90deg)}",
       "#nbs-float-nav.nbs-float-open #nbs-float-fab:hover{transform:rotate(90deg) scale(1.05)}",
