@@ -7,7 +7,6 @@
   <title>NBS - 匯出圖片</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <style>
     :root{
       --primary:#6366f1; --primary-dark:#4f46e5; --primary-light:#eef2ff;
@@ -2560,9 +2559,23 @@ function setP(v){
 }
 function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
 
+// 檔名用的報告名稱：只選了一個區塊時，直接用該區塊的名稱（例如
+// 「儲蓄險現金流時間軸」），比較看得出檔案內容是什麼；選了好幾個
+// 區塊合在一起時，才用通用的「保單體檢」當檔名。
+function getReportBaseName(blks){
+  return blks.length===1 ? blks[0].label : "保單體檢";
+}
+
 async function doExportPNG(blks,div){
   var wm = ''; // 業務員資訊已移至上方，這裡留空
   var disclaimer='<div style="padding:8px 14px;font-size:32px;color:#999;line-height:1.6;text-align:left">⚠️ 本報告彙總之資訊為檢視與討論保障內容的參考藍圖；為守護您的權益，實際理賠給付項目與條件，仍以各家保險公司之最新資料及正式保險契約條款為準。</div>';
+  // 供「儲蓄險現金流時間軸」分張時使用（依被保險人拆成各自一張圖）
+  var nowYearPNG = new Date().getFullYear();
+  var pdmPNG = {};
+  ((familyData && familyData.members) || []).filter(function(m){ return m.role!=="beneficiary_only"; }).forEach(function(m){
+    if (personDataMap[m.personId]) pdmPNG[m.personId] = personDataMap[m.personId];
+  });
+
   if(fmt==="png_single"){
     div.style.width="2400px";
     div.innerHTML=blks.map(function(b){return'<div style="border-bottom:1px solid #f0f0f0">'+(b.key==="cover"?'':getBlockTitleHtml(b))+renderBlock(b.key)+'</div>';}).join("")+disclaimer+wm;
@@ -2579,14 +2592,14 @@ async function doExportPNG(blks,div){
     a.href=c.toDataURL("image/jpeg",0.92);a.click();
     setP(100);
   }else{
-    // 分張圖檔改成打包成單一 zip 一次下載，不要對每張圖片各自觸發一次
-    // a.click()——瀏覽器對「短時間內連續觸發多次下載」有防護機制，常常
-    // 只有第一張真的下載成功，其餘被靜默擋掉，使用者只會看到一張圖。
-    var zip = new JSZip();
-    for(var i=0;i<blks.length;i++){
-      div.style.width="2400px";
-      div.innerHTML=(blks[i].key==="cover"?'':getBlockTitleHtml(blks[i]))+renderBlock(blks[i].key)+disclaimer+wm;
-      setP(Math.round(i/blks.length*90));await sleep(300);
+    // 分張圖檔不再打包成 zip——手機上開 zip 不方便，等於多一道操作。
+    // 改成：先把每張圖都算成 Blob，能用 Web Share API（手機瀏覽器
+    // 大多支援）就直接叫出分享面板，一次把所有圖片帶出去（例如直接
+    // 分享到 LINE）；不支援分享的環境（多半是電腦版瀏覽器）才退回
+    // 逐張觸發下載，並拉長間隔避免被瀏覽器的連續下載防護擋掉。
+    var files = []; // { name, blob }
+
+    async function pushCanvasAsFile(name){
       var actualW=Math.max(div.scrollWidth,div.offsetWidth,800);
       div.style.width=actualW+"px";
       await sleep(100);
@@ -2594,14 +2607,61 @@ async function doExportPNG(blks,div){
         width:actualW,windowWidth:actualW});
       div.style.width="2400px";
       var blob2=await new Promise(function(resolve){ c2.toBlob(resolve,"image/jpeg",0.92); });
-      zip.file(pName+"_"+blks[i].label+"_"+pDate+".jpg", blob2);
-      await sleep(100);
+      files.push({name:name, blob:blob2});
     }
+
+    for(var i=0;i<blks.length;i++){
+      setP(Math.round(i/blks.length*90));
+
+      if(blks[i].key==="savings_timeline"){
+        // 儲蓄險現金流時間軸：分張時改成每位被保險人各自一張圖，不再
+        // 把全家人擠在同一張裡——「PNG 一張長圖」那個選項本來就有全家
+        // 彙整版本，分張的重點應該是拆給各自的保戶看，家庭成員有幾位
+        // 就會有幾張。
+        var stParts = buildSavingsTimelineParts(pdmPNG, familyData, nowYearPNG, nowYearPNG+14);
+        if(!stParts){
+          div.style.width="2400px";
+          div.innerHTML=getBlockTitleHtml(blks[i])+'<div style="padding:60px;text-align:center;color:#9ca3af;font-size:20px">尚無儲蓄保單設定領回資料</div>'+disclaimer+wm;
+          await sleep(300);
+          await pushCanvasAsFile(pName+"_"+blks[i].label+"_"+pDate+".jpg");
+        } else {
+          for(var g=0; g<stParts.groups.length; g++){
+            var grp=stParts.groups[g];
+            div.style.width="2400px";
+            div.innerHTML=getBlockTitleHtml(blks[i])+stParts.headerBandHtml+stParts.buildGroupChunkHtml(grp)+disclaimer+wm;
+            await sleep(300);
+            await pushCanvasAsFile(pName+"_"+blks[i].label+"_"+grp.memberName+"_"+pDate+".jpg");
+          }
+        }
+        continue;
+      }
+
+      div.style.width="2400px";
+      div.innerHTML=(blks[i].key==="cover"?'':getBlockTitleHtml(blks[i]))+renderBlock(blks[i].key)+disclaimer+wm;
+      await sleep(300);
+      await pushCanvasAsFile(pName+"_"+blks[i].label+"_"+pDate+".jpg");
+    }
+
     setP(95);
-    var zipBlob=await zip.generateAsync({type:"blob"});
-    var a2=document.createElement("a");
-    a2.download=pName+"_保單體檢_"+pDate+"_圖檔.zip";
-    a2.href=URL.createObjectURL(zipBlob);a2.click();
+    var shareFiles = files.map(function(f){ return new File([f.blob], f.name, {type:"image/jpeg"}); });
+    var shared = false;
+    if (navigator.canShare && navigator.canShare({files: shareFiles})) {
+      try {
+        await navigator.share({files: shareFiles, title: pName+"_"+getReportBaseName(blks)+"_"+pDate});
+        shared = true;
+      } catch(e) {
+        // 使用者取消分享，或裝置分享失敗，退回逐張下載
+      }
+    }
+    if (!shared) {
+      for (var f=0; f<files.length; f++){
+        var af=document.createElement("a");
+        af.download = files[f].name;
+        af.href = URL.createObjectURL(files[f].blob);
+        af.click();
+        await sleep(600);
+      }
+    }
     setP(100);
   }
 }
@@ -2808,7 +2868,7 @@ async function doExportPDF(blks,div){
     }
   }
   setP(95);
-  pdf.save(pName+"_保單體檢_"+pDate+".pdf");
+  pdf.save(pName+"_"+getReportBaseName(blks)+"_"+pDate+".pdf");
   setP(100);
 }
 
@@ -2816,9 +2876,9 @@ function showDone(blks){
   var isPdf=fmt.startsWith("pdf");
   document.getElementById("DONE_MSG").textContent=(isPdf?"PDF":"圖片")+"已下載到您的裝置，可直接傳送給保戶";
   var h='<div style="font-size:14px;color:#aaa;margin-bottom:6px">下載的檔案</div>';
-  if(fmt==="png_single")h+='<div class="fitem">🖼️ '+pName+'_保單體檢_'+pDate+'.jpg</div>';
-  else if(fmt==="png_multiple")h+='<div class="fitem">🗂️ '+pName+'_保單體檢_'+pDate+'_圖檔.zip（內含 '+blks.length+' 張圖片）</div>';
-  else h+='<div class="fitem">📄 '+pName+'_保單體檢_'+pDate+'.pdf'+(fmt==="pdf_pages"?" ("+blks.length+"頁)":"")+'</div>';
+  if(fmt==="png_single")h+='<div class="fitem">🖼️ '+pName+'_'+getReportBaseName(blks)+'_'+pDate+'.jpg</div>';
+  else if(fmt==="png_multiple")h+=blks.map(function(b){return'<div class="fitem">🖼️ '+pName+'_'+b.label+'_'+pDate+'.jpg</div>';}).join("");
+  else h+='<div class="fitem">📄 '+pName+'_'+getReportBaseName(blks)+'_'+pDate+'.pdf'+(fmt==="pdf_pages"?" ("+blks.length+"頁)":"")+'</div>';
   document.getElementById("DONE_FILES").innerHTML=h;
   goPage("P_DONE");
 }
