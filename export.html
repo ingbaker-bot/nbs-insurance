@@ -205,7 +205,9 @@ var   FMTS=[
   {key:"pdf_merge",   type:"pdf",label:"PDF 合併",    desc:"所有區塊合併為單一 PDF"},
   {key:"pdf_pages",   type:"pdf",label:"PDF 分頁",    desc:"每個區塊各自一頁"},
 ];
-var   CC={"壽險保障":"#3730a3","醫療保障":"#0284c7","意外險":"#b45309","重大疾病險":"#3730a3","重大傷病險":"#3730a3","特定傷病險":"#3730a3","儲蓄險":"#4338ca","年金險":"#4338ca","投資型保險":"#4338ca","癌症醫療":"#be123c","失能長照":"#0f766e","定額手術":"#0369a1"};
+// 每個險種各自獨立顏色（原本壽險/重大/儲蓄/投資型都擠在同兩種靛紫色，
+// 幾乎分不出來，改成 12 種彼此有明顯區隔的顏色）
+var   CC={"壽險保障":"#2563EB","醫療保障":"#0EA5E9","意外險":"#D97706","重大疾病險":"#DC2626","重大傷病險":"#EA580C","特定傷病險":"#C026D3","儲蓄險":"#16A34A","年金險":"#0D9488","投資型保險":"#7C3AED","癌症醫療":"#E11D48","失能長照":"#65A30D","定額手術":"#4F46E5"};
 
 // ── 狀態 ─────────────────────────────────────────────────
 var sel={cover:false,family_premium_summary:false,premium_detail:false,summary:false,policy_detail:false,savings_timeline:false,family_savings_summary:false};
@@ -495,11 +497,9 @@ function buildSavingsTimelineParts(pdm3,fData,startYr,endYr){
 
   // 儲蓄/年金/投資型保險統一收斂在同一組靛紫色系裡（不再依類別各自上色）
   var TAG_BG="#e0e7ff", TAG_CO="#3730a3";
-  // 領回金額色塊改用交錯色盤，不然每張保單都有領回時整張表會變成一片深藍
-  var PILL_PALETTE=[
-    pearlGradientEx("#3B82F6"), pearlGradientEx("#7C3AED"),
-    pearlGradientEx("#0F9E75"), pearlGradientEx("#D97706")
-  ];
+  // 領回金額色塊改成 2 色交錯（不再用 4 色，避免顏色太雜），
+  // 小計／合計列另外固定用靛紫色，不受這個交錯色盤影響
+  var PILL_PALETTE=[ pearlGradientEx("#3B82F6"), pearlGradientEx("#7C3AED") ];
   var pillIdx=0;
 
   // 固定欄寬：第一欄(被保險人/保單)、第二欄(保單現金價值)固定，其餘年份欄位平分，
@@ -599,10 +599,9 @@ function renderSavingsTimeline(pdm3,fData,startYr,endYr){
   // 儲蓄/年金/投資型保險統一收斂在同一組靛紫色系裡（不再依類別各自上色），
   // 跟家庭責任/保單明細一覽表用的靛紫主題呼應
   var TAG_BG="#e0e7ff", TAG_CO="#3730a3";
-  var PILL_PALETTE=[
-    pearlGradientEx("#3B82F6"), pearlGradientEx("#7C3AED"),
-    pearlGradientEx("#0F9E75"), pearlGradientEx("#D97706")
-  ];
+  // 領回金額色塊改成 2 色交錯（不再用 4 色，避免顏色太雜），
+  // 小計／合計列另外固定用靛紫色，不受這個交錯色盤影響
+  var PILL_PALETTE=[ pearlGradientEx("#3B82F6"), pearlGradientEx("#7C3AED") ];
   var pillIdx=0;
 
   // 年份時間軸節點：由左到右一條時間軸線串起每一年，強調「時間軸」的視覺語言
@@ -1982,8 +1981,8 @@ function getDonutCategoryStatusEx(cat, active, coverage, targets, covOverrides) 
 function buildDonutChartEx(active, coverage, targets, covOverrides) {
   var n = DONUT_CATEGORIES_EX.length;
   
-  // 放大 SVG 畫布座標，容納超大字體
-  var cx=500, cy=350, OR=230, IR=125;
+  // 圓心文字拿掉後不再需要留白給文字，內圈半徑大幅縮小，讓甜甜圈本身變厚
+  var cx=500, cy=350, OR=230, IR=70;
   var gapA=0.03, sliceA=(Math.PI*2-n*gapA)/n;
 
   var angle=-Math.PI/2;
@@ -2097,16 +2096,13 @@ function buildDonutChartEx(active, coverage, targets, covOverrides) {
   var gapN = chartCats.filter(item=>getDonutCategoryStatusEx(item,active,coverage,targets,covOverrides).status==="none").length;
   var insN = chartCats.filter(item=>getDonutCategoryStatusEx(item,active,coverage,targets,covOverrides).status==="partial").length;
 
-  // 圓心文字放大，並改為回傳物件格式以供後續精準排版
+  // 圓心文字拿掉，內部空間讓給外圈的甜甜圈（IR 縮小、環變厚），
+  // okN/gapN/insN 改成只給圖例統計用，不再畫在圓心
   return {
     svg: `<svg viewBox="0 0 1000 700" style="width:100%; max-height:620px; height:auto; display:block; margin:0 auto;">
         ${DONUT_DEFS}
         ${paths}
         ${labels}
-        <text x="${cx}" y="${cy-24}" text-anchor="middle" style="font-size:26px;fill:#0369a1">✅ 已規劃</text>
-        <text x="${cx}" y="${cy+18}"  text-anchor="middle" style="font-size:64px;font-weight:bold;fill:#333">${okN}</text>
-        <text x="${cx}" y="${cy+56}" text-anchor="middle" style="font-size:24px;fill:#E74C3C">❌ 缺口 ${gapN}</text>
-        <text x="${cx}" y="${cy+88}" text-anchor="middle" style="font-size:24px;fill:#b45309">◐ 部分有 ${insN}</text>
       </svg>`,
     legendFamily: legendFamily,
     legendBefore: legendBefore,
