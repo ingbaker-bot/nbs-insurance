@@ -288,7 +288,11 @@ function convertToWan(amount, unit) {
 function getDeathBenefitAmt(p) {
   if (p.deathBenefit !== undefined && p.deathBenefit !== null && p.deathBenefit !== "") {
     const w = convertToWan(p.deathBenefit, p.deathBenefitUnit || '萬元');
-    return w !== null ? w : 0;
+    if (w === null) return 0;
+    // 外幣保單：留愛金額填的是保單原幣金額（跟保費同一套邏輯），要用這張
+    // 保單的匯率換算成台幣，不然外幣保單的留愛金額會被誤當成台幣數字。
+    const rate = (p.currency && p.currency !== "TWD" && parseFloat(p.exchangeRate)) ? parseFloat(p.exchangeRate) : 1;
+    return Math.round(w * rate * 10) / 10; // 四捨五入到小數點第一位，避免顯示到第4位被截斷
   }
   return 0;
 }
@@ -938,7 +942,7 @@ function buildDonutChart(active, coverage, targets, covOverrides) {
   const chartCats = DONUT_CATEGORIES;              // 扇形改用合併後的大類別
   const n = chartCats.length;
 
-  const cx=220, cy=150, OR=100, IR=54;
+  const cx=220, cy=150, OR=100, IR=28;
   const gapA=0.03, sliceA=(Math.PI*2-n*gapA)/n;
 
   let angle=-Math.PI/2;
@@ -1054,10 +1058,6 @@ function buildDonutChart(active, coverage, targets, covOverrides) {
         ${DONUT_DEFS}
         ${paths}
         ${labels}
-        <text x="${cx}" y="${cy-16}" text-anchor="middle" style="font-size:13px;fill:#0369a1">✅ 已規劃</text>
-        <text x="${cx}" y="${cy+8}"  text-anchor="middle" style="font-size:28px;font-weight:bold;fill:#333">${okN}</text>
-        <text x="${cx}" y="${cy+26}" text-anchor="middle" style="font-size:12px;fill:#E74C3C">❌ 缺口 ${gapN}</text>
-        <text x="${cx}" y="${cy+42}" text-anchor="middle" style="font-size:12px;fill:#b45309">◐ 部分有 ${insN}</text>
       </svg>
       <div style="min-width:170px;background:#fafafa;padding:12px 16px;border-radius:10px;border:1px solid #f0f0f0">
         ${legendFamily}
