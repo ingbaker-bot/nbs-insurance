@@ -702,7 +702,12 @@ function convertToWanEx(amount, unit) {
 function getDeathBenefitAmt(p) {
   if (p.deathBenefit !== undefined && p.deathBenefit !== null && p.deathBenefit !== "") {
     var w = convertToWanEx(p.deathBenefit, p.deathBenefitUnit || '萬元');
-    return w !== null ? w : 0;
+    if (w === null) return 0;
+    // 外幣保單：留愛金額填的是保單原幣金額（跟保費同一套邏輯——policy.html
+    // 的匯率欄位本來就是給「原幣→台幣」用的），要用這張保單的匯率換算成
+    // 台幣，不然外幣保單的留愛金額會被誤當成台幣數字直接顯示，數字對不起來。
+    var rate = (p.currency && p.currency !== "TWD" && parseFloat(p.exchangeRate)) ? parseFloat(p.exchangeRate) : 1;
+    return w * rate;
   }
   return 0; // 沒填就是沒有，交由畫面顯示「—」，提醒業務員回頭跟保戶確認
 }
