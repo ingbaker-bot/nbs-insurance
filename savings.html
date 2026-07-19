@@ -833,12 +833,17 @@ function renderTimeline() {
 
   // 自動裁切尾端空白年份
   const activeYears = years.filter(y => totalFlows[y] > 0);
-  if (!activeYears.length) {
+  // 就算沒有排定的未來現金流，只要有任何一張保單填過「目前帳戶價值」，
+  // 還是要把表格畫出來（不然填的帳戶價值會被這個空狀態訊息整個擋住看不到）。
+  const hasAnyAccountValue = groups.some(g => g.policies.some(pr => pr.accountValue));
+  if (!activeYears.length && !hasAnyAccountValue) {
     document.getElementById("timeline-content").innerHTML =
       `<div class="empty-timeline">所有保單在此時間範圍內均無現金流入</div>`;
     return;
   }
-  const trimYears = years.filter(y => y <= Math.max(...activeYears));
+  const trimYears = activeYears.length
+    ? years.filter(y => y <= Math.max(...activeYears))
+    : [years[0]]; // 沒有任何排定現金流時，只留一欄當表格骨架，重點是顯示帳戶價值那一行
   const maxTotal = Math.max(...Object.values(totalFlows), 1);
   const totalPolicies = groups.reduce((s, g) => s + g.policies.length, 0);
 
