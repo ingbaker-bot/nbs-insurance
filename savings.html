@@ -311,16 +311,12 @@ function switchMember(pid) {
 }
 
 // ── 保單設定渲染 ──────────────────────────────────────────
-// 保單專屬色盤：讓同一張保單在「保單設定」卡片側邊條、跟「現金流時間軸」
-// 的列側邊條／領回金額色塊都用同一個顏色，方便業務員對照是哪張保單。
-// solid 給卡片側邊條/列側邊條用，grad 給時間軸的金額色塊用。
+// 保單色盤：跟 export.html 完全一致，改成藍紫 2 色交錯（不再是每張保單
+// 各自固定一個顏色的 6 色識別系統）。用在「保單設定」卡片側邊條、跟
+// 「現金流時間軸」的列側邊條／領回金額色塊。
 var POLICY_COLORS = [
   { solid:"#3B82F6", grad:"radial-gradient(ellipse at 30% 20%,#a5c4f5 0%,#3B82F6 55%,#1e3a8a 100%)" },
   { solid:"#7C3AED", grad:"radial-gradient(ellipse at 30% 20%,#c9b8f5 0%,#7C3AED 55%,#3c1e6e 100%)" },
-  { solid:"#0F9E75", grad:"radial-gradient(ellipse at 30% 20%,#9fe1cb 0%,#0F9E75 55%,#04342c 100%)" },
-  { solid:"#D97706", grad:"radial-gradient(ellipse at 30% 20%,#f0c599 0%,#D97706 55%,#5c3208 100%)" },
-  { solid:"#DB2777", grad:"radial-gradient(ellipse at 30% 20%,#f6b8d3 0%,#DB2777 55%,#6b0f3d 100%)" },
-  { solid:"#0891B2", grad:"radial-gradient(ellipse at 30% 20%,#a0e4f0 0%,#0891B2 55%,#0a3f4a 100%)" },
 ];
 function getPolicyColor(idx) { return POLICY_COLORS[idx % POLICY_COLORS.length]; }
 
