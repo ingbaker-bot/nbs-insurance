@@ -196,18 +196,19 @@ var   BLOCKS=[
   {key:"premium_detail",   label:"保險繳費明細一覽表", icon:"📅",desc:"年繳/月均統計、月曆、保單與受益人整合表"},
   {key:"summary",          label:"保單彙總一覽表",     icon:"📊",desc:"保障覆蓋率、家庭責任、醫療階段、就醫情況"},
   {key:"policy_detail",    label:"保單明細一覽表",     icon:"📋",desc:"各項保障加總明細"},
-  {key:"savings_timeline", label:"儲蓄險現金流時間軸", icon:"📈",desc:"未來15年各被保險人現金流匯整"},
+  {key:"savings_timeline", label:"儲蓄險現金流時間軸", icon:"📈",desc:"目前選中成員的儲蓄／投資型保單現金流"},
+  {key:"family_savings_summary", label:"全家儲蓄規劃總表", icon:"👨‍👩‍👧‍👦",desc:"全家儲蓄／投資型保單現金流總覽，各自小計＋合計"},
 ];
 var   FMTS=[
   {key:"png_single",  type:"png",label:"PNG 一張長圖",desc:"所有區塊合併，適合 LINE 傳送"},
   {key:"png_multiple",type:"png",label:"PNG 分張",    desc:"每個區塊各自一張"},
   {key:"pdf_merge",   type:"pdf",label:"PDF 合併",    desc:"所有區塊合併為單一 PDF"},
-  {key:"pdf_pages",   type:"pdf",label:"PDF 分頁",    desc:"每個區塊各自一頁；儲蓄險現金流僅含目前成員"},
+  {key:"pdf_pages",   type:"pdf",label:"PDF 分頁",    desc:"每個區塊各自一頁"},
 ];
 var   CC={"壽險保障":"#3730a3","醫療保障":"#0284c7","意外險":"#b45309","重大疾病險":"#3730a3","重大傷病險":"#3730a3","特定傷病險":"#3730a3","儲蓄險":"#4338ca","年金險":"#4338ca","投資型保險":"#4338ca","癌症醫療":"#be123c","失能長照":"#0f766e","定額手術":"#0369a1"};
 
 // ── 狀態 ─────────────────────────────────────────────────
-var sel={cover:false,family_premium_summary:false,premium_detail:false,summary:false,policy_detail:false,savings_timeline:false};
+var sel={cover:false,family_premium_summary:false,premium_detail:false,summary:false,policy_detail:false,savings_timeline:false,family_savings_summary:false};
 var fmt="pdf_merge";
 var fmtOpen="pdf"; // 手風琴目前展開的區塊，預設展開 PDF
 var person={},policies=[],coverage={},savings=[];
@@ -2535,15 +2536,25 @@ function renderBlock(key){
 
 
   if(key==="savings_timeline"){
+    // 跟保單明細/保障覆蓋率這些區塊一致：只顯示目前選中的這位成員，
+    // 不是全家（全家版本另外獨立成「全家儲蓄規劃總表」）。
     var now2 = new Date().getFullYear();
     var pdm2 = {};
-    var fmem2 = (familyData && familyData.members) || [];
-    fmem2.filter(function(m){ return m.role!=="beneficiary_only"; }).forEach(function(m){
-      // 改用已經在頁面載入時就抓好、跟 Drive 同步過的 personDataMap，
-      // 不再獨立重新讀一次 sessionStorage（避免跟主要載入邏輯脫節、各自為政）
-      if (personDataMap[m.personId]) pdm2[m.personId] = personDataMap[m.personId];
+    if (personDataMap[currentPersonId]) pdm2[currentPersonId] = personDataMap[currentPersonId];
+    var singleMemberFamilyData2 = { members: (familyData&&familyData.members||[]).filter(function(m){ return m.personId===currentPersonId; }) };
+    return renderSavingsTimeline(pdm2, singleMemberFamilyData2, now2, now2+14);
+  }
+
+  if(key==="family_savings_summary"){
+    // 比照「全家保費總表」：不管目前選到誰，永遠顯示全家，
+    // 各自小計＋最後合計，當作獨立的全家儲蓄規劃總覽。
+    var now2b = new Date().getFullYear();
+    var pdm2b = {};
+    var fmem2b = (familyData && familyData.members) || [];
+    fmem2b.filter(function(m){ return m.role!=="beneficiary_only"; }).forEach(function(m){
+      if (personDataMap[m.personId]) pdm2b[m.personId] = personDataMap[m.personId];
     });
-    return renderSavingsTimeline(pdm2, familyData, now2, now2+14);
+    return renderSavingsTimeline(pdm2b, familyData, now2b, now2b+14);
   }
 
   return'<div style="padding:12px;color:#aaa;font-size:14px">建置中</div>';
@@ -2596,6 +2607,11 @@ async function doExportPNG(blks,div){
   var pdmPNG = {};
   if (personDataMap[currentPersonId]) pdmPNG[currentPersonId] = personDataMap[currentPersonId];
   var singleMemberFamilyData = { members: (familyData&&familyData.members||[]).filter(function(m){ return m.personId===currentPersonId; }) };
+  // 供「全家儲蓄規劃總表」使用：固定全家。
+  var pdmFamilyPNG = {};
+  ((familyData && familyData.members) || []).filter(function(m){ return m.role!=="beneficiary_only"; }).forEach(function(m){
+    if (personDataMap[m.personId]) pdmFamilyPNG[m.personId] = personDataMap[m.personId];
+  });
 
   if(fmt==="png_single"){
     div.style.width="2400px";
@@ -2618,13 +2634,25 @@ async function doExportPNG(blks,div){
       setP(Math.round(i/blks.length*90));
       var fname;
 
-      if(blks[i].key==="savings_timeline"){
-        // 儲蓄險現金流時間軸：只匯出目前選到的這位成員，不自動跑全家。
-        // 想要每個人各一張，就切換成員分頁、各自按一次匯出。
-        var stParts = buildSavingsTimelineParts(pdmPNG, singleMemberFamilyData, nowYearPNG, nowYearPNG+14);
+      if(blks[i].key==="savings_timeline" || blks[i].key==="family_savings_summary"){
+        // savings_timeline 只匯出目前選到的這位成員；family_savings_summary
+        // 固定匯出全家彙整版本（各自小計＋合計），兩者資料範圍不同但
+        // 產生圖片的邏輯共用。
+        var isFamilyWidePNG = blks[i].key==="family_savings_summary";
+        var stParts = buildSavingsTimelineParts(
+          isFamilyWidePNG ? pdmFamilyPNG : pdmPNG,
+          isFamilyWidePNG ? familyData : singleMemberFamilyData,
+          nowYearPNG, nowYearPNG+14
+        );
         if(!stParts){
           div.style.width="2400px";
           div.innerHTML=getBlockTitleHtml(blks[i])+'<div style="padding:60px;text-align:center;color:#9ca3af;font-size:20px">尚無儲蓄保單設定領回資料</div>'+disclaimer+wm;
+          fname=pName+"_"+blks[i].label+"_"+pDate+".jpg";
+        } else if (isFamilyWidePNG) {
+          // 全家版本：所有成員合併畫在同一張圖裡（沿用一張長圖的做法），
+          // 不會又拆成好幾個檔案。
+          div.style.width="2400px";
+          div.innerHTML=getBlockTitleHtml(blks[i])+stParts.headerBandHtml+stParts.groups.map(function(g){return stParts.buildGroupChunkHtml(g);}).join("")+stParts.totalRowHtml+disclaimer+wm;
           fname=pName+"_"+blks[i].label+"_"+pDate+".jpg";
         } else {
           var grp=stParts.groups[0]; // 只傳了一位成員，這裡只會有一組
@@ -2663,18 +2691,18 @@ async function doExportPDF(blks,div){
   var pageCount=0;
   var pageLabelCounters = {}; // 每個區塊前綴各自累計頁碼，例如 {"繳費":3,"現金流":2}
 
-  // 供「儲蓄險現金流時間軸」使用的資料（跟 renderBlock 同一套取得方式）
+  // 供「儲蓄險現金流時間軸」（單一成員）／「全家儲蓄規劃總表」（全家）
+  // 使用的資料，跟 renderBlock 同一套取得方式。範圍現在由區塊 key 決定，
+  // 不再依 fmt（PDF合併/分頁）判斷——兩個區塊本來就是不同定位，各自
+  // 永遠固定顯示單一成員或全家，不會因為匯出格式不同而改變內容。
   var nowYearGlobal = new Date().getFullYear();
-  var pdm2Global = {};
+  var pdmFamily = {};
   ((familyData && familyData.members) || []).filter(function(m){ return m.role!=="beneficiary_only"; }).forEach(function(m){
-    if (personDataMap[m.personId]) pdm2Global[m.personId] = personDataMap[m.personId];
+    if (personDataMap[m.personId]) pdmFamily[m.personId] = personDataMap[m.personId];
   });
-  // 「PDF 分頁」跟「圖檔分張」一樣，儲蓄險現金流只放目前選到的這位成員，
-  // 不是全家；「PDF 合併」維持原本全家彙整在一起的版本，兩種模式才會
-  // 真的產生不一樣的內容，不然合併跟分頁看起來永遠一樣。
-  var familyDataForTimeline = fmt==="pdf_pages"
-    ? { members: (familyData&&familyData.members||[]).filter(function(m){ return m.personId===currentPersonId; }) }
-    : familyData;
+  var pdmSingle = {};
+  if (personDataMap[currentPersonId]) pdmSingle[currentPersonId] = personDataMap[currentPersonId];
+  var singleMemberFamilyData = { members: (familyData&&familyData.members||[]).filter(function(m){ return m.personId===currentPersonId; }) };
 
   // 用 canvas 直接畫文字產生標籤圖片，而不是走 html2canvas 擷取整個 DOM，
   // 避免多一次昂貴的擷取；canvas 2D fillText 是瀏覽器原生字型渲染，
@@ -2806,12 +2834,19 @@ async function doExportPDF(blks,div){
         if(y + fd.ih > margin+usableH){ y = await startNewPagePD(); }
         pdf.addImage(footerC.toDataURL("image/jpeg",0.88),"JPEG",margin,y,fd.iw,fd.ih);
       }
-    } else if(blks[i].key==="savings_timeline"){
-      // ── 儲蓄險現金流時間軸：依被保險人分組動態分頁 ──────────
+    } else if(blks[i].key==="savings_timeline" || blks[i].key==="family_savings_summary"){
+      // ── 儲蓄險現金流時間軸／全家儲蓄規劃總表：依被保險人分組動態分頁 ──
       // 標題+欄位年份先自成一頁最上方，接著每位被保險人的所有保單
       // 自成一組，整組放得下就整組印、放不下才換頁，永遠維持滿版
       // 寬度，不會因為表格太高被迫縮小到看不清楚。
-      var stParts = buildSavingsTimelineParts(pdm2Global, familyDataForTimeline, nowYearGlobal, nowYearGlobal+14);
+      // savings_timeline 只放目前選中的這位成員；family_savings_summary
+      // 固定放全家，兩者資料範圍不同，但分頁邏輯完全共用。
+      var isFamilyWide = blks[i].key==="family_savings_summary";
+      var stParts = buildSavingsTimelineParts(
+        isFamilyWide ? pdmFamily : pdmSingle,
+        isFamilyWide ? familyData : singleMemberFamilyData,
+        nowYearGlobal, nowYearGlobal+14
+      );
       if(!stParts){
         var emptyC = await captureHtml(getBlockTitleHtml(blks[i])+'<div style="padding:60px;text-align:center;color:#9ca3af;font-size:20px">尚無儲蓄保單設定領回資料</div>'+(isLast||fmt==="pdf_pages"?disclaimer:"")+wm);
         addNewPage("現金流");
@@ -2863,7 +2898,7 @@ async function doExportPDF(blks,div){
   }
   setP(95);
   var curMemberForName = (familyData&&familyData.members||[]).find(function(m){return m.personId===currentPersonId;});
-  var memberSuffix = (fmt==="pdf_pages" && blks.some(function(b){return b.key==="savings_timeline";}) && curMemberForName)
+  var memberSuffix = (blks.some(function(b){return b.key==="savings_timeline";}) && curMemberForName)
     ? "_"+curMemberForName.name
     : "";
   pdf.save(pName+"_"+getReportBaseName(blks)+memberSuffix+"_"+pDate+".pdf");
