@@ -697,10 +697,32 @@ async function saveAll() {
   } catch(e) { hint.style.display = "none"; alert("儲存失敗：" + e.message); }
 }
 
+// 保單日期解析：優先用 ISO 格式的 startDate/payEndDate 算年份，這兩個欄位
+// 若是空的（常見於較早期匯入、只存了畫面顯示用 Raw 字串的舊保單資料），
+// 改用 Raw 字串（民國年格式，例：1120923＝民國112年09月23日）換算回西元年，
+// 不然這張保單的現金流會因為抓不到起始年，整排都算不出來、全部顯示「—」。
+function extractYearSmart(isoDate, rocRaw) {
+  if (isoDate) {
+    const y = parseInt(String(isoDate).slice(0, 4));
+    if (!isNaN(y) && y > 1900) return y;
+  }
+  if (rocRaw) {
+    const digits = String(rocRaw).replace(/\D/g, "");
+    if (digits.length >= 7) {
+      const rocYear = parseInt(digits.slice(0, 3));
+      if (!isNaN(rocYear)) return rocYear + 1911;
+    } else if (digits.length >= 4) {
+      const y2 = parseInt(digits.slice(0, 4));
+      if (!isNaN(y2) && y2 > 1900) return y2;
+    }
+  }
+  return null;
+}
+
 // ── 計算單張保單各年現金流 ───────────────────────────────
 function calcPolicyFlows(p, s, memberId, years) {
-  const startWestern  = p.startDate  ? parseInt(p.startDate.slice(0,4))  : null;
-  const payEndWestern = p.payEndDate ? parseInt(p.payEndDate.slice(0,4)) : null;
+  const startWestern  = extractYearSmart(p.startDate,  p.startDateRaw);
+  const payEndWestern = extractYearSmart(p.payEndDate, p.payEndRaw);
   const covEndWestern = p.covEndDate
     ? parseInt(p.covEndDate.slice(0,4))
     : getEndYearAt100(memberId, p);
@@ -814,7 +836,7 @@ function renderTimeline() {
       // 「是否仍在繳費期間」要看真正的繳費期滿日，不能用「有沒有算出現金流」
       // 來推斷——很多保單早就繳費期滿了，只是還沒設定領回金額或帳戶價值，
       // 用「沒有現金流＝繳費中」會把這些保單全部誤標成繳費中。
-      const payEndWestern = p.payEndDate ? parseInt(p.payEndDate.slice(0,4)) : null;
+      const payEndWestern = extractYearSmart(p.payEndDate, p.payEndRaw);
       const stillPaying = payEndWestern !== null && new Date().getFullYear() < payEndWestern;
       policyRows.push({
         policyNo:  p.policyNo || p.id,
