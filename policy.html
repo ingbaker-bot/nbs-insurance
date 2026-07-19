@@ -722,10 +722,16 @@ function renderTabs() {
   let html = `<div class="member-tab ${currentTab==='all'?'active':''}" onclick="switchTab('all')">
     全家 <span class="tab-count">${allCount}</span></div>`;
 
+  // 每位成員的分頁文字用固定顏色區分（跟保單卡片上「要保 XXX」徽章同一套
+  // personBadgeColor，同一個人到哪裡都是同一個顏色），不用點下去才知道
+  // 是誰；點選中的那個維持原本的藍色高亮樣式，不套用個人色。
   members.forEach(m => {
     const count = personDataMap[m.personId]?.policies?.length || 0;
-    html += `<div class="member-tab ${currentTab===m.personId?'active':''}" onclick="switchTab('${m.personId}')">
-      ${m.name} <span class="tab-count">${count}</span></div>`;
+    const isActive = currentTab === m.personId;
+    const pc = personBadgeColor(m.personId);
+    const inactiveStyle = isActive ? '' : `color:${pc};font-weight:600;border-bottom-color:${pc}55`;
+    html += `<div class="member-tab ${isActive?'active':''}" style="${inactiveStyle}" onclick="switchTab('${m.personId}')">
+      ${m.name} <span class="tab-count" style="${isActive?'':`background:${pc}1A;color:${pc}`}">${count}</span></div>`;
   });
 
   document.getElementById("member-tabs").innerHTML = html;
@@ -853,11 +859,22 @@ function renderPolicies() {
 
       const fxCell = '';
 
+      // 留愛金額只適用「留給受益人」性質的保障，跟 export.html 用同一份判斷，
+      // 確保這裡看到的「有填/沒填」跟匯出報告呈現的結果一致。
+      // 有填就顯示金額；該填卻沒填的，用醒目的提醒色標出來，不用等匯出
+      // 報告才發現漏填。
+      const needsDeathBenefit = ["壽險保障","意外險","重大疾病險","重大傷病險","特定傷病險","投資型保險","儲蓄險","年金險"].includes(p.category);
+      const dbLine = !needsDeathBenefit ? '' :
+        (p.deathBenefit !== undefined && p.deathBenefit !== null && p.deathBenefit !== "")
+          ? `<div style="font-size:13px;color:#B0466F;font-weight:600;margin-top:2px;white-space:nowrap">留愛：${p.deathBenefit} ${p.deathBenefitUnit||'萬元'}</div>`
+          : `<div style="font-size:13px;color:#D97706;font-weight:600;margin-top:2px;white-space:nowrap">⚠ 留愛金額未填</div>`;
+
       return `<div class="policy-row" onclick="event.stopPropagation(); openForm('edit','${p._memberId}','${p.id}')">
         <div class="pr-cell pr-badge-cell">${badge}</div>
         <div class="pr-cell pr-cat-cell"><span class="cat-badge ${catClass}">${p.category||'—'}</span></div>
-        <div class="pr-cell pr-name-cell" style="display:flex;align-items:center;min-width:0">
+        <div class="pr-cell pr-name-cell" style="display:flex;flex-direction:column;justify-content:center;min-width:0">
           <span style="font-size: 17px;font-weight:600;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.itemName||'—'}</span>
+          ${dbLine}
         </div>
         <div class="pr-cell pr-insured-cell">${insuredStr}</div>
         <div class="pr-cell pr-amount-cell" style="text-align:right;line-height:1.25">
