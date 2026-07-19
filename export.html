@@ -655,9 +655,10 @@ var GAP_GROUPS_EX = [
   { key:"family", label:"家庭責任", color:"#312e81", items:[
     { key:"life_permanent",       label:"終身壽險",    unit:"萬元",   color:"#312e81" },
     { key:"life_term",            label:"定期壽險",    unit:"萬元",   color:"#4338ca" },
-    // 💡 修正：移除 isBool:true，讓投資型與儲蓄險顯示真實數字
-    { key:"investment",           label:"投資型保險",  unit:"萬元",   color:"#4f46e5" },
-    { key:"savings",              label:"儲蓄險",      unit:"萬元",   color:"#6366f1" },
+    // 投資型／儲蓄險不比金額，只看「有沒有規劃資料」，跟 summary.html 的
+    // 圓餅圖統一改回 isBool（有／部分有／沒有三態），不再顯示數字。
+    { key:"investment",           label:"投資型保險",  unit:"萬元",   color:"#4f46e5", isBool:true },
+    { key:"savings",              label:"儲蓄險",      unit:"萬元",   color:"#6366f1", isBool:true },
     // 身故保險金：跟評估確診那三項（重大疾病一次金/重大傷病一次金/特定傷病一次金）
     // 讀的是完全不同的欄位（這裡讀 deathBenefit留愛金額），兩邊互不影響。
     // 有些保單設計上確診才賠、沒有身故金，這裡顯示缺口是正確行為。
@@ -944,8 +945,43 @@ function getItemCurrentEx(key, policies, coverage, covOverrides) {
   return amt;
 }
 
+// ── 投資型／儲蓄險的「有／部分有／沒有」三態判斷（跟 summary.html 同邏輯）：
+// 不比金額，只看這張保單有沒有填過留愛金額(deathBenefit)，或是
+// savings.html 領回設定裡的任一金額欄位，藉此判斷資料是否已經填完整。
+function savingsEntryHasAmountEx(s) {
+  if (!s) return false;
+  var tk = s.type || "1";
+  if (tk === "6") {
+    return Array.isArray(s.yearlyAmts) && s.yearlyAmts.some(function(r){ return parseFloat(r.amt) > 0; });
+  }
+  var da = parseFloat(s.duringAmt) || 0;
+  var aa = parseFloat(s.afterAmt)  || 0;
+  return da > 0 || aa > 0;
+}
+function getSavingsPieStatusEx(key, policies, covOverrides) {
+  var manualKey = currentPersonId + "_" + key;
+  if (covOverrides && covOverrides[manualKey] !== undefined) {
+    var on = !!covOverrides[manualKey];
+    return { status: on ? "ok" : "gap", current: on?1:0, target:null, pct: on?1:0 };
+  }
+  var cats = key === "investment" ? ["投資型保險"] : ["儲蓄險","年金險"];
+  var matched = policies.filter(function(p){ return cats.indexOf(p.category) !== -1; });
+  if (!matched.length) return { status:"gap", current:0, target:null, pct:0 };
+  var hasList = matched.map(function(p){
+    var db = parseFloat(p.deathBenefit);
+    if (!isNaN(db) && db > 0) return true;
+    var s = (savings || []).find(function(sv){ return sv.policyId === p.id; });
+    return savingsEntryHasAmountEx(s);
+  });
+  if (hasList.every(Boolean)) return { status:"ok", current:1, target:null, pct:1 };
+  return { status:"insufficient", current:0.5, target:null, pct:0.5 }; // 保單存在，資料還沒填完整＝部分有
+}
+
 function getItemStatusEx(key, policies, coverage, targets, covOverrides) {
   var item = GAP_GROUPS_EX.flatMap(g=>g.items).find(i=>i.key===key);
+  if (key === "investment" || key === "savings") {
+    return getSavingsPieStatusEx(key, policies, covOverrides);
+  }
   var current = getItemCurrentEx(key, policies, coverage, covOverrides);
   var target  = targets[key];
   var isBool  = item?.isBool;
@@ -1843,6 +1879,11 @@ var DONUT_CATEGORIES_EX = [
 // 合併類別的三態判斷：全部子項目都有 → full(有)；全部都沒有 → none(沒有)；
 // 部分子項目有部分沒有 → partial(部分有)。pct 用子項目「有的比例」畫扇形填色。
 function getDonutCategoryStatusEx(cat, active, coverage, targets, covOverrides) {
+  if (cat.key === "investment" || cat.key === "savings") {
+    var s = getSavingsPieStatusEx(cat.key, active, covOverrides);
+    var statusMap = { gap:"none", insufficient:"partial", ok:"full" };
+    return { status: statusMap[s.status], pct: s.pct };
+  }
   var n = cat.subKeys.length;
   var presentCount = 0;
   cat.subKeys.forEach(function(k){
@@ -1875,7 +1916,15 @@ function buildDonutChartEx(active, coverage, targets, covOverrides) {
 
       var amtHtml = "";
       if (item.isBool) {
-        amtHtml = current > 0 ? `<span style="color:#555;font-size:32px;font-weight:700">有</span>` : `<span style="color:#bbb;font-size:32px;font-weight:700">無</span>`;
+        if (item.key === "investment" || item.key === "savings") {
+          amtHtml = status==="ok"
+            ? `<span style="color:#0C447C;font-size:32px;font-weight:700">有</span>`
+            : status==="insufficient"
+              ? `<span style="color:#B7791F;font-size:32px;font-weight:700">部分有</span>`
+              : `<span style="color:#bbb;font-size:32px;font-weight:700">沒有</span>`;
+        } else {
+          amtHtml = current > 0 ? `<span style="color:#555;font-size:32px;font-weight:700">有</span>` : `<span style="color:#bbb;font-size:32px;font-weight:700">無</span>`;
+        }
       } else {
         if (current > 0 || target > 0) {
           var displayVal = current > 0 ? current.toLocaleString() : "0";
@@ -1984,14 +2033,28 @@ function buildDonutChartEx(active, coverage, targets, covOverrides) {
 // ── 缺口／不足分析 ────────────────────────────────────────
 function buildGapAnalysisEx(active, coverage, targets, covOverrides) {
   var allItems = GAP_GROUPS_EX.flatMap(g=>g.items);
-  var gaps = [], insufficients = [];
+  var gaps = [], insufficients = [], boolPartials = [];
   allItems.forEach(item => {
     var s = getItemStatusEx(item.key, active, coverage, targets, covOverrides);
+    if (item.key === "investment" || item.key === "savings") {
+      if (s.status === "gap") gaps.push({item, ...s});
+      if (s.status === "insufficient") boolPartials.push({item, ...s});
+      return;
+    }
     if(s.status==="gap") gaps.push({item, ...s});
     if(s.status==="insufficient") insufficients.push({item, ...s});
   });
 
   var html = "";
+
+  if (boolPartials.length) {
+    html += `<div style="font-size:17px;font-weight:500;color:#B7791F;margin-bottom:8px">⚠ 部分規劃（保單已存在，但資料尚未填寫完整）</div>`;
+    html += `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">`;
+    boolPartials.forEach(({item}) => {
+      html += `<span style="padding:3px 10px;background:#FAEEDA;border:1px solid #EF9F27;border-radius:99px;font-size:14px;color:#633806">${item.label}</span>`;
+    });
+    html += `</div>`;
+  }
 
   if(insufficients.length) {
     html += `<div style="font-size:17px;font-weight:500;color:#F5A623;margin-bottom:8px">⚠ 規劃不足</div>`;
@@ -2021,7 +2084,7 @@ function buildGapAnalysisEx(active, coverage, targets, covOverrides) {
     html += `</div><div style="font-size:14px;color:#aaa">💡 可與保戶討論是否有需要規劃</div>`;
   }
 
-  if(!insufficients.length && !gaps.length) {
+  if(!insufficients.length && !gaps.length && !boolPartials.length) {
     html += `<div style="font-size:17px;color:#27AE8F;text-align:center;padding:12px 0">🎉 所有已設目標項目均達標！</div>`;
   }
 
