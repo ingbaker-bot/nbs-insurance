@@ -202,7 +202,7 @@ var   FMTS=[
   {key:"png_single",  type:"png",label:"PNG 一張長圖",desc:"所有區塊合併，適合 LINE 傳送"},
   {key:"png_multiple",type:"png",label:"PNG 分張",    desc:"每個區塊各自一張"},
   {key:"pdf_merge",   type:"pdf",label:"PDF 合併",    desc:"所有區塊合併為單一 PDF"},
-  {key:"pdf_pages",   type:"pdf",label:"PDF 分頁",    desc:"每個區塊各自一頁"},
+  {key:"pdf_pages",   type:"pdf",label:"PDF 分頁",    desc:"每個區塊各自一頁；儲蓄險現金流僅含目前成員"},
 ];
 var   CC={"壽險保障":"#3730a3","醫療保障":"#0284c7","意外險":"#b45309","重大疾病險":"#3730a3","重大傷病險":"#3730a3","特定傷病險":"#3730a3","儲蓄險":"#4338ca","年金險":"#4338ca","投資型保險":"#4338ca","癌症醫療":"#be123c","失能長照":"#0f766e","定額手術":"#0369a1"};
 
@@ -2641,12 +2641,18 @@ async function doExportPDF(blks,div){
   var pageCount=0;
   var pageLabelCounters = {}; // 每個區塊前綴各自累計頁碼，例如 {"繳費":3,"現金流":2}
 
-  // 供「儲蓄險現金流時間軸」分頁使用的資料（跟 renderBlock 同一套取得方式）
+  // 供「儲蓄險現金流時間軸」使用的資料（跟 renderBlock 同一套取得方式）
   var nowYearGlobal = new Date().getFullYear();
   var pdm2Global = {};
   ((familyData && familyData.members) || []).filter(function(m){ return m.role!=="beneficiary_only"; }).forEach(function(m){
     if (personDataMap[m.personId]) pdm2Global[m.personId] = personDataMap[m.personId];
   });
+  // 「PDF 分頁」跟「圖檔分張」一樣，儲蓄險現金流只放目前選到的這位成員，
+  // 不是全家；「PDF 合併」維持原本全家彙整在一起的版本，兩種模式才會
+  // 真的產生不一樣的內容，不然合併跟分頁看起來永遠一樣。
+  var familyDataForTimeline = fmt==="pdf_pages"
+    ? { members: (familyData&&familyData.members||[]).filter(function(m){ return m.personId===currentPersonId; }) }
+    : familyData;
 
   // 用 canvas 直接畫文字產生標籤圖片，而不是走 html2canvas 擷取整個 DOM，
   // 避免多一次昂貴的擷取；canvas 2D fillText 是瀏覽器原生字型渲染，
@@ -2783,7 +2789,7 @@ async function doExportPDF(blks,div){
       // 標題+欄位年份先自成一頁最上方，接著每位被保險人的所有保單
       // 自成一組，整組放得下就整組印、放不下才換頁，永遠維持滿版
       // 寬度，不會因為表格太高被迫縮小到看不清楚。
-      var stParts = buildSavingsTimelineParts(pdm2Global, familyData, nowYearGlobal, nowYearGlobal+14);
+      var stParts = buildSavingsTimelineParts(pdm2Global, familyDataForTimeline, nowYearGlobal, nowYearGlobal+14);
       if(!stParts){
         var emptyC = await captureHtml(getBlockTitleHtml(blks[i])+'<div style="padding:60px;text-align:center;color:#9ca3af;font-size:20px">尚無儲蓄保單設定領回資料</div>'+(isLast||fmt==="pdf_pages"?disclaimer:"")+wm);
         addNewPage("現金流");
@@ -2834,7 +2840,11 @@ async function doExportPDF(blks,div){
     }
   }
   setP(95);
-  pdf.save(pName+"_"+getReportBaseName(blks)+"_"+pDate+".pdf");
+  var curMemberForName = (familyData&&familyData.members||[]).find(function(m){return m.personId===currentPersonId;});
+  var memberSuffix = (fmt==="pdf_pages" && blks.some(function(b){return b.key==="savings_timeline";}) && curMemberForName)
+    ? "_"+curMemberForName.name
+    : "";
+  pdf.save(pName+"_"+getReportBaseName(blks)+memberSuffix+"_"+pDate+".pdf");
   setP(100);
 }
 
