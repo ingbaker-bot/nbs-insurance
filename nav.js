@@ -717,7 +717,7 @@
     if (!wrap) return { start: 180, end: 270 };
     var r = wrap.getBoundingClientRect();
     var left = r.left, top = r.top;
-    var threshold = 165; // 半徑 + 圖示半寬 + 安全間距
+    var threshold = 180; // 半徑 + 圖示半寬 + 安全間距
     var canRight = (window.innerWidth  - left) >= threshold;
     var canLeft  = (left - 56)                 >= threshold;
     var canDown  = (window.innerHeight - top)  >= threshold;
@@ -760,7 +760,7 @@
     var span   = arc.end - arc.start;
     var isFull = span >= 359; // 整圈時頭尾角度重疊，要用 n 等分而非 n-1
     var n = levelItems.length + (showBack ? 1 : 0);
-    var radius = 118;
+    var radius = 132;
     var idx = 0;
     var html = "";
 
@@ -773,7 +773,7 @@
 
     if (showBack) {
       var p = posFor(idx); idx++;
-      html += '<div class="nbs-float-item nbs-float-back" style="--tx:'+p.tx+'px;--ty:'+p.ty+'px" onclick="NBS_NAV._floatNavItemClick(-1)" title="返回">' +
+      html += '<div class="nbs-float-item nbs-float-back" style="--tx:'+p.tx+'px;--ty:'+p.ty+'px" onclick="event.stopPropagation();NBS_NAV._floatNavItemClick(-1)" title="返回">' +
         '<span class="nbs-float-icon">←</span>' +
         '<span class="nbs-float-label">返回</span>' +
       '</div>';
@@ -781,7 +781,7 @@
     levelItems.forEach(function(item, i) {
       var p = posFor(idx); idx++;
       var active = !showBack && _page === item.key;
-      html += '<div class="nbs-float-item'+(active?" nbs-float-item-on":"")+'" style="--tx:'+p.tx+'px;--ty:'+p.ty+'px" onclick="NBS_NAV._floatNavItemClick('+i+')" title="'+item.label+'">' +
+      html += '<div class="nbs-float-item'+(active?" nbs-float-item-on":"")+'" style="--tx:'+p.tx+'px;--ty:'+p.ty+'px" onclick="event.stopPropagation();NBS_NAV._floatNavItemClick('+i+')" title="'+item.label+'">' +
         '<span class="nbs-float-icon">'+item.icon+'</span>' +
         '<span class="nbs-float-label">'+item.label+'</span>' +
       '</div>';
@@ -1347,12 +1347,12 @@
       "#nbs-float-nav.nbs-float-open #nbs-float-fab{transform:rotate(90deg)}",
       "#nbs-float-nav.nbs-float-open #nbs-float-fab:hover{transform:rotate(90deg) scale(1.05)}",
       "#nbs-float-items{position:absolute;right:28px;bottom:28px;width:0;height:0}",
-      ".nbs-float-item{position:absolute;right:0;bottom:0;width:60px;height:60px;margin-right:-30px;margin-bottom:-30px;border-radius:50%;background:rgba(255,255,255,.97);backdrop-filter:blur(10px);box-shadow:0 4px 14px rgba(0,0,0,.14);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;opacity:0;transform:translate(0,0) scale(.4);transition:transform .28s cubic-bezier(.34,1.56,.64,1),opacity .2s;pointer-events:none}",
+      ".nbs-float-item{position:absolute;right:0;bottom:0;width:68px;height:68px;margin-right:-34px;margin-bottom:-34px;border-radius:50%;background:rgba(255,255,255,.97);backdrop-filter:blur(10px);box-shadow:0 4px 14px rgba(0,0,0,.14);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;opacity:0;transform:translate(0,0) scale(.4);transition:transform .28s cubic-bezier(.34,1.56,.64,1),opacity .2s;pointer-events:none}",
       "#nbs-float-nav.nbs-float-open .nbs-float-item{opacity:1;transform:translate(var(--tx),var(--ty)) scale(1);pointer-events:auto}",
       ".nbs-float-item-on{box-shadow:0 0 0 2px #7C3AED,0 4px 14px rgba(0,0,0,.14)}",
       ".nbs-float-back{background:rgba(243,244,246,.97)}",
-      ".nbs-float-icon{font-size:20px;line-height:1}",
-      ".nbs-float-label{font-size:11px;font-weight:600;color:#4B5563;margin-top:3px;white-space:nowrap;max-width:56px;overflow:hidden;text-overflow:ellipsis}",
+      ".nbs-float-icon{font-size:23px;line-height:1}",
+      ".nbs-float-label{font-size:12px;font-weight:600;color:#4B5563;margin-top:3px;white-space:nowrap;max-width:64px;overflow:hidden;text-overflow:ellipsis}",
       ".nbs-float-item-on .nbs-float-label{color:#4F46E5;font-weight:700}",
       "@media print{#nbs-sidebar,#nbs-mobile-hdr,#nbs-bottom-tab,#nbs-float-nav{display:none!important}body{padding-left:0!important;padding-top:0!important;padding-bottom:0!important}}",
       ".nbs-logo{border-bottom:1px solid rgba(120,140,255,.12);padding:0;line-height:0;overflow:hidden}",
