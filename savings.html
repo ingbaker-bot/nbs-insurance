@@ -343,6 +343,8 @@ function renderSettings() {
         afterAmt:      sv.afterAmt      || "",
         yearlyRows:    sv.yearlyRows    || "20",
         yearlyAmts:    sv.yearlyAmts    || [],
+        accountValue:     sv.accountValue     || "",
+        accountValueDate: sv.accountValueDate || "",
         // 分紅保單（類型6）若備註空白，預填警語
         note: sv.note !== undefined && sv.note !== "" ? sv.note :
               (sv.type === "6" ? "領回金額採中分紅預估，實際以保險公司年度公告為準" : ""),
@@ -362,7 +364,7 @@ function renderSettings() {
 
     // 已設定過的保單預設展開，新保單預設收合
     // 用 s（settings[p.id]）判斷，sv 可能不在 scope 內
-    const isConfigured = !!(s.type && s.type !== "1") || !!(s.afterAmt) || !!(s.duringAmt) || !!(s.yearlyAmts && s.yearlyAmts.length);
+    const isConfigured = !!(s.type && s.type !== "1") || !!(s.afterAmt) || !!(s.duringAmt) || !!(s.yearlyAmts && s.yearlyAmts.length) || !!(s.accountValue);
     html += `<div class="savings-card ${isConfigured?'card-open':''}" data-pid="${p.id}">
       <div class="card-header card-toggle" onclick="toggleCard('${p.id}')">
         <div style="display:flex;align-items:center;gap:6px;flex:1">
@@ -375,6 +377,7 @@ function renderSettings() {
             </div>
             <div class="card-name">${p.itemName||"—"}</div>
             ${dateStr?`<div class="card-dates">${dateStr}</div>`:""}
+            ${s.accountValue?`<div class="card-dates" style="color:#185FA5;font-weight:600">目前帳戶價值：${fmtAmt(parseFloat(s.accountValue)||0)}${s.accountValueDate?`（${s.accountValueDate} 登錄）`:""}</div>`:""}
           </div>
         </div>
         <div class="card-summary" id="summary-${p.id}">${buildCardSummary(s)}</div>
@@ -382,6 +385,24 @@ function renderSettings() {
 
       <!-- 展開內容 -->
       <div class="card-body" id="body-${p.id}" style="display:${isConfigured?'block':'none'}">
+      <!-- 目前帳戶價值：跟下面的「領回方式」是兩個不同概念——這裡填的是
+           現在帳戶裡已經累積多少錢，領回方式填的是未來排定怎麼領。 -->
+      <div class="adv-block" style="margin-bottom:12px;border-color:#B5D4F4">
+        <div class="adv-block-title" style="color:#0C447C">目前帳戶價值（選填）</div>
+        <div class="adv-row">
+          <div class="field">
+            <label>帳戶價值（元）</label>
+            <input type="number" id="accountValue-${p.id}" value="${s.accountValue}"
+                   placeholder="如：2020000" oninput="updateSetting('${p.id}','accountValue',this.value)" />
+          </div>
+          <div class="field">
+            <label>登錄日期</label>
+            <input type="date" id="accountValueDate-${p.id}" value="${s.accountValueDate}"
+                   onchange="updateSetting('${p.id}','accountValueDate',this.value)" />
+          </div>
+        </div>
+      </div>
+
       <!-- 類型選擇 -->
       <div class="type-section">
         <div class="section-label">領回方式</div>
@@ -744,7 +765,13 @@ function calcPolicyFlows(p, s, memberId, years) {
         if (yr >= base && e % afterFreqYr === 0) flow += afterAmt;
       }
     } else if (monthly) {
-      if (inAfter && afterAmt > 0) flow = afterAmt * 12;
+      if (p.category === "投資型保險") {
+        // 投資型保險的「月月配息」是帳戶配息，保單成立後就持續每月發放，
+        // 不像儲蓄險/年金險的「月領生存金」要等繳費期滿才開始請領。
+        if (afterAmt > 0 && yr >= startWestern) flow = afterAmt * 12;
+      } else {
+        if (inAfter && afterAmt > 0) flow = afterAmt * 12;
+      }
     }
     if (flow > 0) flows[yr] = Math.round(flow * exRate);
   });
@@ -789,6 +816,8 @@ function renderTimeline() {
         itemName:  p.itemName || "",
         category:  p.category || "",
         currency:  p.currency || "TWD",
+        accountValue:     s.accountValue     || "",
+        accountValueDate: s.accountValueDate || "",
         flows,
       });
     });
@@ -856,6 +885,7 @@ function renderTimeline() {
           ${statusTag}
         </div>
         ${pr.itemName ? `<div style="font-size:16px;color:#444;font-weight:500;margin-top:2px;white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis">${pr.itemName}</div>` : ""}
+        ${pr.accountValue ? `<div style="font-size:13px;color:#185FA5;font-weight:600;margin-top:3px;white-space:nowrap">現況 ${fmtAmt(parseFloat(pr.accountValue)||0)}${pr.accountValueDate?`（${pr.accountValueDate}）`:""}</div>` : ""}
       </td>`;
 
       return `<tr class="cf-policy-row">${firstCell}${cells}</tr>`;
