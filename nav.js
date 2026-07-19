@@ -28,6 +28,14 @@
     { key:"visit",       label:"訪談紀錄", icon:"📝", href:"visit.html" }
   ];
 
+  // 浮動圓形導覽選單（v6.1 新增，電腦／平板測試版）：
+  // 先精簡成 6 個常用項目，醫院病房、訪談紀錄暫緩收錄。
+  // 只是既有 NAV_ITEMS 的過濾結果，不影響原本側欄／底部 tab。
+  var FLOAT_NAV_ITEMS = NAV_ITEMS.filter(function(it) {
+    return it.key !== "hospital" && it.key !== "visit";
+  });
+  var _floatNavOpen = false;
+
   var _page     = "";
   var _family   = null;
   var _personId = null;
@@ -127,6 +135,7 @@
       _page = key || "";
       _renderSidebar();
       _renderBottomTab();
+      _renderFloatNav();
     },
 
     // 讓 SPA 路由在換頁、重新執行該頁 <script> 後，
@@ -387,13 +396,34 @@
       '</div>';
     modal.onclick = function(e){ if(e.target===modal) NBS_NAV._closeMemberModal(); };
     document.body.appendChild(modal);
+
+    // 浮動圓形導覽選單（測試版，僅電腦／平板顯示，手機版沿用底部 tab）
+    var floatNav = document.createElement("div");
+    floatNav.id = "nbs-float-nav";
+    floatNav.innerHTML =
+      '<div id="nbs-float-items"></div>' +
+      '<button id="nbs-float-fab" onclick="NBS_NAV._toggleFloatNav()" aria-label="展開導覽選單">' +
+        '<span id="nbs-float-fab-icon">☰</span>' +
+      '</button>';
+    document.body.appendChild(floatNav);
+    document.addEventListener("click", function(e){
+      var wrap = document.getElementById("nbs-float-nav");
+      if (!wrap || !_floatNavOpen) return;
+      if (!wrap.contains(e.target)) NBS_NAV._closeFloatNav();
+    });
   }
 
   function _applyLayout() {
-    var mobile  = window.innerWidth < 768;
-    var sidebar = document.getElementById("nbs-sidebar");
-    var tab     = document.getElementById("nbs-bottom-tab");
-    var hdr     = document.getElementById("nbs-mobile-hdr");
+    var mobile   = window.innerWidth < 768;
+    var sidebar  = document.getElementById("nbs-sidebar");
+    var tab      = document.getElementById("nbs-bottom-tab");
+    var hdr      = document.getElementById("nbs-mobile-hdr");
+    var floatNav = document.getElementById("nbs-float-nav");
+    // 浮動圓形選單目前只在電腦／平板測試，手機版先隱藏、沿用底部 tab
+    if (floatNav) {
+      floatNav.style.display = mobile ? "none" : "block";
+      if (mobile) NBS_NAV._closeFloatNav();
+    }
     if (!sidebar) return;
     if (mobile) {
       sidebar.style.display = "none";
@@ -416,6 +446,7 @@
     _renderSidebar();
     _renderBottomTab();
     _renderMobileHdr();
+    _renderFloatNav();
     _applyLayout();
   }
 
@@ -589,6 +620,43 @@
     if (m.contains(e.target) || (btn && btn.contains(e.target))) return;
     m.style.display = "none";
   });
+
+  // 浮動圓形導覽選單：扇形從水平（180°，正左）展開到垂直（270°，正上），
+  // 因為按鈕固定在右下角，這樣展開才不會被螢幕邊界擋住。
+  function _renderFloatNav() {
+    var wrap = document.getElementById("nbs-float-items");
+    if (!wrap) return;
+    var n = FLOAT_NAV_ITEMS.length;
+    var radius = 108;
+    var startDeg = 180, endDeg = 270;
+    wrap.innerHTML = FLOAT_NAV_ITEMS.map(function(item, i) {
+      var deg = n > 1 ? startDeg + (endDeg - startDeg) * (i / (n - 1)) : (startDeg + endDeg) / 2;
+      var rad = deg * Math.PI / 180;
+      var tx = Math.round(Math.cos(rad) * radius);
+      var ty = Math.round(Math.sin(rad) * radius);
+      var active = _page === item.key;
+      return '<div class="nbs-float-item'+(active?" nbs-float-item-on":"")+'" style="--tx:'+tx+'px;--ty:'+ty+'px" onclick="NBS_NAV._go(\''+item.href+'\');NBS_NAV._closeFloatNav()" title="'+item.label+'">' +
+        '<span class="nbs-float-icon">'+item.icon+'</span>' +
+        '<span class="nbs-float-label">'+item.label+'</span>' +
+      '</div>';
+    }).join("");
+  }
+
+  global.NBS_NAV._toggleFloatNav = function() {
+    _floatNavOpen = !_floatNavOpen;
+    var wrap = document.getElementById("nbs-float-nav");
+    var icon = document.getElementById("nbs-float-fab-icon");
+    if (wrap) wrap.classList.toggle("nbs-float-open", _floatNavOpen);
+    if (icon) icon.textContent = _floatNavOpen ? "✕" : "☰";
+  };
+  global.NBS_NAV._closeFloatNav = function() {
+    if (!_floatNavOpen) return;
+    _floatNavOpen = false;
+    var wrap = document.getElementById("nbs-float-nav");
+    var icon = document.getElementById("nbs-float-fab-icon");
+    if (wrap) wrap.classList.remove("nbs-float-open");
+    if (icon) icon.textContent = "☰";
+  };
 
   function _renderMobileHdr() {
     var el = document.getElementById("nbs-mobile-hdr");
@@ -1099,7 +1167,19 @@
       ".nbs-ef-btns{display:flex;gap:8px;margin-top:4px}",
       ".nbs-ef-cancel{flex:1;padding:9px;background:transparent;color:#666;border:1px solid #ddd;border-radius:7px;cursor:pointer;font-family:inherit;font-size:13px}",
       ".nbs-ef-save{flex:2;padding:9px;background:linear-gradient(90deg,#3B82F6,#7C3AED);color:#fff;border:none;border-radius:9px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600}",
-      "@media print{#nbs-sidebar,#nbs-mobile-hdr,#nbs-bottom-tab{display:none!important}body{padding-left:0!important;padding-top:0!important;padding-bottom:0!important}}",
+      "#nbs-float-nav{position:fixed;right:28px;bottom:28px;width:1px;height:1px;z-index:300}",
+      "#nbs-float-fab{position:absolute;right:0;bottom:0;width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;background:linear-gradient(135deg,#3B82F6,#7C3AED);box-shadow:0 6px 18px rgba(76,29,149,.28);display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;transition:transform .2s}",
+      "#nbs-float-fab:hover{transform:scale(1.05)}",
+      "#nbs-float-nav.nbs-float-open #nbs-float-fab{transform:rotate(90deg)}",
+      "#nbs-float-nav.nbs-float-open #nbs-float-fab:hover{transform:rotate(90deg) scale(1.05)}",
+      "#nbs-float-items{position:absolute;right:28px;bottom:28px;width:0;height:0}",
+      ".nbs-float-item{position:absolute;right:0;bottom:0;width:52px;height:52px;margin-right:-26px;margin-bottom:-26px;border-radius:50%;background:rgba(255,255,255,.97);backdrop-filter:blur(10px);box-shadow:0 4px 14px rgba(0,0,0,.14);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;opacity:0;transform:translate(0,0) scale(.4);transition:transform .28s cubic-bezier(.34,1.56,.64,1),opacity .2s;pointer-events:none}",
+      "#nbs-float-nav.nbs-float-open .nbs-float-item{opacity:1;transform:translate(var(--tx),var(--ty)) scale(1);pointer-events:auto}",
+      ".nbs-float-item-on{box-shadow:0 0 0 2px #7C3AED,0 4px 14px rgba(0,0,0,.14)}",
+      ".nbs-float-icon{font-size:18px;line-height:1}",
+      ".nbs-float-label{font-size:9px;color:#6B7280;margin-top:2px;white-space:nowrap;max-width:48px;overflow:hidden;text-overflow:ellipsis}",
+      ".nbs-float-item-on .nbs-float-label{color:#4F46E5;font-weight:700}",
+      "@media print{#nbs-sidebar,#nbs-mobile-hdr,#nbs-bottom-tab,#nbs-float-nav{display:none!important}body{padding-left:0!important;padding-top:0!important;padding-bottom:0!important}}",
       ".nbs-logo{border-bottom:1px solid rgba(120,140,255,.12);padding:0;line-height:0;overflow:hidden}",
       ".nbs-logo-img{width:100%;height:auto;max-width:200px;display:block;object-fit:contain}"
     ].join("\n");
