@@ -208,6 +208,9 @@ var   FMTS=[
 // 每個險種各自獨立顏色（原本壽險/重大/儲蓄/投資型都擠在同兩種靛紫色，
 // 幾乎分不出來，改成 12 種彼此有明顯區隔的顏色）
 var   CC={"壽險保障":"#2563EB","醫療保障":"#0EA5E9","意外險":"#D97706","重大疾病險":"#DC2626","重大傷病險":"#EA580C","特定傷病險":"#C026D3","儲蓄險":"#16A34A","年金險":"#0D9488","投資型保險":"#7C3AED","癌症醫療":"#E11D48","失能長照":"#65A30D","定額手術":"#4F46E5"};
+// 儲蓄險現金流時間軸（buildSavingsTimelineParts／renderSavingsTimeline）
+// 共用的險種顏色查詢，沒對應到的類別（理論上不會發生）退回灰色。
+function savingsCatColor(cat){ return CC[cat] || "#6b7280"; }
 
 // ── 狀態 ─────────────────────────────────────────────────
 var sel={cover:false,family_premium_summary:false,premium_detail:false,summary:false,policy_detail:false,savings_timeline:false,family_savings_summary:false};
@@ -495,12 +498,9 @@ function buildSavingsTimelineParts(pdm3,fData,startYr,endYr){
   });
   if(!groups.length)return null;
 
-  // 儲蓄/年金/投資型保險統一收斂在同一組靛紫色系裡（不再依類別各自上色）
-  var TAG_BG="#e0e7ff", TAG_CO="#3730a3";
-  // 領回金額色塊改成 2 色交錯（不再用 4 色，避免顏色太雜），
-  // 小計／合計列另外固定用靛紫色，不受這個交錯色盤影響
-  var PILL_PALETTE=[ pearlGradientEx("#3B82F6"), pearlGradientEx("#7C3AED") ];
-  var pillIdx=0;
+  // 顏色改用跟「保單與受益人整合表」同一套 CC 險種色盤（儲蓄險/投資型保險/
+  // 年金險各自固定顏色），跟其他報告的色系保持一致。savingsCatColor() 是
+  // 全域共用函式，定義在檔案上方 CC 旁邊。
 
   // 固定欄寬：第一欄(被保險人/保單)、第二欄(保單現金價值)固定，其餘年份欄位平分，
   // 標題表格跟每一組保單表格都套用同一份，確保欄位對齊
@@ -532,7 +532,7 @@ function buildSavingsTimelineParts(pdm3,fData,startYr,endYr){
       (pay?'<span style="color:#B07000;font-size:17px;margin-left:8px;font-weight:700">（含 '+pay+' 張繳費中）</span>':'')+
     '</td></tr>';
     var pr2=g.policies.map(function(pr){
-      var barBg=PILL_PALETTE[pillIdx%PILL_PALETTE.length];pillIdx++;
+      var barBg=pearlGradientEx(savingsCatColor(pr.category));
       var cells=years.map(function(y4){
         var amt=pr.flows[y4]||0;
         if(!amt)return'<td style="text-align:center;color:#9ca3af;font-size:18px;border-left:1px solid #f5f6f8">—</td>';
@@ -540,7 +540,7 @@ function buildSavingsTimelineParts(pdm3,fData,startYr,endYr){
       }).join("");
       var fc='<td style="padding:11px 7px 11px 17px;border-right:2px solid #e2e5ea">'+
         '<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">'+
-          '<span style="font-size:16px;font-weight:800;padding:4px 11px;border-radius:99px;background:'+TAG_BG+';color:'+TAG_CO+'">'+(pr.category)+'</span>'+
+          '<span style="font-size:16px;font-weight:800;padding:4px 11px;border-radius:99px;background:'+savingsCatColor(pr.category)+'1A;color:'+savingsCatColor(pr.category)+'">'+(pr.category)+'</span>'+
           '<span style="font-size:16px;font-weight:800;color:#4338ca;background:#eef2ff;padding:4px 10px;border-radius:99px;font-variant-numeric:tabular-nums">'+pr.policyNo+'</span>'+
           (pr.stillPaying?'<span style="font-size:16px;color:#B07000;font-weight:700">繳費中</span>':'')+
         '</div>'+
@@ -598,11 +598,7 @@ function renderSavingsTimeline(pdm3,fData,startYr,endYr){
 
   // 儲蓄/年金/投資型保險統一收斂在同一組靛紫色系裡（不再依類別各自上色），
   // 跟家庭責任/保單明細一覽表用的靛紫主題呼應
-  var TAG_BG="#e0e7ff", TAG_CO="#3730a3";
-  // 領回金額色塊改成 2 色交錯（不再用 4 色，避免顏色太雜），
-  // 小計／合計列另外固定用靛紫色，不受這個交錯色盤影響
-  var PILL_PALETTE=[ pearlGradientEx("#3B82F6"), pearlGradientEx("#7C3AED") ];
-  var pillIdx=0;
+
 
   // 年份時間軸節點：由左到右一條時間軸線串起每一年，強調「時間軸」的視覺語言
   var yh=years.map(function(y3,yi){
@@ -635,7 +631,7 @@ function renderSavingsTimeline(pdm3,fData,startYr,endYr){
       (pay?'<span style="color:#B07000;font-size:14px;margin-left:6px;font-weight:700">（含 '+pay+' 張繳費中）</span>':'')+
     '</td></tr>';
     var pr2=g.policies.map(function(pr){
-      var barBg=PILL_PALETTE[pillIdx%PILL_PALETTE.length];pillIdx++;
+      var barBg=pearlGradientEx(savingsCatColor(pr.category));
       var cells=years.map(function(y4){
         var amt=pr.flows[y4]||0;
         if(!amt)return'<td style="text-align:center;color:#9ca3af;font-size:17px;border-left:1px solid #f5f6f8">—</td>';
@@ -643,7 +639,7 @@ function renderSavingsTimeline(pdm3,fData,startYr,endYr){
       }).join("");
       var fc='<td style="padding:10px 7px 10px 17px;border-right:2px solid #e2e5ea">'+
         '<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">'+
-          '<span style="font-size:13px;font-weight:800;padding:2px 10px;border-radius:99px;background:'+TAG_BG+';color:'+TAG_CO+'">'+(pr.category)+'</span>'+
+          '<span style="font-size:13px;font-weight:800;padding:2px 10px;border-radius:99px;background:'+savingsCatColor(pr.category)+'1A;color:'+savingsCatColor(pr.category)+'">'+(pr.category)+'</span>'+
           '<span style="font-size:13px;font-weight:800;color:#4338ca;background:#eef2ff;padding:2px 8px;border-radius:99px;font-variant-numeric:tabular-nums">'+pr.policyNo+'</span>'+
           (pr.stillPaying?'<span style="font-size:13px;color:#B07000;font-weight:700">繳費中</span>':'')+
         '</div>'+
