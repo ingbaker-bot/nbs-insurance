@@ -811,6 +811,11 @@ function renderTimeline() {
       Object.entries(flows).forEach(([yr, amt]) => {
         totalFlows[yr] = (totalFlows[yr] || 0) + amt;
       });
+      // 「是否仍在繳費期間」要看真正的繳費期滿日，不能用「有沒有算出現金流」
+      // 來推斷——很多保單早就繳費期滿了，只是還沒設定領回金額或帳戶價值，
+      // 用「沒有現金流＝繳費中」會把這些保單全部誤標成繳費中。
+      const payEndWestern = p.payEndDate ? parseInt(p.payEndDate.slice(0,4)) : null;
+      const stillPaying = payEndWestern !== null && new Date().getFullYear() < payEndWestern;
       policyRows.push({
         policyNo:  p.policyNo || p.id,
         itemName:  p.itemName || "",
@@ -818,6 +823,7 @@ function renderTimeline() {
         currency:  p.currency || "TWD",
         accountValue:     s.accountValue     || "",
         accountValueDate: s.accountValueDate || "",
+        stillPaying,
         flows,
       });
     });
@@ -843,7 +849,7 @@ function renderTimeline() {
   }
   const trimYears = activeYears.length
     ? years.filter(y => y <= Math.max(...activeYears))
-    : [years[0]]; // 沒有任何排定現金流時，只留一欄當表格骨架，重點是顯示帳戶價值那一行
+    : years; // 沒有任何排定現金流時，維持使用者選定的完整年份範圍，重點是顯示帳戶價值那一行
   const maxTotal = Math.max(...Object.values(totalFlows), 1);
   const totalPolicies = groups.reduce((s, g) => s + g.policies.length, 0);
 
@@ -859,8 +865,8 @@ function renderTimeline() {
       <td colspan="${trimYears.length + 1}">
         <span style="font-size:16px;font-weight:600;color:#1a1a1a">${g.memberName}</span>
         <span style="font-size:14px;color:#555;font-weight:500;margin-left:6px">${g.policies.length} 張保單</span>
-        ${g.policies.filter(p=>Object.keys(p.flows).length===0).length > 0
-          ? `<span style="font-size:14px;color:#b07000;font-weight:500;margin-left:4px">（含 ${g.policies.filter(p=>Object.keys(p.flows).length===0).length} 張繳費中）</span>`
+        ${g.policies.filter(p=>p.stillPaying).length > 0
+          ? `<span style="font-size:14px;color:#b07000;font-weight:500;margin-left:4px">（含 ${g.policies.filter(p=>p.stillPaying).length} 張繳費中）</span>`
           : ""}
       </td>
     </tr>`;
@@ -877,9 +883,8 @@ function renderTimeline() {
       // 第一欄：險種 badge + 保單號碼 + 商品名稱（統一收斂為靛紫色系，
       // 跟 export.html 的保單明細一覽表/家庭責任配色一致）
       const badgeStyle = `font-size:14px;padding:1px 5px;border-radius:3px;display:inline-block;background:#e0e7ff;color:#3730a3`;
-      // 繳費中但無現金流：標示狀態
-      const hasFlow = Object.keys(pr.flows).length > 0;
-      const statusTag = !hasFlow
+      // 繳費中標籤：現在改用真正的繳費期滿日判斷，不再用「有沒有現金流」誤判
+      const statusTag = pr.stillPaying
         ? `<span style="font-size:14px;color:#888;font-weight:500;margin-left:4px">（繳費中）</span>`
         : "";
       // 第一欄：改為兩行——行1: badge + 號碼，行2: 險種名稱
