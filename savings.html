@@ -836,8 +836,11 @@ function renderTimeline() {
       // 「是否仍在繳費期間」要看真正的繳費期滿日，不能用「有沒有算出現金流」
       // 來推斷——很多保單早就繳費期滿了，只是還沒設定領回金額或帳戶價值，
       // 用「沒有現金流＝繳費中」會把這些保單全部誤標成繳費中。
+      // 投資型保險另外不判斷這個標籤：這類保單常見不定期繳/彈性繳/單筆躉繳，
+      // 「繳費期滿日」欄位對它的意義不像儲蓄險/年金險那麼明確，容易誤標。
       const payEndWestern = extractYearSmart(p.payEndDate, p.payEndRaw);
-      const stillPaying = payEndWestern !== null && new Date().getFullYear() < payEndWestern;
+      const stillPaying = p.category !== "投資型保險" &&
+        payEndWestern !== null && new Date().getFullYear() < payEndWestern;
       policyRows.push({
         policyNo:  p.policyNo || p.id,
         itemName:  p.itemName || "",
