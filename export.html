@@ -707,7 +707,7 @@ function getDeathBenefitAmt(p) {
     // 的匯率欄位本來就是給「原幣→台幣」用的），要用這張保單的匯率換算成
     // 台幣，不然外幣保單的留愛金額會被誤當成台幣數字直接顯示，數字對不起來。
     var rate = (p.currency && p.currency !== "TWD" && parseFloat(p.exchangeRate)) ? parseFloat(p.exchangeRate) : 1;
-    return w * rate;
+    return Math.round(w * rate * 10) / 10; // 取到小數點第1位（看小數點第2位四捨五入），避免顯示到第4位被截斷
   }
   return 0; // 沒填就是沒有，交由畫面顯示「—」，提醒業務員回頭跟保戶確認
 }
