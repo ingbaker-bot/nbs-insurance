@@ -3000,6 +3000,13 @@ async function buildPdfDocument(blks,div){
     if(ih>maxH){ iw=iw*(maxH/ih); ih=maxH; }
     return {iw:iw, ih:ih};
   }
+  // 永遠強制滿版寬度：跟 canvasToMM 不同，這個版本不會因為算出來的高度
+  // 超過可用高度，就反過來把寬度也跟著縮小——寧可讓內容高一點、貼近
+  // 頁面下緣，也要保證寬度一定撐滿整頁，不要再出現「寬度被犧牲」的狀況。
+  function canvasToMMFullWidth(c, maxW){
+    var iw=maxW, ih=(c.height/c.width)*iw;
+    return {iw:iw, ih:ih};
+  }
 
   for(var i=0;i<blks.length;i++){
     var isLast = i===blks.length-1;
@@ -3139,7 +3146,10 @@ async function buildPdfDocument(blks,div){
       var showDisclaimer = isCover ? false : (fmt==="pdf_pages" ? true : isLast);
       var c = await captureHtml((isCover?'':getBlockTitleHtml(blks[i]))+renderBlock(blks[i].key)+(showDisclaimer?disclaimer:"")+(isCover?'':wm));
       addNewPage(PAGE_LABEL_PREFIX[blks[i].key] || "報告");
-      var d = canvasToMM(c, usableW, usableH);
+      // 保單彙總一覽表、保單明細一覽表這兩個區塊，永遠強制滿版寬度，
+      // 不要再讓高度超出可用範圍時，反過來把寬度也跟著縮小。
+      var forceFullWidth = (blks[i].key==="summary" || blks[i].key==="policy_detail");
+      var d = forceFullWidth ? canvasToMMFullWidth(c, usableW) : canvasToMM(c, usableW, usableH);
       // 內容比整頁矮的時候（等比例縮放後高度小於可用高度），改成垂直置中
       // 顯示，讓上下留白平均分配，不要整段空白都堆在下方，看起來像沒用滿
       // 整張紙。封面頁維持原本頂端對齊（本來就是滿版設計，不套用這個調整）。
