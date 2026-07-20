@@ -1893,17 +1893,17 @@ function buildPremiumDetailParts() {
   var headerHtml='<div style="padding:14px 12px">';
 
   // 縮小標題字體與底部留白
-  headerHtml+='<div style="font-size:47px;font-weight:800;color:#444;margin-bottom:8px">年繳保費與月繳費分配</div>';
+  headerHtml+='<div style="font-size:45px;font-weight:800;color:#444;margin-bottom:8px">年繳保費與月繳費分配</div>';
   var nowM=new Date().getMonth();
   var statCells = [
     // 將 padding 縮小為 8px，字體 38px 縮為 30px
     '<div style="padding:8px;border-radius:10px;background:linear-gradient(135deg,#E6F1FB,#F0F7FF);text-align:center;box-shadow:0 4px 10px -3px rgba(12,68,124,.18)">'+
-      '<div style="font-size:40px;font-weight:700;color:#5B8DBE">年繳總保費</div>'+
-      '<div style="font-size:54px;font-weight:800;margin-top:2px;color:#0C447C;font-variant-numeric:tabular-nums">'+totalTWD_pd.toLocaleString()+'<span style="font-size:36px;font-weight:700;margin-left:1px">元</span></div>'+
+      '<div style="font-size:36px;font-weight:700;color:#5B8DBE">年繳總保費</div>'+
+      '<div style="font-size:36px;font-weight:800;margin-top:2px;color:#0C447C;font-variant-numeric:tabular-nums">'+totalTWD_pd.toLocaleString()+'<span style="font-size:36px;font-weight:700;margin-left:1px">元</span></div>'+
     '</div>',
     '<div style="padding:8px;border-radius:10px;background:linear-gradient(135deg,#EAF3DE,#F3F9EC);text-align:center;box-shadow:0 4px 10px -3px rgba(39,80,10,.18)">'+
-      '<div style="font-size:40px;font-weight:700;color:#6B9450">月均保費</div>'+
-      '<div style="font-size:54px;font-weight:800;margin-top:2px;color:#27500A;font-variant-numeric:tabular-nums">'+Math.round(totalTWD_pd/12).toLocaleString()+'<span style="font-size:36px;font-weight:700;margin-left:1px">元</span></div>'+
+      '<div style="font-size:36px;font-weight:700;color:#6B9450">月均保費</div>'+
+      '<div style="font-size:36px;font-weight:800;margin-top:2px;color:#27500A;font-variant-numeric:tabular-nums">'+Math.round(totalTWD_pd/12).toLocaleString()+'<span style="font-size:36px;font-weight:700;margin-left:1px">元</span></div>'+
     '</div>',
   ];
   // 建立「保單群組 → 主約生效日」對照表：附約如果自己的生效日欄位是空的，
@@ -1928,14 +1928,14 @@ function buildPremiumDetailParts() {
     var isNow = mi===nowM;
     // 移除當月特殊上色，12 個月一律用同一套樣式
     return'<div style="padding:8px 4px;background:#f7f8fa;border-radius:10px;text-align:center;">'+
-      '<div style="font-size:43px;font-weight:800;color:#6b7280">'+(mi+1)+'月</div>'+
-      '<div style="font-size:47px;font-weight:800;margin-top:2px;color:'+(t>0?"#1a1a1a":"#9ca3af")+';font-variant-numeric:tabular-nums">'+(t>0?t.toLocaleString()+'<span style="font-size:32px;font-weight:700">元</span>':"—")+'</div>'+
+      '<div style="font-size:36px;font-weight:800;color:#6b7280">'+(mi+1)+'月</div>'+
+      '<div style="font-size:36px;font-weight:800;margin-top:2px;color:'+(t>0?"#1a1a1a":"#9ca3af")+';font-variant-numeric:tabular-nums">'+(t>0?t.toLocaleString()+'<span style="font-size:36px;font-weight:700">元</span>':"—")+'</div>'+
     '</div>';
   });
   var cellsPD = [statCells[0]].concat(monthCells.slice(0,6))
     .concat([statCells[1]]).concat(monthCells.slice(6,12)).join("");
   headerHtml+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:16px">'+cellsPD+'</div>';
-  headerHtml+='<div style="font-size:54px;font-weight:800;color:#444;margin-bottom:10px">保單與受益人整合表</div>';
+  headerHtml+='<div style="font-size:45px;font-weight:800;color:#444;margin-bottom:8px">保單與受益人整合表</div>';
   headerHtml+='</div>';
 
   var BENEF_RULES_PD = {
@@ -1966,7 +1966,7 @@ function buildPremiumDetailParts() {
   // 限制商品名最大寬度為400px，並加寬狀態(130px)與受益人(240px)
   // 讓商品名改為 1fr 填滿剩餘空白，同時保持狀態與受益人的寬裕空間
   // 加入 minmax(300px, 1fr) 確保在預覽畫面中商品名不會被擠壓變形
-  var COLS_PD = '78px 143px minmax(390px,1fr) 195px 221px 169px 195px 195px 312px 312px';
+  var COLS_PD = '50px 171px minmax(390px,1fr) 195px 221px 169px 195px 195px 312px 312px';
 
   var colHeaderRow =
     '<div style="display:grid;grid-template-columns:'+COLS_PD+';border-bottom:2px solid #eef0f3">'+
@@ -2089,7 +2089,7 @@ function buildPremiumDetailParts() {
       '</div>';
     });
 
-    var cardWrapOpen  = '<div style="break-inside:avoid;margin-bottom:10px;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);border-left:8px solid #6366f1">';
+    var cardWrapOpen  = '<div style="break-inside:avoid;margin-bottom:7px;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);border-left:8px solid #6366f1">';
     var cardWrapClose = '</div>';
     var fullHtml = cardWrapOpen + cardHeaderHtml + colHeaderRow + rowsHtml.join("") + cardWrapClose;
 
