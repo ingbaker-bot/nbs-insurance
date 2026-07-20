@@ -764,23 +764,23 @@ function renderFamilySavingsSummary(pdm3, fData, startYr, endYr){
   });
   if(!memberRows.length) return null;
 
-  var colgroupHtmlFS='<colgroup><col style="width:190px"><col style="width:150px">'+years.map(function(){return'<col>';}).join("")+'</colgroup>';
+  var colgroupHtmlFS='<colgroup><col style="width:260px"><col style="width:220px">'+years.map(function(){return'<col>';}).join("")+'</colgroup>';
   var yh=years.map(function(y3){
-    return '<th style="background:linear-gradient(180deg,#f7f8fa,#fff);padding:11px 7px;text-align:center;font-weight:800;color:#374151;border-bottom:2px solid #e2e5ea;border-left:1px solid #eef0f3;white-space:nowrap">'+
-      '<div style="width:8px;height:8px;border-radius:50%;background:#4338ca;margin:0 auto 5px"></div>'+
-      '<span class="st-year-num" style="font-size:20px">'+y3+'</span><br><span class="st-year-roc" style="font-size:18px;color:#6b7280;font-weight:600">'+(y3-1911)+'年</span>'+
+    return '<th style="background:linear-gradient(180deg,#f7f8fa,#fff);padding:22px 10px;text-align:center;font-weight:800;color:#374151;border-bottom:2px solid #e2e5ea;border-left:1px solid #eef0f3;white-space:nowrap">'+
+      '<div style="width:14px;height:14px;border-radius:50%;background:#4338ca;margin:0 auto 8px"></div>'+
+      '<span class="st-year-num" style="font-size:40px">'+y3+'</span><br><span class="st-year-roc" style="font-size:36px;color:#6b7280;font-weight:600">'+(y3-1911)+'年</span>'+
     '</th>';
   }).join("");
 
   var headerHtml =
     '<div style="background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);margin-bottom:14px">'+
-      '<div style="padding:17px 19px;background:linear-gradient(135deg,#EEF2FF,#F5F3FF);display:flex;align-items:center;gap:10px;flex-wrap:wrap">'+
-        '<span style="font-size:20px;font-weight:800;color:#4338ca">👨‍👩‍👧‍👦 全家儲蓄規劃總表</span>'+
-        '<span style="font-size:14px;color:#7c7fa0;font-weight:700;background:#fff;padding:4px 12px;border-radius:99px">'+startYr+' － '+years[years.length-1]+' 年・'+memberRows.length+' 位被保險人</span>'+
+      '<div style="padding:24px 26px;background:linear-gradient(135deg,#EEF2FF,#F5F3FF);display:flex;align-items:center;gap:14px;flex-wrap:wrap">'+
+        '<span style="font-size:40px;font-weight:800;color:#4338ca">👨‍👩‍👧‍👦 全家儲蓄規劃總表</span>'+
+        '<span style="font-size:28px;color:#7c7fa0;font-weight:700;background:#fff;padding:6px 18px;border-radius:99px">'+startYr+' － '+years[years.length-1]+' 年・'+memberRows.length+' 位被保險人</span>'+
       '</div>'+
       '<table style="width:100%;border-collapse:collapse;table-layout:fixed">'+colgroupHtmlFS+
-      '<thead><tr><th style="background:#f7f8fa;padding:10px 17px;text-align:left;border-bottom:2px solid #e2e5ea;font-size:17px;font-weight:800;color:#6b7280">被保險人</th>'+
-      '<th style="background:#f7f8fa;padding:10px 10px;text-align:center;border-bottom:2px solid #e2e5ea;font-size:17px;font-weight:800;color:#6b7280">保單現金價值</th>'+
+      '<thead><tr><th style="background:#f7f8fa;padding:20px 34px;text-align:left;border-bottom:2px solid #e2e5ea;font-size:34px;font-weight:800;color:#6b7280">被保險人</th>'+
+      '<th style="background:#f7f8fa;padding:20px 20px;text-align:center;border-bottom:2px solid #e2e5ea;font-size:34px;font-weight:800;color:#6b7280">保單現金價值</th>'+
       yh+'</tr></thead>'+
       '</table>'+
     '</div>';
@@ -788,29 +788,29 @@ function renderFamilySavingsSummary(pdm3, fData, startYr, endYr){
   var rowsHtml = memberRows.map(function(mr, idx){
     var rowBg = idx%2===0 ? '#fff' : '#fbfbfc';
     var cvHtml = mr.accountValueTWD>0
-      ? '<td style="text-align:center;border-right:2px solid #e2e5ea"><span class="st-cv-amt" style="font-size:17px;color:#185FA5;font-weight:800">'+fmtAmtEx(mr.accountValueTWD)+'</span></td>'
-      : '<td style="text-align:center;border-right:2px solid #e2e5ea;color:#c7c9d1;font-size:16px">—</td>';
+      ? '<td style="text-align:center;border-right:2px solid #e2e5ea"><span class="st-cv-amt" style="font-size:34px;color:#185FA5;font-weight:800">'+fmtAmtEx(mr.accountValueTWD)+'</span></td>'
+      : '<td style="text-align:center;border-right:2px solid #e2e5ea;color:#c7c9d1;font-size:32px">—</td>';
     var cells = years.map(function(yr){
       var amt = mr.flows[yr]||0;
-      if(!amt) return '<td style="text-align:center;color:#9ca3af;font-size:17px;border-left:1px solid #f5f6f8"><span class="st-pill-amt">—</span></td>';
-      return '<td style="border-left:1px solid #f5f6f8;padding:5px 6px;text-align:center"><span class="st-pill-amt" style="font-size:18px;color:#1a1a1a;font-weight:800;font-variant-numeric:tabular-nums">'+fmtAmtEx(amt)+'</span></td>';
+      if(!amt) return '<td style="text-align:center;color:#9ca3af;font-size:34px;border-left:1px solid #f5f6f8"><span class="st-pill-amt">—</span></td>';
+      return '<td style="border-left:1px solid #f5f6f8;padding:10px 12px;text-align:center"><span class="st-pill-amt" style="font-size:36px;color:#1a1a1a;font-weight:800;font-variant-numeric:tabular-nums">'+fmtAmtEx(amt)+'</span></td>';
     }).join("");
     return '<tr style="background:'+rowBg+'">'+
-      '<td style="padding:12px 17px;border-right:2px solid #e2e5ea">'+
-        '<div style="font-size:18px;font-weight:800;color:#1a1a2e">'+mr.name+'</div>'+
-        '<div style="font-size:13px;color:#6B7280;font-weight:600;margin-top:2px">'+mr.policyCount+' 張保單</div>'+
+      '<td style="padding:24px 34px;border-right:2px solid #e2e5ea">'+
+        '<div style="font-size:36px;font-weight:800;color:#1a1a2e">'+mr.name+'</div>'+
+        '<div style="font-size:26px;color:#6B7280;font-weight:600;margin-top:4px">'+mr.policyCount+' 張保單</div>'+
       '</td>'+cvHtml+cells+'</tr>';
   }).join("");
 
   var totalHtml =
     '<tr style="background:#4c46b8;color:#fff;font-weight:800">'+
-      '<td style="padding:12px 17px">全家合計</td>'+
+      '<td style="padding:24px 34px;font-size:34px">全家合計</td>'+
       '<td style="text-align:center;border-left:1px solid rgba(255,255,255,.2)">'+
-        (totalAccountValueTWD>0?'<span class="st-cv-amt" style="font-size:18px">'+fmtAmtEx(totalAccountValueTWD)+'</span>':'<span style="opacity:.6">—</span>')+
+        (totalAccountValueTWD>0?'<span class="st-cv-amt" style="font-size:36px">'+fmtAmtEx(totalAccountValueTWD)+'</span>':'<span style="opacity:.6;font-size:32px">—</span>')+
       '</td>'+
       years.map(function(yr){
         var a=totalFlows[yr]||0;
-        return a?'<td style="text-align:center;border-left:1px solid rgba(255,255,255,.2)"><span class="st-pill-amt" style="font-size:19px;font-variant-numeric:tabular-nums">'+fmtAmtEx(a)+'</span></td>':'<td style="text-align:center;opacity:.6;border-left:1px solid rgba(255,255,255,.2)">—</td>';
+        return a?'<td style="text-align:center;border-left:1px solid rgba(255,255,255,.2)"><span class="st-pill-amt" style="font-size:38px;font-variant-numeric:tabular-nums">'+fmtAmtEx(a)+'</span></td>':'<td style="text-align:center;opacity:.6;border-left:1px solid rgba(255,255,255,.2);font-size:32px">—</td>';
       }).join("")+
     '</tr>';
 
