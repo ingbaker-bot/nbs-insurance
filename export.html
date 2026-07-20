@@ -87,20 +87,21 @@
     .ex-modal-btn{flex:1;padding:14px;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;border:none;font-family:inherit}
     .ex-modal-btn.cancel{background:#eef1f6;color:var(--text-muted)}
     .ex-modal-btn.save{background:var(--primary);color:#fff;box-shadow:0 6px 14px -4px rgba(99,102,241,.5)}
-    /* 列印：只印預覽區塊本身，其餘畫面元件（按鈕、頁首等）都隱藏；
-       取消預覽用的縮放 transform，讓瀏覽器的列印功能自己抓合適的縮放比例 */
+    /* 列印：只印預覽區塊本身，其餘畫面元件（按鈕、頁首等）都隱藏。
+       實際縮放交給 doPrintPreview() 用 JS 精準計算並同步調整容器尺寸，
+       這裡不再用 transform:none（那樣只是視覺縮放，瀏覽器分頁還是會
+       照縮放前的 2400px 寬度計算，導致切成一堆頁、內容超出紙張）。 */
     @media print {
+      @page { size: A4 landscape; margin: 8mm; }
       body.printing-preview > *:not(#P_PREV) { display:none !important; }
-      body.printing-preview #P_PREV *:not(#PV_BLOCKS):not(#PV_BLOCKS *) { visibility:hidden !important; }
+      body.printing-preview #P_PREV *:not(#PV_BLOCKS):not(#PV_BLOCKS *):not(#PV_SCALE_OUTER) { visibility:hidden !important; }
       body.printing-preview #PV_BLOCKS, body.printing-preview #PV_BLOCKS * { visibility:visible !important; }
-      body.printing-preview #PV_BLOCKS {
-        position:absolute; left:0; top:0;
-        transform:none !important;
-        width:100% !important;
-      }
       body.printing-preview #PV_SCALE_OUTER {
-        width:auto !important; height:auto !important; overflow:visible !important;
+        visibility:visible !important;
+        overflow:visible !important;
+        margin:0 !important;
       }
+      body.printing-preview #PV_BLOCKS { position:static !important; }
     }
   </style>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -258,12 +259,35 @@ document.getElementById("B_EXPORT").onclick  = doExport;
 
 // 直接列印目前預覽畫面看到的內容，不用等 PDF/圖片產生完成。
 function doPrintPreview(){
+  var inner = document.getElementById("PV_BLOCKS");
+  var outer = document.getElementById("PV_SCALE_OUTER");
+  var prevTransform, prevWidth, prevHeight;
+
+  if (inner && outer) {
+    // 報告設計寬度是 2400px（給截圖用的超寬版面），單純取消縮放
+    // (transform:none) 只是「看起來」變大，瀏覽器分頁還是照 2400px
+    // 的寬度去算，才會切成一堆頁面、內容還超出紙張範圍。
+    // 這裡改成：精準縮小到適合橫向 A4 的寬度，而且外層容器的實際
+    // 尺寸也要一起縮小（不只是視覺上用 transform 縮小），瀏覽器分頁
+    // 才會照縮小後的實際尺寸計算，不會再切成一堆頁、也不會超出邊界。
+    var printScale = 1000 / 2400; // 橫向 A4 扣掉邊界後大約可用寬度
+    prevTransform = inner.style.transform;
+    prevWidth  = outer.style.width;
+    prevHeight = outer.style.height;
+    inner.style.transform = "scale(" + printScale + ")";
+    outer.style.width  = Math.round(2400 * printScale) + "px";
+    outer.style.height = Math.round(inner.scrollHeight * printScale) + "px";
+  }
+
   document.body.classList.add("printing-preview");
   window.print();
+
   // afterprint 在部分瀏覽器（尤其手機）不一定會確實觸發，
   // 保底用 setTimeout 一定會把樣式復原，避免列印完畫面卡住。
   var restore = function(){
     document.body.classList.remove("printing-preview");
+    if (inner) inner.style.transform = prevTransform || "";
+    if (outer) { outer.style.width = prevWidth || ""; outer.style.height = prevHeight || ""; }
     window.removeEventListener("afterprint", restore);
   };
   window.addEventListener("afterprint", restore);
