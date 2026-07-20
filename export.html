@@ -1733,12 +1733,12 @@ function buildStatGroupCard(g, policies, cov3) {
     '<div style="padding:18px 20px;background:'+pearlGradientEx(g.color)+'">'+
       '<div style="display:flex;align-items:center;gap:12px;min-width:0">'+
         // 放大前方的圖示 (icon)
-        '<span style="font-size:36px;line-height:1;flex-shrink:0">'+(g.icon||'')+'</span>'+
+        '<span style="font-size:65px;line-height:1;flex-shrink:0">'+(g.icon||'')+'</span>'+
         // 放大分類標題 (如：住院醫療)，改為白字搭配珍珠光澤底色
-        '<span style="font-size:26px;font-weight:800;letter-spacing:.01em;color:#fff;line-height:1.3;text-shadow:0 1px 2px rgba(0,0,0,.15)">'+g.label+'</span>'+
+        '<span style="font-size:47px;font-weight:800;letter-spacing:.01em;color:#fff;line-height:1.3;text-shadow:0 1px 2px rgba(0,0,0,.15)">'+g.label+'</span>'+
       '</div>'+
       // 放大終身/定期標籤
-      (termBadge ? '<div style="margin-top:8px"><span style="font-size:20px;font-weight:800;padding:4px 12px;border-radius:99px;background:rgba(255,255,255,.92);color:'+g.color+';white-space:nowrap">'+termBadge+'</span></div>' : '')+
+      (termBadge ? '<div style="margin-top:8px"><span style="font-size:36px;font-weight:800;padding:4px 12px;border-radius:99px;background:rgba(255,255,255,.92);color:'+g.color+';white-space:nowrap">'+termBadge+'</span></div>' : '')+
     '</div>'+
     rowsHtml +
   '</div>';
@@ -1748,20 +1748,20 @@ function statRowHtml(x, color) {
   var valueHtml;
   if (!isFilled) {
     // 缺口標籤放大
-    valueHtml = '<span style="font-size:22px;font-weight:800;color:#6b7280;background:#eef0f3;padding:4px 12px;border-radius:99px;white-space:nowrap">缺口</span>';
+    valueHtml = '<span style="font-size:40px;font-weight:800;color:#6b7280;background:#eef0f3;padding:4px 12px;border-radius:99px;white-space:nowrap">缺口</span>';
   } else if (x.isRange) {
     // 範圍型數字與單位放大
-    valueHtml = '<span style="font-size:28px;font-weight:800;color:'+color+';font-variant-numeric:tabular-nums">'+
+    valueHtml = '<span style="font-size:50px;font-weight:800;color:'+color+';font-variant-numeric:tabular-nums">'+
       x.minVal.toLocaleString()+'<span style="color:#9ca3af;margin:0 2px;font-weight:400">～</span>'+x.maxVal.toLocaleString()+
-      '<span style="font-size:20px;color:#6b7280;font-weight:700;margin-left:4px">'+x.unit+'</span></span>';
+      '<span style="font-size:36px;color:#6b7280;font-weight:700;margin-left:4px">'+x.unit+'</span></span>';
   } else {
     // 單一數字與單位放大
-    valueHtml = '<span style="font-size:30px;font-weight:800;color:'+color+';font-variant-numeric:tabular-nums">'+x.total.toLocaleString()+
-      '<span style="font-size:20px;color:#6b7280;font-weight:700;margin-left:4px">'+x.unit+'</span></span>';
+    valueHtml = '<span style="font-size:54px;font-weight:800;color:'+color+';font-variant-numeric:tabular-nums">'+x.total.toLocaleString()+
+      '<span style="font-size:36px;color:#6b7280;font-weight:700;margin-left:4px">'+x.unit+'</span></span>';
   }
   return '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px 8px;padding:'+(isFilled?'14px':'12px')+' 16px;border-top:1px solid #f2f2f4">'+
     // 左側保障項目名稱放大
-    '<span style="font-size:24px;color:'+(isFilled?"#555":"#aaacb3")+';font-weight:700">'+x.label+(isFilled?x.remainNote:"")+'</span>'+
+    '<span style="font-size:43px;color:'+(isFilled?"#555":"#aaacb3")+';font-weight:700">'+x.label+(isFilled?x.remainNote:"")+'</span>'+
     valueHtml+
   '</div>';
 }
@@ -1843,24 +1843,24 @@ function buildFamilyPremiumSummaryHtml(){
   });
 
   var html = '<div style="padding:14px 12px">';
-  html += '<div style="font-size:30px;font-weight:800;color:#444;margin-bottom:10px">全家保費總表</div>';
+  html += '<div style="font-size:54px;font-weight:800;color:#444;margin-bottom:10px">全家保費總表</div>';
 
   // 全家合計兩張卡片
   html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px">'+
     '<div style="padding:10px;border-radius:10px;background:linear-gradient(135deg,#E6F1FB,#F0F7FF);text-align:center;box-shadow:0 4px 10px -3px rgba(12,68,124,.18)">'+
-      '<div style="font-size:24px;font-weight:700;color:#5B8DBE">全家年繳總保費</div>'+
-      '<div style="font-size:36px;font-weight:800;margin-top:2px;color:#0C447C;font-variant-numeric:tabular-nums">'+familyTotal.toLocaleString()+'<span style="font-size:22px;font-weight:700;margin-left:1px">元</span></div>'+
+      '<div style="font-size:43px;font-weight:700;color:#5B8DBE">全家年繳總保費</div>'+
+      '<div style="font-size:65px;font-weight:800;margin-top:2px;color:#0C447C;font-variant-numeric:tabular-nums">'+familyTotal.toLocaleString()+'<span style="font-size:40px;font-weight:700;margin-left:1px">元</span></div>'+
     '</div>'+
     '<div style="padding:10px;border-radius:10px;background:linear-gradient(135deg,#EAF3DE,#F3F9EC);text-align:center;box-shadow:0 4px 10px -3px rgba(39,80,10,.18)">'+
-      '<div style="font-size:24px;font-weight:700;color:#6B9450">全家月均保費</div>'+
-      '<div style="font-size:36px;font-weight:800;margin-top:2px;color:#27500A;font-variant-numeric:tabular-nums">'+Math.round(familyTotal/12).toLocaleString()+'<span style="font-size:22px;font-weight:700;margin-left:1px">元</span></div>'+
+      '<div style="font-size:43px;font-weight:700;color:#6B9450">全家月均保費</div>'+
+      '<div style="font-size:65px;font-weight:800;margin-top:2px;color:#27500A;font-variant-numeric:tabular-nums">'+Math.round(familyTotal/12).toLocaleString()+'<span style="font-size:40px;font-weight:700;margin-left:1px">元</span></div>'+
     '</div>'+
   '</div>';
 
   // 月份 × 成員 明細表（跟原始保單健檢報告的「每月保費一覽表」同款：
   // 每個成員各一欄，最後加一欄合計）
-  var thStyleFP = 'padding:10px;text-align:right;font-size:20px;font-weight:800;color:#6b7280;white-space:nowrap;background:#f7f8fa;';
-  var tdStyleFP = 'padding:10px;text-align:right;font-size:22px;font-variant-numeric:tabular-nums;background:#fff;';
+  var thStyleFP = 'padding:10px;text-align:right;font-size:36px;font-weight:800;color:#6b7280;white-space:nowrap;background:#f7f8fa;';
+  var tdStyleFP = 'padding:10px;text-align:right;font-size:40px;font-variant-numeric:tabular-nums;background:#fff;';
   var nCols = perMember.length + 2; // 月份欄 + 各成員 + 合計
   var colTemplate = '110px ' + perMember.map(function(){return '1fr';}).join(' ') + ' 1fr';
 
@@ -1893,17 +1893,17 @@ function buildPremiumDetailParts() {
   var headerHtml='<div style="padding:14px 12px">';
 
   // 縮小標題字體與底部留白
-  headerHtml+='<div style="font-size:26px;font-weight:800;color:#444;margin-bottom:8px">年繳保費與月繳費分配</div>';
+  headerHtml+='<div style="font-size:47px;font-weight:800;color:#444;margin-bottom:8px">年繳保費與月繳費分配</div>';
   var nowM=new Date().getMonth();
   var statCells = [
     // 將 padding 縮小為 8px，字體 38px 縮為 30px
     '<div style="padding:8px;border-radius:10px;background:linear-gradient(135deg,#E6F1FB,#F0F7FF);text-align:center;box-shadow:0 4px 10px -3px rgba(12,68,124,.18)">'+
-      '<div style="font-size:22px;font-weight:700;color:#5B8DBE">年繳總保費</div>'+
-      '<div style="font-size:30px;font-weight:800;margin-top:2px;color:#0C447C;font-variant-numeric:tabular-nums">'+totalTWD_pd.toLocaleString()+'<span style="font-size:20px;font-weight:700;margin-left:1px">元</span></div>'+
+      '<div style="font-size:40px;font-weight:700;color:#5B8DBE">年繳總保費</div>'+
+      '<div style="font-size:54px;font-weight:800;margin-top:2px;color:#0C447C;font-variant-numeric:tabular-nums">'+totalTWD_pd.toLocaleString()+'<span style="font-size:36px;font-weight:700;margin-left:1px">元</span></div>'+
     '</div>',
     '<div style="padding:8px;border-radius:10px;background:linear-gradient(135deg,#EAF3DE,#F3F9EC);text-align:center;box-shadow:0 4px 10px -3px rgba(39,80,10,.18)">'+
-      '<div style="font-size:22px;font-weight:700;color:#6B9450">月均保費</div>'+
-      '<div style="font-size:30px;font-weight:800;margin-top:2px;color:#27500A;font-variant-numeric:tabular-nums">'+Math.round(totalTWD_pd/12).toLocaleString()+'<span style="font-size:20px;font-weight:700;margin-left:1px">元</span></div>'+
+      '<div style="font-size:40px;font-weight:700;color:#6B9450">月均保費</div>'+
+      '<div style="font-size:54px;font-weight:800;margin-top:2px;color:#27500A;font-variant-numeric:tabular-nums">'+Math.round(totalTWD_pd/12).toLocaleString()+'<span style="font-size:36px;font-weight:700;margin-left:1px">元</span></div>'+
     '</div>',
   ];
   // 建立「保單群組 → 主約生效日」對照表：附約如果自己的生效日欄位是空的，
@@ -1928,14 +1928,14 @@ function buildPremiumDetailParts() {
     var isNow = mi===nowM;
     // 移除當月特殊上色，12 個月一律用同一套樣式
     return'<div style="padding:8px 4px;background:#f7f8fa;border-radius:10px;text-align:center;">'+
-      '<div style="font-size:24px;font-weight:800;color:#6b7280">'+(mi+1)+'月</div>'+
-      '<div style="font-size:26px;font-weight:800;margin-top:2px;color:'+(t>0?"#1a1a1a":"#9ca3af")+';font-variant-numeric:tabular-nums">'+(t>0?t.toLocaleString()+'<span style="font-size:18px;font-weight:700">元</span>':"—")+'</div>'+
+      '<div style="font-size:43px;font-weight:800;color:#6b7280">'+(mi+1)+'月</div>'+
+      '<div style="font-size:47px;font-weight:800;margin-top:2px;color:'+(t>0?"#1a1a1a":"#9ca3af")+';font-variant-numeric:tabular-nums">'+(t>0?t.toLocaleString()+'<span style="font-size:32px;font-weight:700">元</span>':"—")+'</div>'+
     '</div>';
   });
   var cellsPD = [statCells[0]].concat(monthCells.slice(0,6))
     .concat([statCells[1]]).concat(monthCells.slice(6,12)).join("");
   headerHtml+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:16px">'+cellsPD+'</div>';
-  headerHtml+='<div style="font-size:30px;font-weight:800;color:#444;margin-bottom:10px">保單與受益人整合表</div>';
+  headerHtml+='<div style="font-size:54px;font-weight:800;color:#444;margin-bottom:10px">保單與受益人整合表</div>';
   headerHtml+='</div>';
 
   var BENEF_RULES_PD = {
@@ -1959,8 +1959,8 @@ function buildPremiumDetailParts() {
     pdGroupMap[k].rows.push(p);
   });
 
-  var thStylePD = 'padding:10px;text-align:left;font-size:22px;font-weight:800;color:#6b7280;white-space:nowrap;background:#f7f8fa;';
-  var tdStylePD = 'padding:10px;vertical-align:middle;font-size:26px;background:#fff;';
+  var thStylePD = 'padding:10px;text-align:left;font-size:40px;font-weight:800;color:#6b7280;white-space:nowrap;background:#f7f8fa;';
+  var tdStylePD = 'padding:10px;vertical-align:middle;font-size:47px;background:#fff;';
   // 10 欄固定寬度，header 跟每一列都用同一份，確保不管各自截圖幾張，
   // 欄位永遠對得整齊
   // 限制商品名最大寬度為400px，並加寬狀態(130px)與受益人(240px)
@@ -1991,8 +1991,8 @@ function buildPremiumDetailParts() {
     var startRocText = toRocDateStr(mainPol.startDate);
     var insAgeAtStart = getAgeAtDate(person.profile && person.profile.birthDate, mainPol.startDate);
     var startInfoHtml = startRocText
-      ? '<span style="font-size:24px;color:#6b7280;font-weight:600;white-space:nowrap">生效日 '+startRocText+(insAgeAtStart!==null?'　投保年齡 '+insAgeAtStart+'歲':'')+'</span>'
-      : (insAgeAtStart!==null ? '<span style="font-size:24px;color:#6b7280;font-weight:600;white-space:nowrap">投保年齡 '+insAgeAtStart+'歲</span>' : '');
+      ? '<span style="font-size:43px;color:#6b7280;font-weight:600;white-space:nowrap">生效日 '+startRocText+(insAgeAtStart!==null?'　投保年齡 '+insAgeAtStart+'歲':'')+'</span>'
+      : (insAgeAtStart!==null ? '<span style="font-size:43px;color:#6b7280;font-weight:600;white-space:nowrap">投保年齡 '+insAgeAtStart+'歲</span>' : '');
 
     // 要保人（owner）如果跟被保險人（這份報表本人）不同人，特別標示出來，
     // 因為保單帳戶價值／解約權利是屬於要保人，不是被保險人。
@@ -2001,18 +2001,18 @@ function buildPremiumDetailParts() {
     var ownerBadgeHtml = "";
     if (ownerNamePD && ownerNamePD !== insuredNamePD) {
       var ownerColorPD = personBadgeColor(ownerNamePD);
-      ownerBadgeHtml = '<span title="要保人" style="font-size:22px;font-weight:700;padding:3px 12px;border-radius:99px;background:#fff;color:'+ownerColorPD+';border:2px solid '+ownerColorPD+';white-space:nowrap">要保人 '+ownerNamePD+'</span>';
+      ownerBadgeHtml = '<span title="要保人" style="font-size:40px;font-weight:700;padding:3px 12px;border-radius:99px;background:#fff;color:'+ownerColorPD+';border:2px solid '+ownerColorPD+';white-space:nowrap">要保人 '+ownerNamePD+'</span>';
     }
 
     var cardHeaderHtml =
       '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;padding:12px 16px;background:linear-gradient(135deg,#EEF4FF,#F7F5FF)">'+
         '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+
-          '<span style="font-family:monospace;font-size:24px;font-weight:700;color:#3B82F6;background:#fff;padding:3px 9px;border-radius:99px">'+grp.key+'</span>'+
-          '<span style="font-size:30px;font-weight:800;color:#374151">'+(mainPol.company||'未知')+'</span>'+
+          '<span style="font-family:monospace;font-size:43px;font-weight:700;color:#3B82F6;background:#fff;padding:3px 9px;border-radius:99px">'+grp.key+'</span>'+
+          '<span style="font-size:54px;font-weight:800;color:#374151">'+(mainPol.company||'未知')+'</span>'+
           ownerBadgeHtml+
           startInfoHtml+
         '</div>'+
-        '<span style="font-size:26px;font-weight:700;color:#6b7280">年繳 NT$'+groupTotalPrem.toLocaleString()+'</span>'+
+        '<span style="font-size:47px;font-weight:700;color:#6b7280">年繳 NT$'+groupTotalPrem.toLocaleString()+'</span>'+
       '</div>';
 
     var rowsHtml = ordered.map(function(p){
@@ -2024,7 +2024,7 @@ function buildPremiumDetailParts() {
 
       var isFxPD = p.currency && p.currency !== "TWD";
       var premDisplayPD = isFxPD
-        ? 'NT$'+(p.premiumTWD||0).toLocaleString()+' <span style="font-size:20px;color:#9CA3AF;font-weight:400">(USD '+(p.premiumOrig||0).toLocaleString()+')</span>'
+        ? 'NT$'+(p.premiumTWD||0).toLocaleString()+' <span style="font-size:36px;color:#9CA3AF;font-weight:400">(USD '+(p.premiumOrig||0).toLocaleString()+')</span>'
         : 'NT$'+(p.premiumTWD||0).toLocaleString();
 
       var dStr = "";
@@ -2050,7 +2050,7 @@ function buildPremiumDetailParts() {
       if(rule.live === "不適用" || p.category === "壽險保障") {
         liveDisplay = '<span style="color:#9ca3af">不適用</span>';
       } else if(rule.live === "鎖定本人" || p.category === "年金險" || p.category === "投資型保險") {
-        liveDisplay = '<span style="font-size:22px;background:#f0f0f0;color:#888;padding:2px 6px;border-radius:6px">本人 🔒</span>';
+        liveDisplay = '<span style="font-size:40px;background:#f0f0f0;color:#888;padding:2px 6px;border-radius:6px">本人 🔒</span>';
       } else {
         var partsPD = [];
         if(lStr) partsPD.push('<div>生存金：'+lStr+'</div>');
@@ -2076,16 +2076,16 @@ function buildPremiumDetailParts() {
       var expiryText = getPolicyExpiryDisplay(p);
 
       return '<div style="display:grid;grid-template-columns:'+COLS_PD+';border-bottom:1px solid #f2f2f4">'+
-        '<div style="'+tdStylePD+'">'+(isMR?'<span style="font-size:20px;color:#fff;background:#378ADD;padding:2px 7px;border-radius:99px;font-weight:700">主</span>':'<span style="font-size:20px;color:#888;background:#ebebeb;padding:2px 7px;border-radius:99px;font-weight:700">附</span>')+'</div>'+
-        '<div style="'+tdStylePD+'"><span style="font-size:20px;padding:2px 7px;border-radius:99px;background:'+cc+'1A;color:'+cc+';font-weight:700;white-space:nowrap">'+(p.category||'—')+'</span></div>'+
+        '<div style="'+tdStylePD+'">'+(isMR?'<span style="font-size:36px;color:#fff;background:#378ADD;padding:2px 7px;border-radius:99px;font-weight:700">主</span>':'<span style="font-size:36px;color:#888;background:#ebebeb;padding:2px 7px;border-radius:99px;font-weight:700">附</span>')+'</div>'+
+        '<div style="'+tdStylePD+'"><span style="font-size:36px;padding:2px 7px;border-radius:99px;background:'+cc+'1A;color:'+cc+';font-weight:700;white-space:nowrap">'+(p.category||'—')+'</span></div>'+
         '<div style="'+tdStylePD+'font-weight:700;color:#1f2937">'+(p.itemName||'—')+'</div>'+
         '<div style="'+tdStylePD+'text-align:right;font-weight:800;color:#0C447C;font-variant-numeric:tabular-nums;white-space:nowrap">'+amtText+'</div>'+
         '<div style="'+tdStylePD+'text-align:right;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums">'+premDisplayPD+'</div>'+
-        '<div style="'+tdStylePD+'"><span style="font-size:20px;padding:2px 7px;border-radius:99px;background:'+(isPolicyActiveEx(p)?"#EAF3DE":"#f0f0f0")+';color:'+(isPolicyActiveEx(p)?"#27500A":"#888")+'">'+(p.status||"有效")+'</span></div>'+
-        '<div style="'+tdStylePD+'font-size:24px;color:'+(expiryText==="終身"?"#374151":expiryText==="—"?"#9ca3af":"#B07000")+';font-weight:700;white-space:nowrap">'+expiryText+'</div>'+
+        '<div style="'+tdStylePD+'"><span style="font-size:36px;padding:2px 7px;border-radius:99px;background:'+(isPolicyActiveEx(p)?"#EAF3DE":"#f0f0f0")+';color:'+(isPolicyActiveEx(p)?"#27500A":"#888")+'">'+(p.status||"有效")+'</span></div>'+
+        '<div style="'+tdStylePD+'font-size:43px;color:'+(expiryText==="終身"?"#374151":expiryText==="—"?"#9ca3af":"#B07000")+';font-weight:700;white-space:nowrap">'+expiryText+'</div>'+
         '<div style="'+tdStylePD+'text-align:right;font-weight:800;color:#B0466F;font-variant-numeric:tabular-nums;white-space:nowrap">'+dbText+'</div>'+
-        '<div style="'+tdStylePD+'color:'+dColor+';line-height:1.4;font-size:24px">'+dStr+'</div>'+
-        '<div style="'+tdStylePD+'line-height:1.4;font-size:24px">'+liveDisplay+'</div>'+
+        '<div style="'+tdStylePD+'color:'+dColor+';line-height:1.4;font-size:43px">'+dStr+'</div>'+
+        '<div style="'+tdStylePD+'line-height:1.4;font-size:43px">'+liveDisplay+'</div>'+
       '</div>';
     });
 
@@ -2137,7 +2137,7 @@ function buildSvgArrows(phases) {
   var weights=[1,1.4,1], totalW=3.4;
   var widths=weights.map(function(w){return w/totalW*W;});
   // 加上 height="85px" 與 preserveAspectRatio="none"，強制鎖死高度以對齊右側
-  var svg='<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="85px" preserveAspectRatio="none" viewBox="0 0 '+W+' '+H+'" style="display:block;margin-bottom:20px">';
+  var svg='<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="153px" preserveAspectRatio="none" viewBox="0 0 '+W+' '+H+'" style="display:block;margin-bottom:20px">';
   var x=0;
   phases.forEach(function(ph,i){
     var w=widths[i], x0=x, x1=x+w, pts;
@@ -2150,7 +2150,8 @@ function buildSvgArrows(phases) {
     }
     svg+='<polygon points="'+pts+'" fill="'+ph.color+'"/>';
     var tx=i===0?x0+(w-tip)/2:i===2?x0+tip+(w-tip)/2:x0+tip+(w-tip*2)/2;
-    // 箭頭內文字放大為 28px
+    // 箭頭內文字放大：viewBox 座標系統不變，改用調整實際渲染高度的方式
+    // 讓文字視覺變大（強制 height 從 85px 提高到 153px，約 1.8 倍）
     svg+='<text x="'+tx+'" y="'+(H/2+8)+'" text-anchor="middle" fill="#fff" font-size="28" font-weight="700" font-family="-apple-system,BlinkMacSystemFont,sans-serif">'+ph.label+'</text>';
     x+=w;
   });
@@ -2354,44 +2355,44 @@ function buildGapAnalysisEx(active, coverage, targets, covOverrides) {
   var html = "";
 
   if (boolPartials.length) {
-    html += `<div style="font-size:17px;font-weight:500;color:#B7791F;margin-bottom:8px">⚠ 部分規劃（保單已存在，但資料尚未填寫完整）</div>`;
+    html += `<div style="font-size:31px;font-weight:500;color:#B7791F;margin-bottom:8px">⚠ 部分規劃（保單已存在，但資料尚未填寫完整）</div>`;
     html += `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">`;
     boolPartials.forEach(({item}) => {
-      html += `<span style="padding:3px 10px;background:#FAEEDA;border:1px solid #EF9F27;border-radius:99px;font-size:14px;color:#633806">${item.label}</span>`;
+      html += `<span style="padding:3px 10px;background:#FAEEDA;border:1px solid #EF9F27;border-radius:99px;font-size:25px;color:#633806">${item.label}</span>`;
     });
     html += `</div>`;
   }
 
   if(insufficients.length) {
-    html += `<div style="font-size:17px;font-weight:500;color:#F5A623;margin-bottom:8px">⚠ 規劃不足</div>`;
+    html += `<div style="font-size:31px;font-weight:500;color:#F5A623;margin-bottom:8px">⚠ 規劃不足</div>`;
     insufficients.forEach(({item,current,target,pct}) => {
       html += `<div style="margin-bottom:10px">
         <div style="display:flex;justify-content:space-between;margin-bottom:3px">
-          <span style="font-size:16px;color:#555">${item.label}</span>
+          <span style="font-size:29px;color:#555">${item.label}</span>
           <div style="display:flex;gap:6px;align-items:center">
-            <span style="font-size:17px;color:#555;font-weight:500">${current.toLocaleString()}${item.unit}</span>
-            <span style="font-size:14px;color:#aaa">/ 目標 ${target?.toLocaleString()}${item.unit}</span>
+            <span style="font-size:31px;color:#555;font-weight:500">${current.toLocaleString()}${item.unit}</span>
+            <span style="font-size:25px;color:#aaa">/ 目標 ${target?.toLocaleString()}${item.unit}</span>
           </div>
         </div>
         <div style="height:7px;background:#f0f0f0;border-radius:99px;overflow:hidden">
           <div style="height:100%;width:${Math.round(pct*100)}%;background:${item.color};border-radius:99px"></div>
         </div>
-        <div style="font-size:14px;color:#E74C3C;margin-top:3px">尚不足 ${(target-current).toLocaleString()}${item.unit}（${Math.round(pct*100)}% 達成）</div>
+        <div style="font-size:25px;color:#E74C3C;margin-top:3px">尚不足 ${(target-current).toLocaleString()}${item.unit}（${Math.round(pct*100)}% 達成）</div>
       </div>`;
     });
   }
 
   if(gaps.length) {
-    html += `<div style="font-size:17px;font-weight:500;color:#E74C3C;margin-bottom:8px;margin-top:${insufficients.length?12:0}px">❌ 尚未規劃</div>`;
+    html += `<div style="font-size:31px;font-weight:500;color:#E74C3C;margin-bottom:8px;margin-top:${insufficients.length?12:0}px">❌ 尚未規劃</div>`;
     html += `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">`;
     gaps.forEach(({item}) => {
-      html += `<span style="padding:3px 10px;background:#FCEBEB;border:1px solid #F0A8BF;border-radius:99px;font-size:14px;color:#791F1F">${item.label}</span>`;
+      html += `<span style="padding:3px 10px;background:#FCEBEB;border:1px solid #F0A8BF;border-radius:99px;font-size:25px;color:#791F1F">${item.label}</span>`;
     });
-    html += `</div><div style="font-size:14px;color:#aaa">💡 可與保戶討論是否有需要規劃</div>`;
+    html += `</div><div style="font-size:25px;color:#aaa">💡 可與保戶討論是否有需要規劃</div>`;
   }
 
   if(!insufficients.length && !gaps.length && !boolPartials.length) {
-    html += `<div style="font-size:17px;color:#27AE8F;text-align:center;padding:12px 0">🎉 所有已設目標項目均達標！</div>`;
+    html += `<div style="font-size:31px;color:#27AE8F;text-align:center;padding:12px 0">🎉 所有已設目標項目均達標！</div>`;
   }
 
   return html;
@@ -2636,8 +2637,8 @@ function renderBlock(key){
     // 區塊 1-A：保障覆蓋率(圓餅圖)
     html+='<div style="background:#fff;border-radius:24px;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);padding:24px;display:flex;flex-direction:column">';
     html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">';
-    html+='<div style="font-size:36px;font-weight:800;color:#444;">保障覆蓋率</div>';
-    html+='<div style="display:flex;gap:24px;font-size:28px;color:#888;font-weight:700">'+
+    html+='<div style="font-size:65px;font-weight:800;color:#444;">保障覆蓋率</div>';
+    html+='<div style="display:flex;gap:24px;font-size:50px;color:#888;font-weight:700">'+
       '<span><span style="display:inline-block;width:22px;height:22px;border-radius:5px;background:radial-gradient(ellipse at 30% 20%,#7dd3fc 0%,#0ea5e9 55%,#0369a1 100%);margin-right:8px;vertical-align:middle"></span>已規劃</span>'+
       '<span style="color:#b45309"><span style="display:inline-block;width:22px;height:22px;border-radius:5px;background:radial-gradient(ellipse at 30% 20%,#fcd34d 0%,#f59e0b 55%,#b45309 100%);opacity:.7;margin-right:8px;border:2px dashed #f59e0b;vertical-align:middle"></span>部分有</span>'+
       '<span style="color:#94a3b8"><span style="display:inline-block;width:22px;height:22px;border-radius:5px;background:#E2E8F0;margin-right:8px;vertical-align:middle"></span>缺口</span>'+
@@ -2648,7 +2649,7 @@ function renderBlock(key){
 
     // 區塊 1-B：就醫情況
     html+='<div style="background:#fff;border-radius:24px;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);padding:24px;display:flex;flex-direction:column">';
-    html+='<div style="font-size:36px;font-weight:800;color:#444;margin-bottom:16px">就醫情況</div>';
+    html+='<div style="font-size:65px;font-weight:800;color:#444;margin-bottom:16px">就醫情況</div>';
     var baseHosp=sumCovEx(["hosp_room","hosp_ext_room","daily_room_1_30","hosp_ext_daily","daily_discharge"],policies,cov);
     var visitCats = [
       { label:"疾病", color:"#0369a1", bg:"#e0f2fe" },
@@ -2670,26 +2671,26 @@ function renderBlock(key){
 
       html+='<div style="background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 3px 10px -3px rgba(0,0,0,.12);display:flex;flex-direction:column;border-left:6px solid '+vc.color+'">';
       html+='<div style="padding:14px;background:linear-gradient(135deg,'+vc.color+'26,'+vc.color+'0A);text-align:center">'+
-          '<span style="font-size:46px;font-weight:800;color:'+vc.color+'">'+vc.label+'</span>'+
+          '<span style="font-size:83px;font-weight:800;color:'+vc.color+'">'+vc.label+'</span>'+
         '</div>';
       
       html+='<div style="padding:16px 24px;display:flex;justify-content:space-between;align-items:center;border-bottom:2px dashed #f2f2f4;flex:1">';
-      html+='<div style="font-size:26px;color:#6b7280;font-weight:700">門診</div>';
+      html+='<div style="font-size:47px;color:#6b7280;font-weight:700">門診</div>';
       if(opdIsInsurance) {
-        html+='<div style="padding:6px 20px;border-radius:12px;background:#EAF3DE"><span style="font-size:28px;font-weight:800;color:#27500A">健保</span></div>';
+        html+='<div style="padding:6px 20px;border-radius:12px;background:#EAF3DE"><span style="font-size:50px;font-weight:800;color:#27500A">健保</span></div>';
       } else {
-        html+='<div style="font-size:36px;font-weight:800;color:'+(opdVal!=="—"?"#1a1a1a":"#9ca3af")+';font-variant-numeric:tabular-nums">'+(typeof opdVal==="number"?opdVal.toLocaleString():opdVal)+(opdVal!=="—"?'<span style="font-size:20px;color:#6b7280;font-weight:700;margin-left:6px">'+opdUnit+'</span>':'')+'</div>';
+        html+='<div style="font-size:65px;font-weight:800;color:'+(opdVal!=="—"?"#1a1a1a":"#9ca3af")+';font-variant-numeric:tabular-nums">'+(typeof opdVal==="number"?opdVal.toLocaleString():opdVal)+(opdVal!=="—"?'<span style="font-size:36px;color:#6b7280;font-weight:700;margin-left:6px">'+opdUnit+'</span>':'')+'</div>';
       }
       html+='</div>';
 
       html+='<div style="padding:16px 24px;display:flex;justify-content:space-between;align-items:center;flex:1">';
-      html+='<div style="font-size:26px;color:#6b7280;font-weight:700">住院</div>';
-      html+='<div style="font-size:36px;font-weight:800;color:'+(hospVal!=="—"?"#1a1a1a":"#9ca3af")+';font-variant-numeric:tabular-nums">'+(typeof hospVal==="number"?hospVal.toLocaleString():hospVal)+(hospVal!=="—"?'<span style="font-size:20px;color:#6b7280;font-weight:700;margin-left:6px">'+hospUnit+'</span>':'')+'</div>';
+      html+='<div style="font-size:47px;color:#6b7280;font-weight:700">住院</div>';
+      html+='<div style="font-size:65px;font-weight:800;color:'+(hospVal!=="—"?"#1a1a1a":"#9ca3af")+';font-variant-numeric:tabular-nums">'+(typeof hospVal==="number"?hospVal.toLocaleString():hospVal)+(hospVal!=="—"?'<span style="font-size:36px;color:#6b7280;font-weight:700;margin-left:6px">'+hospUnit+'</span>':'')+'</div>';
       html+='</div>';
       html+='</div>';
     });
     html+='</div>';
-    html+='<div style="font-size:20px;color:#b7bac2;padding:16px 6px 0;text-align:center;font-weight:600">💡 疾病住院＝實支病房＋日額病房＋日額出院療養  💡 意外住院＝疾病住院＋意外日額</div>';
+    html+='<div style="font-size:36px;color:#b7bac2;padding:16px 6px 0;text-align:center;font-weight:600">💡 疾病住院＝實支病房＋日額病房＋日額出院療養  💡 意外住院＝疾病住院＋意外日額</div>';
     html+='</div>'; 
     html+='</div>'; 
 
@@ -2713,7 +2714,7 @@ function renderBlock(key){
     // 區塊 2-B：家庭責任
     html+='<div style="background:#fff;border-radius:24px;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);padding:24px;display:flex;flex-direction:column">';
     // 高度強制鎖死為 85px，與左側 SVG 完全對齊
-    html+='<div style="height:85px;margin-bottom:20px;display:flex;align-items:center;justify-content:center;background:#312e81;border-radius:8px;color:#fff;font-size:46px;font-weight:700;flex-shrink:0;white-space:nowrap">家庭與傳承</div>';
+    html+='<div style="height:85px;margin-bottom:20px;display:flex;align-items:center;justify-content:center;background:#312e81;border-radius:8px;color:#fff;font-size:83px;font-weight:700;flex-shrink:0;white-space:nowrap">家庭與傳承</div>';
     html+='<div style="background:#fafbfc;padding:24px;border-radius:20px;border:1px solid rgba(0,0,0,.05);border-left:6px solid #312e81;flex:1">'+chartParts.legendFamily+'</div>';
     html+='</div>'; 
     
@@ -2732,7 +2733,7 @@ function renderBlock(key){
     });
     var html='<div style="padding:20px 16px">';
     // 放大「各項保障加總」主標題
-    html+='<div style="font-size:38px;font-weight:800;color:#444;margin-bottom:18px">各項保障加總</div>';
+    html+='<div style="font-size:68px;font-weight:800;color:#444;margin-bottom:18px">各項保障加總</div>';
     // 五欄，依指定分組（不是自動順排，是手動指定哪幾類放同一欄）
     var columnMap = [
       ["壽險/重大保障(終身/定期)", "意外險"],
