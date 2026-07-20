@@ -102,6 +102,12 @@
         margin:0 !important;
       }
       body.printing-preview #PV_BLOCKS { position:static !important; }
+      /* 儲蓄險現金流時間軸：年份跟金額數字太小看不清楚，列印時單獨放大
+         50%（18px→27px、20px→30px、18px→27px），其餘版面維持原本比例，
+         不會整頁一起放大導致又超出紙張範圍 */
+      body.printing-preview .st-year-num  { font-size:30px !important; }
+      body.printing-preview .st-year-roc  { font-size:27px !important; }
+      body.printing-preview .st-pill-amt  { font-size:27px !important; }
     }
   </style>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -270,7 +276,7 @@ function doPrintPreview(){
     // 這裡改成：精準縮小到適合橫向 A4 的寬度，而且外層容器的實際
     // 尺寸也要一起縮小（不只是視覺上用 transform 縮小），瀏覽器分頁
     // 才會照縮小後的實際尺寸計算，不會再切成一堆頁、也不會超出邊界。
-    var printScale = 1000 / 2400; // 橫向 A4 扣掉邊界後大約可用寬度
+    var printScale = 1040 / 2400; // 橫向 A4 扣掉邊界後大約可用寬度（留一點安全邊界）
     prevTransform = inner.style.transform;
     prevWidth  = outer.style.width;
     prevHeight = outer.style.height;
@@ -659,7 +665,7 @@ function renderSavingsTimeline(pdm3,fData,startYr,endYr){
   var yh=years.map(function(y3,yi){
     return '<th style="background:linear-gradient(180deg,#f7f8fa,#fff);padding:11px 7px;text-align:center;font-weight:800;color:#374151;border-bottom:2px solid #e2e5ea;'+(yi>0?'border-left:1px solid #eef0f3;':'')+'white-space:nowrap;position:relative">'+
       '<div style="width:8px;height:8px;border-radius:50%;background:#4338ca;margin:0 auto 5px"></div>'+
-      '<span style="font-size:20px">'+y3+'</span><br><span style="font-size:18px;color:#6b7280;font-weight:600">'+(y3-1911)+'年</span>'+
+      '<span class="st-year-num" style="font-size:20px">'+y3+'</span><br><span class="st-year-roc" style="font-size:18px;color:#6b7280;font-weight:600">'+(y3-1911)+'年</span>'+
     '</th>';
   }).join("");
 
@@ -689,8 +695,8 @@ function renderSavingsTimeline(pdm3,fData,startYr,endYr){
       var barBg=pearlGradientEx(savingsCatColor(pr.category));
       var cells=years.map(function(y4){
         var amt=pr.flows[y4]||0;
-        if(!amt)return'<td style="text-align:center;color:#9ca3af;font-size:17px;border-left:1px solid #f5f6f8">—</td>';
-        return'<td style="border-left:1px solid #f5f6f8;padding:5px 6px"><div style="height:35px;line-height:35px;border-radius:6px;background:'+barBg+';text-align:center;white-space:nowrap;padding:0 8px"><span style="font-size:18px;color:#fff;font-weight:800;font-variant-numeric:tabular-nums">'+fmtAmtEx(amt)+'</span></div></td>';
+        if(!amt)return'<td style="text-align:center;color:#9ca3af;font-size:17px;border-left:1px solid #f5f6f8"><span class="st-pill-amt">—</span></td>';
+        return'<td style="border-left:1px solid #f5f6f8;padding:5px 6px"><div style="height:35px;line-height:35px;border-radius:6px;background:'+barBg+';text-align:center;white-space:nowrap;padding:0 8px"><span class="st-pill-amt" style="font-size:18px;color:#fff;font-weight:800;font-variant-numeric:tabular-nums">'+fmtAmtEx(amt)+'</span></div></td>';
       }).join("");
       var fc='<td style="padding:10px 7px 10px 17px;border-right:2px solid #e2e5ea">'+
         '<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">'+
