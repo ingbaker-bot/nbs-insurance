@@ -419,7 +419,7 @@ function renderSettings() {
             <label>帳戶價值${isFx?`（原幣：${s.currency}）`:"（元）"}</label>
             <input type="number" id="accountValue-${p.id}" value="${s.accountValue}"
                    placeholder="${isFx?"請填原幣金額，如：10000":"如：2020000"}" oninput="updateSetting('${p.id}','accountValue',this.value);_refreshAccountValueHint('${p.id}')" />
-            ${isFx?`<div id="accountValueHint-${p.id}" style="font-size:12px;color:#9aa0ac;margin-top:3px">${s.accountValue?("≈ 台幣 "+fmtAmt((parseFloat(s.accountValue)||0)*(parseFloat(s.exchangeRate)||1))):""}</div>`:""}
+            ${isFx?`<div id="accountValueHint-${p.id}" style="font-size:12px;color:#4B5563;font-weight:600;margin-top:3px">${s.accountValue?("≈ 台幣 "+fmtAmt((parseFloat(s.accountValue)||0)*(parseFloat(s.exchangeRate)||1))):""}</div>`:""}
           </div>
           <div class="field">
             <label>登錄日期</label>
@@ -988,7 +988,7 @@ function renderTimeline() {
       // 獨立的「保單現金價值」欄，跟後面每年排定要領的錢分開放，
       // 不再擠在第一欄的商品名稱下面當附註文字。
       const cvCell = pr.accountValue
-        ? `<td style="text-align:center"><div style="font-size:16px;color:#185FA5;font-weight:700">${fmtAccountValue(pr.accountValue, pr.currency, pr.exchangeRate)}</div><div style="font-size:12px;color:#9aa0ac">${pr.accountValueDate||""}</div></td>`
+        ? `<td style="text-align:center"><div style="font-size:16px;color:#185FA5;font-weight:700">${fmtAccountValue(pr.accountValue, pr.currency, pr.exchangeRate)}</div><div style="font-size:12px;color:#4B5563;font-weight:600">${pr.accountValueDate||""}</div></td>`
         : `<td style="text-align:center"><span style="color:#c7c9d1;font-size:14px">—</span></td>`;
 
       return `<tr class="cf-policy-row">${firstCell}${cvCell}${cells}</tr>`;
@@ -1001,9 +1001,17 @@ function renderTimeline() {
         memberFlows[yr] = (memberFlows[yr] || 0) + amt;
       });
     });
+    // 保單現金價值小計：外幣保單先用自己的匯率換算成台幣，才能跟其他
+    // 保單加在一起，不然幣別不同直接加總數字會是錯的。
+    let cvSubtotal = 0;
+    g.policies.forEach(pr => {
+      if (!pr.accountValue) return;
+      const rate = (pr.currency && pr.currency !== "TWD" && parseFloat(pr.exchangeRate)) ? parseFloat(pr.exchangeRate) : 1;
+      cvSubtotal += (parseFloat(pr.accountValue) || 0) * rate;
+    });
     const subtotalRows = `<tr class="cf-subtotal-row">
       <td style="padding-left:18px">小計（台幣）</td>
-      <td></td>
+      <td style="text-align:center">${cvSubtotal > 0 ? fmtAmt(cvSubtotal) : `<span style="color:#999;font-size:14px">—</span>`}</td>
       ${trimYears.map(yr => {
         const amt = memberFlows[yr] || 0;
         if (!amt) return `<td><span style="color:#999;font-size:14px">—</span></td>`;
@@ -1014,10 +1022,18 @@ function renderTimeline() {
     return nameRow + policyRowsHtml + subtotalRows;
   }).join("");
 
+  // 保單現金價值總計：所有成員的小計再加總一次
+  let cvGrandTotal = 0;
+  groups.forEach(g => g.policies.forEach(pr => {
+    if (!pr.accountValue) return;
+    const rate = (pr.currency && pr.currency !== "TWD" && parseFloat(pr.exchangeRate)) ? parseFloat(pr.exchangeRate) : 1;
+    cvGrandTotal += (parseFloat(pr.accountValue) || 0) * rate;
+  }));
+
   // ── 合計列（統一台幣）──
   const totalRow = `<tr class="cf-total-row">
     <td>合計現金流（台幣）</td>
-    <td></td>
+    <td style="text-align:center">${cvGrandTotal > 0 ? fmtAmt(cvGrandTotal) : `<span style="color:#999;font-size:14px">—</span>`}</td>
     ${trimYears.map(yr => {
       const amt = totalFlows[yr] || 0;
       if (!amt) return `<td><span style="color:#999;font-size:14px">—</span></td>`;
@@ -1064,7 +1080,7 @@ function fmtAccountValue(rawValue, currency, exchangeRate) {
   const cur = currency || "TWD";
   if (cur === "TWD") return fmtAmt(amt);
   const rate = parseFloat(exchangeRate) || 1;
-  return fmtForeign(amt, cur) + `<span style="color:#9aa0ac;font-weight:500">（≈${fmtAmt(amt*rate)}台幣）</span>`;
+  return fmtForeign(amt, cur) + `<span style="color:#4B5563;font-weight:700">（≈${fmtAmt(amt*rate)}台幣）</span>`;
 }
 
 function escHtml(s) {
