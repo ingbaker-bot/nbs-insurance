@@ -736,6 +736,83 @@ function renderSavingsTimeline(pdm3,fData,startYr,endYr){
   return headerBandHtml + groupCards + totalHtml;
 }
 
+// ── 全家儲蓄規劃總表：每位成員一列（小計），不逐張保單列出 ─────
+// 跟「全家保費總表」是同一種定位——一眼看出每個人領多少、全家領多少，
+// 想看某個人的個別保單明細，去看「儲蓄險現金流時間軸」那個區塊
+// （切到那位成員），這裡只保留最精簡的總覽。
+function renderFamilySavingsSummary(pdm3, fData, startYr, endYr){
+  var years=[]; for(var y=startYr;y<=endYr;y++) years.push(y);
+
+  var memberRows=[], totalFlows={};
+  (fData.members||[]).filter(function(m){ return m.role!=="beneficiary_only"; }).forEach(function(m){
+    var p3=pdm3[m.personId]; if(!p3) return;
+    var sp=(p3.policies||[]).filter(function(p){ return ["儲蓄險","年金險","儲蓄年金","投資型保險"].indexOf(p.category)>=0; });
+    if(!sp.length) return;
+
+    var memberFlows={};
+    sp.forEach(function(p){
+      var s2=(p3.savings||[]).find(function(sv){ return sv.policyId===p.id; }) || {type:"1"};
+      var flows=calcPolicyFlowsEx(p, s2, m.personId, years, p3.profile && p3.profile.birthDate);
+      Object.keys(flows).forEach(function(y2){
+        memberFlows[y2]=(memberFlows[y2]||0)+flows[y2];
+        totalFlows[y2]=(totalFlows[y2]||0)+flows[y2];
+      });
+    });
+    memberRows.push({ name:m.name, policyCount:sp.length, flows:memberFlows });
+  });
+  if(!memberRows.length) return null;
+
+  var colgroupHtmlFS='<colgroup><col style="width:190px">'+years.map(function(){return'<col>';}).join("")+'</colgroup>';
+  var yh=years.map(function(y3){
+    return '<th style="background:linear-gradient(180deg,#f7f8fa,#fff);padding:11px 7px;text-align:center;font-weight:800;color:#374151;border-bottom:2px solid #e2e5ea;border-left:1px solid #eef0f3;white-space:nowrap">'+
+      '<div style="width:8px;height:8px;border-radius:50%;background:#4338ca;margin:0 auto 5px"></div>'+
+      '<span class="st-year-num" style="font-size:20px">'+y3+'</span><br><span class="st-year-roc" style="font-size:18px;color:#6b7280;font-weight:600">'+(y3-1911)+'年</span>'+
+    '</th>';
+  }).join("");
+
+  var headerHtml =
+    '<div style="background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);margin-bottom:14px">'+
+      '<div style="padding:17px 19px;background:linear-gradient(135deg,#EEF2FF,#F5F3FF);display:flex;align-items:center;gap:10px;flex-wrap:wrap">'+
+        '<span style="font-size:20px;font-weight:800;color:#4338ca">👨‍👩‍👧‍👦 全家儲蓄規劃總表</span>'+
+        '<span style="font-size:14px;color:#7c7fa0;font-weight:700;background:#fff;padding:4px 12px;border-radius:99px">'+startYr+' － '+years[years.length-1]+' 年・'+memberRows.length+' 位被保險人</span>'+
+      '</div>'+
+      '<table style="width:100%;border-collapse:collapse;table-layout:fixed">'+colgroupHtmlFS+
+      '<thead><tr><th style="background:#f7f8fa;padding:10px 17px;text-align:left;border-bottom:2px solid #e2e5ea;font-size:17px;font-weight:800;color:#6b7280">被保險人</th>'+yh+'</tr></thead>'+
+      '</table>'+
+    '</div>';
+
+  var rowsHtml = memberRows.map(function(mr, idx){
+    var rowBg = idx%2===0 ? '#fff' : '#fbfbfc';
+    var cells = years.map(function(yr){
+      var amt = mr.flows[yr]||0;
+      if(!amt) return '<td style="text-align:center;color:#9ca3af;font-size:17px;border-left:1px solid #f5f6f8"><span class="st-pill-amt">—</span></td>';
+      return '<td style="border-left:1px solid #f5f6f8;padding:5px 6px;text-align:center"><span class="st-pill-amt" style="font-size:18px;color:#1a1a1a;font-weight:800;font-variant-numeric:tabular-nums">'+fmtAmtEx(amt)+'</span></td>';
+    }).join("");
+    return '<tr style="background:'+rowBg+'">'+
+      '<td style="padding:12px 17px;border-right:2px solid #e2e5ea">'+
+        '<div style="font-size:18px;font-weight:800;color:#1a1a2e">'+mr.name+'</div>'+
+        '<div style="font-size:13px;color:#6B7280;font-weight:600;margin-top:2px">'+mr.policyCount+' 張保單</div>'+
+      '</td>'+cells+'</tr>';
+  }).join("");
+
+  var totalHtml =
+    '<tr style="background:#4c46b8;color:#fff;font-weight:800">'+
+      '<td style="padding:12px 17px">全家合計</td>'+
+      years.map(function(yr){
+        var a=totalFlows[yr]||0;
+        return a?'<td style="text-align:center;border-left:1px solid rgba(255,255,255,.2)"><span class="st-pill-amt" style="font-size:19px;font-variant-numeric:tabular-nums">'+fmtAmtEx(a)+'</span></td>':'<td style="text-align:center;opacity:.6;border-left:1px solid rgba(255,255,255,.2)">—</td>';
+      }).join("")+
+    '</tr>';
+
+  var tableHtml =
+    '<div style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04)">'+
+      '<table style="width:100%;border-collapse:collapse;table-layout:fixed">'+colgroupHtmlFS+
+      '<tbody>'+rowsHtml+totalHtml+'</tbody></table>'+
+    '</div>';
+
+  return headerHtml + tableHtml;
+}
+
 
 // ── Summary 輔助函式（移植自 summary.html）──────────────
 // 保額單位換算成「萬元」，同 summary.html 的 convertToWan
@@ -2610,15 +2687,17 @@ function renderBlock(key){
   }
 
   if(key==="family_savings_summary"){
-    // 比照「全家保費總表」：不管目前選到誰，永遠顯示全家，
-    // 各自小計＋最後合計，當作獨立的全家儲蓄規劃總覽。
+    // 比照「全家保費總表」：不管目前選到誰，永遠顯示全家；改成每位
+    // 成員一列（小計）＋最後一列全家合計，不再逐張保單列出——想看
+    // 某個人的個別保單明細，切到那位成員看「儲蓄險現金流時間軸」。
     var now2b = new Date().getFullYear();
     var pdm2b = {};
     var fmem2b = (familyData && familyData.members) || [];
     fmem2b.filter(function(m){ return m.role!=="beneficiary_only"; }).forEach(function(m){
       if (personDataMap[m.personId]) pdm2b[m.personId] = personDataMap[m.personId];
     });
-    return renderSavingsTimeline(pdm2b, familyData, now2b, now2b+14);
+    var fsHtml = renderFamilySavingsSummary(pdm2b, familyData, now2b, now2b+14);
+    return fsHtml || '<div style="padding:60px;text-align:center;color:#9ca3af;font-size:20px">尚無儲蓄保單設定領回資料</div>';
   }
 
   return'<div style="padding:12px;color:#aaa;font-size:14px">建置中</div>';
@@ -2727,25 +2806,12 @@ async function doExportPNG(blks,div){
       setP(Math.round(i/blks.length*90));
       var fname;
 
-      if(blks[i].key==="savings_timeline" || blks[i].key==="family_savings_summary"){
-        // savings_timeline 只匯出目前選到的這位成員；family_savings_summary
-        // 固定匯出全家彙整版本（各自小計＋合計），兩者資料範圍不同但
-        // 產生圖片的邏輯共用。
-        var isFamilyWidePNG = blks[i].key==="family_savings_summary";
-        var stParts = buildSavingsTimelineParts(
-          isFamilyWidePNG ? pdmFamilyPNG : pdmPNG,
-          isFamilyWidePNG ? familyData : singleMemberFamilyData,
-          nowYearPNG, nowYearPNG+14
-        );
+      if(blks[i].key==="savings_timeline"){
+        // savings_timeline 只匯出目前選到的這位成員。
+        var stParts = buildSavingsTimelineParts(pdmPNG, singleMemberFamilyData, nowYearPNG, nowYearPNG+14);
         if(!stParts){
           div.style.width="2400px";
           div.innerHTML=getBlockTitleHtml(blks[i])+'<div style="padding:60px;text-align:center;color:#9ca3af;font-size:20px">尚無儲蓄保單設定領回資料</div>'+disclaimer+wm;
-          fname=pName+"_"+blks[i].label+"_"+pDate+".jpg";
-        } else if (isFamilyWidePNG) {
-          // 全家版本：所有成員合併畫在同一張圖裡（沿用一張長圖的做法），
-          // 不會又拆成好幾個檔案。
-          div.style.width="2400px";
-          div.innerHTML=getBlockTitleHtml(blks[i])+stParts.headerBandHtml+stParts.groups.map(function(g){return stParts.buildGroupChunkHtml(g);}).join("")+stParts.totalRowHtml+disclaimer+wm;
           fname=pName+"_"+blks[i].label+"_"+pDate+".jpg";
         } else {
           var grp=stParts.groups[0]; // 只傳了一位成員，這裡只會有一組
@@ -2753,6 +2819,13 @@ async function doExportPNG(blks,div){
           div.innerHTML=getBlockTitleHtml(blks[i])+stParts.headerBandHtml+stParts.buildGroupChunkHtml(grp)+disclaimer+wm;
           fname=pName+"_"+blks[i].label+"_"+grp.memberName+"_"+pDate+".jpg";
         }
+      } else if(blks[i].key==="family_savings_summary"){
+        // 全家儲蓄規劃總表：現在是精簡的單一表格（每人一列＋合計），
+        // 不再需要逐組拼接，直接整塊畫成一張圖就好。
+        var fsHtmlPNG = renderFamilySavingsSummary(pdmFamilyPNG, familyData, nowYearPNG, nowYearPNG+14);
+        div.style.width="2400px";
+        div.innerHTML=getBlockTitleHtml(blks[i])+(fsHtmlPNG || '<div style="padding:60px;text-align:center;color:#9ca3af;font-size:20px">尚無儲蓄保單設定領回資料</div>')+disclaimer+wm;
+        fname=pName+"_"+blks[i].label+"_"+pDate+".jpg";
       } else {
         div.style.width="2400px";
         div.innerHTML=(blks[i].key==="cover"?'':getBlockTitleHtml(blks[i]))+renderBlock(blks[i].key)+disclaimer+wm;
@@ -2927,19 +3000,15 @@ async function doExportPDF(blks,div){
         if(y + fd.ih > margin+usableH){ y = await startNewPagePD(); }
         pdf.addImage(footerC.toDataURL("image/jpeg",0.88),"JPEG",margin,y,fd.iw,fd.ih);
       }
-    } else if(blks[i].key==="savings_timeline" || blks[i].key==="family_savings_summary"){
-      // ── 儲蓄險現金流時間軸／全家儲蓄規劃總表：依被保險人分組動態分頁 ──
+    } else if(blks[i].key==="savings_timeline"){
+      // ── 儲蓄險現金流時間軸：依被保險人分組動態分頁 ──────────
       // 標題+欄位年份先自成一頁最上方，接著每位被保險人的所有保單
       // 自成一組，整組放得下就整組印、放不下才換頁，永遠維持滿版
       // 寬度，不會因為表格太高被迫縮小到看不清楚。
-      // savings_timeline 只放目前選中的這位成員；family_savings_summary
-      // 固定放全家，兩者資料範圍不同，但分頁邏輯完全共用。
-      var isFamilyWide = blks[i].key==="family_savings_summary";
-      var stParts = buildSavingsTimelineParts(
-        isFamilyWide ? pdmFamily : pdmSingle,
-        isFamilyWide ? familyData : singleMemberFamilyData,
-        nowYearGlobal, nowYearGlobal+14
-      );
+      // 只放目前選中的這位成員（全家版本已經獨立成精簡的
+      // 「全家儲蓄規劃總表」，走一般區塊的單頁流程，不需要這套
+      // 動態分頁邏輯）。
+      var stParts = buildSavingsTimelineParts(pdmSingle, singleMemberFamilyData, nowYearGlobal, nowYearGlobal+14);
       if(!stParts){
         var emptyC = await captureHtml(getBlockTitleHtml(blks[i])+'<div style="padding:60px;text-align:center;color:#9ca3af;font-size:20px">尚無儲蓄保單設定領回資料</div>'+(isLast||fmt==="pdf_pages"?disclaimer:"")+wm);
         addNewPage("現金流");
@@ -2980,7 +3049,7 @@ async function doExportPDF(blks,div){
       }
     } else {
       // ── 其餘區塊：維持單頁等比例縮放 ──────────────────
-      var PAGE_LABEL_PREFIX = { summary:"彙總", policy_detail:"保障", cover:"封面", family_premium_summary:"總表" };
+      var PAGE_LABEL_PREFIX = { summary:"彙總", policy_detail:"保障", cover:"封面", family_premium_summary:"總表", family_savings_summary:"總表" };
       var isCover = blks[i].key==="cover";
       var showDisclaimer = isCover ? false : (fmt==="pdf_pages" ? true : isLast);
       var c = await captureHtml((isCover?'':getBlockTitleHtml(blks[i]))+renderBlock(blks[i].key)+(showDisclaimer?disclaimer:"")+(isCover?'':wm));
