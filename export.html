@@ -1966,7 +1966,7 @@ function buildPremiumDetailParts() {
   // 限制商品名最大寬度為400px，並加寬狀態(130px)與受益人(240px)
   // 讓商品名改為 1fr 填滿剩餘空白，同時保持狀態與受益人的寬裕空間
   // 加入 minmax(300px, 1fr) 確保在預覽畫面中商品名不會被擠壓變形
-  var COLS_PD = '108px 198px minmax(540px,1fr) 270px 306px 234px 270px 270px 432px 432px';
+  var COLS_PD = '78px 143px minmax(390px,1fr) 195px 221px 169px 195px 195px 312px 312px';
 
   var colHeaderRow =
     '<div style="display:grid;grid-template-columns:'+COLS_PD+';border-bottom:2px solid #eef0f3">'+
@@ -1991,8 +1991,8 @@ function buildPremiumDetailParts() {
     var startRocText = toRocDateStr(mainPol.startDate);
     var insAgeAtStart = getAgeAtDate(person.profile && person.profile.birthDate, mainPol.startDate);
     var startInfoHtml = startRocText
-      ? '<span style="font-size:43px;color:#6b7280;font-weight:600;white-space:nowrap">生效日 '+startRocText+(insAgeAtStart!==null?'　投保年齡 '+insAgeAtStart+'歲':'')+'</span>'
-      : (insAgeAtStart!==null ? '<span style="font-size:43px;color:#6b7280;font-weight:600;white-space:nowrap">投保年齡 '+insAgeAtStart+'歲</span>' : '');
+      ? '<span style="font-size:31px;color:#6b7280;font-weight:600;white-space:nowrap">生效日 '+startRocText+(insAgeAtStart!==null?'　投保年齡 '+insAgeAtStart+'歲':'')+'</span>'
+      : (insAgeAtStart!==null ? '<span style="font-size:31px;color:#6b7280;font-weight:600;white-space:nowrap">投保年齡 '+insAgeAtStart+'歲</span>' : '');
 
     // 要保人（owner）如果跟被保險人（這份報表本人）不同人，特別標示出來，
     // 因為保單帳戶價值／解約權利是屬於要保人，不是被保險人。
@@ -2001,18 +2001,18 @@ function buildPremiumDetailParts() {
     var ownerBadgeHtml = "";
     if (ownerNamePD && ownerNamePD !== insuredNamePD) {
       var ownerColorPD = personBadgeColor(ownerNamePD);
-      ownerBadgeHtml = '<span title="要保人" style="font-size:40px;font-weight:700;padding:3px 12px;border-radius:99px;background:#fff;color:'+ownerColorPD+';border:2px solid '+ownerColorPD+';white-space:nowrap">要保人 '+ownerNamePD+'</span>';
+      ownerBadgeHtml = '<span title="要保人" style="font-size:29px;font-weight:700;padding:3px 12px;border-radius:99px;background:#fff;color:'+ownerColorPD+';border:2px solid '+ownerColorPD+';white-space:nowrap">要保人 '+ownerNamePD+'</span>';
     }
 
     var cardHeaderHtml =
       '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;padding:12px 16px;background:linear-gradient(135deg,#EEF4FF,#F7F5FF)">'+
         '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'+
-          '<span style="font-family:monospace;font-size:43px;font-weight:700;color:#3B82F6;background:#fff;padding:3px 9px;border-radius:99px">'+grp.key+'</span>'+
-          '<span style="font-size:54px;font-weight:800;color:#374151">'+(mainPol.company||'未知')+'</span>'+
+          '<span style="font-family:monospace;font-size:31px;font-weight:700;color:#3B82F6;background:#fff;padding:3px 9px;border-radius:99px">'+grp.key+'</span>'+
+          '<span style="font-size:39px;font-weight:800;color:#374151">'+(mainPol.company||'未知')+'</span>'+
           ownerBadgeHtml+
           startInfoHtml+
         '</div>'+
-        '<span style="font-size:47px;font-weight:700;color:#6b7280">年繳 NT$'+groupTotalPrem.toLocaleString()+'</span>'+
+        '<span style="font-size:34px;font-weight:700;color:#6b7280">年繳 NT$'+groupTotalPrem.toLocaleString()+'</span>'+
       '</div>';
 
     var rowsHtml = ordered.map(function(p){
@@ -2024,7 +2024,7 @@ function buildPremiumDetailParts() {
 
       var isFxPD = p.currency && p.currency !== "TWD";
       var premDisplayPD = isFxPD
-        ? 'NT$'+(p.premiumTWD||0).toLocaleString()+' <span style="font-size:36px;color:#9CA3AF;font-weight:400">(USD '+(p.premiumOrig||0).toLocaleString()+')</span>'
+        ? 'NT$'+(p.premiumTWD||0).toLocaleString()+' <span style="font-size:26px;color:#9CA3AF;font-weight:400">(USD '+(p.premiumOrig||0).toLocaleString()+')</span>'
         : 'NT$'+(p.premiumTWD||0).toLocaleString();
 
       var dStr = "";
@@ -2050,7 +2050,7 @@ function buildPremiumDetailParts() {
       if(rule.live === "不適用" || p.category === "壽險保障") {
         liveDisplay = '<span style="color:#9ca3af">不適用</span>';
       } else if(rule.live === "鎖定本人" || p.category === "年金險" || p.category === "投資型保險") {
-        liveDisplay = '<span style="font-size:40px;background:#f0f0f0;color:#888;padding:2px 6px;border-radius:6px">本人 🔒</span>';
+        liveDisplay = '<span style="font-size:29px;background:#f0f0f0;color:#888;padding:2px 6px;border-radius:6px">本人 🔒</span>';
       } else {
         var partsPD = [];
         if(lStr) partsPD.push('<div>生存金：'+lStr+'</div>');
@@ -2076,16 +2076,16 @@ function buildPremiumDetailParts() {
       var expiryText = getPolicyExpiryDisplay(p);
 
       return '<div style="display:grid;grid-template-columns:'+COLS_PD+';border-bottom:1px solid #f2f2f4">'+
-        '<div style="'+tdStylePD+'">'+(isMR?'<span style="font-size:36px;color:#fff;background:#378ADD;padding:2px 7px;border-radius:99px;font-weight:700">主</span>':'<span style="font-size:36px;color:#888;background:#ebebeb;padding:2px 7px;border-radius:99px;font-weight:700">附</span>')+'</div>'+
-        '<div style="'+tdStylePD+'"><span style="font-size:36px;padding:2px 7px;border-radius:99px;background:'+cc+'1A;color:'+cc+';font-weight:700;white-space:nowrap">'+(p.category||'—')+'</span></div>'+
-        '<div style="'+tdStylePD+'font-size:35px;font-weight:700;color:#1f2937">'+(p.itemName||'—')+'</div>'+
+        '<div style="'+tdStylePD+'">'+(isMR?'<span style="font-size:26px;color:#fff;background:#378ADD;padding:2px 7px;border-radius:99px;font-weight:700">主</span>':'<span style="font-size:26px;color:#888;background:#ebebeb;padding:2px 7px;border-radius:99px;font-weight:700">附</span>')+'</div>'+
+        '<div style="'+tdStylePD+'"><span style="font-size:26px;padding:2px 7px;border-radius:99px;background:'+cc+'1A;color:'+cc+';font-weight:700;white-space:nowrap">'+(p.category||'—')+'</span></div>'+
+        '<div style="'+tdStylePD+'font-size:25px;font-weight:700;color:#1f2937">'+(p.itemName||'—')+'</div>'+
         '<div style="'+tdStylePD+'text-align:right;font-weight:800;color:#0C447C;font-variant-numeric:tabular-nums;white-space:nowrap">'+amtText+'</div>'+
         '<div style="'+tdStylePD+'text-align:right;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums">'+premDisplayPD+'</div>'+
-        '<div style="'+tdStylePD+'"><span style="font-size:36px;padding:2px 7px;border-radius:99px;background:'+(isPolicyActiveEx(p)?"#EAF3DE":"#f0f0f0")+';color:'+(isPolicyActiveEx(p)?"#27500A":"#888")+'">'+(p.status||"有效")+'</span></div>'+
-        '<div style="'+tdStylePD+'font-size:43px;color:'+(expiryText==="終身"?"#374151":expiryText==="—"?"#9ca3af":"#B07000")+';font-weight:700;white-space:nowrap">'+expiryText+'</div>'+
+        '<div style="'+tdStylePD+'"><span style="font-size:26px;padding:2px 7px;border-radius:99px;background:'+(isPolicyActiveEx(p)?"#EAF3DE":"#f0f0f0")+';color:'+(isPolicyActiveEx(p)?"#27500A":"#888")+'">'+(p.status||"有效")+'</span></div>'+
+        '<div style="'+tdStylePD+'font-size:31px;color:'+(expiryText==="終身"?"#374151":expiryText==="—"?"#9ca3af":"#B07000")+';font-weight:700;white-space:nowrap">'+expiryText+'</div>'+
         '<div style="'+tdStylePD+'text-align:right;font-weight:800;color:#B0466F;font-variant-numeric:tabular-nums;white-space:nowrap">'+dbText+'</div>'+
-        '<div style="'+tdStylePD+'color:'+dColor+';line-height:1.4;font-size:43px">'+dStr+'</div>'+
-        '<div style="'+tdStylePD+'line-height:1.4;font-size:43px">'+liveDisplay+'</div>'+
+        '<div style="'+tdStylePD+'color:'+dColor+';line-height:1.4;font-size:31px">'+dStr+'</div>'+
+        '<div style="'+tdStylePD+'line-height:1.4;font-size:31px">'+liveDisplay+'</div>'+
       '</div>';
     });
 
