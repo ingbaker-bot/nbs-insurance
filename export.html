@@ -2970,13 +2970,22 @@ async function buildPdfDocument(blks,div){
   }
 
   // 在頁面右下角（10mm 頁緣留白處，不會跟內容重疊）蓋上「前綴-頁碼」標籤
+  var currentPageLabelPrefix = null; // 記住這一頁用的是哪個前綴，供內容貼完後補畫用
   function stampPageLabel(prefix){
     if(!prefix) return;
     pageLabelCounters[prefix] = (pageLabelCounters[prefix]||0)+1;
+    currentPageLabelPrefix = prefix;
     var img = makePageLabelImg(prefix+"-"+pageLabelCounters[prefix]);
     // 位置抓更保守一點：離紙張邊緣至少 15mm 淨空（原本 10mm 對某些
     // 印表機的實際可列印邊界來說可能還是不夠，這只是個小小的頁碼
     // 參考標籤，寧可位置往內縮一點，也不要冒風險被裁掉）。
+    pdf.addImage(img,"PNG", pageW-margin-22, pageH-15-4.4, 22, 4.4);
+  }
+  // 重畫「目前這一頁」的頁碼標籤，不遞增計數器——用在內容圖片貼上去
+  // 之後，確保頁碼標籤一定是最上層、不會被滿版內容蓋住。
+  function restampCurrentPageLabel(){
+    if(!currentPageLabelPrefix) return;
+    var img = makePageLabelImg(currentPageLabelPrefix+"-"+pageLabelCounters[currentPageLabelPrefix]);
     pdf.addImage(img,"PNG", pageW-margin-22, pageH-15-4.4, 22, 4.4);
   }
 
@@ -3158,6 +3167,7 @@ async function buildPdfDocument(blks,div){
         yPos = margin + (usableH - d.ih) / 2;
       }
       pdf.addImage(c.toDataURL("image/jpeg",0.88),"JPEG",margin,yPos,d.iw,d.ih);
+      restampCurrentPageLabel();
     }
   }
   setP(95);
