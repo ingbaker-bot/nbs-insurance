@@ -1974,12 +1974,20 @@ function getDonutCategoryStatusEx(cat, active, coverage, targets, covOverrides) 
   return { status: status, pct: n ? presentCount/n : 0 };
 }
 
+// 圓餅圖圓心用的簡稱：去掉姓氏，只留名字（例：李丞敏 → 丞敏）。
+// 假設姓氏是單一字，這是中文姓名最常見的情況；複姓等特殊情況不特別處理。
+function getGivenNameEx(fullName) {
+  var s = (fullName || "").trim();
+  return s.length > 1 ? s.slice(1) : s;
+}
+
 function buildDonutChartEx(active, coverage, targets, covOverrides) {
   var n = DONUT_CATEGORIES_EX.length;
   
   // 圓心文字拿掉後不再需要留白給文字，內圈半徑大幅縮小，讓甜甜圈本身變厚
   var cx=500, cy=350, OR=230, IR=70;
   var gapA=0.03, sliceA=(Math.PI*2-n*gapA)/n;
+  var centerName = getGivenNameEx(personDataMap[currentPersonId]?.profile?.name);
 
   var angle=-Math.PI/2;
   var paths="";
@@ -2092,13 +2100,13 @@ function buildDonutChartEx(active, coverage, targets, covOverrides) {
   var gapN = chartCats.filter(item=>getDonutCategoryStatusEx(item,active,coverage,targets,covOverrides).status==="none").length;
   var insN = chartCats.filter(item=>getDonutCategoryStatusEx(item,active,coverage,targets,covOverrides).status==="partial").length;
 
-  // 圓心文字拿掉，內部空間讓給外圈的甜甜圈（IR 縮小、環變厚），
-  // okN/gapN/insN 改成只給圖例統計用，不再畫在圓心
+  // 圓心放被保險人的名字（去掉姓氏），把拿掉狀態文字後空出來的空間用掉
   return {
     svg: `<svg viewBox="0 0 1000 700" style="width:100%; max-height:620px; height:auto; display:block; margin:0 auto;">
         ${DONUT_DEFS}
         ${paths}
         ${labels}
+        ${centerName ? `<text x="${cx}" y="${cy+18}" text-anchor="middle" style="font-size:56px;font-weight:800;fill:#333">${centerName}</text>` : ""}
       </svg>`,
     legendFamily: legendFamily,
     legendBefore: legendBefore,
