@@ -1960,7 +1960,7 @@ function buildPremiumDetailParts() {
   });
 
   var thStylePD = 'padding:10px;text-align:left;font-size:40px;font-weight:800;color:#6b7280;white-space:nowrap;background:#f7f8fa;';
-  var tdStylePD = 'padding:6px 10px;vertical-align:middle;font-size:28px;background:#fff;';
+  var tdStylePD = 'padding:6px 10px;vertical-align:middle;font-size:30px;background:#fff;';
   // 10 欄固定寬度，header 跟每一列都用同一份，確保不管各自截圖幾張，
   // 欄位永遠對得整齊
   // 限制商品名最大寬度為400px，並加寬狀態(130px)與受益人(240px)
@@ -2076,16 +2076,16 @@ function buildPremiumDetailParts() {
       var expiryText = getPolicyExpiryDisplay(p);
 
       return '<div style="display:grid;grid-template-columns:'+COLS_PD+';border-bottom:1px solid #f2f2f4">'+
-        '<div style="'+tdStylePD+'">'+(isMR?'<span style="font-size:34px;color:#fff;background:#378ADD;padding:2px 7px;border-radius:99px;font-weight:700">主</span>':'<span style="font-size:34px;color:#888;background:#ebebeb;padding:2px 7px;border-radius:99px;font-weight:700">附</span>')+'</div>'+
-        '<div style="'+tdStylePD+'"><span style="font-size:34px;padding:2px 7px;border-radius:99px;background:'+cc+'1A;color:'+cc+';font-weight:700;white-space:nowrap">'+(p.category||'—')+'</span></div>'+
+        '<div style="'+tdStylePD+'">'+(isMR?'<span style="font-size:30px;color:#fff;background:#378ADD;padding:2px 7px;border-radius:99px;font-weight:700">主</span>':'<span style="font-size:30px;color:#888;background:#ebebeb;padding:2px 7px;border-radius:99px;font-weight:700">附</span>')+'</div>'+
+        '<div style="'+tdStylePD+'"><span style="font-size:30px;padding:2px 7px;border-radius:99px;background:'+cc+'1A;color:'+cc+';font-weight:700;white-space:nowrap">'+(p.category||'—')+'</span></div>'+
         '<div style="'+tdStylePD+'font-size:34px;font-weight:700;color:#1f2937">'+(p.itemName||'—')+'</div>'+
         '<div style="'+tdStylePD+'text-align:right;font-weight:800;color:#0C447C;font-variant-numeric:tabular-nums;white-space:nowrap">'+amtText+'</div>'+
         '<div style="'+tdStylePD+'text-align:right;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums">'+premDisplayPD+'</div>'+
-        '<div style="'+tdStylePD+'"><span style="font-size:34px;padding:2px 7px;border-radius:99px;background:'+(isPolicyActiveEx(p)?"#EAF3DE":"#f0f0f0")+';color:'+(isPolicyActiveEx(p)?"#27500A":"#888")+'">'+(p.status||"有效")+'</span></div>'+
-        '<div style="'+tdStylePD+'font-size:34px;color:'+(expiryText==="終身"?"#374151":expiryText==="—"?"#9ca3af":"#B07000")+';font-weight:700;white-space:nowrap">'+expiryText+'</div>'+
+        '<div style="'+tdStylePD+'"><span style="font-size:30px;padding:2px 7px;border-radius:99px;background:'+(isPolicyActiveEx(p)?"#EAF3DE":"#f0f0f0")+';color:'+(isPolicyActiveEx(p)?"#27500A":"#888")+'">'+(p.status||"有效")+'</span></div>'+
+        '<div style="'+tdStylePD+'font-size:30px;color:'+(expiryText==="終身"?"#374151":expiryText==="—"?"#9ca3af":"#B07000")+';font-weight:700;white-space:nowrap">'+expiryText+'</div>'+
         '<div style="'+tdStylePD+'text-align:right;font-weight:800;color:#B0466F;font-variant-numeric:tabular-nums;white-space:nowrap">'+dbText+'</div>'+
-        '<div style="'+tdStylePD+'color:'+dColor+';line-height:1.4;font-size:31px">'+dStr+'</div>'+
-        '<div style="'+tdStylePD+'line-height:1.4;font-size:31px">'+liveDisplay+'</div>'+
+        '<div style="'+tdStylePD+'color:'+dColor+';line-height:1.4;font-size:30px">'+dStr+'</div>'+
+        '<div style="'+tdStylePD+'line-height:1.4;font-size:30px">'+liveDisplay+'</div>'+
       '</div>';
     });
 
