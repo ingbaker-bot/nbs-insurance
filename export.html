@@ -1759,7 +1759,7 @@ function statRowHtml(x, color) {
     valueHtml = '<span style="font-size:42px;font-weight:800;color:'+color+';font-variant-numeric:tabular-nums">'+x.total.toLocaleString()+
       '<span style="font-size:30px;color:#6b7280;font-weight:700;margin-left:4px">'+x.unit+'</span></span>';
   }
-  return '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px 8px;padding:'+(isFilled?'8px':'6px')+' 16px;border-top:1px solid #f2f2f4">'+
+  return '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px 8px;padding:'+(isFilled?'6px':'4px')+' 16px;border-top:1px solid #f2f2f4">'+
     // 左側保障項目名稱放大
     '<span style="font-size:36px;color:'+(isFilled?"#555":"#aaacb3")+';font-weight:700">'+x.label+(isFilled?x.remainNote:"")+'</span>'+
     valueHtml+
