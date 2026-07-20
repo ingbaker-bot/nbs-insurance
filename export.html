@@ -431,11 +431,14 @@ function fmtAmtEx(amt){if(amt>=10000)return(amt/10000).toFixed(1)+"萬";return a
 // 把「35.9萬」拆成數字「35.9」跟單位「萬」分開換行顯示，讓色塊可以窄一點、
 // 數字本身還是看得清楚，用在儲蓄險現金流時間軸的領回金額色塊。
 function fmtAmtExWrapped(amt){
+  // 用純 block div + text-align:center（不要用 flex）：html2canvas 對
+  // flexbox 的支援不完整，巢狀直排的 flex 常常擷取成空白，改用跟
+  // 「保單現金價值」那欄同一種已經驗證過在 PDF 裡穩定顯示的寫法。
   var s = fmtAmtEx(amt);
   if (s.slice(-1)==="萬") {
-    return '<span style="display:block;line-height:1.05">'+s.slice(0,-1)+'</span><span style="display:block;font-size:0.6em;line-height:1;font-weight:700">萬</span>';
+    return '<div style="font-size:26px;color:#fff;font-weight:800;line-height:1.05;font-variant-numeric:tabular-nums">'+s.slice(0,-1)+'</div><div style="font-size:16px;color:#fff;font-weight:700;line-height:1.2">萬</div>';
   }
-  return s;
+  return '<div style="font-size:26px;color:#fff;font-weight:800;font-variant-numeric:tabular-nums">'+s+'</div>';
 }
 var CUR_SYMBOL_EX={USD:"$",EUR:"€",JPY:"¥",CNY:"¥",TWD:""};
 function fmtForeignEx(amt,cur){
@@ -581,7 +584,7 @@ function buildSavingsTimelineParts(pdm3,fData,startYr,endYr){
       var cells=years.map(function(y4){
         var amt=pr.flows[y4]||0;
         if(!amt)return'<td style="text-align:center;color:#9ca3af;font-size:30px;border-left:1px solid #f5f6f8">—</td>';
-        return'<td style="border-left:1px solid #f5f6f8;padding:8px 10px"><div style="min-height:38px;border-radius:8px;background:'+barBg+';display:inline-flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;white-space:nowrap;padding:2px 8px;width:100%;box-sizing:border-box"><span style="font-size:26px;color:#fff;font-weight:800;font-variant-numeric:tabular-nums">'+fmtAmtExWrapped(amt)+'</span></div></td>';
+        return'<td style="border-left:1px solid #f5f6f8;padding:8px 10px"><div style="min-height:38px;border-radius:8px;background:'+barBg+';text-align:center;padding:4px 8px">'+fmtAmtExWrapped(amt)+'</div></td>';
       }).join("");
       var fc='<td style="padding:6px 12px 6px 34px;border-right:2px solid #e2e5ea">'+
         '<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">'+
@@ -638,7 +641,7 @@ function buildSavingsTimelineParts(pdm3,fData,startYr,endYr){
       var cells=years.map(function(y4){
         var amt=pr.flows[y4]||0;
         if(!amt)return'<td style="text-align:center;color:#9ca3af;font-size:30px;border-left:1px solid #f5f6f8">—</td>';
-        return'<td style="border-left:1px solid #f5f6f8;padding:8px 10px"><div style="min-height:38px;border-radius:8px;background:'+barBg+';display:inline-flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;white-space:nowrap;padding:2px 8px;width:100%;box-sizing:border-box"><span style="font-size:26px;color:#fff;font-weight:800;font-variant-numeric:tabular-nums">'+fmtAmtExWrapped(amt)+'</span></div></td>';
+        return'<td style="border-left:1px solid #f5f6f8;padding:8px 10px"><div style="min-height:38px;border-radius:8px;background:'+barBg+';text-align:center;padding:4px 8px">'+fmtAmtExWrapped(amt)+'</div></td>';
       }).join("");
       var fc='<td style="padding:6px 12px 6px 34px;border-right:2px solid #e2e5ea">'+
         '<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">'+
@@ -749,7 +752,7 @@ function renderSavingsTimeline(pdm3,fData,startYr,endYr){
       var cells=years.map(function(y4){
         var amt=pr.flows[y4]||0;
         if(!amt)return'<td style="text-align:center;color:#9ca3af;font-size:30px;border-left:1px solid #f5f6f8"><span class="st-pill-amt">—</span></td>';
-        return'<td style="border-left:1px solid #f5f6f8;padding:8px 10px"><div style="min-height:38px;border-radius:8px;background:'+barBg+';display:inline-flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;white-space:nowrap;padding:2px 8px;width:100%;box-sizing:border-box"><span class="st-pill-amt" style="font-size:26px;color:#fff;font-weight:800;font-variant-numeric:tabular-nums">'+fmtAmtExWrapped(amt)+'</span></div></td>';
+        return'<td style="border-left:1px solid #f5f6f8;padding:8px 10px"><div class="st-pill-amt" style="min-height:38px;border-radius:8px;background:'+barBg+';text-align:center;padding:4px 8px">'+fmtAmtExWrapped(amt)+'</div></td>';
       }).join("");
       var fc='<td style="padding:6px 12px 6px 34px;border-right:2px solid #e2e5ea">'+
         '<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">'+
