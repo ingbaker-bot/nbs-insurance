@@ -1730,7 +1730,7 @@ function buildStatGroupCard(g, policies, cov3) {
 
   return '<div style="background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);border-left:8px solid '+g.color+'">'+
     // 珍珠光澤標題底，跟圓餅圖已規劃/部分有的質感呼應
-    '<div style="padding:12px 16px;background:'+pearlGradientEx(g.color)+'">'+
+    '<div style="padding:8px 14px;background:'+pearlGradientEx(g.color)+'">'+
       '<div style="display:flex;align-items:center;gap:12px;min-width:0">'+
         // 放大前方的圖示 (icon)
         '<span style="font-size:36px;line-height:1;flex-shrink:0">'+(g.icon||'')+'</span>'+
@@ -2137,7 +2137,7 @@ function buildSvgArrows(phases) {
   var weights=[1,1.4,1], totalW=3.4;
   var widths=weights.map(function(w){return w/totalW*W;});
   // 加上 height="85px" 與 preserveAspectRatio="none"，強制鎖死高度以對齊右側
-  var svg='<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100px" preserveAspectRatio="none" viewBox="0 0 '+W+' '+H+'" style="display:block;margin-bottom:20px">';
+  var svg='<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="72px" preserveAspectRatio="none" viewBox="0 0 '+W+' '+H+'" style="display:block;margin-bottom:12px">';
   var x=0;
   phases.forEach(function(ph,i){
     var w=widths[i], x0=x, x1=x+w, pts;
@@ -2217,7 +2217,7 @@ function buildDonutChartEx(active, coverage, targets, covOverrides) {
 
   function renderLegend(g) {
     // 標題放大至 36px
-    var legendHtml = `<div style="font-size:42px;font-weight:800;color:${g.color};margin-bottom:20px;border-bottom:3px solid ${g.color}30;padding-bottom:12px">${g.label}</div>`;
+    var legendHtml = `<div style="font-size:42px;font-weight:800;color:${g.color};margin-bottom:10px;border-bottom:3px solid ${g.color}30;padding-bottom:8px">${g.label}</div>`;
     
     g.items.forEach(item => {
       var {status, pct, current, target} = getItemStatusEx(item.key, active, coverage, targets, covOverrides);
@@ -2247,7 +2247,7 @@ function buildDonutChartEx(active, coverage, targets, covOverrides) {
       }
 
       // 項目文字放大至 30px
-      legendHtml += `<div style="display:flex;align-items:center;gap:14px;font-size:32px;margin-bottom:16px">
+      legendHtml += `<div style="display:flex;align-items:center;gap:14px;font-size:32px;margin-bottom:8px">
         <div style="width:20px;height:20px;border-radius:6px;background:${dotColor};flex-shrink:0"></div>
         <span style="color:${status==="gap"?"#bbb":"#444"};font-weight:700;flex:1;white-space:nowrap">${item.label}</span>
         ${amtHtml}
@@ -2629,13 +2629,13 @@ function renderBlock(key){
 
     var chartParts = buildDonutChartEx(active, cov, {}, {});
 
-    var html='<div style="padding:16px">';
+    var html='<div style="padding:10px">';
 
     // ── 第一行：圓餅圖 (左側佔 2 份) + 就醫狀況 (右側佔 3 份) ──
-    html+='<div style="display:grid;grid-template-columns:2fr 3fr;gap:20px;margin-bottom:30px">';
+    html+='<div style="display:grid;grid-template-columns:2fr 3fr;gap:14px;margin-bottom:14px">';
     
     // 區塊 1-A：保障覆蓋率(圓餅圖)
-    html+='<div style="background:#fff;border-radius:24px;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);padding:24px;display:flex;flex-direction:column">';
+    html+='<div style="background:#fff;border-radius:24px;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);padding:14px;display:flex;flex-direction:column">';
     html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">';
     html+='<div style="font-size:48px;font-weight:800;color:#444;">保障覆蓋率</div>';
     html+='<div style="display:flex;gap:24px;font-size:36px;color:#888;font-weight:700">'+
@@ -2648,7 +2648,7 @@ function renderBlock(key){
     html+='</div>'; 
 
     // 區塊 1-B：就醫情況
-    html+='<div style="background:#fff;border-radius:24px;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);padding:24px;display:flex;flex-direction:column">';
+    html+='<div style="background:#fff;border-radius:24px;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);padding:14px;display:flex;flex-direction:column">';
     html+='<div style="font-size:48px;font-weight:800;color:#444;margin-bottom:16px">就醫情況</div>';
     var baseHosp=sumCovEx(["hosp_room","hosp_ext_room","daily_room_1_30","hosp_ext_daily","daily_discharge"],policies,cov);
     var visitCats = [
@@ -2656,7 +2656,7 @@ function renderBlock(key){
       { label:"意外", color:"#b45309", bg:"#fef3c7" },
       { label:"癌症", color:"#be123c", bg:"#ffe4e6" },
     ];
-    html+='<div style="background:#f7f8fa;border-radius:24px;padding:20px;display:grid;grid-template-columns:repeat(3,1fr);gap:18px;flex:1">';
+    html+='<div style="background:#f7f8fa;border-radius:24px;padding:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;flex:1">';
     visitCats.forEach(function(vc, ci){
       var ck = ["disease","accident","cancer"][ci];
       var opdVal="—", opdUnit="", opdIsInsurance=false;
@@ -2670,11 +2670,11 @@ function renderBlock(key){
       else hospVal=(baseHosp+sumCovEx(["can_hosp","can_discharge"],policies,cov))||"—";
 
       html+='<div style="background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 3px 10px -3px rgba(0,0,0,.12);display:flex;flex-direction:column;border-left:6px solid '+vc.color+'">';
-      html+='<div style="padding:14px;background:linear-gradient(135deg,'+vc.color+'26,'+vc.color+'0A);text-align:center">'+
+      html+='<div style="padding:8px;background:linear-gradient(135deg,'+vc.color+'26,'+vc.color+'0A);text-align:center">'+
           '<span style="font-size:48px;font-weight:800;color:'+vc.color+'">'+vc.label+'</span>'+
         '</div>';
       
-      html+='<div style="padding:16px 24px;display:flex;justify-content:space-between;align-items:center;border-bottom:2px dashed #f2f2f4;flex:1">';
+      html+='<div style="padding:8px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:2px dashed #f2f2f4;flex:1">';
       html+='<div style="font-size:34px;color:#6b7280;font-weight:700">門診</div>';
       if(opdIsInsurance) {
         html+='<div style="padding:6px 20px;border-radius:12px;background:#EAF3DE"><span style="font-size:36px;font-weight:800;color:#27500A">健保</span></div>';
@@ -2683,7 +2683,7 @@ function renderBlock(key){
       }
       html+='</div>';
 
-      html+='<div style="padding:16px 24px;display:flex;justify-content:space-between;align-items:center;flex:1">';
+      html+='<div style="padding:8px 20px;display:flex;justify-content:space-between;align-items:center;flex:1">';
       html+='<div style="font-size:34px;color:#6b7280;font-weight:700">住院</div>';
       html+='<div style="font-size:47px;font-weight:800;color:'+(hospVal!=="—"?"#1a1a1a":"#9ca3af")+';font-variant-numeric:tabular-nums">'+(typeof hospVal==="number"?hospVal.toLocaleString():hospVal)+(hospVal!=="—"?'<span style="font-size:30px;color:#6b7280;font-weight:700;margin-left:6px">'+hospUnit+'</span>':'')+'</div>';
       html+='</div>';
@@ -2695,27 +2695,27 @@ function renderBlock(key){
     html+='</div>'; 
 
     // ── 第二行：醫療前中後期 (左側 3fr) + 家庭責任 (右側 1fr) ──
-    html+='<div style="display:grid;grid-template-columns:3fr 1fr;gap:20px">';
+    html+='<div style="display:grid;grid-template-columns:3fr 1fr;gap:14px">';
     
     // 區塊 2-A：三個醫療階段
-    html+='<div style="background:#fff;border-radius:24px;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);padding:24px;display:flex;flex-direction:column">';
+    html+='<div style="background:#fff;border-radius:24px;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);padding:14px;display:flex;flex-direction:column">';
     html+= buildSvgArrows([
       {label:GAP_GROUPS_EX[1].arrowLabel, color:GAP_GROUPS_EX[1].arrowColor},
       {label:GAP_GROUPS_EX[2].arrowLabel, color:GAP_GROUPS_EX[2].arrowColor},
       {label:GAP_GROUPS_EX[3].arrowLabel, color:GAP_GROUPS_EX[3].arrowColor}
     ]); 
-    html+='<div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:20px;flex:1">';
-    html+='<div style="background:#fafbfc;padding:24px;border-radius:20px;border:1px solid rgba(0,0,0,.05);border-left:6px solid '+GAP_GROUPS_EX[1].arrowColor+';display:flex;flex-direction:column">'+chartParts.legendBefore+'</div>';
-    html+='<div style="background:#fafbfc;padding:24px;border-radius:20px;border:1px solid rgba(0,0,0,.05);border-left:6px solid '+GAP_GROUPS_EX[2].arrowColor+';display:flex;flex-direction:column">'+chartParts.legendDuring+'</div>';
-    html+='<div style="background:#fafbfc;padding:24px;border-radius:20px;border:1px solid rgba(0,0,0,.05);border-left:6px solid '+GAP_GROUPS_EX[3].arrowColor+';display:flex;flex-direction:column">'+chartParts.legendAfter+'</div>';
+    html+='<div style="display:grid;grid-template-columns:repeat(3, 1fr);gap:10px;flex:1">';
+    html+='<div style="background:#fafbfc;padding:12px;border-radius:20px;border:1px solid rgba(0,0,0,.05);border-left:6px solid '+GAP_GROUPS_EX[1].arrowColor+';display:flex;flex-direction:column">'+chartParts.legendBefore+'</div>';
+    html+='<div style="background:#fafbfc;padding:12px;border-radius:20px;border:1px solid rgba(0,0,0,.05);border-left:6px solid '+GAP_GROUPS_EX[2].arrowColor+';display:flex;flex-direction:column">'+chartParts.legendDuring+'</div>';
+    html+='<div style="background:#fafbfc;padding:12px;border-radius:20px;border:1px solid rgba(0,0,0,.05);border-left:6px solid '+GAP_GROUPS_EX[3].arrowColor+';display:flex;flex-direction:column">'+chartParts.legendAfter+'</div>';
     html+='</div>';
     html+='</div>'; 
 
     // 區塊 2-B：家庭責任
-    html+='<div style="background:#fff;border-radius:24px;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);padding:24px;display:flex;flex-direction:column">';
+    html+='<div style="background:#fff;border-radius:24px;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);padding:14px;display:flex;flex-direction:column">';
     // 高度強制鎖死為 85px，與左側 SVG 完全對齊
-    html+='<div style="height:100px;margin-bottom:20px;display:flex;align-items:center;justify-content:center;background:#312e81;border-radius:8px;color:#fff;font-size:60px;font-weight:700;flex-shrink:0;white-space:nowrap">家庭與傳承</div>';
-    html+='<div style="background:#fafbfc;padding:24px;border-radius:20px;border:1px solid rgba(0,0,0,.05);border-left:6px solid #312e81;flex:1">'+chartParts.legendFamily+'</div>';
+    html+='<div style="height:70px;margin-bottom:12px;display:flex;align-items:center;justify-content:center;background:#312e81;border-radius:8px;color:#fff;font-size:60px;font-weight:700;flex-shrink:0;white-space:nowrap">家庭與傳承</div>';
+    html+='<div style="background:#fafbfc;padding:12px;border-radius:20px;border:1px solid rgba(0,0,0,.05);border-left:6px solid #312e81;flex:1">'+chartParts.legendFamily+'</div>';
     html+='</div>'; 
     
     html+='</div>'; 
@@ -2731,9 +2731,9 @@ function renderBlock(key){
         if(typeof e[1]==="number") cov3[e[0]]=(cov3[e[0]]||0)+e[1]; else cov3[e[0]]=e[1];
       });
     });
-    var html='<div style="width:2540px;padding:14px 16px;box-sizing:content-box">';
+    var html='<div style="width:2540px;padding:8px 16px;box-sizing:content-box">';
     // 放大「各項保障加總」主標題
-    html+='<div style="font-size:48px;font-weight:800;color:#444;margin-bottom:12px">各項保障加總</div>';
+    html+='<div style="font-size:48px;font-weight:800;color:#444;margin-bottom:8px">各項保障加總</div>';
     // 改成三欄（原本五欄在字體放大後太窄，容易擠在一起），一樣是手動
     // 指定哪幾類放同一欄，不是自動順排
     var columnMap = [
@@ -2743,9 +2743,9 @@ function renderBlock(key){
       ["癌症醫療"],
     ];
     // 加大欄位之間的距離 (gap: 20px)
-    html+='<div style="display:grid;grid-template-columns:repeat(4,620px);gap:20px;align-items:start;width:2540px">';
+    html+='<div style="display:grid;grid-template-columns:repeat(4,620px);gap:14px;align-items:start;width:2540px">';
     columnMap.forEach(function(labels){
-      html+='<div style="display:flex;flex-direction:column;gap:8px">';
+      html+='<div style="display:flex;flex-direction:column;gap:6px">';
       labels.forEach(function(label){
         var g = COVERAGE_GROUPS_EX.find(function(x){ return x.label===label; });
         if (g) html += buildStatGroupCard(g, policies, cov3);
