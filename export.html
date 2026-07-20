@@ -2240,14 +2240,14 @@ function buildDonutChartEx(active, coverage, targets, covOverrides) {
           var displayVal = current > 0 ? current.toLocaleString() : "0";
           if (target > 0) displayVal += ` / ${target.toLocaleString()}`;
           // 數字放大至 38px
-          amtHtml = `<span style="color:${current>0?'#0C447C':'#888'};font-weight:800;font-size:36px;font-variant-numeric:tabular-nums">${displayVal}<span style="font-size:26px;color:#888;margin-left:6px;font-weight:600">${item.unit}</span></span>`;
+          amtHtml = `<span style="color:${current>0?'#0C447C':'#888'};font-weight:800;font-size:32px;font-variant-numeric:tabular-nums">${displayVal}<span style="font-size:26px;color:#888;margin-left:6px;font-weight:600">${item.unit}</span></span>`;
         } else {
           amtHtml = `<span style="color:#bbb;font-size:28px;font-weight:700">0</span>`;
         }
       }
 
       // 項目文字放大至 30px
-      legendHtml += `<div style="display:flex;align-items:center;gap:14px;font-size:36px;margin-bottom:16px">
+      legendHtml += `<div style="display:flex;align-items:center;gap:14px;font-size:32px;margin-bottom:16px">
         <div style="width:20px;height:20px;border-radius:6px;background:${dotColor};flex-shrink:0"></div>
         <span style="color:${status==="gap"?"#bbb":"#444"};font-weight:700;flex:1;white-space:nowrap">${item.label}</span>
         ${amtHtml}
