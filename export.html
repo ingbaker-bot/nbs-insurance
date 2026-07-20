@@ -87,35 +87,6 @@
     .ex-modal-btn{flex:1;padding:14px;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;border:none;font-family:inherit}
     .ex-modal-btn.cancel{background:#eef1f6;color:var(--text-muted)}
     .ex-modal-btn.save{background:var(--primary);color:#fff;box-shadow:0 6px 14px -4px rgba(99,102,241,.5)}
-    /* @page 要獨立寫在最外層，不要巢狀在 @media print 裡面——部分瀏覽器
-       不會正確套用巢狀在 @media 裡的 @page，導致設定的橫向被忽略、
-       還是印出直向 A4。 */
-    @page { size: A4 landscape; margin: 8mm; }
-
-    /* 列印：只印預覽區塊本身，其餘畫面元件（按鈕、頁首等）都隱藏。
-       實際縮放交給 doPrintPreview() 用 JS 精準計算並同步調整容器尺寸，
-       這裡不再用 transform:none（那樣只是視覺縮放，瀏覽器分頁還是會
-       照縮放前的 2400px 寬度計算，導致切成一堆頁、內容超出紙張）。 */
-    @media print {
-      body.printing-preview > *:not(#P_PREV) { display:none !important; }
-      body.printing-preview #P_PREV *:not(#PV_BLOCKS):not(#PV_BLOCKS *):not(#PV_SCALE_OUTER) { visibility:hidden !important; }
-      body.printing-preview #PV_BLOCKS, body.printing-preview #PV_BLOCKS * { visibility:visible !important; }
-      body.printing-preview #PV_SCALE_OUTER {
-        visibility:visible !important;
-        overflow:visible !important;
-        margin:0 !important;
-      }
-      body.printing-preview #PV_BLOCKS { position:static !important; }
-      /* 儲蓄險現金流時間軸：年份、金額、帳戶現金價值這些數字太小看不清楚，
-         列印時單獨大幅放大，其餘版面維持原本比例，不會整頁一起放大
-         導致又超出紙張範圍 */
-      body.printing-preview .st-year-num  { font-size:34px !important; }
-      body.printing-preview .st-year-roc  { font-size:30px !important; }
-      body.printing-preview .st-pill-amt  { font-size:30px !important; }
-      body.printing-preview .st-cv-amt    { font-size:26px !important; }
-      body.printing-preview .st-cv-twd    { font-size:20px !important; }
-      body.printing-preview .st-cv-date   { font-size:18px !important; }
-    }
   </style>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="nav.js"></script>
@@ -170,7 +141,7 @@
     <div class="brow">
       <div class="brow-inner">
         <button class="sbtn" id="B_BACK2">返回修改</button>
-        <button class="sbtn" id="B_PRINT" title="直接列印目前預覽的內容，不用等產生完成">🖨️ 列印</button>
+        <button class="sbtn" id="B_PRINT" title="產生列印用的 PDF，並在新分頁開啟，從瀏覽器的 PDF 檢視器列印">🖨️ 列印</button>
         <button class="pbtn" id="B_EXPORT" style="background:var(--primary);flex:2">下載圖片</button>
       </div>
     </div>
@@ -270,41 +241,38 @@ document.getElementById("B_BACK2").onclick   = doShowSelect;
 document.getElementById("B_PRINT").onclick   = doPrintPreview;
 document.getElementById("B_EXPORT").onclick  = doExport;
 
-// 直接列印目前預覽畫面看到的內容，不用等 PDF/圖片產生完成。
-function doPrintPreview(){
-  var inner = document.getElementById("PV_BLOCKS");
-  var outer = document.getElementById("PV_SCALE_OUTER");
-  var prevTransform, prevWidth, prevHeight;
+// 列印改成：背景先產生 PDF（跟「匯出 PDF」共用同一套已驗證正確的
+// html2canvas＋jsPDF 流程），完成後在新分頁開啟，讓使用者從瀏覽器
+// 內建的 PDF 檢視器按列印。
+// 原本的做法是直接列印畫面上即時的 DOM（用 CSS transform 縮放），
+// 但這樣容易遇到瀏覽器分頁演算法跟縮放互相干擾的問題——例如圖片
+// 位置跑掉、使用者自己在列印面板又疊加一層縮放導致版面全部跑掉。
+// PDF 產生流程是先把每個區塊擷取成固定圖片再排版，不會有這些即時
+// 重排的不穩定因素，橫向、分頁、圖片位置都已經驗證沒問題。
+async function doPrintPreview(){
+  var selBlks = BLOCKS.filter(function(b){ return sel[b.key]; });
+  if (!selBlks.length) return;
 
-  if (inner && outer) {
-    // 報告設計寬度是 2400px（給截圖用的超寬版面），單純取消縮放
-    // (transform:none) 只是「看起來」變大，瀏覽器分頁還是照 2400px
-    // 的寬度去算，才會切成一堆頁面、內容還超出紙張範圍。
-    // 這裡改成：精準縮小到適合橫向 A4 的寬度，而且外層容器的實際
-    // 尺寸也要一起縮小（不只是視覺上用 transform 縮小），瀏覽器分頁
-    // 才會照縮小後的實際尺寸計算，不會再切成一堆頁、也不會超出邊界。
-    var printScale = 1040 / 2400; // 橫向 A4 扣掉邊界後大約可用寬度（留一點安全邊界）
-    prevTransform = inner.style.transform;
-    prevWidth  = outer.style.width;
-    prevHeight = outer.style.height;
-    inner.style.transform = "scale(" + printScale + ")";
-    outer.style.width  = Math.round(2400 * printScale) + "px";
-    outer.style.height = Math.round(inner.scrollHeight * printScale) + "px";
+  var btn = document.getElementById("B_PRINT");
+  var originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "產生列印內容中…";
+
+  var div = document.createElement("div");
+  div.style.cssText = "position:fixed;left:-9999px;top:0;width:1200px;background:#fff;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;color:#1a1a1a";
+  document.body.appendChild(div);
+
+  try {
+    var result = await buildPdfDocument(selBlks, div);
+    var url = URL.createObjectURL(result.pdf.output("blob"));
+    window.open(url, "_blank");
+  } catch (e) {
+    alert("列印內容產生失敗："+e.message);
+  } finally {
+    document.body.removeChild(div);
+    btn.disabled = false;
+    btn.textContent = originalText;
   }
-
-  document.body.classList.add("printing-preview");
-  window.print();
-
-  // afterprint 在部分瀏覽器（尤其手機）不一定會確實觸發，
-  // 保底用 setTimeout 一定會把樣式復原，避免列印完畫面卡住。
-  var restore = function(){
-    document.body.classList.remove("printing-preview");
-    if (inner) inner.style.transform = prevTransform || "";
-    if (outer) { outer.style.width = prevWidth || ""; outer.style.height = prevHeight || ""; }
-    window.removeEventListener("afterprint", restore);
-  };
-  window.addEventListener("afterprint", restore);
-  setTimeout(restore, 1500);
 }
 document.getElementById("B_FINISH").onclick  = _goFamily;
 document.getElementById("B_DONE_PREV").onclick = doShowSelect;
@@ -2890,7 +2858,7 @@ async function doExportPNG(blks,div){
   }
 }
 
-async function doExportPDF(blks,div){
+async function buildPdfDocument(blks,div){
   var J=window.jspdf.jsPDF;
   var pdf=new J({ orientation:"l", unit:"mm", format:[297,210] });  // 明確指定橫向寬高（297x210mm），避免文字參數解析問題
   var pageW=297, pageH=210, margin=10, usableW=pageW-margin*2, usableH=pageH-margin*2;
@@ -3106,8 +3074,15 @@ async function doExportPDF(blks,div){
     ? "_"+curMemberForName.name
     : "";
   const pdfFileName = pName+"_"+getReportBaseName(blks)+memberSuffix+"_"+pDate+".pdf";
-  await saveBlobSmart(pdf.output("blob"), pdfFileName, "PDF 文件", {"application/pdf": [".pdf"]});
   setP(100);
+  return { pdf: pdf, fileName: pdfFileName };
+}
+
+// 「匯出 PDF」按鈕用的包裝函式：呼叫共用的 buildPdfDocument 產生 PDF，
+// 再存檔（支援的瀏覽器跳出另存新檔，不支援就自動下載）。
+async function doExportPDF(blks,div){
+  var result = await buildPdfDocument(blks,div);
+  await saveBlobSmart(result.pdf.output("blob"), result.fileName, "PDF 文件", {"application/pdf": [".pdf"]});
 }
 
 function showDone(blks){
