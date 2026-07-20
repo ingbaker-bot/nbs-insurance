@@ -1761,7 +1761,7 @@ function statRowHtml(x, color) {
   }
   return '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px 8px;padding:'+(isFilled?'14px':'12px')+' 16px;border-top:1px solid #f2f2f4">'+
     // 左側保障項目名稱放大
-    '<span style="font-size:31px;color:'+(isFilled?"#555":"#aaacb3")+';font-weight:700">'+x.label+(isFilled?x.remainNote:"")+'</span>'+
+    '<span style="font-size:34px;color:'+(isFilled?"#555":"#aaacb3")+';font-weight:700">'+x.label+(isFilled?x.remainNote:"")+'</span>'+
     valueHtml+
   '</div>';
 }
@@ -1991,8 +1991,8 @@ function buildPremiumDetailParts() {
     var startRocText = toRocDateStr(mainPol.startDate);
     var insAgeAtStart = getAgeAtDate(person.profile && person.profile.birthDate, mainPol.startDate);
     var startInfoHtml = startRocText
-      ? '<span style="font-size:31px;color:#6b7280;font-weight:600;white-space:nowrap">生效日 '+startRocText+(insAgeAtStart!==null?'　投保年齡 '+insAgeAtStart+'歲':'')+'</span>'
-      : (insAgeAtStart!==null ? '<span style="font-size:31px;color:#6b7280;font-weight:600;white-space:nowrap">投保年齡 '+insAgeAtStart+'歲</span>' : '');
+      ? '<span style="font-size:34px;color:#6b7280;font-weight:600;white-space:nowrap">生效日 '+startRocText+(insAgeAtStart!==null?'　投保年齡 '+insAgeAtStart+'歲':'')+'</span>'
+      : (insAgeAtStart!==null ? '<span style="font-size:34px;color:#6b7280;font-weight:600;white-space:nowrap">投保年齡 '+insAgeAtStart+'歲</span>' : '');
 
     // 要保人（owner）如果跟被保險人（這份報表本人）不同人，特別標示出來，
     // 因為保單帳戶價值／解約權利是屬於要保人，不是被保險人。
@@ -2076,13 +2076,13 @@ function buildPremiumDetailParts() {
       var expiryText = getPolicyExpiryDisplay(p);
 
       return '<div style="display:grid;grid-template-columns:'+COLS_PD+';border-bottom:1px solid #f2f2f4">'+
-        '<div style="'+tdStylePD+'">'+(isMR?'<span style="font-size:26px;color:#fff;background:#378ADD;padding:2px 7px;border-radius:99px;font-weight:700">主</span>':'<span style="font-size:26px;color:#888;background:#ebebeb;padding:2px 7px;border-radius:99px;font-weight:700">附</span>')+'</div>'+
-        '<div style="'+tdStylePD+'"><span style="font-size:26px;padding:2px 7px;border-radius:99px;background:'+cc+'1A;color:'+cc+';font-weight:700;white-space:nowrap">'+(p.category||'—')+'</span></div>'+
-        '<div style="'+tdStylePD+'font-size:32px;font-weight:700;color:#1f2937">'+(p.itemName||'—')+'</div>'+
+        '<div style="'+tdStylePD+'">'+(isMR?'<span style="font-size:34px;color:#fff;background:#378ADD;padding:2px 7px;border-radius:99px;font-weight:700">主</span>':'<span style="font-size:34px;color:#888;background:#ebebeb;padding:2px 7px;border-radius:99px;font-weight:700">附</span>')+'</div>'+
+        '<div style="'+tdStylePD+'"><span style="font-size:34px;padding:2px 7px;border-radius:99px;background:'+cc+'1A;color:'+cc+';font-weight:700;white-space:nowrap">'+(p.category||'—')+'</span></div>'+
+        '<div style="'+tdStylePD+'font-size:34px;font-weight:700;color:#1f2937">'+(p.itemName||'—')+'</div>'+
         '<div style="'+tdStylePD+'text-align:right;font-weight:800;color:#0C447C;font-variant-numeric:tabular-nums;white-space:nowrap">'+amtText+'</div>'+
         '<div style="'+tdStylePD+'text-align:right;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums">'+premDisplayPD+'</div>'+
-        '<div style="'+tdStylePD+'"><span style="font-size:26px;padding:2px 7px;border-radius:99px;background:'+(isPolicyActiveEx(p)?"#EAF3DE":"#f0f0f0")+';color:'+(isPolicyActiveEx(p)?"#27500A":"#888")+'">'+(p.status||"有效")+'</span></div>'+
-        '<div style="'+tdStylePD+'font-size:31px;color:'+(expiryText==="終身"?"#374151":expiryText==="—"?"#9ca3af":"#B07000")+';font-weight:700;white-space:nowrap">'+expiryText+'</div>'+
+        '<div style="'+tdStylePD+'"><span style="font-size:34px;padding:2px 7px;border-radius:99px;background:'+(isPolicyActiveEx(p)?"#EAF3DE":"#f0f0f0")+';color:'+(isPolicyActiveEx(p)?"#27500A":"#888")+'">'+(p.status||"有效")+'</span></div>'+
+        '<div style="'+tdStylePD+'font-size:34px;color:'+(expiryText==="終身"?"#374151":expiryText==="—"?"#9ca3af":"#B07000")+';font-weight:700;white-space:nowrap">'+expiryText+'</div>'+
         '<div style="'+tdStylePD+'text-align:right;font-weight:800;color:#B0466F;font-variant-numeric:tabular-nums;white-space:nowrap">'+dbText+'</div>'+
         '<div style="'+tdStylePD+'color:'+dColor+';line-height:1.4;font-size:31px">'+dStr+'</div>'+
         '<div style="'+tdStylePD+'line-height:1.4;font-size:31px">'+liveDisplay+'</div>'+
