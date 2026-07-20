@@ -616,19 +616,30 @@ function buildSavingsTimelineParts(pdm3,fData,startYr,endYr){
       return'<tr>'+fc+cvCell+cells+'</tr>';
     }).join("");
     var mf={};g.policies.forEach(function(pr){Object.keys(pr.flows).forEach(function(y5){mf[y5]=(mf[y5]||0)+pr.flows[y5];});});
+    var cvSub=0;g.policies.forEach(function(pr){
+      if(!pr.accountValue)return;
+      var rate=(pr.currency&&pr.currency!=="TWD"&&parseFloat(pr.exchangeRate))?parseFloat(pr.exchangeRate):1;
+      cvSub+=(parseFloat(pr.accountValue)||0)*rate;
+    });
     var sub='<tr style="background:#eef0ff;font-weight:800;color:#4338ca"><td style="padding:8px 7px 8px 17px;border-right:2px solid #e2e5ea;font-size:17px">小計</td>'+
-      '<td style="border-right:2px solid #e2e5ea"></td>'+
+      '<td style="text-align:center;border-right:2px solid #e2e5ea;font-size:17px">'+(cvSub>0?fmtAmtEx(cvSub):'—')+'</td>'+
       years.map(function(y6){var a=mf[y6]||0;return a?'<td style="text-align:center;font-size:18px;font-variant-numeric:tabular-nums">'+fmtAmtEx(a)+'</td>':'<td style="text-align:center;color:#9ca3af">—</td>';}).join("")+'</tr>';
     return '<div style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);border-left:8px solid #4338ca">'+
       '<table style="width:100%;border-collapse:collapse;font-size:19px;table-layout:fixed">'+colgroupHtml+'<tbody>'+nr+pr2+sub+'</tbody></table>'+
     '</div>';
   }
 
+  var totalCV=0;
+  groups.forEach(function(g){ g.policies.forEach(function(pr){
+    if(!pr.accountValue) return;
+    var rate=(pr.currency&&pr.currency!=="TWD"&&parseFloat(pr.exchangeRate))?parseFloat(pr.exchangeRate):1;
+    totalCV+=(parseFloat(pr.accountValue)||0)*rate;
+  }); });
   var totalRowHtml = '<div style="border-radius:16px;overflow:hidden;box-shadow:0 4px 14px -4px rgba(0,0,0,.12)">'+
     '<table style="width:100%;border-collapse:collapse;font-size:19px;table-layout:fixed;background:#4c46b8">'+colgroupHtml+
     '<tbody><tr style="color:#fff;font-weight:800">'+
     '<td style="padding:12px 7px 12px 17px;font-size:18px">合計現金流</td>'+
-    '<td></td>'+
+    '<td style="text-align:center;font-size:17px">'+(totalCV>0?fmtAmtEx(totalCV):'—')+'</td>'+
     years.map(function(y7){var a=totalFlows[y7]||0;return a?'<td style="text-align:center;font-size:20px;font-variant-numeric:tabular-nums">'+fmtAmtEx(a)+'</td>':'<td style="text-align:center;opacity:.6">—</td>';}).join("")+
     '</tr></tbody></table></div>';
 
@@ -715,20 +726,31 @@ function renderSavingsTimeline(pdm3,fData,startYr,endYr){
       return'<tr>'+fc+cvCell+cells+'</tr>';
     }).join("");
     var mf={};g.policies.forEach(function(pr){Object.keys(pr.flows).forEach(function(y5){mf[y5]=(mf[y5]||0)+pr.flows[y5];});});
+    var cvSub=0;g.policies.forEach(function(pr){
+      if(!pr.accountValue)return;
+      var rate=(pr.currency&&pr.currency!=="TWD"&&parseFloat(pr.exchangeRate))?parseFloat(pr.exchangeRate):1;
+      cvSub+=(parseFloat(pr.accountValue)||0)*rate;
+    });
     var sub='<tr style="background:#eef0ff;font-weight:800;color:#4338ca"><td style="padding:7px 7px 7px 17px;border-right:2px solid #e2e5ea;font-size:16px">小計</td>'+
-      '<td style="border-right:2px solid #e2e5ea"></td>'+
+      '<td style="text-align:center;border-right:2px solid #e2e5ea;font-size:16px">'+(cvSub>0?fmtAmtEx(cvSub):'—')+'</td>'+
       years.map(function(y6){var a=mf[y6]||0;return a?'<td style="text-align:center;font-size:17px;font-variant-numeric:tabular-nums">'+fmtAmtEx(a)+'</td>':'<td style="text-align:center;color:#9ca3af">—</td>';}).join("")+'</tr>';
     return '<div style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);border-left:8px solid #4338ca;margin-bottom:14px">'+
       '<table style="width:100%;border-collapse:collapse;table-layout:fixed">'+colgroupHtml2+'<tbody>'+nr+pr2+sub+'</tbody></table>'+
     '</div>';
   }).join("");
 
+  var totalCV=0;
+  groups.forEach(function(g){ g.policies.forEach(function(pr){
+    if(!pr.accountValue) return;
+    var rate=(pr.currency&&pr.currency!=="TWD"&&parseFloat(pr.exchangeRate))?parseFloat(pr.exchangeRate):1;
+    totalCV+=(parseFloat(pr.accountValue)||0)*rate;
+  }); });
   var totalHtml =
     '<div style="border-radius:16px;overflow:hidden;box-shadow:0 4px 14px -4px rgba(0,0,0,.12)">'+
       '<table style="width:100%;border-collapse:collapse;table-layout:fixed;background:#4c46b8">'+colgroupHtml2+
       '<tbody><tr style="color:#fff;font-weight:800">'+
         '<td style="padding:12px 7px 12px 17px;font-size:18px">合計現金流</td>'+
-        '<td></td>'+
+        '<td style="text-align:center;font-size:16px">'+(totalCV>0?fmtAmtEx(totalCV):'—')+'</td>'+
         years.map(function(y7){var a=totalFlows[y7]||0;return a?'<td style="text-align:center;font-size:19px;font-variant-numeric:tabular-nums">'+fmtAmtEx(a)+'</td>':'<td style="text-align:center;opacity:.6">—</td>';}).join("")+
       '</tr></tbody></table>'+
     '</div>';
