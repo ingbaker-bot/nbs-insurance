@@ -1730,10 +1730,10 @@ function buildStatGroupCard(g, policies, cov3) {
 
   return '<div style="background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);border-left:8px solid '+g.color+'">'+
     // 珍珠光澤標題底，跟圓餅圖已規劃/部分有的質感呼應
-    '<div style="padding:18px 20px;background:'+pearlGradientEx(g.color)+'">'+
+    '<div style="padding:12px 16px;background:'+pearlGradientEx(g.color)+'">'+
       '<div style="display:flex;align-items:center;gap:12px;min-width:0">'+
         // 放大前方的圖示 (icon)
-        '<span style="font-size:47px;line-height:1;flex-shrink:0">'+(g.icon||'')+'</span>'+
+        '<span style="font-size:36px;line-height:1;flex-shrink:0">'+(g.icon||'')+'</span>'+
         // 放大分類標題 (如：住院醫療)，改為白字搭配珍珠光澤底色
         '<span style="font-size:40px;font-weight:800;letter-spacing:.01em;color:#fff;line-height:1.3;text-shadow:0 1px 2px rgba(0,0,0,.15)">'+g.label+'</span>'+
       '</div>'+
@@ -1759,7 +1759,7 @@ function statRowHtml(x, color) {
     valueHtml = '<span style="font-size:42px;font-weight:800;color:'+color+';font-variant-numeric:tabular-nums">'+x.total.toLocaleString()+
       '<span style="font-size:30px;color:#6b7280;font-weight:700;margin-left:4px">'+x.unit+'</span></span>';
   }
-  return '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px 8px;padding:'+(isFilled?'14px':'12px')+' 16px;border-top:1px solid #f2f2f4">'+
+  return '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px 8px;padding:'+(isFilled?'8px':'6px')+' 16px;border-top:1px solid #f2f2f4">'+
     // 左側保障項目名稱放大
     '<span style="font-size:36px;color:'+(isFilled?"#555":"#aaacb3")+';font-weight:700">'+x.label+(isFilled?x.remainNote:"")+'</span>'+
     valueHtml+
@@ -2731,9 +2731,9 @@ function renderBlock(key){
         if(typeof e[1]==="number") cov3[e[0]]=(cov3[e[0]]||0)+e[1]; else cov3[e[0]]=e[1];
       });
     });
-    var html='<div style="padding:20px 16px">';
+    var html='<div style="padding:14px 16px">';
     // 放大「各項保障加總」主標題
-    html+='<div style="font-size:48px;font-weight:800;color:#444;margin-bottom:18px">各項保障加總</div>';
+    html+='<div style="font-size:48px;font-weight:800;color:#444;margin-bottom:12px">各項保障加總</div>';
     // 改成三欄（原本五欄在字體放大後太窄，容易擠在一起），一樣是手動
     // 指定哪幾類放同一欄，不是自動順排
     var columnMap = [
@@ -2745,7 +2745,7 @@ function renderBlock(key){
     // 加大欄位之間的距離 (gap: 20px)
     html+='<div style="display:grid;grid-template-columns:repeat(4,577px);gap:20px;align-items:start;width:2368px">';
     columnMap.forEach(function(labels){
-      html+='<div style="display:flex;flex-direction:column;gap:12px">';
+      html+='<div style="display:flex;flex-direction:column;gap:8px">';
       labels.forEach(function(label){
         var g = COVERAGE_GROUPS_EX.find(function(x){ return x.label===label; });
         if (g) html += buildStatGroupCard(g, policies, cov3);
