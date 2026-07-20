@@ -87,6 +87,21 @@
     .ex-modal-btn{flex:1;padding:14px;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;border:none;font-family:inherit}
     .ex-modal-btn.cancel{background:#eef1f6;color:var(--text-muted)}
     .ex-modal-btn.save{background:var(--primary);color:#fff;box-shadow:0 6px 14px -4px rgba(99,102,241,.5)}
+    /* 列印：只印預覽區塊本身，其餘畫面元件（按鈕、頁首等）都隱藏；
+       取消預覽用的縮放 transform，讓瀏覽器的列印功能自己抓合適的縮放比例 */
+    @media print {
+      body.printing-preview > *:not(#P_PREV) { display:none !important; }
+      body.printing-preview #P_PREV *:not(#PV_BLOCKS):not(#PV_BLOCKS *) { visibility:hidden !important; }
+      body.printing-preview #PV_BLOCKS, body.printing-preview #PV_BLOCKS * { visibility:visible !important; }
+      body.printing-preview #PV_BLOCKS {
+        position:absolute; left:0; top:0;
+        transform:none !important;
+        width:100% !important;
+      }
+      body.printing-preview #PV_SCALE_OUTER {
+        width:auto !important; height:auto !important; overflow:visible !important;
+      }
+    }
   </style>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="nav.js"></script>
@@ -141,6 +156,7 @@
     <div class="brow">
       <div class="brow-inner">
         <button class="sbtn" id="B_BACK2">返回修改</button>
+        <button class="sbtn" id="B_PRINT" title="直接列印目前預覽的內容，不用等產生完成">🖨️ 列印</button>
         <button class="pbtn" id="B_EXPORT" style="background:var(--primary);flex:2">下載圖片</button>
       </div>
     </div>
@@ -237,7 +253,22 @@ document.getElementById("B_BACK").onclick    = _goFamily;
 document.getElementById("B_TOGALL").onclick  = doToggleAll;
 document.getElementById("B_PREV").onclick    = doShowPreview;
 document.getElementById("B_BACK2").onclick   = doShowSelect;
+document.getElementById("B_PRINT").onclick   = doPrintPreview;
 document.getElementById("B_EXPORT").onclick  = doExport;
+
+// 直接列印目前預覽畫面看到的內容，不用等 PDF/圖片產生完成。
+function doPrintPreview(){
+  document.body.classList.add("printing-preview");
+  window.print();
+  // afterprint 在部分瀏覽器（尤其手機）不一定會確實觸發，
+  // 保底用 setTimeout 一定會把樣式復原，避免列印完畫面卡住。
+  var restore = function(){
+    document.body.classList.remove("printing-preview");
+    window.removeEventListener("afterprint", restore);
+  };
+  window.addEventListener("afterprint", restore);
+  setTimeout(restore, 1500);
+}
 document.getElementById("B_FINISH").onclick  = _goFamily;
 document.getElementById("B_DONE_PREV").onclick = doShowSelect;
 
@@ -2599,6 +2630,36 @@ function getReportBaseName(blks){
   return blks.length===1 ? blks[0].label : "保單體檢";
 }
 
+// 智慧存檔：支援 File System Access API 的瀏覽器（目前只有 Chrome／Edge
+// 桌面版）會跳出瀏覽器原生的「另存新檔」視窗，讓使用者自己選資料夾；
+// 不支援的環境（Safari、Firefox、手機瀏覽器）自動退回原本「直接觸發
+// 下載」的做法，不影響原本的使用方式。
+// 回傳 true＝檔案已經處理完成（存檔或下載），false＝使用者自己按了
+// 取消，這種情況不應該又跳回去自動下載，尊重使用者取消的意思。
+async function saveBlobSmart(blob, suggestedName, description, accept) {
+  if (window.showSaveFilePicker) {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: suggestedName,
+        types: [{ description: description, accept: accept }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return true;
+    } catch (e) {
+      if (e && e.name === "AbortError") return false; // 使用者自己取消，不要又跳回去自動下載
+      // 其他非預期錯誤（例如權限問題）才退回自動下載，不要整個匯出失敗
+    }
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.download = suggestedName;
+  a.href = url;
+  a.click();
+  return true;
+}
+
 async function doExportPNG(blks,div){
   var wm = ''; // 業務員資訊已移至上方，這裡留空
   var disclaimer='<div style="padding:8px 14px;font-size:32px;color:#999;line-height:1.6;text-align:left">⚠️ 本報告彙總之資訊為檢視與討論保障內容的參考藍圖；為守護您的權益，實際理賠給付項目與條件，仍以各家保險公司之最新資料及正式保險契約條款為準。</div>';
@@ -2624,9 +2685,8 @@ async function doExportPNG(blks,div){
       width:singleW,windowWidth:singleW});
     div.style.width="2400px";
     setP(80);await sleep(100);
-    var a=document.createElement("a");
-    a.download=pName+"_保單體檢_"+pDate+".jpg";
-    a.href=c.toDataURL("image/jpeg",0.92);a.click();
+    var singleBlob=await new Promise(function(resolve){ c.toBlob(resolve,"image/jpeg",0.92); });
+    await saveBlobSmart(singleBlob, pName+"_"+getReportBaseName(blks)+"_"+pDate+".jpg", "JPEG 圖片", {"image/jpeg": [".jpg",".jpeg"]});
     setP(100);
   }else{
     // 分張圖檔：每個區塊各自一張，逐張直接觸發下載，不打包、不經過分享。
@@ -2901,7 +2961,8 @@ async function doExportPDF(blks,div){
   var memberSuffix = (blks.some(function(b){return b.key==="savings_timeline";}) && curMemberForName)
     ? "_"+curMemberForName.name
     : "";
-  pdf.save(pName+"_"+getReportBaseName(blks)+memberSuffix+"_"+pDate+".pdf");
+  const pdfFileName = pName+"_"+getReportBaseName(blks)+memberSuffix+"_"+pDate+".pdf";
+  await saveBlobSmart(pdf.output("blob"), pdfFileName, "PDF 文件", {"application/pdf": [".pdf"]});
   setP(100);
 }
 
