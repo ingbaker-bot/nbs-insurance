@@ -87,12 +87,16 @@
     .ex-modal-btn{flex:1;padding:14px;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;border:none;font-family:inherit}
     .ex-modal-btn.cancel{background:#eef1f6;color:var(--text-muted)}
     .ex-modal-btn.save{background:var(--primary);color:#fff;box-shadow:0 6px 14px -4px rgba(99,102,241,.5)}
+    /* @page 要獨立寫在最外層，不要巢狀在 @media print 裡面——部分瀏覽器
+       不會正確套用巢狀在 @media 裡的 @page，導致設定的橫向被忽略、
+       還是印出直向 A4。 */
+    @page { size: A4 landscape; margin: 8mm; }
+
     /* 列印：只印預覽區塊本身，其餘畫面元件（按鈕、頁首等）都隱藏。
        實際縮放交給 doPrintPreview() 用 JS 精準計算並同步調整容器尺寸，
        這裡不再用 transform:none（那樣只是視覺縮放，瀏覽器分頁還是會
        照縮放前的 2400px 寬度計算，導致切成一堆頁、內容超出紙張）。 */
     @media print {
-      @page { size: A4 landscape; margin: 8mm; }
       body.printing-preview > *:not(#P_PREV) { display:none !important; }
       body.printing-preview #P_PREV *:not(#PV_BLOCKS):not(#PV_BLOCKS *):not(#PV_SCALE_OUTER) { visibility:hidden !important; }
       body.printing-preview #PV_BLOCKS, body.printing-preview #PV_BLOCKS * { visibility:visible !important; }
