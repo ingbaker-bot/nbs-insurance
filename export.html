@@ -102,12 +102,15 @@
         margin:0 !important;
       }
       body.printing-preview #PV_BLOCKS { position:static !important; }
-      /* 儲蓄險現金流時間軸：年份跟金額數字太小看不清楚，列印時單獨放大
-         50%（18px→27px、20px→30px、18px→27px），其餘版面維持原本比例，
-         不會整頁一起放大導致又超出紙張範圍 */
-      body.printing-preview .st-year-num  { font-size:30px !important; }
-      body.printing-preview .st-year-roc  { font-size:27px !important; }
-      body.printing-preview .st-pill-amt  { font-size:27px !important; }
+      /* 儲蓄險現金流時間軸：年份、金額、帳戶現金價值這些數字太小看不清楚，
+         列印時單獨大幅放大，其餘版面維持原本比例，不會整頁一起放大
+         導致又超出紙張範圍 */
+      body.printing-preview .st-year-num  { font-size:34px !important; }
+      body.printing-preview .st-year-roc  { font-size:30px !important; }
+      body.printing-preview .st-pill-amt  { font-size:30px !important; }
+      body.printing-preview .st-cv-amt    { font-size:26px !important; }
+      body.printing-preview .st-cv-twd    { font-size:20px !important; }
+      body.printing-preview .st-cv-date   { font-size:18px !important; }
     }
   </style>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -466,7 +469,7 @@ function fmtAccountValueEx(rawValue,currency,exchangeRate){
   var cur=currency||"TWD";
   if(cur==="TWD")return fmtAmtEx(amt);
   var rate=parseFloat(exchangeRate)||1;
-  return fmtForeignEx(amt,cur)+'<span style="color:#9aa0ac;font-weight:600">（≈'+fmtAmtEx(amt*rate)+'台幣）</span>';
+  return fmtForeignEx(amt,cur)+'<span class="st-cv-twd" style="color:#4B5563;font-weight:700">（≈'+fmtAmtEx(amt*rate)+'台幣）</span>';
 }
 function isMonthlyEx(k){return k==="5";}
 function isYearlyDetailEx(k){return k==="6";}
@@ -608,7 +611,7 @@ function buildSavingsTimelineParts(pdm3,fData,startYr,endYr){
         (pr.itemName?'<div style="font-size:18px;color:#444;font-weight:700;margin-top:4px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.3">'+pr.itemName+'</div>':'')+
       '</td>';
       var cvCell=pr.accountValue
-        ? '<td style="text-align:center;border-right:2px solid #e2e5ea"><div style="font-size:19px;color:#185FA5;font-weight:800">'+fmtAccountValueEx(pr.accountValue,pr.currency,pr.exchangeRate)+'</div><div style="font-size:14px;color:#9aa0ac">'+(pr.accountValueDate||"")+'</div></td>'
+        ? '<td style="text-align:center;border-right:2px solid #e2e5ea"><div class="st-cv-amt" style="font-size:19px;color:#185FA5;font-weight:800">'+fmtAccountValueEx(pr.accountValue,pr.currency,pr.exchangeRate)+'</div><div class="st-cv-date" style="font-size:14px;color:#6B7280;font-weight:600">'+(pr.accountValueDate||"")+'</div></td>'
         : '<td style="text-align:center;border-right:2px solid #e2e5ea;color:#c7c9d1;font-size:18px">—</td>';
       return'<tr>'+fc+cvCell+cells+'</tr>';
     }).join("");
@@ -707,7 +710,7 @@ function renderSavingsTimeline(pdm3,fData,startYr,endYr){
         (pr.itemName?'<div style="font-size:16px;color:#444;font-weight:700;margin-top:4px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.3">'+pr.itemName+'</div>':'')+
       '</td>';
       var cvCell=pr.accountValue
-        ? '<td style="text-align:center;border-right:2px solid #e2e5ea"><div style="font-size:17px;color:#185FA5;font-weight:800">'+fmtAccountValueEx(pr.accountValue,pr.currency,pr.exchangeRate)+'</div><div style="font-size:12px;color:#9aa0ac">'+(pr.accountValueDate||"")+'</div></td>'
+        ? '<td style="text-align:center;border-right:2px solid #e2e5ea"><div class="st-cv-amt" style="font-size:17px;color:#185FA5;font-weight:800">'+fmtAccountValueEx(pr.accountValue,pr.currency,pr.exchangeRate)+'</div><div class="st-cv-date" style="font-size:12px;color:#6B7280;font-weight:600">'+(pr.accountValueDate||"")+'</div></td>'
         : '<td style="text-align:center;border-right:2px solid #e2e5ea;color:#c7c9d1;font-size:16px">—</td>';
       return'<tr>'+fc+cvCell+cells+'</tr>';
     }).join("");
