@@ -1886,7 +1886,7 @@ function buildFamilyPremiumSummaryHtml(){
   return html;
 }
 
-function buildPremiumDetailParts() {
+function buildPremiumDetailParts(forPrint) {
   var active = policies.filter(isPolicyActiveEx); // 自己算，不依賴外層變數，
                                                     // 確保從 doExportPDF 直接呼叫時也能正確運作
   var totalTWD_pd=active.reduce(function(s,p){return s+(p.premiumTWD||0);},0);
@@ -1935,7 +1935,7 @@ function buildPremiumDetailParts() {
   var cellsPD = [statCells[0]].concat(monthCells.slice(0,6))
     .concat([statCells[1]]).concat(monthCells.slice(6,12)).join("");
   headerHtml+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:16px">'+cellsPD+'</div>';
-  headerHtml+='<div style="font-size:45px;font-weight:800;color:#444;margin-bottom:5px">保單與受益人整合表</div>';
+  headerHtml+='<div style="font-size:45px;font-weight:800;color:#444;margin-bottom:'+(forPrint?'5px':'8px')+'">保單與受益人整合表</div>';
   headerHtml+='</div>';
 
   var BENEF_RULES_PD = {
@@ -2089,7 +2089,7 @@ function buildPremiumDetailParts() {
       '</div>';
     });
 
-    var cardWrapOpen  = '<div style="break-inside:avoid;margin-bottom:5px;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);border-left:8px solid #6366f1">';
+    var cardWrapOpen  = '<div style="break-inside:avoid;margin-bottom:'+(forPrint?'5px':'7px')+';background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);border-left:8px solid #6366f1">';
     var cardWrapClose = '</div>';
     var fullHtml = cardWrapOpen + cardHeaderHtml + colHeaderRow + rowsHtml.join("") + cardWrapClose;
 
@@ -3028,7 +3028,7 @@ async function buildPdfDocument(blks,div){
       // 絕對不會把同一組保單（主約+附約）從中間切成兩半分散兩頁，
       // 也不會為了硬塞進一頁而把整張圖縮到看不清楚。
       // 每次換頁，標題都會在新的一頁重新印一次，不會只有第一頁有標題。
-      var parts = buildPremiumDetailParts();
+      var parts = buildPremiumDetailParts(true);
       var titleC = await captureHtml(getBlockTitleHtml(blks[i]));
       var titleH = (titleC.height/titleC.width)*usableW;
 
