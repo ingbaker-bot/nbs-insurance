@@ -176,10 +176,15 @@ function submitShellUrl() {
 
   // 先 ping Shell 確認能連上
   fetch(url + "?action=ping")
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-      if (!d.ok) throw new Error("Shell 回應異常");
-      // Shell 正常，向 API1 註冊
+  .then(function(r) { return r.json(); })
+  .then(function(d) {
+    if (!d.ok) throw new Error("Shell 回應異常");
+    if (!d.email || d.email.toLowerCase() !== userEmail.toLowerCase()) {
+      throw new Error(
+        "這個網址綁定的帳號是「" + (d.email || "未知") + "」，跟您的帳號「" + userEmail +
+        "」不一致。請確認您是否有先點「檔案 → 建立副本」，複製到自己的帳號後再部署。"
+      );
+    }
       return fetch(GAS_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain" },
