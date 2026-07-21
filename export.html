@@ -3036,16 +3036,21 @@ async function buildPdfDocument(blks,div){
       var headerC = await captureHtml(parts.headerHtml);
       var hd = canvasToMM(headerC, usableW, usableH-titleH-4);
 
-      // 【修改點 2】修改換頁函數，讓每新的一頁都同時印上「主標題」與「保費統計與月曆」
+      // 【修改點 2】年繳保費與月繳費分配這個區塊只在第一頁出現，
+      // 第二頁以後不再重複印，只保留最上方的主標題列，直接接續保單列表。
+      var isFirstPagePD = true;
       async function startNewPagePD(){
         addNewPage("繳費");
-        // 1. 印上最上方主標題 (【XXX】保單繳費明細一覽表)
+        // 1. 印上最上方主標題 (【XXX】保單繳費明細一覽表)——每頁都要有
         pdf.addImage(titleC.toDataURL("image/jpeg",0.88),"JPEG",margin,margin,usableW,titleH);
-        // 2. 緊接著印上列印標題 (年繳保費、月繳保費分配、欄位名稱)
-        pdf.addImage(headerC.toDataURL("image/jpeg",0.88),"JPEG",margin,margin+titleH,hd.iw,hd.ih);
-        
-        // 回傳加上列印標題後的新 Y 座標，讓接下來的保單明細從這裡開始往下排
-        return margin+titleH+hd.ih+4; 
+        if (isFirstPagePD) {
+          // 2. 只有第一頁才印「年繳保費、月繳保費分配」這個區塊
+          pdf.addImage(headerC.toDataURL("image/jpeg",0.88),"JPEG",margin,margin+titleH,hd.iw,hd.ih);
+          isFirstPagePD = false;
+          return margin+titleH+hd.ih+4;
+        }
+        // 第二頁以後：主標題印完就直接接保單列表，不留這段空間
+        return margin+titleH+4;
       }
 
       var y = await startNewPagePD();
