@@ -1935,7 +1935,7 @@ function buildPremiumDetailParts() {
   var cellsPD = [statCells[0]].concat(monthCells.slice(0,6))
     .concat([statCells[1]]).concat(monthCells.slice(6,12)).join("");
   headerHtml+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:16px">'+cellsPD+'</div>';
-  headerHtml+='<div style="font-size:45px;font-weight:800;color:#444;margin-bottom:8px">保單與受益人整合表</div>';
+  headerHtml+='<div style="font-size:45px;font-weight:800;color:#444;margin-bottom:5px">保單與受益人整合表</div>';
   headerHtml+='</div>';
 
   var BENEF_RULES_PD = {
@@ -2089,7 +2089,7 @@ function buildPremiumDetailParts() {
       '</div>';
     });
 
-    var cardWrapOpen  = '<div style="break-inside:avoid;margin-bottom:7px;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);border-left:8px solid #6366f1">';
+    var cardWrapOpen  = '<div style="break-inside:avoid;margin-bottom:5px;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);border-left:8px solid #6366f1">';
     var cardWrapClose = '</div>';
     var fullHtml = cardWrapOpen + cardHeaderHtml + colHeaderRow + rowsHtml.join("") + cardWrapClose;
 
