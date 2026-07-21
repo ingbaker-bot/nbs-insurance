@@ -542,6 +542,15 @@
       </div>
 
       <div class="field">
+        <label>性別</label>
+        <select id="new-gender">
+          <option value="male">男</option>
+          <option value="female">女</option>
+        </select>
+        <div class="hint" style="font-size:12px;color:#999;margin-top:3px">用於平均餘命試算，之後也會用於家系圖</div>
+      </div>
+
+      <div class="field">
         <label>角色</label>
         <select id="new-role">
           <option value="secondary">次要成員（有自己的保單）</option>
@@ -585,6 +594,15 @@
         </div>
         <input type="hidden" id="edit-birth" />
         <div class="hint" id="edit-age-hint"></div>
+      </div>
+
+      <div class="field">
+        <label>性別</label>
+        <select id="edit-gender">
+          <option value="male">男</option>
+          <option value="female">女</option>
+        </select>
+        <div class="hint" style="font-size:12px;color:#999;margin-top:3px">用於平均餘命試算，之後也會用於家系圖</div>
       </div>
 
       <div class="field">
@@ -841,6 +859,7 @@
       const name     = document.getElementById("new-name").value.trim();
       const relation = document.getElementById("new-relation").value;
       const birth    = document.getElementById("new-birth").value;
+      const gender   = document.getElementById("new-gender").value;
       const role     = document.getElementById("new-role").value;
       const address  = (document.getElementById("new-address")||{}).value||"";
       if (!name) return;
@@ -861,6 +880,7 @@
         profile: {
           name,
           birthDate: birth || null,
+          gender: gender || "male",
           analysisDate: familyData.analysisDate,
           address: address || null,
           note: "",
@@ -929,6 +949,7 @@
       document.getElementById("edit-birth-y").value = rocParts.y;
       document.getElementById("edit-birth-m").value = rocParts.m;
       document.getElementById("edit-birth-d").value = rocParts.d;
+      document.getElementById("edit-gender").value = person.profile.gender || "male";
       document.getElementById("edit-analysis").value = person.profile.analysisDate || "";
       document.getElementById("edit-address").value = person.profile.address || "";
       updateEditAge();
@@ -962,11 +983,13 @@
 
       const newName     = document.getElementById("edit-name").value.trim();
       const newBirth    = document.getElementById("edit-birth").value;
+      const newGender   = document.getElementById("edit-gender").value;
       const newAnalysis = document.getElementById("edit-analysis").value;
       const newAddress  = document.getElementById("edit-address").value.trim();
 
       person.profile.name         = newName || person.profile.name;
       person.profile.birthDate    = newBirth || null;
+      person.profile.gender       = newGender || "male";
       person.profile.analysisDate = newAnalysis;
       person.profile.address      = newAddress || null;
       person.updatedAt = new Date().toISOString();
