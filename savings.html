@@ -196,6 +196,8 @@
     // GAS_URL 已移至 nav.js 統一管理
 var currentUser = null, familyData = null, personDataMap = {}, currentPersonId = null;
 var settings = {}; // { [policyId]: settingObj }
+// 退休金(勞保/勞退)：獨立於任何一張保單之外的資料，不掛在policyId上
+var laborPensionData = {};
 var currentPageTab = "settings";
 
 
@@ -307,6 +309,7 @@ function renderTabs() {
 function switchMember(pid) {
   currentPersonId = pid;
   settings = {};
+  laborPensionData = {};
   renderTabs();
   renderSettings();
   if (currentPageTab === "timeline") renderTimeline();
@@ -317,7 +320,7 @@ function switchMember(pid) {
 // 依「類別」固定顏色（儲蓄險/年金險/投資型保險/儲蓄年金），不再是依保單
 // 排列順序輪流交錯的顏色——這樣同一種險種，不管在哪個成員底下、哪張
 // 保單，看到的顏色都一致，跟 export.html 的報告色系對得起來。
-var SAVINGS_CAT_COLORS = { "儲蓄險":"#16A34A", "年金險":"#0D9488", "投資型保險":"#7C3AED", "儲蓄年金":"#16A34A" };
+var SAVINGS_CAT_COLORS = { "儲蓄險":"#16A34A", "年金險":"#0D9488", "投資型保險":"#7C3AED", "儲蓄年金":"#16A34A", "勞保":"#0EA5E9", "勞退":"#D97706", "勞退舊制":"#B45309", "國民年金":"#059669" };
 function _shadeHex(hex, pct) {
   // pct > 0 調亮、< 0 調暗
   const n = parseInt(hex.slice(1), 16);
@@ -333,6 +336,155 @@ function getPolicyColor(category) {
   return { solid: solid, grad: `radial-gradient(ellipse at 30% 20%,${light} 0%,${solid} 55%,${dark} 100%)` };
 }
 
+// ── 退休金(勞保/勞退)：獨立於保單之外，用來搭配儲蓄險現金流一起看 ──
+// 平均餘命只是台灣近年概略值，畫面上會直接顯示出來、業務員可以自己
+// 覆寫起領年齡去對應想要的顯示範圍，不會偷偷藏在背後計算。
+var LIFE_EXPECTANCY = { male: 77, female: 84 };
+
+function updateLaborPension(field, val) {
+  laborPensionData[field] = val;
+}
+
+function renderLaborPensionCard(person) {
+  if (!laborPensionData._loaded) {
+    const lp = person.laborPension || {};
+    laborPensionData = {
+      _loaded: true,
+      gender:     lp.gender     || "male",
+      liType:     lp.liType     || "monthly",   // monthly=月領年金／lumpsum=一次請領
+      liAmount:   lp.liAmount   || "",
+      liStartAge: lp.liStartAge || "65",
+      lpType:     lp.lpType     || "monthly",   // monthly=月退休金／lumpsum=一次領
+      lpAmount:   lp.lpAmount   || "",
+      lpStartAge: lp.lpStartAge || "60",
+      osAmount:   lp.osAmount   || "",          // 勞退舊制：固定一次領，沒有月領選項
+      osStartAge: lp.osStartAge || "60",
+      npType:     lp.npType     || "monthly",   // 國民年金，monthly=月領／lumpsum=一次請領
+      npAmount:   lp.npAmount   || "",
+      npStartAge: lp.npStartAge || "65",
+    };
+  }
+  const lp = laborPensionData;
+  const liMonthly = lp.liType !== "lumpsum";
+  const lpMonthly = lp.lpType !== "lumpsum";
+  const npMonthly = lp.npType !== "lumpsum";
+  const lifeExp = LIFE_EXPECTANCY[lp.gender] || LIFE_EXPECTANCY.male;
+
+  return `<div class="savings-card card-open" style="border-left:6px solid #6366F1;margin-bottom:18px">
+    <div class="card-header" style="cursor:default">
+      <div style="display:flex;align-items:center;gap:6px;flex:1">
+        <div>
+          <div class="card-name">🏛️ 退休金規劃（勞保／勞退／國民年金）</div>
+          <div class="card-dates">跟保單分開設定，會一起併入下方「現金流時間軸」的小計／合計</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body" style="display:block">
+      <div style="background:#EEF2FF;border:1px solid #C7D2FE;border-radius:8px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div style="font-size:14px;color:#4338CA">
+          💡 以下所有金額請先到「勞保局 e 化服務系統」試算查詢後，再把結果填入下方欄位——這些是政府依實際投保/提繳紀錄計算的數字，系統無法也不應該自行推算。
+        </div>
+        <a href="https://edesk.bli.gov.tw/me/#/home" target="_blank" rel="noopener"
+           style="flex-shrink:0;background:#4338CA;color:#fff;padding:6px 14px;border-radius:99px;font-size:14px;font-weight:600;text-decoration:none;white-space:nowrap">
+          前往勞保局 e 化服務系統 ↗
+        </a>
+      </div>
+
+      <div class="adv-block" style="margin-bottom:12px">
+        <div class="adv-block-title">性別（用來預設平均餘命，可自行覆寫起領年齡調整顯示範圍）</div>
+        <div class="adv-row single">
+          <div class="field">
+            <label>性別</label>
+            <select onchange="updateLaborPension('gender', this.value); renderSettings();">
+              <option value="male"   ${lp.gender==='male'  ?'selected':''}>男（平均餘命約 ${LIFE_EXPECTANCY.male} 歲）</option>
+              <option value="female" ${lp.gender==='female'?'selected':''}>女（平均餘命約 ${LIFE_EXPECTANCY.female} 歲）</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="adv-block" style="margin-bottom:12px;border-color:#B5D4F4">
+        <div class="adv-block-title" style="color:#0C447C">勞保老年給付</div>
+        <div class="adv-row">
+          <div class="field">
+            <label>領取方式</label>
+            <select onchange="updateLaborPension('liType', this.value); renderSettings();">
+              <option value="monthly" ${liMonthly?'selected':''}>月領年金（領到平均餘命 ${lifeExp} 歲）</option>
+              <option value="lumpsum" ${!liMonthly?'selected':''}>一次請領</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>${liMonthly ? '每月金額（元）' : '一次領總額（元）'}</label>
+            <input type="number" value="${lp.liAmount}" oninput="updateLaborPension('liAmount', this.value)" placeholder="如 18000" />
+          </div>
+          <div class="field">
+            <label>起領年齡</label>
+            <input type="number" value="${lp.liStartAge}" oninput="updateLaborPension('liStartAge', this.value)" />
+          </div>
+        </div>
+      </div>
+
+      <div class="adv-block" style="margin-bottom:12px;border-color:#F5D9A8">
+        <div class="adv-block-title" style="color:#8A5A00">勞退（新制個人退休金專戶）</div>
+        <div class="adv-row">
+          <div class="field">
+            <label>領取方式</label>
+            <select onchange="updateLaborPension('lpType', this.value); renderSettings();">
+              <option value="monthly" ${lpMonthly?'selected':''}>月退休金（領到平均餘命 ${lifeExp} 歲）</option>
+              <option value="lumpsum" ${!lpMonthly?'selected':''}>一次領</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>${lpMonthly ? '每月金額（元）' : '一次領總額（元）'}</label>
+            <input type="number" value="${lp.lpAmount}" oninput="updateLaborPension('lpAmount', this.value)" placeholder="如 8000" />
+          </div>
+          <div class="field">
+            <label>起領年齡</label>
+            <input type="number" value="${lp.lpStartAge}" oninput="updateLaborPension('lpStartAge', this.value)" />
+          </div>
+        </div>
+      </div>
+
+      <div class="adv-block" style="margin-bottom:12px;border-color:#D9C2A8">
+        <div class="adv-block-title" style="color:#7A4A1E">勞退（舊制，勞基法退休金）</div>
+        <div class="adv-row">
+          <div class="field">
+            <label>一次領總額（元）</label>
+            <input type="number" value="${lp.osAmount}" oninput="updateLaborPension('osAmount', this.value)" placeholder="如 500000" />
+          </div>
+          <div class="field">
+            <label>起領年齡</label>
+            <input type="number" value="${lp.osStartAge}" oninput="updateLaborPension('osStartAge', this.value)" />
+          </div>
+        </div>
+        <div style="font-size:13px;color:#9aa0ac;margin-top:6px">舊制是雇主一次發給，只有 2005/7/1 前有工作年資、且未完全轉入新制的人才會有這筆</div>
+      </div>
+
+      <div class="adv-block" style="border-color:#C7E2D8">
+        <div class="adv-block-title" style="color:#0F6A4C">國民年金老年年金給付</div>
+        <div class="adv-row">
+          <div class="field">
+            <label>領取方式</label>
+            <select onchange="updateLaborPension('npType', this.value); renderSettings();">
+              <option value="monthly" ${npMonthly?'selected':''}>月領年金（領到平均餘命 ${lifeExp} 歲）</option>
+              <option value="lumpsum" ${!npMonthly?'selected':''}>一次請領</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>${npMonthly ? '每月金額（元）' : '一次領總額（元）'}</label>
+            <input type="number" value="${lp.npAmount}" oninput="updateLaborPension('npAmount', this.value)" placeholder="如 4000" />
+          </div>
+          <div class="field">
+            <label>起領年齡</label>
+            <input type="number" value="${lp.npStartAge}" oninput="updateLaborPension('npStartAge', this.value)" />
+          </div>
+        </div>
+        <div style="font-size:13px;color:#9aa0ac;margin-top:6px">沒有參加勞保/公教/軍保/農保期間，才會有國民年金投保紀錄</div>
+      </div>
+    </div>
+  </div>`;
+}
+
 function renderSettings() {
   const person = personDataMap[currentPersonId];
   if (!person) return;
@@ -341,11 +493,12 @@ function renderSettings() {
 
   if (!policies.length) {
     document.getElementById("settings-view").innerHTML =
+      renderLaborPensionCard(person) +
       `<div class="empty-state">此成員尚無儲蓄／年金／投資型保單</div>`;
     return;
   }
 
-  let html = "";
+  let html = renderLaborPensionCard(person);
   policies.forEach((p, pIdx) => {
     if (!settings[p.id]) {
       const sv = (person.savings || []).find(s => s.policyId === p.id) || {};
@@ -738,6 +891,10 @@ async function saveAll() {
   hint.style.display = "block";
 
   person.savings   = Object.values(settings);
+  // 退休金(勞保/勞退)：拿掉內部用的 _loaded 標記，只存實際欄位
+  const lpToSave = Object.assign({}, laborPensionData);
+  delete lpToSave._loaded;
+  person.laborPension = lpToSave;
   person.updatedAt = new Date().toISOString();
 
   try {
@@ -857,6 +1014,64 @@ function calcPolicyFlows(p, s, memberId, years) {
 }
 
 // ── 現金流時間軸 ──────────────────────────────────────────
+// ── 退休金(勞保/勞退)現金流計算：算成跟保單一樣的格式，直接併入
+// 同一張表的小計/合計，不用另外處理。 ──
+function getBirthYearForLP(memberId) {
+  const person = personDataMap[memberId];
+  const bd = person?.profile?.birthDate ||
+             familyData?.members?.find(m => m.personId === memberId)?.birthDate;
+  if (bd) {
+    const y = parseInt(bd.slice(0, 4));
+    if (!isNaN(y)) return y;
+  }
+  return null;
+}
+function calcLaborPensionRows(lp, memberId, years) {
+  const rows = [];
+  if (!lp) return rows;
+  const birthYear = getBirthYearForLP(memberId);
+  if (birthYear === null) return rows; // 沒有生日資料，算不出起領/終止年份，先跳過
+
+  const lifeExp = LIFE_EXPECTANCY[lp.gender] || LIFE_EXPECTANCY.male;
+  const lifeEndYear = birthYear + lifeExp;
+
+  function buildRow(label, type, amount, startAge) {
+    const amt = parseFloat(amount) || 0;
+    if (amt <= 0) return null;
+    const flows = {};
+    const startYear = birthYear + (parseInt(startAge) || 0);
+    if (type === "lumpsum") {
+      if (years.includes(startYear)) flows[startYear] = amt;
+    } else {
+      const endYear = Math.min(lifeEndYear, years[years.length - 1]);
+      years.forEach(y => { if (y >= startYear && y <= endYear) flows[y] = amt * 12; });
+    }
+    return {
+      policyNo: "—",
+      itemName: label + (type === "lumpsum" ? "（一次領）" : "（月領，至" + lifeExp + " 歲）"),
+      category: label,
+      currency: "TWD",
+      exchangeRate: 1,
+      colorIdx: 0,
+      accountValue: "",
+      accountValueDate: "",
+      stillPaying: false,
+      flows,
+    };
+  }
+
+  const liRow = buildRow("勞保", lp.liType, lp.liAmount, lp.liStartAge);
+  if (liRow) rows.push(liRow);
+  const lpRow = buildRow("勞退", lp.lpType, lp.lpAmount, lp.lpStartAge);
+  if (lpRow) rows.push(lpRow);
+  // 勞退舊制固定是雇主一次發給，沒有月領選項
+  const osRow = buildRow("勞退舊制", "lumpsum", lp.osAmount, lp.osStartAge);
+  if (osRow) rows.push(osRow);
+  const npRow = buildRow("國民年金", lp.npType, lp.npAmount, lp.npStartAge);
+  if (npRow) rows.push(npRow);
+  return rows;
+}
+
 function renderTimeline() {
   const startYr = parseInt(document.getElementById("tl-start").value) || new Date().getFullYear();
   const endYr   = parseInt(document.getElementById("tl-end").value)   || startYr + 29;
@@ -877,7 +1092,13 @@ function renderTimeline() {
     if (!person) return;
     const savingPolicies = (person.policies || []).filter(p =>
       ["儲蓄險","年金險","儲蓄年金","投資型保險"].includes(p.category));
-    if (!savingPolicies.length) return;
+    // 如果剛好是目前選中的這位成員，優先用尚未存檔的即時退休金資料
+    // (跟保單設定同一套邏輯：settings[p.id] 優先於 person.savings)
+    const lpSource = (m.personId === currentPersonId && laborPensionData._loaded)
+      ? laborPensionData
+      : (person.laborPension || {});
+    const lpRows = calcLaborPensionRows(lpSource, m.personId, years);
+    if (!savingPolicies.length && !lpRows.length) return;
 
     const policyRows = [];
     savingPolicies.forEach((p, pIdx) => {
@@ -910,6 +1131,15 @@ function renderTimeline() {
         flows,
       });
     });
+
+    // 加入勞保/勞退列，現金流一併累加進總計
+    lpRows.forEach(row => {
+      Object.entries(row.flows).forEach(([yr, amt]) => {
+        totalFlows[yr] = (totalFlows[yr] || 0) + amt;
+      });
+      policyRows.push(row);
+    });
+
     if (policyRows.length > 0) groups.push({ memberName: m.name, policies: policyRows });
   });
 
@@ -1099,6 +1329,7 @@ function callGAS(action, params) {
 NBS_NAV.onMemberChange = function(pid) {
   currentPersonId = pid;
   settings = {};
+  laborPensionData = {};
   renderTabs();
   renderSettings();
   if (currentPageTab === "timeline") renderTimeline();
