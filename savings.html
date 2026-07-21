@@ -350,7 +350,9 @@ function renderLaborPensionCard(person) {
     const lp = person.laborPension || {};
     laborPensionData = {
       _loaded: true,
-      gender:     lp.gender     || "male",
+      // 性別改由「家庭成員」資料帶入（person.profile.gender），這裡只是讀取顯示，
+      // 保留 lp.gender 當作沒有 profile 資料時的舊資料相容 fallback。
+      gender:     (person.profile && person.profile.gender) || lp.gender || "male",
       liType:     lp.liType     || "monthly",   // monthly=月領年金／lumpsum=一次請領
       liAmount:   lp.liAmount   || "",
       liStartAge: lp.liStartAge || "65",
@@ -370,119 +372,127 @@ function renderLaborPensionCard(person) {
   const npMonthly = lp.npType !== "lumpsum";
   const lifeExp = LIFE_EXPECTANCY[lp.gender] || LIFE_EXPECTANCY.male;
 
-  return `<div class="savings-card card-open" style="border-left:6px solid #6366F1;margin-bottom:18px">
-    <div class="card-header" style="cursor:default">
+  const genderLabel = lp.gender === "female" ? "女" : "男";
+
+  return `<div class="savings-card" data-lp="1" style="border-left:6px solid #6366F1;margin-bottom:18px">
+    <div class="card-header card-toggle" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px" onclick="toggleLPCard()">
       <div style="display:flex;align-items:center;gap:6px;flex:1">
+        <span class="card-chevron" id="lp-chevron">▸</span>
         <div>
           <div class="card-name">🏛️ 退休金規劃（勞保／勞退／國民年金）</div>
           <div class="card-dates">跟保單分開設定，會一起併入下方「現金流時間軸」的小計／合計</div>
         </div>
       </div>
+      <a href="https://edesk.bli.gov.tw/me/#/home" target="_blank" rel="noopener" onclick="event.stopPropagation()"
+         style="flex-shrink:0;background:#4338CA;color:#fff;padding:6px 14px;border-radius:99px;font-size:13px;font-weight:600;text-decoration:none;white-space:nowrap">
+        前往勞保局 e 化服務系統 ↗
+      </a>
     </div>
-    <div class="card-body" style="display:block">
-      <div style="background:#EEF2FF;border:1px solid #C7D2FE;border-radius:8px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-        <div style="font-size:14px;color:#4338CA">
-          💡 以下所有金額請先到「勞保局 e 化服務系統」試算查詢後，再把結果填入下方欄位——這些是政府依實際投保/提繳紀錄計算的數字，系統無法也不應該自行推算。
-        </div>
-        <a href="https://edesk.bli.gov.tw/me/#/home" target="_blank" rel="noopener"
-           style="flex-shrink:0;background:#4338CA;color:#fff;padding:6px 14px;border-radius:99px;font-size:14px;font-weight:600;text-decoration:none;white-space:nowrap">
-          前往勞保局 e 化服務系統 ↗
-        </a>
+    <div class="card-body" id="lp-body" style="display:none">
+      <div style="background:#EEF2FF;border:1px solid #C7D2FE;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:14px;color:#4338CA">
+        💡 以下所有金額請先到「勞保局 e 化服務系統」試算查詢後，再把結果填入下方欄位——這些是政府依實際投保/提繳紀錄計算的數字，系統無法也不應該自行推算。
       </div>
 
-      <div class="adv-block" style="margin-bottom:12px">
-        <div class="adv-block-title">性別（用來預設平均餘命，可自行覆寫起領年齡調整顯示範圍）</div>
-        <div class="adv-row single">
-          <div class="field">
-            <label>性別</label>
-            <select onchange="updateLaborPension('gender', this.value); renderSettings();">
-              <option value="male"   ${lp.gender==='male'  ?'selected':''}>男（平均餘命約 ${LIFE_EXPECTANCY.male} 歲）</option>
-              <option value="female" ${lp.gender==='female'?'selected':''}>女（平均餘命約 ${LIFE_EXPECTANCY.female} 歲）</option>
-            </select>
-          </div>
-        </div>
+      <div style="font-size:13px;color:#666;margin-bottom:12px">
+        性別：${genderLabel}（平均餘命約 ${lifeExp} 歲）——此欄位資料來自「家庭成員」的性別設定，如需修改請至成員資料編輯，這裡只讀取顯示。
       </div>
 
-      <div class="adv-block" style="margin-bottom:12px;border-color:#B5D4F4">
-        <div class="adv-block-title" style="color:#0C447C">勞保老年給付</div>
-        <div class="adv-row">
-          <div class="field">
-            <label>領取方式</label>
-            <select onchange="updateLaborPension('liType', this.value); renderSettings();">
-              <option value="monthly" ${liMonthly?'selected':''}>月領年金（領到平均餘命 ${lifeExp} 歲）</option>
-              <option value="lumpsum" ${!liMonthly?'selected':''}>一次請領</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>${liMonthly ? '每月金額（元）' : '一次領總額（元）'}</label>
-            <input type="number" value="${lp.liAmount}" oninput="updateLaborPension('liAmount', this.value)" placeholder="如 18000" />
-          </div>
-          <div class="field">
-            <label>起領年齡</label>
-            <input type="number" value="${lp.liStartAge}" oninput="updateLaborPension('liStartAge', this.value)" />
+      <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+        <div class="adv-block" style="flex:1;min-width:260px;border-color:#B5D4F4">
+          <div class="adv-block-title" style="color:#0C447C">勞保老年給付</div>
+          <div class="adv-row">
+            <div class="field">
+              <label>領取方式</label>
+              <select onchange="updateLaborPension('liType', this.value); renderSettings();">
+                <option value="monthly" ${liMonthly?'selected':''}>月領年金（領到平均餘命 ${lifeExp} 歲）</option>
+                <option value="lumpsum" ${!liMonthly?'selected':''}>一次請領</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>${liMonthly ? '每月金額（元）' : '一次領總額（元）'}</label>
+              <input type="number" value="${lp.liAmount}" oninput="updateLaborPension('liAmount', this.value)" placeholder="如 18000" />
+            </div>
+            <div class="field">
+              <label>起領年齡</label>
+              <input type="number" value="${lp.liStartAge}" oninput="updateLaborPension('liStartAge', this.value)" />
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="adv-block" style="margin-bottom:12px;border-color:#F5D9A8">
-        <div class="adv-block-title" style="color:#8A5A00">勞退（新制個人退休金專戶）</div>
-        <div class="adv-row">
-          <div class="field">
-            <label>領取方式</label>
-            <select onchange="updateLaborPension('lpType', this.value); renderSettings();">
-              <option value="monthly" ${lpMonthly?'selected':''}>月退休金（領到平均餘命 ${lifeExp} 歲）</option>
-              <option value="lumpsum" ${!lpMonthly?'selected':''}>一次領</option>
-            </select>
+        <div class="adv-block" style="flex:1;min-width:260px;border-color:#C7E2D8">
+          <div class="adv-block-title" style="color:#0F6A4C">國民年金老年年金給付</div>
+          <div class="adv-row">
+            <div class="field">
+              <label>領取方式</label>
+              <select onchange="updateLaborPension('npType', this.value); renderSettings();">
+                <option value="monthly" ${npMonthly?'selected':''}>月領年金（領到平均餘命 ${lifeExp} 歲）</option>
+                <option value="lumpsum" ${!npMonthly?'selected':''}>一次請領</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>${npMonthly ? '每月金額（元）' : '一次領總額（元）'}</label>
+              <input type="number" value="${lp.npAmount}" oninput="updateLaborPension('npAmount', this.value)" placeholder="如 4000" />
+            </div>
+            <div class="field">
+              <label>起領年齡</label>
+              <input type="number" value="${lp.npStartAge}" oninput="updateLaborPension('npStartAge', this.value)" />
+            </div>
           </div>
-          <div class="field">
-            <label>${lpMonthly ? '每月金額（元）' : '一次領總額（元）'}</label>
-            <input type="number" value="${lp.lpAmount}" oninput="updateLaborPension('lpAmount', this.value)" placeholder="如 8000" />
-          </div>
-          <div class="field">
-            <label>起領年齡</label>
-            <input type="number" value="${lp.lpStartAge}" oninput="updateLaborPension('lpStartAge', this.value)" />
-          </div>
+          <div style="font-size:13px;color:#9aa0ac;margin-top:6px">沒有參加勞保/公教/軍保/農保期間，才會有國民年金投保紀錄；有些人一生會勞保、國保交替投保，兩邊都有資料是正常的，請依實際查詢結果分別填寫。</div>
         </div>
       </div>
 
-      <div class="adv-block" style="margin-bottom:12px;border-color:#D9C2A8">
-        <div class="adv-block-title" style="color:#7A4A1E">勞退（舊制，勞基法退休金）</div>
-        <div class="adv-row">
-          <div class="field">
-            <label>一次領總額（元）</label>
-            <input type="number" value="${lp.osAmount}" oninput="updateLaborPension('osAmount', this.value)" placeholder="如 500000" />
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <div class="adv-block" style="flex:1;min-width:260px;border-color:#D9C2A8">
+          <div class="adv-block-title" style="color:#7A4A1E">勞退（舊制，勞基法退休金）</div>
+          <div class="adv-row">
+            <div class="field">
+              <label>一次領總額（元）</label>
+              <input type="number" value="${lp.osAmount}" oninput="updateLaborPension('osAmount', this.value)" placeholder="如 500000" />
+            </div>
+            <div class="field">
+              <label>起領年齡</label>
+              <input type="number" value="${lp.osStartAge}" oninput="updateLaborPension('osStartAge', this.value)" />
+            </div>
           </div>
-          <div class="field">
-            <label>起領年齡</label>
-            <input type="number" value="${lp.osStartAge}" oninput="updateLaborPension('osStartAge', this.value)" />
-          </div>
+          <div style="font-size:13px;color:#9aa0ac;margin-top:6px">舊制是雇主一次發給，只有 2005/7/1 前有工作年資、且未完全轉入新制的人才會有這筆</div>
         </div>
-        <div style="font-size:13px;color:#9aa0ac;margin-top:6px">舊制是雇主一次發給，只有 2005/7/1 前有工作年資、且未完全轉入新制的人才會有這筆</div>
-      </div>
 
-      <div class="adv-block" style="border-color:#C7E2D8">
-        <div class="adv-block-title" style="color:#0F6A4C">國民年金老年年金給付</div>
-        <div class="adv-row">
-          <div class="field">
-            <label>領取方式</label>
-            <select onchange="updateLaborPension('npType', this.value); renderSettings();">
-              <option value="monthly" ${npMonthly?'selected':''}>月領年金（領到平均餘命 ${lifeExp} 歲）</option>
-              <option value="lumpsum" ${!npMonthly?'selected':''}>一次請領</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>${npMonthly ? '每月金額（元）' : '一次領總額（元）'}</label>
-            <input type="number" value="${lp.npAmount}" oninput="updateLaborPension('npAmount', this.value)" placeholder="如 4000" />
-          </div>
-          <div class="field">
-            <label>起領年齡</label>
-            <input type="number" value="${lp.npStartAge}" oninput="updateLaborPension('npStartAge', this.value)" />
+        <div class="adv-block" style="flex:1;min-width:260px;border-color:#F5D9A8">
+          <div class="adv-block-title" style="color:#8A5A00">勞退（新制個人退休金專戶）</div>
+          <div class="adv-row">
+            <div class="field">
+              <label>領取方式</label>
+              <select onchange="updateLaborPension('lpType', this.value); renderSettings();">
+                <option value="monthly" ${lpMonthly?'selected':''}>月退休金（領到平均餘命 ${lifeExp} 歲）</option>
+                <option value="lumpsum" ${!lpMonthly?'selected':''}>一次領</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>${lpMonthly ? '每月金額（元）' : '一次領總額（元）'}</label>
+              <input type="number" value="${lp.lpAmount}" oninput="updateLaborPension('lpAmount', this.value)" placeholder="如 8000" />
+            </div>
+            <div class="field">
+              <label>起領年齡</label>
+              <input type="number" value="${lp.lpStartAge}" oninput="updateLaborPension('lpStartAge', this.value)" />
+            </div>
           </div>
         </div>
-        <div style="font-size:13px;color:#9aa0ac;margin-top:6px">沒有參加勞保/公教/軍保/農保期間，才會有國民年金投保紀錄</div>
       </div>
     </div>
   </div>`;
+}
+
+// ── 退休金規劃卡片收合（預設收合，跟保單卡片一樣點標題列展開）──
+function toggleLPCard() {
+  const body    = document.getElementById("lp-body");
+  const chevron = document.getElementById("lp-chevron");
+  const card    = document.querySelector('[data-lp="1"]');
+  if (!body) return;
+  const open = body.style.display === "none";
+  body.style.display  = open ? "block" : "none";
+  chevron.textContent = open ? "▾" : "▸";
+  if (card) card.classList.toggle("card-open", open);
 }
 
 function renderSettings() {
@@ -537,14 +547,12 @@ function renderSettings() {
       p.payEndRaw    ? "繳滿：" + p.payEndRaw  : "",
     ].filter(Boolean).join("　");
 
-    // 已設定過的保單預設展開，新保單預設收合
-    // 用 s（settings[p.id]）判斷，sv 可能不在 scope 內
-    const isConfigured = !!(s.type && s.type !== "1") || !!(s.afterAmt) || !!(s.duringAmt) || !!(s.yearlyAmts && s.yearlyAmts.length) || !!(s.accountValue);
+    // 保單卡片一律預設收合（不管有沒有填過資料），使用者自己點標題列展開
     const pColor = getPolicyColor(p.category).solid;
-    html += `<div class="savings-card ${isConfigured?'card-open':''}" data-pid="${p.id}" style="border-left:6px solid ${pColor}">
+    html += `<div class="savings-card" data-pid="${p.id}" style="border-left:6px solid ${pColor}">
       <div class="card-header card-toggle" onclick="toggleCard('${p.id}')">
         <div style="display:flex;align-items:center;gap:6px;flex:1">
-          <span class="card-chevron" id="chevron-${p.id}">${isConfigured?'▾':'▸'}</span>
+          <span class="card-chevron" id="chevron-${p.id}">▸</span>
           <div>
             <div>
               <span class="card-no">${p.policyNo||"—"}</span>
@@ -560,7 +568,7 @@ function renderSettings() {
       </div>
 
       <!-- 展開內容 -->
-      <div class="card-body" id="body-${p.id}" style="display:${isConfigured?'block':'none'}">
+      <div class="card-body" id="body-${p.id}" style="display:none">
       <!-- 目前帳戶價值：跟下面的「領回方式」是兩個不同概念——這裡填的是
            現在帳戶裡已經累積多少錢，領回方式填的是未來排定怎麼領。
            外幣保單這裡要填「原幣」金額（跟保單本身的幣別一致），不是台幣，
