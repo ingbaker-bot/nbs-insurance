@@ -374,6 +374,15 @@
         </div>
 
         <div class="field">
+          <label>性別</label>
+          <select id="primary-gender">
+            <option value="male">男</option>
+            <option value="female">女</option>
+          </select>
+          <div class="hint" style="font-size:12px;color:#999;margin-top:3px">用於平均餘命試算，之後也會用於家系圖</div>
+        </div>
+
+        <div class="field">
           <label>分析日</label>
           <input type="date" id="analysis-date" />
           <div class="hint" id="analysis-roc"></div>
@@ -775,6 +784,7 @@
     function createFamily() {
       const primaryName  = document.getElementById("primary-name").value.trim();
       const birthDate    = document.getElementById("primary-birth").value;
+      const gender       = document.getElementById("primary-gender").value;
       const analysisDate = document.getElementById("analysis-date").value;
       const familyName   = document.getElementById("family-name-input").value.trim();
 
@@ -799,6 +809,7 @@
         profile: {
           name: primaryName,
           birthDate: birthDate || null,
+          gender: gender || "male",
           analysisDate: analysisDate,
           note: "",
         },
