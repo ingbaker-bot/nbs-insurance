@@ -199,7 +199,7 @@ var   BLOCKS=[
   {key:"policy_detail",    label:"保單明細一覽表",     icon:"📋",desc:"各項保障加總明細"},
   {key:"savings_timeline", label:"儲蓄險現金流時間軸", icon:"📈",desc:"目前選中成員的儲蓄／投資型保單現金流"},
   {key:"family_savings_summary", label:"全家儲蓄規劃總表", icon:"👨‍👩‍👧‍👦",desc:"全家儲蓄／投資型保單現金流總覽，各自小計＋合計"},
-  {key:"retirement_pillars", label:"退休金三層總覽", icon:"🏛️",desc:"第一層社會保險＋第二層企業退休金＋第三層自行準備，每位成員各佔一頁"},
+  {key:"retirement_pillars", label:"退休金三層總覽", icon:"🏛️",desc:"目前選中成員的第一層社會保險＋第二層企業退休金＋第三層自行準備"},
 ];
 // 退休金三層總覽：可設定的退休起領年齡區間（例如 60~65），影響長條圖／比較表的年齡欄位範圍
 var retireAgeFrom = 60, retireAgeTo = 65;
@@ -2941,17 +2941,14 @@ function renderBlock(key){
   }
 
   if(key==="retirement_pillars"){
-    // 跟「全家儲蓄規劃總表」一樣，不管目前選到誰，永遠列出全家每位成員，
-    // 每人各自一組長條圖＋比較表（PDF 匯出時每人各佔一頁，這裡預覽用分隔線區隔）。
+    // 跟「儲蓄險現金流時間軸」一致：只顯示目前選中的這位成員，不是全家。
+    // 要看配偶的就切換成員再匯出一次，兩人是各自獨立的報告。
     var pdmRP = {};
-    ((familyData && familyData.members) || []).filter(function(m){ return m.role!=="beneficiary_only"; }).forEach(function(m){
-      if (personDataMap[m.personId]) pdmRP[m.personId] = personDataMap[m.personId];
-    });
-    var rpParts = buildRetirementPillarsParts(pdmRP, familyData, retireAgeFrom, retireAgeTo);
-    if (!rpParts.length) return '<div style="padding:60px;text-align:center;color:#9ca3af;font-size:20px">尚無勞保／勞退／國保或儲蓄保單資料可供計算</div>';
-    return rpParts.map(function(rp){
-      return '<div style="margin-bottom:32px;padding-bottom:24px;border-bottom:2px dashed #e2e5ea">'+rp.html+'</div>';
-    }).join("");
+    if (personDataMap[currentPersonId]) pdmRP[currentPersonId] = personDataMap[currentPersonId];
+    var singleMemberFamilyDataRP = { members: (familyData&&familyData.members||[]).filter(function(m){ return m.personId===currentPersonId; }) };
+    var rpParts = buildRetirementPillarsParts(pdmRP, singleMemberFamilyDataRP, retireAgeFrom, retireAgeTo);
+    if (!rpParts.length) return '<div style="padding:60px;text-align:center;color:#9ca3af;font-size:20px">這位成員尚無勞保／勞退／國保或儲蓄保單資料可供計算</div>';
+    return rpParts[0].html;
   }
 
   return'<div style="padding:12px;color:#aaa;font-size:14px">建置中</div>';
@@ -3081,38 +3078,17 @@ async function doExportPNG(blks,div){
         div.innerHTML=getBlockTitleHtml(blks[i])+(fsHtmlPNG || '<div style="padding:60px;text-align:center;color:#9ca3af;font-size:20px">尚無儲蓄保單設定領回資料</div>')+disclaimer+wm;
         fname=pName+"_"+blks[i].label+"_"+pDate+".jpg";
       } else if(blks[i].key==="retirement_pillars"){
-        // 退休金三層總覽：每位成員各自輸出一張圖（跟 PDF 每人各佔一頁對應）。
-        var rpPartsPNG = buildRetirementPillarsParts(pdmFamilyPNG, familyData, retireAgeFrom, retireAgeTo);
+        // 退休金三層總覽：只匯出目前選到的這位成員（跟 savings_timeline 一致）。
+        var rpPartsPNG = buildRetirementPillarsParts(pdmPNG, singleMemberFamilyData, retireAgeFrom, retireAgeTo);
         if(!rpPartsPNG.length){
           div.style.width="2400px";
-          div.innerHTML=getBlockTitleHtml(blks[i])+'<div style="padding:60px;text-align:center;color:#9ca3af;font-size:20px">尚無勞保／勞退／國保或儲蓄保單資料可供計算</div>'+disclaimer+wm;
-          await sleep(300);
-          var actualWRP=Math.max(div.scrollWidth,div.offsetWidth,800);
-          div.style.width=actualWRP+"px";
-          await sleep(100);
-          var cRPempty=await html2canvas(div,{scale:2,useCORS:true,backgroundColor:"#ffffff",width:actualWRP,windowWidth:actualWRP});
-          div.style.width="2400px";
-          var aRPe=document.createElement("a");
-          aRPe.download=pName+"_"+blks[i].label+"_"+pDate+".jpg";
-          aRPe.href=cRPempty.toDataURL("image/jpeg",0.92);aRPe.click();
-          await sleep(400);
+          div.innerHTML=getBlockTitleHtml(blks[i])+'<div style="padding:60px;text-align:center;color:#9ca3af;font-size:20px">這位成員尚無勞保／勞退／國保或儲蓄保單資料可供計算</div>'+disclaimer+wm;
+          fname=pName+"_"+blks[i].label+"_"+pDate+".jpg";
         } else {
-          for(var rpI=0; rpI<rpPartsPNG.length; rpI++){
-            div.style.width="2400px";
-            div.innerHTML=getBlockTitleHtml(blks[i])+rpPartsPNG[rpI].html+disclaimer+wm;
-            await sleep(300);
-            var actualWRP2=Math.max(div.scrollWidth,div.offsetWidth,800);
-            div.style.width=actualWRP2+"px";
-            await sleep(100);
-            var cRP=await html2canvas(div,{scale:2,useCORS:true,backgroundColor:"#ffffff",width:actualWRP2,windowWidth:actualWRP2});
-            div.style.width="2400px";
-            var aRP=document.createElement("a");
-            aRP.download=pName+"_"+blks[i].label+"_"+rpPartsPNG[rpI].memberName+"_"+pDate+".jpg";
-            aRP.href=cRP.toDataURL("image/jpeg",0.92);aRP.click();
-            await sleep(400);
-          }
+          div.style.width="2400px";
+          div.innerHTML=getBlockTitleHtml(blks[i])+rpPartsPNG[0].html+disclaimer+wm;
+          fname=pName+"_"+blks[i].label+"_"+rpPartsPNG[0].memberName+"_"+pDate+".jpg";
         }
-        continue;
       } else {
         div.style.width="2400px";
         div.innerHTML=(blks[i].key==="cover"?'':getBlockTitleHtml(blks[i]))+renderBlock(blks[i].key)+disclaimer+wm;
@@ -3359,30 +3335,9 @@ async function buildPdfDocument(blks,div){
           pdf.addImage(footC2.toDataURL("image/jpeg",0.88),"JPEG",margin,y2,fd2.iw,fd2.ih);
         }
       }
-    } else if(blks[i].key==="retirement_pillars"){
-      // ── 退休金三層總覽：每位成員各自一頁 ──────────────────
-      var rpParts2 = buildRetirementPillarsParts(pdmFamily, familyData, retireAgeFrom, retireAgeTo);
-      if(!rpParts2.length){
-        var emptyRPC = await captureHtml(getBlockTitleHtml(blks[i])+'<div style="padding:60px;text-align:center;color:#9ca3af;font-size:20px">尚無勞保／勞退／國保或儲蓄保單資料可供計算</div>'+(isLast||fmt==="pdf_pages"?disclaimer:"")+wm);
-        addNewPage("三層");
-        var edRP = canvasToMM(emptyRPC, usableW, usableH);
-        pdf.addImage(emptyRPC.toDataURL("image/jpeg",0.88),"JPEG",margin,margin,edRP.iw,edRP.ih);
-      } else {
-        for(var rmI=0; rmI<rpParts2.length; rmI++){
-          var rm = rpParts2[rmI];
-          var showDisclaimerRM = (fmt==="pdf_pages") ? true : (isLast && rmI===rpParts2.length-1);
-          var cRM = await captureHtml(getBlockTitleHtml(blks[i])+rm.html+(showDisclaimerRM?disclaimer:"")+wm);
-          addNewPage("三層");
-          var dRM = canvasToMM(cRM, usableW, usableH);
-          var yPosRM = margin;
-          if(dRM.ih < usableH) yPosRM = margin + (usableH-dRM.ih)/2;
-          pdf.addImage(cRM.toDataURL("image/jpeg",0.88),"JPEG",margin,yPosRM,dRM.iw,dRM.ih);
-          restampCurrentPageLabel();
-        }
-      }
     } else {
       // ── 其餘區塊：維持單頁等比例縮放 ──────────────────
-      var PAGE_LABEL_PREFIX = { summary:"彙總", policy_detail:"保障", cover:"封面", family_premium_summary:"總表", family_savings_summary:"總表" };
+      var PAGE_LABEL_PREFIX = { summary:"彙總", policy_detail:"保障", cover:"封面", family_premium_summary:"總表", family_savings_summary:"總表", retirement_pillars:"三層" };
       var isCover = blks[i].key==="cover";
       var showDisclaimer = isCover ? false : (fmt==="pdf_pages" ? true : isLast);
       var c = await captureHtml((isCover?'':getBlockTitleHtml(blks[i]))+renderBlock(blks[i].key)+(showDisclaimer?disclaimer:"")+(isCover?'':wm));
@@ -3404,7 +3359,7 @@ async function buildPdfDocument(blks,div){
   }
   setP(95);
   var curMemberForName = (familyData&&familyData.members||[]).find(function(m){return m.personId===currentPersonId;});
-  var memberSuffix = (blks.some(function(b){return b.key==="savings_timeline";}) && curMemberForName)
+  var memberSuffix = (blks.some(function(b){return b.key==="savings_timeline"||b.key==="retirement_pillars";}) && curMemberForName)
     ? "_"+curMemberForName.name
     : "";
   const pdfFileName = pName+"_"+getReportBaseName(blks)+memberSuffix+"_"+pDate+".pdf";
