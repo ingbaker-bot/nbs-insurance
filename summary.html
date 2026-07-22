@@ -379,21 +379,23 @@ var GAP_KEY_MAP = {
   waiver:          { cats:[],                   keys:["ltc_waiver"] },
 };
 
+// 這 12 個項目跟圓餅圖 DONUT_CATEGORIES 完全 1:1 對應，每個按鈕剛好對應
+// 圓餅圖上的一片，不會出現「按了沒反應」或「好幾個按鈕搶同一片」的狀況。
 var COVERAGE_TYPES = [
-  { key:"life",       label:"壽險保障", group:"壽險", color:"#4A90D9", detect:(p,c)=>p.some(x=>x.category==="壽險保障") },
-  { key:"acc_death",  label:"意外身故", group:"意外", color:"#F5A623", detect:(p,c)=>p.some(x=>x.category==="意外險") },
-  { key:"acc_medical",label:"意外醫療", group:"意外", color:"#F08C00", detect:(p,c)=>Object.keys(c).some(k=>k.includes("acc_opd")) },
-  { key:"acc_hosp",   label:"意外住院", group:"意外", color:"#D97706", detect:(p,c)=>Object.keys(c).some(k=>k.includes("daily_room"))&&p.some(x=>x.category==="意外險") },
+  { key:"life_permanent", label:"終身壽險", group:"壽險", color:"#4A90D9",
+    detect:(p,c)=>p.some(x=>x.category==="壽險保障" && (((x.coverage&&x.coverage.protect_period_type)||"終身")==="終身")) },
+  { key:"life_term",      label:"定期壽險", group:"壽險", color:"#4A90D9",
+    detect:(p,c)=>p.some(x=>x.category==="壽險保障" && (((x.coverage&&x.coverage.protect_period_type)||"終身")!=="終身")) },
+  { key:"acc",        label:"意外險",   group:"意外", color:"#F5A623", detect:(p,c)=>p.some(x=>x.category==="意外險") },
   { key:"hosp_real",  label:"實支實付", group:"醫療", color:"#27AE8F", detect:(p,c)=>Object.keys(c).some(k=>k.includes("hosp_room")) },
   { key:"hosp_daily", label:"住院日額", group:"醫療", color:"#1E8A72", detect:(p,c)=>Object.keys(c).some(k=>k.includes("daily_room")) },
   { key:"hosp_surg",  label:"手術險",   group:"醫療", color:"#166756", detect:(p,c)=>Object.keys(c).some(k=>k.includes("surg_opd")||k.includes("surg_hosp")) },
   { key:"ci",         label:"重大疾病", group:"重大", color:"#9B59B6", detect:(p,c)=>p.some(x=>["重大疾病險","重大傷病險","特定傷病險"].includes(x.category)) },
   { key:"cancer",     label:"癌症險",   group:"癌症", color:"#E74C3C", detect:(p,c)=>Object.keys(c).some(k=>k.includes("can_first")||k.includes("can_hosp")) },
-  { key:"ltc",        label:"長照險",   group:"長照", color:"#27500A", detect:(p,c)=>Object.keys(c).some(k=>k.includes("ltc_monthly")||k.includes("ltc_care")) },
-  { key:"disable",    label:"失能險",   group:"長照", color:"#5BAD6F", detect:(p,c)=>Object.keys(c).some(k=>k.includes("ltc_dis_amt")||k.includes("ltc_dis_life")) },
-  { key:"savings",    label:"儲蓄險",   group:"財務", color:"#E8638A", detect:(p,c)=>p.some(x=>x.category==="儲蓄險") },
-  { key:"annuity",    label:"年金險",   group:"財務", color:"#C0392B", detect:(p,c)=>p.some(x=>x.category==="年金險") },
+  { key:"ltc",        label:"失能/長照", group:"長照", color:"#27500A", detect:(p,c)=>Object.keys(c).some(k=>k.includes("ltc_monthly")||k.includes("ltc_care")||k.includes("ltc_dis_amt")||k.includes("ltc_dis_life")) },
+  { key:"savings",    label:"儲蓄險",   group:"財務", color:"#E8638A", detect:(p,c)=>p.some(x=>["儲蓄險","年金險"].includes(x.category)) },
   { key:"investment", label:"投資型",   group:"財務", color:"#95A5A6", detect:(p,c)=>p.some(x=>x.category==="投資型保險") },
+  { key:"waiver",     label:"豁免",     group:"其他", color:"#607D8B", detect:(p,c)=>Object.keys(c).some(k=>k.includes("ltc_waiver")) },
 ];
 
 // ── 「手動調整保障有無」跟圓餅圖/圖例/缺口分析，本來是兩套各自獨立的
@@ -402,23 +404,21 @@ var COVERAGE_TYPES = [
 // 圓餅圖完全沒反應（只有 investment／savings 這兩個剛好同名才會動）。
 // 這裡建一個對照表，把 Modal 的切換動作導到圓餅圖實際會讀的 key 上。
 var COVERAGE_TYPE_TO_GAP_KEYS = {
-  life:        ["life_permanent","life_term"],
-  acc_death:   ["acc_death_amt"],
-  acc_medical: ["acc_medical"],
-  acc_hosp:    ["acc_hosp"],
-  hosp_real:   ["hosp_real_room"],
-  hosp_daily:  ["hosp_daily"],
-  hosp_surg:   ["surgery"],
-  ci:          ["ci_major","ci_catastrophic","ci_specific","ci_death"],
-  cancer:      ["cancer","cancer_hosp","cancer_surgery","cancer_death_hospice"],
-  ltc:         ["ltc_care"],
-  disable:     ["ltc_disable","ltc_support"],
-  savings:     ["savings"],
-  annuity:     ["savings"], // 年金險在 GAP 系統裡跟儲蓄險合併算同一個 savings 項目，沒有獨立 key
-  investment:  ["investment"],
+  life_permanent: ["life_permanent"],
+  life_term:      ["life_term"],
+  acc:            ["acc_death_amt","acc_medical","acc_hosp"],
+  hosp_real:      ["hosp_real_room"],
+  hosp_daily:     ["hosp_daily"],
+  hosp_surg:      ["surgery"],
+  ci:             ["ci_major","ci_catastrophic","ci_specific","ci_death"],
+  cancer:         ["cancer","cancer_hosp","cancer_surgery","cancer_death_hospice"],
+  ltc:            ["ltc_disable","ltc_support","ltc_care"],
+  savings:        ["savings"],
+  investment:     ["investment"],
+  waiver:         ["waiver"],
 };
 
-var GROUP_COLORS = { 壽險:"#4A90D9",意外:"#F5A623",醫療:"#27AE8F",重大:"#9B59B6",癌症:"#E74C3C",長照:"#27500A",財務:"#E8638A" };
+var GROUP_COLORS = { 壽險:"#4A90D9",意外:"#F5A623",醫療:"#27AE8F",重大:"#9B59B6",癌症:"#E74C3C",長照:"#27500A",財務:"#E8638A",其他:"#607D8B" };
 
 var CAT_COLORS = {
   "壽險保障":"#4A90D9","醫療保障":"#27AE8F","意外險":"#F5A623",
@@ -1302,7 +1302,7 @@ function openModal() {
     return {...t,covered:isManual?manualCovered:auto,autoDetected:auto,isManual};
   });
 
-  const groups=["壽險","意外","醫療","重大","癌症","長照","財務"];
+  const groups=["壽險","意外","醫療","重大","癌症","長照","財務","其他"];
   let html="";
   groups.forEach(g=>{
     const gTypes=covTypes.filter(t=>t.group===g);
