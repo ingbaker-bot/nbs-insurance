@@ -271,8 +271,17 @@ window.onload = function() {
     clearUrl();
     var info = parseJwt(idToken);
     if (info && info.email) {
-      if (isSilent) { goMain(); }
-      else { saveAndCheck(info.email, info.name||"", info.picture||""); }
+      if (isSilent) {
+        // 靜默更新也要順便把新的到期時間存回去，不然下次整頁載入時
+        // 還是讀到舊的 tokenExpiry，會被誤判成快過期，多跑一次不必要的
+        // 靜默驗證（不影響使用者體感，但沒必要每次都轉一輪 iframe）。
+        try {
+          var su = JSON.parse(localStorage.getItem("nbs_user")||"{}");
+          su.tokenExpiry = info.exp ? info.exp*1000 : (Date.now()+55*60*1000);
+          localStorage.setItem("nbs_user", JSON.stringify(su));
+        } catch(e) {}
+        goMain();
+      } else { saveAndCheck(info.email, info.name||"", info.picture||"", info.exp); }
     } else {
       showLogin();
       showStatus("login-status","error","登入失敗，請重試");
@@ -285,7 +294,10 @@ window.onload = function() {
     try {
       var u = JSON.parse(saved);
       var now = Date.now();
-      if (tokenExpiry - now > TOKEN_MARGIN) {
+      // tokenExpiry 存在 nbs_user 裡（saveAndCheck 存進去的，單位是毫秒）。
+      // 舊資料/沒登入過 Google id_token 流程的情況下可能沒有這個欄位，
+      // 用 (u.tokenExpiry || 0) 防呆，沒有就當作已過期，走靜默重新驗證。
+      if ((u.tokenExpiry || 0) - now > TOKEN_MARGIN) {
         goMain(); return;
       } else {
         showLoading();
@@ -351,9 +363,13 @@ function parseJwt(token) {
   } catch(e) { return null; }
 }
 
-function saveAndCheck(email, name, picture) {
+function saveAndCheck(email, name, picture, exp) {
   showLoading();
-  localStorage.setItem("nbs_user", JSON.stringify({email:email, name:name, picture:picture}));
+  // exp 是 JWT 標準的到期時間欄位，單位是「秒」，這裡轉成毫秒存起來，
+  // 之後回到 index.html 才有真正的依據判斷 session 還有沒有效，
+  // 不會再因為讀到一個從沒賦值過的變數而把登入資料誤刪。
+  var tokenExpiryMs = exp ? exp * 1000 : (Date.now() + 55 * 60 * 1000); // 沒有 exp 就保守估 55 分鐘
+  localStorage.setItem("nbs_user", JSON.stringify({email:email, name:name, picture:picture, tokenExpiry:tokenExpiryMs}));
   checkAndGo(email);
 }
 
