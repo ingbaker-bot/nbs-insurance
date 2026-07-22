@@ -1218,16 +1218,16 @@ var COVERAGE_GROUPS_EX = [
     { label:"定期壽險", unit:"萬元", compute:function(pols){ return lifeAmountEx(pols, ["壽險保障"], true); }, remain:function(pols){ return lifeRemainYearsEx(pols, ["壽險保障"]); } },
     { label:"投資型(身故金)", unit:"萬元", compute:function(pols){ 
         let sum=0; pols.filter(p=>p.category==="投資型保險").forEach(p=>{
-            let a=(p.deathBenefit!==undefined&&p.deathBenefit!==null&&p.deathBenefit!=="")?p.deathBenefit:p.insuredAmount;
-            let u=(p.deathBenefit!==undefined&&p.deathBenefit!==null&&p.deathBenefit!=="")?(p.deathBenefitUnit||'萬元'):(p.insuredAmountUnit||'萬元');
-            let w=convertToWanEx(a,u); if(w!==null) sum+=w;
+            // 只採用使用者實際填寫的留愛金額(deathBenefit)，沒填就是 0，
+            // 不再用保額(insuredAmount)頂替（之前這裡漏改，導致沒填留愛金額
+            // 的保單被誤算成保額金額，跟保單明細頁的留愛金額對不起來）。
+            let w=convertToWanEx(p.deathBenefit, p.deathBenefitUnit||'萬元'); if(w!==null) sum+=w;
         }); return sum;
     } },
     { label:"儲蓄險(身故金)", unit:"萬元", compute:function(pols){ 
         let sum=0; pols.filter(p=>["儲蓄險","年金險"].includes(p.category)).forEach(p=>{
-            let a=(p.deathBenefit!==undefined&&p.deathBenefit!==null&&p.deathBenefit!=="")?p.deathBenefit:p.insuredAmount;
-            let u=(p.deathBenefit!==undefined&&p.deathBenefit!==null&&p.deathBenefit!=="")?(p.deathBenefitUnit||'萬元'):(p.insuredAmountUnit||'萬元');
-            let w=convertToWanEx(a,u); if(w!==null) sum+=w;
+            // 同上：只採用使用者實際填寫的留愛金額(deathBenefit)，不再用保額頂替。
+            let w=convertToWanEx(p.deathBenefit, p.deathBenefitUnit||'萬元'); if(w!==null) sum+=w;
         }); return sum;
     } },
     { label:"重大終身", unit:"萬元", compute:function(pols){ return lifeAmountEx(pols, ["重大疾病險","重大傷病險","特定傷病險"], false); } },
@@ -2786,7 +2786,7 @@ function renderBlock(key){
       });
     });
 
-    var chartParts = buildDonutChartEx(active, cov, {}, {});
+    var chartParts = buildDonutChartEx(active, cov, targets, overrides);
 
     var html='<div style="padding:10px">';
 
@@ -3472,6 +3472,19 @@ window.addEventListener("nbs_nav_ready", async function(e) {
     await Promise.all(fetchPromises);
 
     personDataMap = pdm;
+
+    // 把每個人存檔裡的手動調整結果（person.covOverrides，來自 summary.html 的
+    // 「✏️ 手動調整」）還原進 overrides，讓匯出的報告跟 summary.html 上看到的
+    // 圓餅圖／保障覆蓋率狀態一致，不會匯出後又變回純自動判斷的結果。
+    Object.keys(pdm).forEach(function(pid) {
+      var p = pdm[pid];
+      if (p && p.covOverrides) {
+        Object.keys(p.covOverrides).forEach(function(gapKey) {
+          overrides[pid + "_" + gapKey] = p.covOverrides[gapKey];
+        });
+      }
+    });
+
     person = pdm[currentPersonId] || {};
     policies = person.policies || [];
     coverage = person.coverage || {};
