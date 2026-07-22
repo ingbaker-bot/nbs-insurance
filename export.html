@@ -1042,7 +1042,13 @@ function buildRetirementPillarHtml(memberName, calc, ageFrom, ageTo){
       '<span style="font-size:28px;color:#7c7fa0;font-weight:700;background:#eef2ff;padding:6px 18px;border-radius:99px">退休起領 '+ageFrom+' － '+ageTo+' 歲</span>'+
     '</div>';
 
-  return headerHtml + chartHtml + tableHtml + notesHtml;
+  return {
+    headerHtml: headerHtml,
+    chartHtml: chartHtml,
+    tableHtml: tableHtml,
+    notesHtml: notesHtml,
+    html: headerHtml + chartHtml + tableHtml + notesHtml // 預覽畫面用的合併版本
+  };
 }
 
 function buildRetirementPillarsParts(pdmAll, fData, ageFrom, ageTo){
@@ -1051,7 +1057,9 @@ function buildRetirementPillarsParts(pdmAll, fData, ageFrom, ageTo){
     var p = pdmAll[m.personId]; if(!p) return;
     var calc = calcRetirementPillarsForMember(p, ageFrom, ageTo);
     if (!calc.hasData) return;
-    parts.push({ memberName:m.name, html:buildRetirementPillarHtml(m.name, calc, ageFrom, ageTo) });
+    var pieces = buildRetirementPillarHtml(m.name, calc, ageFrom, ageTo);
+    parts.push({ memberName:m.name, headerHtml:pieces.headerHtml, chartHtml:pieces.chartHtml,
+      tableHtml:pieces.tableHtml, notesHtml:pieces.notesHtml, html:pieces.html });
   });
   return parts;
 }
@@ -3336,6 +3344,64 @@ async function buildPdfDocument(blks,div){
           var fd2 = canvasToMM(footC2, usableW, 40);
           if(y2+fd2.ih > margin+usableH){ y2 = await startNewPageST(); }
           pdf.addImage(footC2.toDataURL("image/jpeg",0.88),"JPEG",margin,y2,fd2.iw,fd2.ih);
+        }
+      }
+    } else if(blks[i].key==="retirement_pillars"){
+      // ── 退休金三層總覽：依內容自然高度動態分頁 ──────────
+      // 之前是整塊硬塞進一頁等比例縮放，年齡區間設大一點（例如 60~75，
+      // 16 欄）加上一次性給付備註很長時，會被壓得很小、頁面比例很怪。
+      // 改成跟「儲蓄險現金流時間軸」一樣的做法：標題先自成一頁最上方，
+      // 「成員名稱+長條圖」當一組先看放不放得下，接著比較表、最後備註，
+      // 各自量實際高度，放不下才換頁，永遠維持滿版寬度不縮小。
+      var rpParts3 = buildRetirementPillarsParts(pdmSingle, singleMemberFamilyData, retireAgeFrom, retireAgeTo);
+      if(!rpParts3.length){
+        var emptyRP2 = await captureHtml(getBlockTitleHtml(blks[i])+'<div style="padding:60px;text-align:center;color:#9ca3af;font-size:20px">尚無勞保／勞退／國保或儲蓄保單資料可供計算</div>'+(isLast||fmt==="pdf_pages"?disclaimer:"")+wm);
+        addNewPage("三層");
+        var edRP2 = canvasToMM(emptyRP2, usableW, usableH);
+        pdf.addImage(emptyRP2.toDataURL("image/jpeg",0.88),"JPEG",margin,margin,edRP2.iw,edRP2.ih);
+      } else {
+        var rp3 = rpParts3[0]; // 只有目前選中的這一位成員
+        var titleC3 = await captureHtml(getBlockTitleHtml(blks[i]));
+        var titleH3 = (titleC3.height/titleC3.width)*usableW;
+
+        async function startNewPageRP(){
+          addNewPage("三層");
+          pdf.addImage(titleC3.toDataURL("image/jpeg",0.88),"JPEG",margin,margin,usableW,titleH3);
+          return margin+titleH3+4;
+        }
+
+        var y3 = await startNewPageRP();
+
+        // 成員名稱＋長條圖 當一組，盡量放在同一頁
+        var headChartC = await captureHtml(rp3.headerHtml + rp3.chartHtml);
+        var headChartH = (headChartC.height/headChartC.width)*usableW;
+        if (y3+headChartH > margin+usableH && y3>margin+1) { y3 = await startNewPageRP(); }
+        pdf.addImage(headChartC.toDataURL("image/jpeg",0.88),"JPEG",margin,y3,usableW,headChartH);
+        y3 += headChartH + 3;
+
+        // 比較表：正常情況一定放得下就直接放；年齡區間設超大導致表格
+        // 本身就比一整頁還高的極端情況，改用「強制滿版寬度」讓它自然
+        // 往下延伸，不要被壓縮到看不清楚數字。
+        var tableC3 = await captureHtml(rp3.tableHtml);
+        var tableH3 = (tableC3.height/tableC3.width)*usableW;
+        if (y3+tableH3 > margin+usableH && y3>margin+1) { y3 = await startNewPageRP(); }
+        pdf.addImage(tableC3.toDataURL("image/jpeg",0.88),"JPEG",margin,y3,usableW,tableH3);
+        y3 += tableH3 + 3;
+
+        // 一次性給付備註（如果有）
+        if (rp3.notesHtml) {
+          var notesC3 = await captureHtml(rp3.notesHtml);
+          var notesH3 = (notesC3.height/notesC3.width)*usableW;
+          if (y3+notesH3 > margin+usableH && y3>margin+1) { y3 = await startNewPageRP(); }
+          pdf.addImage(notesC3.toDataURL("image/jpeg",0.88),"JPEG",margin,y3,usableW,notesH3);
+          y3 += notesH3;
+        }
+
+        if(isLast || fmt==="pdf_pages"){
+          var footC3 = await captureHtml(disclaimer+wm);
+          var fd3 = canvasToMM(footC3, usableW, 40);
+          if(y3+fd3.ih > margin+usableH){ y3 = await startNewPageRP(); }
+          pdf.addImage(footC3.toDataURL("image/jpeg",0.88),"JPEG",margin,y3,fd3.iw,fd3.ih);
         }
       }
     } else {
