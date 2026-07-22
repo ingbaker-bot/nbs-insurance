@@ -396,6 +396,28 @@ var COVERAGE_TYPES = [
   { key:"investment", label:"投資型",   group:"財務", color:"#95A5A6", detect:(p,c)=>p.some(x=>x.category==="投資型保險") },
 ];
 
+// ── 「手動調整保障有無」跟圓餅圖/圖例/缺口分析，本來是兩套各自獨立的
+// key 命名系統（COVERAGE_TYPES 給這個 Modal 用，GAP_KEY_MAP 給圓餅圖/
+// 圖例/缺口分析用），大部分 key 名稱對不起來，導致這裡手動切換，
+// 圓餅圖完全沒反應（只有 investment／savings 這兩個剛好同名才會動）。
+// 這裡建一個對照表，把 Modal 的切換動作導到圓餅圖實際會讀的 key 上。
+var COVERAGE_TYPE_TO_GAP_KEYS = {
+  life:        ["life_permanent","life_term"],
+  acc_death:   ["acc_death_amt"],
+  acc_medical: ["acc_medical"],
+  acc_hosp:    ["acc_hosp"],
+  hosp_real:   ["hosp_real_room"],
+  hosp_daily:  ["hosp_daily"],
+  hosp_surg:   ["surgery"],
+  ci:          ["ci_major","ci_catastrophic","ci_specific","ci_death"],
+  cancer:      ["cancer","cancer_hosp","cancer_surgery","cancer_death_hospice"],
+  ltc:         ["ltc_care"],
+  disable:     ["ltc_disable","ltc_support"],
+  savings:     ["savings"],
+  annuity:     ["savings"], // 年金險在 GAP 系統裡跟儲蓄險合併算同一個 savings 項目，沒有獨立 key
+  investment:  ["investment"],
+};
+
 var GROUP_COLORS = { 壽險:"#4A90D9",意外:"#F5A623",醫療:"#27AE8F",重大:"#9B59B6",癌症:"#E74C3C",長照:"#27500A",財務:"#E8638A" };
 
 var CAT_COLORS = {
@@ -699,6 +721,18 @@ async function initPage(detail) {
     });
 
     await Promise.all(fetchPromises);
+
+    // 把每個人存檔裡的手動調整結果（person.covOverrides）還原進執行期的 overrides，
+    // 這樣重新整理頁面、或 export.html 讀到同一份保單資料時，都能看到一樣的手動調整。
+    activeMembers.forEach(m => {
+      const p = personDataMap[m.personId];
+      if (p && p.covOverrides) {
+        Object.entries(p.covOverrides).forEach(([gapKey, val]) => {
+          overrides[m.personId + "_" + gapKey] = val;
+        });
+      }
+    });
+
     document.getElementById("loading").style.display = "none";
     document.getElementById("content").style.display = "block";
     renderTabs();
@@ -1259,8 +1293,13 @@ function openModal() {
   const active  = policies.filter(isPolicyActive);
   const covTypes= COVERAGE_TYPES.map(t=>{
     const auto=t.detect(active,coverage);
-    const manual=overrides[currentPersonId+"_"+t.key];
-    return {...t,covered:manual!==undefined?manual:auto,autoDetected:auto,isManual:manual!==undefined};
+    // 手動狀態要看「對照表裡對應的 GAP key」有沒有被覆蓋過，
+    // 不是看 COVERAGE_TYPES 自己這個 key（兩套命名對不起來）。
+    const gapKeys = COVERAGE_TYPE_TO_GAP_KEYS[t.key] || [t.key];
+    const overriddenVals = gapKeys.map(gk=>overrides[currentPersonId+"_"+gk]).filter(v=>v!==undefined);
+    const isManual = overriddenVals.length>0;
+    const manualCovered = isManual ? overriddenVals.some(v=>v===true) : undefined;
+    return {...t,covered:isManual?manualCovered:auto,autoDetected:auto,isManual};
   });
 
   const groups=["壽險","意外","醫療","重大","癌症","長照","財務"];
@@ -1284,16 +1323,49 @@ function openModal() {
 }
 
 function toggleOverride(key) {
-  const fk=currentPersonId+"_"+key;
   const person=personDataMap[currentPersonId];
   const active=(person?.policies||[]).filter(isPolicyActive);
   const cov=person?.coverage||{};
   const t=COVERAGE_TYPES.find(x=>x.key===key);
   const auto=t?t.detect(active,cov):false;
-  const cur=overrides[fk];
-  if(cur===undefined) overrides[fk]=!auto;
-  else delete overrides[fk];
+
+  // 這個 Modal 切換的類別，實際要對應到圓餅圖/圖例/缺口分析會讀的哪幾個 GAP key
+  const gapKeys = COVERAGE_TYPE_TO_GAP_KEYS[key] || [key];
+  const isCurrentlyManual = gapKeys.some(gk => overrides[currentPersonId+"_"+gk] !== undefined);
+
+  if (!isCurrentlyManual) {
+    // 從自動判斷切成手動：把底下對應的每個 GAP key 都設成「跟自動判斷相反」
+    gapKeys.forEach(gk => { overrides[currentPersonId+"_"+gk] = !auto; });
+  } else {
+    // 已經是手動狀態，再點一次 → 恢復自動判斷，清掉底下每個 GAP key 的手動覆蓋
+    gapKeys.forEach(gk => { delete overrides[currentPersonId+"_"+gk]; });
+  }
   openModal();
+  renderContent(); // 立即重繪圓餅圖／圖例／缺口分析，不用等關閉 Modal 才更新
+  saveOverridesForCurrentPerson(); // 存回雲端，export.html 才讀得到這次的手動調整
+}
+
+// 把目前這位成員的手動調整（overrides 裡屬於他的那些 key）整理出來，
+// 存進 person.covOverrides，再存檔到 Drive。跟保單資料存在同一個檔案裡，
+// export.html 讀 person 資料時就會一併讀到，不用另外開一支存檔流程。
+function saveOverridesForCurrentPerson() {
+  const person = personDataMap[currentPersonId];
+  if (!person) return;
+  const prefix = currentPersonId + "_";
+  const covOverrides = {};
+  Object.keys(overrides).forEach(k => {
+    if (k.indexOf(prefix) === 0) covOverrides[k.slice(prefix.length)] = overrides[k];
+  });
+  person.covOverrides = covOverrides;
+
+  const member = (familyData.members || []).find(m => m.personId === currentPersonId);
+  if (!member) return;
+  callGAS("saveFile", {
+    email: currentUser.email,
+    fileType: "persons",
+    fileName: member.name + "_" + currentPersonId + ".json",
+    content: person
+  }).catch(err => console.error("手動調整存檔失敗：", err));
 }
 function closeModal() { document.getElementById("edit-modal").classList.remove("active"); renderContent(); }
 function handleModalOverlay(e) { if(e.target===document.getElementById("edit-modal")) closeModal(); }
