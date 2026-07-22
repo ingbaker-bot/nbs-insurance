@@ -98,7 +98,8 @@
       } else if (s.textContent && s.textContent.trim()) {
         chain = chain.then(function() {
           var el = document.createElement("script");
-          el.textContent = s.textContent;
+          // 跟 body script 同樣的道理：包一層 { } 避免 const／let 重複宣告炸掉
+          el.textContent = "{\n" + s.textContent + "\n}";
           document.head.appendChild(el);
         });
       }
@@ -204,7 +205,13 @@
     scriptNodes.forEach(function(s) {
       if (s.src) return; // 外部 body script：目前 8 支頁面沒有這種用法，暫不支援
       var el = document.createElement("script");
-      el.textContent = s.textContent;
+      // ⚠️ 用一層普通的 { } 區塊包住頁面腳本內容（不是 function／IIFE）：
+      // 非嚴格模式下，區塊內宣告的 function 仍會依照 Annex B 相容性規則
+      // 自動掛回 window（所以 onclick="xxx()" 不受影響），但區塊內的
+      // const／let 會被限制在這個區塊的生命週期裡，執行完就釋放。
+      // 這樣使用者重複切換回同一頁時，同名的 const／let 不會撞上「已宣告」
+      // 而整段腳本崩潰（這正是 coverage.html／summary.html 之前發生的問題）。
+      el.textContent = "{\n" + s.textContent + "\n}";
       document.body.appendChild(el);
       _current.scriptEls.push(el);
     });
