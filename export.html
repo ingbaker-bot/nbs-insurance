@@ -981,12 +981,15 @@ function buildRetirementPillarHtml(memberName, calc, ageFrom, ageTo){
 
   var bars = calc.rows.map(function(r){
     var h1=Math.round(r.p1*scale), h2=Math.round(r.p2*scale), h3=Math.round(r.p3*scale);
+    // column-reverse：DOM 順序第一個在最下面、最後一個在最上面。
+    // 依序放 第一層(藍,最下) → 第二層(橙,中間) → 第三層(綠,最上)，
+    // 對應「社會保險打底、企業退休金居中、自行準備疊在最上層」。
     return '<div style="display:flex;flex-direction:column;align-items:center;flex:1">'+
       '<div style="font-size:26px;font-weight:800;color:#374151;margin-bottom:6px">'+(r.total>0?fmtAmtEx(r.total):'—')+'</div>'+
       '<div style="width:100%;max-width:110px;display:flex;flex-direction:column-reverse;height:'+CHART_H+'px">'+
-        (h3>0?'<div style="height:'+h3+'px;background:#1baf7a"></div>':'')+
-        (h2>0?'<div style="height:'+h2+'px;background:#eb6834"></div>':'')+
         (h1>0?'<div style="height:'+h1+'px;background:#2a78d6;border-radius:0 0 8px 8px"></div>':'')+
+        (h2>0?'<div style="height:'+h2+'px;background:#eb6834"></div>':'')+
+        (h3>0?'<div style="height:'+h3+'px;background:#1baf7a;border-radius:8px 8px 0 0"></div>':'')+
       '</div>'+
       '<div style="font-size:30px;font-weight:800;color:#1a1a2e;margin-top:10px">'+r.age+' 歲</div>'+
     '</div>';
