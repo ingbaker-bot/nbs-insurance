@@ -598,10 +598,18 @@ function getItemCurrent(key, policies, coverage, covOverrides) {
   }
 
   if (["ci_major","ci_catastrophic","ci_specific"].includes(key)) {
-      const matchedPolicies = policies.filter(p => map.cats.includes(p.category));
-      let amt = sumCov(map.keys, matchedPolicies, coverage);
+      // 這幾個「一次金」欄位在 coverage.html 是不分類別、任何保單的「重大」
+      // 分頁都能填（例如終身醫療險本身就附帶重大疾病一次給付），所以
+      // 加總時不應該再限定「類別」剛好等於重大疾病險／重大傷病險／
+      // 特定傷病險，只要保單有填這個欄位金額就該算進去，不管保單本身
+      // 被歸在哪個類別。
+      let amt = sumCov(map.keys, policies, coverage);
       if (amt === 0) {
-        // 沒填一次金欄位，退回用保單保額（相容還沒細分填寫的舊保單），含單位換算
+        // 完全沒有任何保單填過這個一次金欄位，才退回用保單保額頂替
+        // （相容還沒細分填寫的舊保單）。這個 fallback 才需要限定類別，
+        // 因為「保額」代表保單本身的保障金額，只有真的歸類在這個重大
+        // 疾病類別的保單，用保額去頂替才有意義。
+        const matchedPolicies = policies.filter(p => map.cats.includes(p.category));
         matchedPolicies.forEach(p => {
            const w = convertToWan(p.insuredAmount, p.insuredAmountUnit);
            if (w !== null) amt += w;
