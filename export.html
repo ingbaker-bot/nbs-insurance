@@ -1379,9 +1379,13 @@ function getItemCurrentEx(key, policies, coverage, covOverrides) {
   }
 
   if (["ci_major","ci_catastrophic","ci_specific"].includes(key)) {
-      var matchedPolicies = policies.filter(p => map.cats.includes(p.category));
-      var amt = sumCovEx(map.keys, matchedPolicies, coverage);
+      // 跟 summary.html 同一個修正：這幾個「一次金」欄位在 coverage.html
+      // 是不分類別、任何保單的「重大」分頁都能填（例如終身醫療險本身就
+      // 附帶重大疾病一次給付），加總不應該再限定類別，只有完全沒填
+      // 任何一次金、需要退回用保額頂替時，才需要限定類別。
+      var amt = sumCovEx(map.keys, policies, coverage);
       if (amt === 0) {
+        var matchedPolicies = policies.filter(p => map.cats.includes(p.category));
         matchedPolicies.forEach(p => {
            var w = convertToWanEx(p.insuredAmount, p.insuredAmountUnit);
            if (w !== null) amt += w;
