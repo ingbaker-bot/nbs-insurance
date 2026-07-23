@@ -368,8 +368,13 @@
         </div>
 
         <div class="field">
-          <label>出生日期</label>
-          <input type="date" id="primary-birth" oninput="calcAge()" />
+          <label>出生日期（民國）</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="number" id="primary-birth-y" placeholder="年" min="1" max="200" style="width:70px" oninput="onPrimaryBirthRocChange()" />年
+            <input type="number" id="primary-birth-m" placeholder="月" min="1" max="12" style="width:56px" oninput="onPrimaryBirthRocChange()" />月
+            <input type="number" id="primary-birth-d" placeholder="日" min="1" max="31" style="width:56px" oninput="onPrimaryBirthRocChange()" />日
+          </div>
+          <input type="hidden" id="primary-birth" />
           <div class="age-hint" id="age-hint"></div>
         </div>
 
@@ -383,9 +388,13 @@
         </div>
 
         <div class="field">
-          <label>分析日</label>
-          <input type="date" id="analysis-date" />
-          <div class="hint" id="analysis-roc"></div>
+          <label>分析日（民國）</label>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="number" id="analysis-date-y" placeholder="年" min="1" max="200" style="width:70px" oninput="onAnalysisDateRocChange()" />年
+            <input type="number" id="analysis-date-m" placeholder="月" min="1" max="12" style="width:56px" oninput="onAnalysisDateRocChange()" />月
+            <input type="number" id="analysis-date-d" placeholder="日" min="1" max="31" style="width:56px" oninput="onAnalysisDateRocChange()" />日
+          </div>
+          <input type="hidden" id="analysis-date" />
         </div>
 
         <div class="btn-row">
@@ -457,8 +466,11 @@
       if (currentUser.isAdmin) adminBadge.style.display = "inline";
 
       const today = new Date().toISOString().slice(0, 10);
+      const todayRoc = isoToRocParts(today);
       document.getElementById("analysis-date").value = today;
-      updateAnalysisRoc();
+      document.getElementById("analysis-date-y").value = todayRoc.y;
+      document.getElementById("analysis-date-m").value = todayRoc.m;
+      document.getElementById("analysis-date-d").value = todayRoc.d;
 
       // ── 新增：檢查是否有直連網址，沒有就補抓 ──
       const shellUrl = localStorage.getItem("nbs_shell_url");
@@ -885,19 +897,58 @@
       return years;
     }
 
-    // ── 分析日民國年顯示 ──────────────────────────────────────
-    function updateAnalysisRoc() {
-      const val = document.getElementById("analysis-date").value;
-      if (!val) return;
-      const d = new Date(val);
-      document.getElementById("analysis-roc").textContent =
-        "民國 " + (d.getFullYear()-1911) + " 年 " + (d.getMonth()+1) + " 月 " + d.getDate() + " 日";
+    // ── 民國年/月/日輸入 ↔ 西元 ISO 字串轉換 ──────────────────
+    function rocToIso(rocYear, month, day) {
+      rocYear = parseInt(rocYear, 10);
+      month   = parseInt(month, 10);
+      day     = parseInt(day, 10);
+      if (!rocYear || !month || !day) return "";
+      const adYear = rocYear + 1911;
+      const mm = String(month).padStart(2, "0");
+      const dd = String(day).padStart(2, "0");
+      return adYear + "-" + mm + "-" + dd;
     }
 
-    document.addEventListener("DOMContentLoaded", () => {
-      const el = document.getElementById("analysis-date");
-      if (el) el.addEventListener("change", updateAnalysisRoc);
-    });
+    function isoToRocParts(iso) {
+      if (!iso) return { y: "", m: "", d: "" };
+      const d = new Date(iso);
+      if (isNaN(d)) return { y: "", m: "", d: "" };
+      return { y: d.getFullYear() - 1911, m: d.getMonth() + 1, d: d.getDate() };
+    }
+
+    function onPrimaryBirthRocChange() {
+      const y = document.getElementById("primary-birth-y").value;
+      const m = document.getElementById("primary-birth-m").value;
+      const d = document.getElementById("primary-birth-d").value;
+      document.getElementById("primary-birth").value = rocToIso(y, m, d);
+      calcAge();
+    }
+
+    function onAnalysisDateRocChange() {
+      const y = document.getElementById("analysis-date-y").value;
+      const m = document.getElementById("analysis-date-m").value;
+      const d = document.getElementById("analysis-date-d").value;
+      document.getElementById("analysis-date").value = rocToIso(y, m, d);
+      calcAge();
+    }
+
+    // 民國年/月/日三格輸入的自動跳格：月/日固定 2 碼，打滿就自動跳下
+    // 一格；年因為可能是 2 碼（例如民國 53 年）也可能是 3 碼（例如民國
+    // 115 年），打滿 3 碼才自動跳，2 碼的情況維持原本手動按 Tab／點擊
+    // 切換，這是刻意的取捨，不是漏做。
+    function wireRocAutoAdvance(yId, mId, dId) {
+      const yEl = document.getElementById(yId);
+      const mEl = document.getElementById(mId);
+      const dEl = document.getElementById(dId);
+      if (yEl && mEl) yEl.addEventListener("input", function(){
+        if (this.value.replace(/\D/g,"").length >= 3) mEl.focus();
+      });
+      if (mEl && dEl) mEl.addEventListener("input", function(){
+        if (this.value.replace(/\D/g,"").length >= 2) dEl.focus();
+      });
+    }
+    wireRocAutoAdvance("primary-birth-y", "primary-birth-m", "primary-birth-d");
+    wireRocAutoAdvance("analysis-date-y", "analysis-date-m", "analysis-date-d");
 
     // ── 民國年轉換 ────────────────────────────────────────────
     function toRoc(dateStr) {
