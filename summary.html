@@ -559,10 +559,12 @@ function getItemCurrent(key, policies, coverage, covOverrides) {
   const map = GAP_KEY_MAP[key];
   if(!map) return 0;
 
-  const manualKey = currentPersonId+"_"+key;
-  if(covOverrides && covOverrides[manualKey] !== undefined) {
-    return covOverrides[manualKey] ? 1 : 0;
-  }
+  // ⚠️ 這裡原本有一段「手動覆蓋就直接回傳 0/1」的短路邏輯，已經移除。
+  // getItemCurrent 專門負責算「真實金額」，手動調整（有／沒有）只應該
+  // 影響 getItemStatus 判斷出來的狀態（✅/❌、圖示顏色），不該讓這裡回傳
+  // 假的 0 或 1——不然只要曾經手動調整過一次，之後不管保單資料填了多少
+  // 錢，這裡永遠都只會顯示 0 或 1，跟「投資型保險 1萬元」這種明顯錯誤
+  // 的數字就是這樣來的。
 
   if(["waiver"].includes(key)) {
     if(key==="waiver")     return sumCov(["ltc_waiver"], policies, coverage) > 0 ? 1 : 0;
@@ -677,10 +679,23 @@ function getSavingsPieStatus(key, policies, covOverrides) {
 
 function getItemStatus(key, policies, coverage, targets, covOverrides) {
   const item = GAP_GROUPS.flatMap(g=>g.items).find(i=>i.key===key);
-  if (key === "investment" || key === "savings") {
-    return getSavingsPieStatus(key, policies, covOverrides);
-  }
+  // current 一律用 getItemCurrent 算出來的「真實金額」，不管有沒有手動
+  // 覆蓋——手動調整只該影響下面的「狀態」判斷（✅/❌/圖示顏色），不該讓
+  // 金額本身被蓋成假的 0 或 1（之前這裡投資型/儲蓄險會整個跳過金額計算，
+  // 只要之前手動調整過一次，就會被鎖死顯示「1萬元」這種假數字）。
   const current = getItemCurrent(key, policies, coverage, covOverrides);
+  const manualKey = currentPersonId + "_" + key;
+  if (covOverrides && covOverrides[manualKey] !== undefined) {
+    const on = !!covOverrides[manualKey];
+    return { status: on ? "ok" : "gap", current, target:null, pct: on?1:0 };
+  }
+  if (key === "investment" || key === "savings") {
+    // 沒有手動覆蓋時，狀態（有／部分有／沒有）維持原本這套判斷邏輯，
+    // 但金額一律用真實計算結果，不要再回傳 getSavingsPieStatus 自己
+    // 算的假 0/1/0.5。
+    const pieStatus = getSavingsPieStatus(key, policies, null);
+    return { status: pieStatus.status, current, target:null, pct: pieStatus.pct };
+  }
   const target  = targets[key];
   const isBool  = item?.isBool;
   if(!current) return {status:"gap", current:0, target, pct:0};
