@@ -1223,6 +1223,27 @@ var CAT_COLORS = {
   "儲蓄險":"#E8638A","年金險":"#C0392B","投資型保險":"#95A5A6",
 };
 
+// 重大疾病/傷病/特定傷病的「一次金」加總（跟「評估確診」那組同一套邏輯：
+// 不分保單類別，只要保單有填這幾個一次金欄位就算，並依保障期間拆終身/定期）。
+// 之前這裡是用 lifeAmountEx 算「留愛金額」，語意上比較像壽險的身故給付，
+// 跟「評估確診」顯示的「一次金」金額對不起來（例如醫療險本身附帶的重大
+// 疾病一次金，因為沒有另外填留愛金額，這裡會被算成 0），改成跟「評估
+// 確診」用同一套「一次金」欄位，兩邊看到的重大疾病相關金額才會一致。
+function ciLumpAmountEx(pols, isTerm) {
+  var amt = 0;
+  pols.forEach(function(p){
+    var pt = (p.coverage && p.coverage.protect_period_type) ? p.coverage.protect_period_type : "終身";
+    var isPolTerm = (pt !== "終身");
+    if (isTerm !== isPolTerm) return;
+    var c = p.coverage || {};
+    ["ci_major_lump","ci_catastrophic_lump","ci_specific_lump"].forEach(function(k){
+      var v = parseFloat(c[k]);
+      if (!isNaN(v)) amt += v;
+    });
+  });
+  return amt;
+}
+
 var COVERAGE_GROUPS_EX = [
   { label:"壽險/重大保障(終身/定期)", icon:"🛡️", color:"#3730a3", items:[
     { label:"終身壽險", unit:"萬元", compute:function(pols){ return lifeAmountEx(pols, ["壽險保障"], false); } },
@@ -1242,8 +1263,8 @@ var COVERAGE_GROUPS_EX = [
             sum += getDeathBenefitAmt(p);
         }); return sum;
     } },
-    { label:"重大終身", unit:"萬元", compute:function(pols){ return lifeAmountEx(pols, ["重大疾病險","重大傷病險","特定傷病險"], false); } },
-    { label:"重大定期", unit:"萬元", compute:function(pols){ return lifeAmountEx(pols, ["重大疾病險","重大傷病險","特定傷病險"], true); }, remain:function(pols){ return lifeRemainYearsEx(pols, ["重大疾病險","重大傷病險","特定傷病險"]); } },
+    { label:"重大終身", unit:"萬元", compute:function(pols){ return ciLumpAmountEx(pols, false); } },
+    { label:"重大定期", unit:"萬元", compute:function(pols){ return ciLumpAmountEx(pols, true); }, remain:function(pols){ return lifeRemainYearsEx(pols, ["重大疾病險","重大傷病險","特定傷病險"]); } },
     { label:"生活扶助金（每月）", keys:["ltc_life"], unit:"萬元/月" },
     { label:"特定傷病保險金（每年）", keys:["ltc_yr"], unit:"萬元/年" },
     { label:"特定傷病保險金（每月）", keys:["ltc_mo"], unit:"萬元/月" },
@@ -1337,10 +1358,10 @@ function getItemCurrentEx(key, policies, coverage, covOverrides) {
   var map = GAP_KEY_MAP_EX[key];
   if(!map) return 0;
 
-  var manualKey = currentPersonId+"_"+key;
-  if(covOverrides && covOverrides[manualKey] !== undefined) {
-    return covOverrides[manualKey] ? 1 : 0;
-  }
+  // ⚠️ 跟 summary.html 同一個修正：移除「手動覆蓋就直接回傳 0/1」的
+  // 短路邏輯。getItemCurrentEx 專門負責算「真實金額」，手動調整（有／
+  // 沒有）只應該影響 getItemStatusEx 判斷出來的狀態，不該讓這裡回傳假
+  // 的 0 或 1。
 
   if(["waiver"].includes(key)) {
     if(key==="waiver") return sumCovEx(["ltc_waiver"], policies, coverage) > 0 ? 1 : 0;
@@ -1455,10 +1476,17 @@ function getSavingsPieStatusEx(key, policies, covOverrides) {
 
 function getItemStatusEx(key, policies, coverage, targets, covOverrides) {
   var item = GAP_GROUPS_EX.flatMap(g=>g.items).find(i=>i.key===key);
-  if (key === "investment" || key === "savings") {
-    return getSavingsPieStatusEx(key, policies, covOverrides);
-  }
+  // current 一律用真實金額，跟 summary.html 同一個修正。
   var current = getItemCurrentEx(key, policies, coverage, covOverrides);
+  var manualKey = currentPersonId + "_" + key;
+  if (covOverrides && covOverrides[manualKey] !== undefined) {
+    var on = !!covOverrides[manualKey];
+    return { status: on ? "ok" : "gap", current: current, target:null, pct: on?1:0 };
+  }
+  if (key === "investment" || key === "savings") {
+    var pieStatus = getSavingsPieStatusEx(key, policies, null);
+    return { status: pieStatus.status, current: current, target:null, pct: pieStatus.pct };
+  }
   var target  = targets[key];
   var isBool  = item?.isBool;
   if(!current) return {status:"gap", current:0, target, pct:0};
