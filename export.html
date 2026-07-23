@@ -2419,8 +2419,24 @@ function buildDonutChartEx(active, coverage, targets, covOverrides) {
   var labels=""; 
 
   function renderLegend(g) {
-    // 標題放大至 36px
-    var legendHtml = `<div style="font-size:42px;font-weight:800;color:${g.color};margin-bottom:10px;border-bottom:3px solid ${g.color}30;padding-bottom:8px">${g.label}</div>`;
+    var legendHtml;
+    if (g.key === "family") {
+      // 壽險留愛合計：終身壽險＋定期壽險＋投資型＋儲蓄險，這幾種都是
+      // 「帶壽險身故(留愛金額)給付」的保單；意外身故已經在下面明細列表
+      // 單獨呈現過，這裡不重複計入。
+      var lifeDeathTotal = ["life_permanent","life_term","investment","savings"]
+        .reduce(function(sum,k){ return sum + getItemCurrentEx(k, active, coverage, covOverrides); }, 0);
+      legendHtml = `<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:10px;border-bottom:3px solid ${g.color}30;padding-bottom:8px">
+        <div style="font-size:42px;font-weight:800;color:${g.color};flex-shrink:0">${g.label}</div>
+        <div style="background:${g.color}18;border-radius:16px;padding:10px 22px;flex:1;display:flex;align-items:baseline;justify-content:space-between;gap:12px;min-width:0">
+          <span style="font-size:26px;color:${g.color};white-space:nowrap">壽險留愛合計</span>
+          <span style="font-size:44px;font-weight:800;color:${g.color};white-space:nowrap">${lifeDeathTotal.toLocaleString()}<span style="font-size:26px;margin-left:4px">萬元</span></span>
+        </div>
+      </div>`;
+    } else {
+      // 標題放大至 36px
+      legendHtml = `<div style="font-size:42px;font-weight:800;color:${g.color};margin-bottom:10px;border-bottom:3px solid ${g.color}30;padding-bottom:8px">${g.label}</div>`;
+    }
     
     g.items.forEach(item => {
       var {status, pct, current, target} = getItemStatusEx(item.key, active, coverage, targets, covOverrides);
