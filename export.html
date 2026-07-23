@@ -2426,11 +2426,11 @@ function buildDonutChartEx(active, coverage, targets, covOverrides) {
       // 單獨呈現過，這裡不重複計入。
       var lifeDeathTotal = ["life_permanent","life_term","investment","savings"]
         .reduce(function(sum,k){ return sum + getItemCurrentEx(k, active, coverage, covOverrides); }, 0);
-      legendHtml = `<div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:10px;border-bottom:3px solid ${g.color}30;padding-bottom:8px">
-        <div style="font-size:42px;font-weight:800;color:${g.color};flex-shrink:0">${g.label}</div>
-        <div style="background:${g.color}18;border-radius:16px;padding:10px 22px;flex:1;display:flex;align-items:baseline;justify-content:space-between;gap:12px;min-width:0">
-          <span style="font-size:26px;color:${g.color};white-space:nowrap">壽險留愛合計</span>
-          <span style="font-size:44px;font-weight:800;color:${g.color};white-space:nowrap">${lifeDeathTotal.toLocaleString()}<span style="font-size:26px;margin-left:4px">萬元</span></span>
+      legendHtml = `<div style="margin-bottom:10px;border-bottom:3px solid ${g.color}30;padding-bottom:8px">
+        <div style="font-size:42px;font-weight:800;color:${g.color};margin-bottom:8px">${g.label}</div>
+        <div style="background:${g.color}18;border-radius:16px;padding:10px 20px;display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap">
+          <span style="font-size:22px;color:${g.color};white-space:nowrap">壽險留愛合計</span>
+          <span style="font-size:34px;font-weight:800;color:${g.color};white-space:nowrap">${lifeDeathTotal.toLocaleString()}<span style="font-size:22px;margin-left:4px">萬元</span></span>
         </div>
       </div>`;
     } else {
