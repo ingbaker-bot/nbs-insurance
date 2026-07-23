@@ -98,8 +98,8 @@
       } else if (s.textContent && s.textContent.trim()) {
         chain = chain.then(function() {
           var el = document.createElement("script");
-          // 跟 body script 同樣的道理：包一層 { } 避免 const／let 重複宣告炸掉
-          el.textContent = "{\n" + s.textContent + "\n}";
+          // 跟 body script 同樣的道理，用 _wrapPageScript 處理
+          el.textContent = _wrapPageScript(s.textContent);
           document.head.appendChild(el);
         });
       }
@@ -175,6 +175,29 @@
     });
   }
 
+  // 把頁面的 <script> 內容包進一層 { } 區塊：區塊內的 const／let 只在
+  // 這次執行的生命週期裡有效，執行完就釋放，重複切回同一頁不會撞上
+  // 「已宣告」而整段腳本崩潰。
+  //
+  // 但單純包 { } 有個例外：一般的 function 宣告，瀏覽器基於 Annex B
+  // 相容性規則會自動掛回 window，可是 async function／generator
+  // function 不適用這條規則，包進區塊後會變成只在區塊內看得到，
+  // onclick="xxx()" 這種寫在 HTML 屬性裡、需要從全域呼叫的寫法就會找
+  // 不到函式。這裡額外掃描頂層（沒有縮排、真正寫在最外層的）
+  // function／async function／function* 宣告，在區塊「結束前」明確補一行
+  // window.名稱 = 名稱，讓它們不管是哪種 function 都能被 onclick 呼叫到。
+  var TOP_LEVEL_FN_RE = /^(?:async\s+)?function\s*\*?\s+([A-Za-z_$][\w$]*)\s*\(/gm;
+  function _wrapPageScript(code) {
+    var names = [];
+    var m;
+    TOP_LEVEL_FN_RE.lastIndex = 0;
+    while ((m = TOP_LEVEL_FN_RE.exec(code))) { names.push(m[1]); }
+    var exposeLines = names.map(function(n) {
+      return "if (typeof " + n + " === 'function') { window." + n + " = " + n + "; }";
+    }).join("\n");
+    return "{\n" + code + "\n" + exposeLines + "\n}";
+  }
+
   function _runBodyScripts(key, scriptNodes) {
     var capturedListeners = [];
     var capturedTimers = [];
@@ -205,13 +228,7 @@
     scriptNodes.forEach(function(s) {
       if (s.src) return; // 外部 body script：目前 8 支頁面沒有這種用法，暫不支援
       var el = document.createElement("script");
-      // ⚠️ 用一層普通的 { } 區塊包住頁面腳本內容（不是 function／IIFE）：
-      // 非嚴格模式下，區塊內宣告的 function 仍會依照 Annex B 相容性規則
-      // 自動掛回 window（所以 onclick="xxx()" 不受影響），但區塊內的
-      // const／let 會被限制在這個區塊的生命週期裡，執行完就釋放。
-      // 這樣使用者重複切換回同一頁時，同名的 const／let 不會撞上「已宣告」
-      // 而整段腳本崩潰（這正是 coverage.html／summary.html 之前發生的問題）。
-      el.textContent = "{\n" + s.textContent + "\n}";
+      el.textContent = _wrapPageScript(s.textContent);
       document.body.appendChild(el);
       _current.scriptEls.push(el);
     });
