@@ -324,8 +324,8 @@ var GAP_GROUPS = [
   { key:"family", label:"家庭責任", color:"#1565C0", items:[
     { key:"life_permanent", label:"終身壽險",    unit:"萬元",   color:"#1565C0" },
     { key:"life_term",      label:"定期壽險",    unit:"萬元",   color:"#1E88E5" },
-    { key:"investment",     label:"投資型保險",  unit:"萬元",   color:"#7B1FA2", isBool:true },
-    { key:"savings",        label:"儲蓄險",      unit:"萬元",   color:"#E91E8C", isBool:true },
+    { key:"investment",     label:"投資型保險",  unit:"萬元",   color:"#7B1FA2" },
+    { key:"savings",        label:"儲蓄險",      unit:"萬元",   color:"#E91E8C" },
     { key:"ci_death",       label:"重大/特傷/重疾", unit:"萬元", color:"#C0392B" },
     { key:"acc_death_amt",  label:"意外身故",     unit:"萬元",   color:"#F5A623" },
   ]},
@@ -1001,15 +1001,7 @@ function buildDonutChart(active, coverage, targets, covOverrides) {
 
       let amtHtml = "";
       if (item.isBool) {
-        if (item.key === "investment" || item.key === "savings") {
-          amtHtml = status==="ok"
-            ? `<span style="color:#0C447C;font-size:14px;font-weight:600">有</span>`
-            : status==="insufficient"
-              ? `<span style="color:#B7791F;font-size:14px;font-weight:600">部分有</span>`
-              : `<span style="color:#bbb;font-size:14px">沒有</span>`;
-        } else {
-          amtHtml = current > 0 ? `<span style="color:#555;font-size:14px">有</span>` : `<span style="color:#bbb;font-size:14px">無</span>`;
-        }
+        amtHtml = current > 0 ? `<span style="color:#555;font-size:14px">有</span>` : `<span style="color:#bbb;font-size:14px">無</span>`;
       } else {
         if (current > 0 || target > 0) {
           let displayVal = current > 0 ? current.toLocaleString() : "0";
