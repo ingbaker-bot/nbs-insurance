@@ -606,9 +606,13 @@
       </div>
 
       <div class="field">
-        <label>分析日</label>
-        <input type="date" id="edit-analysis" oninput="updateEditAnalysis()" />
-        <div class="hint" id="edit-analysis-hint"></div>
+        <label>分析日（民國）</label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input type="number" id="edit-analysis-y" placeholder="年" min="1" max="200" style="width:70px" oninput="onEditAnalysisRocChange()" />年
+          <input type="number" id="edit-analysis-m" placeholder="月" min="1" max="12" style="width:56px" oninput="onEditAnalysisRocChange()" />月
+          <input type="number" id="edit-analysis-d" placeholder="日" min="1" max="31" style="width:56px" oninput="onEditAnalysisRocChange()" />日
+        </div>
+        <input type="hidden" id="edit-analysis" />
       </div>
 
       <div class="field">
@@ -950,10 +954,13 @@
       document.getElementById("edit-birth-m").value = rocParts.m;
       document.getElementById("edit-birth-d").value = rocParts.d;
       document.getElementById("edit-gender").value = person.profile.gender || "male";
+      const analysisRocParts = isoToRocParts(person.profile.analysisDate);
       document.getElementById("edit-analysis").value = person.profile.analysisDate || "";
+      document.getElementById("edit-analysis-y").value = analysisRocParts.y;
+      document.getElementById("edit-analysis-m").value = analysisRocParts.m;
+      document.getElementById("edit-analysis-d").value = analysisRocParts.d;
       document.getElementById("edit-address").value = person.profile.address || "";
       updateEditAge();
-      updateEditAnalysis();
       document.getElementById("edit-person-modal").classList.add("active");
     }
 
@@ -969,12 +976,12 @@
       hint.textContent = "保險年齡：" + calcInsAge(birth, analysis || new Date().toISOString().slice(0,10)) + " 歲";
     }
 
-    function updateEditAnalysis() {
-      const val = document.getElementById("edit-analysis").value;
-      const hint = document.getElementById("edit-analysis-hint");
-      if (!val) { hint.textContent = ""; return; }
-      const d = new Date(val);
-      hint.textContent = "民國 " + (d.getFullYear()-1911) + " 年 " + (d.getMonth()+1) + " 月 " + d.getDate() + " 日";
+    function onEditAnalysisRocChange() {
+      const y = document.getElementById("edit-analysis-y").value;
+      const m = document.getElementById("edit-analysis-m").value;
+      const d = document.getElementById("edit-analysis-d").value;
+      document.getElementById("edit-analysis").value = rocToIso(y, m, d);
+      updateEditAge();
     }
 
     async function saveEditPerson() {
@@ -1102,6 +1109,25 @@
       if (isNaN(d)) return { y: "", m: "", d: "" };
       return { y: d.getFullYear() - 1911, m: d.getMonth() + 1, d: d.getDate() };
     }
+
+    // 民國年/月/日三格輸入的自動跳格：月/日固定 2 碼，打滿就自動跳下一格；
+    // 年因為可能是 2 碼（例如民國 53 年）也可能是 3 碼（例如民國 115
+    // 年），打滿 3 碼才自動跳，2 碼的情況維持原本手動按 Tab／點擊切換，
+    // 這是刻意的取捨，不是漏做。
+    function wireRocAutoAdvance(yId, mId, dId) {
+      const yEl = document.getElementById(yId);
+      const mEl = document.getElementById(mId);
+      const dEl = document.getElementById(dId);
+      if (yEl && mEl) yEl.addEventListener("input", function(){
+        if (this.value.replace(/\D/g,"").length >= 3) mEl.focus();
+      });
+      if (mEl && dEl) mEl.addEventListener("input", function(){
+        if (this.value.replace(/\D/g,"").length >= 2) dEl.focus();
+      });
+    }
+    wireRocAutoAdvance("new-birth-y", "new-birth-m", "new-birth-d");
+    wireRocAutoAdvance("edit-birth-y", "edit-birth-m", "edit-birth-d");
+    wireRocAutoAdvance("edit-analysis-y", "edit-analysis-m", "edit-analysis-d");
 
     function onNewBirthRocChange() {
       const y = document.getElementById("new-birth-y").value;
