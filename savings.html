@@ -221,6 +221,27 @@ function needsDuringBlock(k) { return ["2","4"].includes(k); }
 function isMonthly(k)        { return k === "5"; }
 function isYearlyDetail(k)   { return k === "6"; }
 
+// ── 月現金流「實際 vs 預估」分界：用「今天」而不是行事曆年份切，
+// 已經過去的 12 個月（含本月）可以登錄實際金額，再往前推的 12 個月
+// 是還沒發生、只能用預估值。這條線會隨時間往前滑動，不寫死年份。
+function getRocMonthKey(monthsAgo) {
+  const now = new Date();
+  const d = new Date(now.getFullYear(), now.getMonth() - monthsAgo, 1);
+  const rocYear = d.getFullYear() - 1911;
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  return rocYear + "-" + mm;
+}
+function getPast12MonthKeys() {
+  // 由舊到新排列，最後一格是本月
+  const keys = [];
+  for (let i = 11; i >= 0; i--) keys.push(getRocMonthKey(i));
+  return keys;
+}
+function formatRocMonthLabel(key) {
+  const parts = key.split("-");
+  return parts[0] + "/" + parts[1];
+}
+
 // ── 取得被保人 100 歲的西元年 ─────────────────────────────
 function getEndYearAt100(memberId, policy) {
   // 優先從 person.profile.birthDate 算
@@ -633,6 +654,107 @@ function renderSettings() {
   document.getElementById("settings-view").innerHTML = html;
 }
 
+// ── 月領生存金：實際金額（過去12個月）＋預估金額（未來） ──────
+function renderMonthlyAfterBlock(pid, s) {
+  const actual = s.actualMonthly || {};
+  const isVariable = !!s.monthlyVariable;
+
+  const toggleHtml = `
+    <label style="display:flex;align-items:center;gap:6px;font-size:14px;color:#555;margin-bottom:10px">
+      <input type="checkbox" ${isVariable?"checked":""}
+             onchange="toggleMonthlyVariable('${pid}', this.checked)" />
+      此保單配息會變動，登錄實際金額
+    </label>`;
+
+  if (!isVariable) {
+    // 沒開啟變動登錄，維持原本最簡單的「填一筆、整年套用」
+    return toggleHtml + `
+      <div class="adv-row single">
+        <div class="field">
+          <label>每月金額（元）</label>
+          <input type="number" id="afterAmt-${pid}" value="${s.afterAmt}"
+                 placeholder="估算值" oninput="updateSetting('${pid}','afterAmt',this.value)" />
+        </div>
+      </div>`;
+  }
+
+  const pastKeys = getPast12MonthKeys();
+  let filledSum = 0, missingCount = 0;
+  const cellsHtml = pastKeys.map(function(key){
+    const val = actual[key];
+    const label = formatRocMonthLabel(key);
+    if (val !== undefined && val !== null && val !== "") {
+      filledSum += parseFloat(val) || 0;
+      return `<div style="background:#EAF3DE;border-radius:8px;padding:6px 4px;text-align:center">
+        <div style="font-size:11px;color:#27500A">${label}</div>
+        <input type="number" value="${val}" style="width:100%;text-align:center;font-size:13px;font-weight:700;color:#173404;background:transparent;border:none;padding:2px"
+               onchange="updateMonthlyActual('${pid}','${key}',this.value)" />
+      </div>`;
+    } else {
+      missingCount++;
+      return `<div style="background:#FAEEDA;border-radius:8px;padding:6px 4px;text-align:center">
+        <div style="font-size:11px;color:#633806">${label}</div>
+        <input type="number" placeholder="尚未登錄" style="width:100%;text-align:center;font-size:12px;font-weight:600;color:#8A5A00;background:transparent;border:none;padding:2px"
+               onchange="updateMonthlyActual('${pid}','${key}',this.value)" />
+      </div>`;
+    }
+  }).join("");
+
+  const totalWarnHtml = missingCount > 0
+    ? `<span style="font-size:12px;color:#B7791F;font-weight:600;margin-left:10px">還有 ${missingCount} 個月尚未登錄</span>`
+    : "";
+
+  return toggleHtml + `
+    <div style="font-size:13px;color:#666;margin-bottom:6px">已發生月份（${pastKeys[0]}～${pastKeys[pastKeys.length-1]}）— 實際金額</div>
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:8px">
+      ${cellsHtml}
+    </div>
+    <textarea rows="2" placeholder="快速貼上 12 個數字（空格或換行分隔），依序對應 ${pastKeys[0]}～${pastKeys[pastKeys.length-1]}"
+              style="width:100%;font-size:13px;padding:6px;border:1px solid #e0e0e0;border-radius:8px"
+              onchange="pasteMonthlyActual('${pid}', this.value)"></textarea>
+
+    <div style="font-size:13px;color:#666;margin:14px 0 6px">未發生月份 — 預估金額</div>
+    <div class="adv-row single">
+      <div class="field">
+        <label>每月金額（元）</label>
+        <input type="number" id="afterAmt-${pid}" value="${s.afterAmt}"
+               placeholder="估算值" oninput="updateSetting('${pid}','afterAmt',this.value)" />
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-top:12px;padding-top:8px;border-top:1px solid #eee">
+      <span style="font-size:13px;color:#666">已登錄合計</span>
+      <span style="font-size:18px;font-weight:700;color:#1a1a1a">${filledSum.toLocaleString()} 元${totalWarnHtml}</span>
+    </div>`;
+}
+
+function toggleMonthlyVariable(pid, checked) {
+  settings[pid].monthlyVariable = checked;
+  if (checked && !settings[pid].actualMonthly) settings[pid].actualMonthly = {};
+  renderSettings();
+}
+
+function updateMonthlyActual(pid, key, val) {
+  if (!settings[pid].actualMonthly) settings[pid].actualMonthly = {};
+  if (val === "" || val === null) {
+    delete settings[pid].actualMonthly[key];
+  } else {
+    settings[pid].actualMonthly[key] = parseFloat(val) || 0;
+  }
+  renderSettings();
+}
+
+function pasteMonthlyActual(pid, text) {
+  const nums = text.split(/[\s,\n]+/).map(function(t){return t.trim();}).filter(function(t){return t.length>0;}).map(Number).filter(function(n){return !isNaN(n);});
+  if (nums.length === 0) return;
+  const keys = getPast12MonthKeys();
+  if (!settings[pid].actualMonthly) settings[pid].actualMonthly = {};
+  keys.forEach(function(key, i){
+    if (i < nums.length) settings[pid].actualMonthly[key] = nums[i];
+  });
+  renderSettings();
+}
+
 // ── 進階設定內容（依類型） ────────────────────────────────
 function renderAdvInner(pid, s) {
   const monthly = isMonthly(s.type);
@@ -686,14 +808,7 @@ function renderAdvInner(pid, s) {
   const afterBlock = `
     <div class="adv-block" id="adv-after-${pid}">
       <div class="adv-block-title">${monthly?"月領":"期滿後"}</div>
-      ${monthly ? `
-        <div class="adv-row single">
-          <div class="field">
-            <label>每月金額（元）</label>
-            <input type="number" id="afterAmt-${pid}" value="${s.afterAmt}"
-                   placeholder="估算值" oninput="updateSetting('${pid}','afterAmt',this.value)" />
-          </div>
-        </div>` : `
+      ${monthly ? renderMonthlyAfterBlock(pid, s) : `
         <div class="adv-row" style="grid-template-columns:1fr 1fr 1fr;gap:8px">
           <div class="field">
             <label>第幾年開始第一次領</label>
