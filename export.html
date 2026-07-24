@@ -1115,32 +1115,56 @@ function buildRetirementPillarsParts(pdmAll, fData, ageFrom, ageTo){
 }
 
 // ═══════════════════════════════════════════════════════
-//  月現金流月曆：去年／今年（自然年）逐月進帳對照，只看「月領生存金／
-//  月月配息」（type 5）這種真正有月資料的保單，不含逐年領回明細/一次領
-//  這些跟「月」無關的類型。跟 savings.html／calcPolicyFlowsEx 用同一套
-//  「今天」判斷過去/未來的規則：已經過去的月份，有登錄實際金額就用
-//  實際值、沒登錄就顯示「尚未登錄」（不會拿估算值偷偷頂替）；還沒發生
-//  的月份，顯示估算金額。
+//  月現金流月曆：去年／今年（自然年）逐月進帳對照。
+//  分兩種來源：
+//  1. 「月領生存金／月月配息」（type 5）：真正逐月的保單，用
+//     computeMonthlyBlendedTotalEx 同一套「已登錄用實際、沒登錄用
+//     估算」規則。
+//  2. 其他類型的儲蓄/投資/年金保單（一次領、期間領+期滿領、逐年
+//     領回明細等）：雖然不是逐月配發，但通常一年只在「保單週年月」
+//     那個月配發一次（例如生效日 9 月，就是每年 9 月給付），這種
+//     保單之前完全沒有被算進月曆——只要那一年這張保單確實有算出
+//     現金流（用跟主時間軸相同的 calcPolicyFlowsEx），就把金額
+//     加進它週年月份那一格。
 // ═══════════════════════════════════════════════════════
-function getMonthlyPoliciesForCalendarEx(person){
-  var list = [];
+function getAnniversaryMonthEx(p){
+  if (p.startDate){
+    var mm = parseInt(String(p.startDate).slice(5,7));
+    if (!isNaN(mm) && mm>=1 && mm<=12) return mm;
+  }
+  if (p.startDateRaw){
+    var d = String(p.startDateRaw).replace(/\D/g,"");
+    if (d.length===7) return parseInt(d.slice(3,5));
+    if (d.length===6) return parseInt(d.slice(2,4));
+  }
+  return null;
+}
+
+function getMonthlyPoliciesForCalendarEx(person, years){
+  var monthlyList = [], annualList = [];
   (person.policies||[]).filter(function(p){
     return ["儲蓄險","年金險","儲蓄年金","投資型保險"].indexOf(p.category)>=0;
   }).forEach(function(p){
     var s2 = (person.savings||[]).find(function(sv){return sv.policyId===p.id;}) || {type:"1"};
-    if (s2.type !== "5") return; // 只要「月領生存金／月月配息」
-    var er = (p.currency && p.currency!=="TWD" && parseFloat(s2.exchangeRate)) ? parseFloat(s2.exchangeRate) : 1;
-    list.push({
-      itemName: p.itemName || p.policyNo || "保單",
-      afterAmt: (parseFloat(s2.afterAmt)||0) * er,
-      actualMonthly: s2.actualMonthly || {},
-      exchangeRate: er
-    });
+    if (s2.type === "5"){
+      var er = (p.currency && p.currency!=="TWD" && parseFloat(s2.exchangeRate)) ? parseFloat(s2.exchangeRate) : 1;
+      monthlyList.push({
+        itemName: p.itemName || p.policyNo || "保單",
+        afterAmt: (parseFloat(s2.afterAmt)||0) * er,
+        actualMonthly: s2.actualMonthly || {},
+        exchangeRate: er
+      });
+    } else {
+      var month = getAnniversaryMonthEx(p);
+      if (month===null) return; // 抓不到週年月份就無法定位在哪一格，略過
+      var flows = calcPolicyFlowsEx(p, s2, person.personId, years, person.profile&&person.profile.birthDate);
+      annualList.push({ itemName: p.itemName || p.policyNo || "保單", month:month, flows:flows });
+    }
   });
-  return list;
+  return { monthlyList:monthlyList, annualList:annualList };
 }
 
-function buildCalendarYearDataEx(policies, year){
+function buildCalendarYearDataEx(monthlyList, annualList, year){
   var now = new Date();
   var curY = now.getFullYear(), curM = now.getMonth()+1;
   var months = [];
@@ -1148,7 +1172,7 @@ function buildCalendarYearDataEx(policies, year){
     var isPast = (year < curY) || (year === curY && m <= curM);
     var rocKey = (year-1911) + "-" + String(m).padStart(2,"0");
     var total = 0, missingCount = 0, actualCount = 0;
-    policies.forEach(function(pr){
+    monthlyList.forEach(function(pr){
       if (!isPast){ total += pr.afterAmt; return; }
       var v = pr.actualMonthly[rocKey];
       if (v !== undefined && v !== null && v !== ""){
@@ -1157,6 +1181,14 @@ function buildCalendarYearDataEx(policies, year){
       } else {
         missingCount++;
       }
+    });
+    // 年配/一次性保單：週年月份剛好是這個月、且這一年確實有算出現金流，
+    // 直接加進來，不受「尚未登錄」規則影響（這種保單本來就沒有逐月
+    // 登錄的概念，年度金額怎麼算跟主時間軸一致）。
+    annualList.forEach(function(pr){
+      if (pr.month !== m) return;
+      var amt = pr.flows[year] || 0;
+      if (amt>0) total += amt;
     });
     var status = !isPast ? "estimate"
       : (missingCount===0 ? "actual"
@@ -1170,14 +1202,16 @@ function buildMonthlyCalendarPartsEx(pdmAll, fData){
   var parts = [];
   (fData.members||[]).filter(function(m){return m.role!=="beneficiary_only";}).forEach(function(m){
     var p = pdmAll[m.personId]; if(!p) return;
-    var policies = getMonthlyPoliciesForCalendarEx(p);
-    if (!policies.length) return;
     var now = new Date();
     var thisYear = now.getFullYear(), lastYear = thisYear-1;
-    var lastYearData = buildCalendarYearDataEx(policies, lastYear);
-    var thisYearData = buildCalendarYearDataEx(policies, thisYear);
+    var src = getMonthlyPoliciesForCalendarEx(p, [lastYear, thisYear]);
+    var allPolicyNames = src.monthlyList.map(function(pr){return pr.itemName;})
+      .concat(src.annualList.map(function(pr){return pr.itemName;}));
+    if (!allPolicyNames.length) return;
+    var lastYearData = buildCalendarYearDataEx(src.monthlyList, src.annualList, lastYear);
+    var thisYearData = buildCalendarYearDataEx(src.monthlyList, src.annualList, thisYear);
     parts.push({
-      memberName:m.name, policies:policies,
+      memberName:m.name, policyNames:allPolicyNames, policyCount:allPolicyNames.length,
       lastYear:lastYear, lastYearData:lastYearData,
       thisYear:thisYear, thisYearData:thisYearData
     });
@@ -1196,18 +1230,20 @@ function buildYearCalendarCardHtml(year, monthData, accentColor, bgTint){
       '</div>';
     }
     if (d.status === "missing"){
-      total += d.total;
-      return '<div style="background:#FAEEDA;border-radius:10px;padding:10px 6px;text-align:center">'+
-        '<div style="font-size:20px;color:#8A5A00">'+label+'</div>'+
-        '<div style="font-size:20px;font-weight:800;color:#8A5A00">尚未登錄</div>'+
+      // 這裡是給保戶看的報告，不用「尚未登錄」這種暴露業務員內部作業
+      // 狀態的字眼，改成中性的「－」，跟其他「這個月沒有金額」的儲存
+      // 格用同一種樣式，不特別標出來。
+      return '<div style="background:#f9fafb;border-radius:10px;padding:10px 6px;text-align:center">'+
+        '<div style="font-size:20px;color:#9ca3af">'+label+'</div>'+
+        '<div style="font-size:24px;font-weight:800;color:#9ca3af">－</div>'+
       '</div>';
     }
     total += d.total;
-    var warn = d.status==="partial" ? '<div style="font-size:14px;color:#B7791F;font-weight:700">'+d.missingCount+'張未登錄</div>' : '';
+    // partial 狀態（部分保單有登錄、部分沒有）在這裡也不特別標註提醒
+    // 文字，只安靜顯示已經有的合計金額，跟 actual 狀態呈現方式一致。
     return '<div style="background:#EAF3DE;border-radius:10px;padding:10px 6px;text-align:center">'+
       '<div style="font-size:20px;color:#27500A">'+label+'</div>'+
       '<div style="font-size:26px;font-weight:800;color:#173404">'+fmtAmtEx(d.total)+'</div>'+
-      warn+
     '</div>';
   }).join("");
 
@@ -1224,7 +1260,7 @@ function buildMonthlyCalendarHtmlEx(part){
   var headerHtml =
     '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px">'+
       '<span style="font-size:40px;font-weight:800;color:#166534">🗓️ '+part.memberName+'</span>'+
-      '<span style="font-size:26px;color:#4b5563;font-weight:700;background:#f0fdf4;padding:6px 18px;border-radius:99px">'+part.policies.length+' 張月領/月配息保單</span>'+
+      '<span style="font-size:26px;color:#4b5563;font-weight:700;background:#f0fdf4;padding:6px 18px;border-radius:99px">'+part.policyCount+' 張保單</span>'+
     '</div>';
 
   var calendarsHtml = '<div style="display:flex;gap:20px;margin-bottom:16px;align-items:stretch">'+
@@ -1233,7 +1269,7 @@ function buildMonthlyCalendarHtmlEx(part){
   '</div>';
 
   var listHtml = '<div style="font-size:22px;color:#6b7280;line-height:1.7">涵蓋保單：'+
-    part.policies.map(function(pr){return pr.itemName;}).join('、')+'</div>';
+    part.policyNames.join('、')+'</div>';
 
   return { headerHtml:headerHtml, calendarsHtml:calendarsHtml, listHtml:listHtml,
     html: headerHtml+calendarsHtml+listHtml };
