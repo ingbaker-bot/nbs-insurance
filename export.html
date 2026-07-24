@@ -500,7 +500,44 @@ function extractYearSmartEx(isoDate, rocRaw){
   }
   return null;
 }
-function calcPolicyFlowsEx(p,s,memberId,years,profileBirthDate){
+// ── 月領型態保單：年度加總改用「已登錄實際金額 + 未登錄月份用預估值
+// 頂替」混合計算，不再是單純「預估每月金額 × 12」。跟 savings.html
+// 用同一套「以今天為分界，往前推 12 個月」的規則抓實際登錄範圍。
+function getRocMonthKeyEx(monthsAgo) {
+  var now = new Date();
+  var d = new Date(now.getFullYear(), now.getMonth() - monthsAgo, 1);
+  var rocYear = d.getFullYear() - 1911;
+  var mm = String(d.getMonth() + 1).padStart(2, "0");
+  return rocYear + "-" + mm;
+}
+function getPast12MonthKeysEx() {
+  var keys = [];
+  for (var i = 11; i >= 0; i--) keys.push(getRocMonthKeyEx(i));
+  return keys;
+}
+// 這一整年（yr，西元）裡，逐月判斷：這個月如果落在「已發生的近 12
+// 個月」範圍內、而且使用者有登錄實際金額，就用實際值；否則（不管是
+// 還沒發生的未來月份，還是已發生但漏填的月份）都用預估值頂替，這樣
+// 年度加總才會是「目前資料能給出的最佳整年金額」，不會因為某幾個月
+// 忘記登錄，反而讓整年度金額比預估更低。
+function computeMonthlyBlendedTotalEx(yr, aa, actual) {
+  var pastKeys = getPast12MonthKeysEx();
+  var total = 0, hasActual = false;
+  var rocYear = yr - 1911;
+  for (var m = 1; m <= 12; m++) {
+    var key = rocYear + "-" + String(m).padStart(2, "0");
+    var v = actual ? actual[key] : undefined;
+    if (pastKeys.indexOf(key) !== -1 && v !== undefined && v !== null && v !== "") {
+      total += parseFloat(v) || 0;
+      hasActual = true;
+    } else {
+      total += aa;
+    }
+  }
+  return { total: total, hasActual: hasActual };
+}
+
+function calcPolicyFlowsEx(p,s,memberId,years,profileBirthDate,actualYearsOut){
   var sw=extractYearSmartEx(p.startDate,p.startDateRaw);
   var pw=extractYearSmartEx(p.payEndDate,p.payEndRaw);
   var cw=p.covEndDate?parseInt(p.covEndDate.slice(0,4)):getEndYearAt100Ex(memberId,p,profileBirthDate);
@@ -526,8 +563,12 @@ function calcPolicyFlowsEx(p,s,memberId,years,profileBirthDate){
       if(id&&da>0){var ft2=sw+dsy-1,e3=yr-ft2;if(yr>=ft2&&e3%dfr===0)fl+=da;}
       if(ia&&aa>0){var b2=(pw||sw)+asy,e4=yr-b2;if(yr>=b2&&e4%afr===0)fl+=aa;}
     }else if(mo){
-      if(p.category==="投資型保險"){ if(aa>0&&yr>=sw)fl=aa*12; }
-      else if(ia&&aa>0)fl=aa*12;
+      var canFlow = p.category==="投資型保險" ? (yr>=sw) : ia;
+      if(canFlow){
+        var blended = computeMonthlyBlendedTotalEx(yr, aa, s.actualMonthly);
+        fl = blended.total;
+        if(blended.hasActual && actualYearsOut) actualYearsOut.add(yr);
+      }
     }
     if(fl>0)flows[yr]=Math.round(fl*er);
   });
@@ -548,7 +589,8 @@ function buildSavingsTimelineParts(pdm3,fData,startYr,endYr){
     var pRows=[];
     sp.forEach(function(p){
       var s2=(p3.savings||[]).find(function(sv){return sv.policyId===p.id;})||{type:"1"};
-      var flows=calcPolicyFlowsEx(p,s2,m.personId,years,p3.profile&&p3.profile.birthDate);
+      var actualYearsSet=new Set();
+      var flows=calcPolicyFlowsEx(p,s2,m.personId,years,p3.profile&&p3.profile.birthDate,actualYearsSet);
       Object.keys(flows).forEach(function(y2){totalFlows[y2]=(totalFlows[y2]||0)+flows[y2];});
       // 「是否仍在繳費期間」用真正的繳費期滿日判斷，不是用「有沒有現金流」推斷。
       // 投資型保險不判斷這個標籤：常見不定期繳/彈性繳/單筆躉繳，
@@ -559,7 +601,7 @@ function buildSavingsTimelineParts(pdm3,fData,startYr,endYr){
         policyNo:p.policyNo||p.id,itemName:p.itemName||"",category:p.category||"",
         currency:p.currency||"TWD",exchangeRate:s2.exchangeRate||1,
         accountValue:s2.accountValue||"",accountValueDate:s2.accountValueDate||"",
-        stillPaying:stillPaying,flows:flows
+        stillPaying:stillPaying,flows:flows,actualYears:actualYearsSet
       });
     });
     if(pRows.length)groups.push({memberName:m.name,policies:pRows});
@@ -604,12 +646,14 @@ function buildSavingsTimelineParts(pdm3,fData,startYr,endYr){
       var cells=years.map(function(y4){
         var amt=pr.flows[y4]||0;
         if(!amt)return'<td style="text-align:center;color:#9ca3af;font-size:30px;border-left:1px solid #f5f6f8">—</td>';
-        return'<td style="border-left:1px solid #f5f6f8;padding:8px 10px"><div style="min-height:38px;border-radius:8px;background:'+barBg+';text-align:center;padding:4px 8px">'+fmtAmtExWrapped(amt)+'</div></td>';
+        var hasActual = pr.actualYears && pr.actualYears.has(y4);
+        var dot = hasActual ? '<span title="此欄位已代入部分月份的實際登錄金額" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#16a34a;margin-left:4px;vertical-align:middle"></span>' : '';
+        return'<td style="text-align:center;border-left:1px solid #f5f6f8;padding:8px 10px"><div style="min-height:38px;border-radius:8px;background:'+barBg+';text-align:center;padding:4px 8px">'+fmtAmtExWrapped(amt)+dot+'</div></td>';
       }).join("");
       var fc='<td style="padding:6px 12px 6px 34px;border-right:2px solid #e2e5ea">'+
         '<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">'+
-          '<span style="font-size:15px;font-weight:800;padding:2px 8px;border-radius:99px;background:'+savingsCatColor(pr.category)+'1A;color:'+savingsCatColor(pr.category)+'">'+(pr.category)+'</span>'+
-          '<span style="font-size:15px;font-weight:800;color:#4338ca;background:#eef2ff;padding:2px 8px;border-radius:99px;font-variant-numeric:tabular-nums">'+pr.policyNo+'</span>'+
+          '<span style="font-size:19px;font-weight:800;padding:2px 8px;border-radius:99px;background:'+savingsCatColor(pr.category)+'1A;color:'+savingsCatColor(pr.category)+'">'+(pr.category)+'</span>'+
+          '<span style="font-size:19px;font-weight:800;color:#4338ca;background:#eef2ff;padding:2px 8px;border-radius:99px;font-variant-numeric:tabular-nums">'+pr.policyNo+'</span>'+
           (pr.stillPaying?'<span style="font-size:15px;color:#B07000;font-weight:700">繳費中</span>':'')+
         '</div>'+
         (pr.itemName?'<div style="font-size:19px;color:#444;font-weight:700;margin-top:2px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.2">'+pr.itemName+'</div>':'')+
@@ -661,12 +705,14 @@ function buildSavingsTimelineParts(pdm3,fData,startYr,endYr){
       var cells=years.map(function(y4){
         var amt=pr.flows[y4]||0;
         if(!amt)return'<td style="text-align:center;color:#9ca3af;font-size:30px;border-left:1px solid #f5f6f8">—</td>';
-        return'<td style="border-left:1px solid #f5f6f8;padding:8px 10px"><div style="min-height:38px;border-radius:8px;background:'+barBg+';text-align:center;padding:4px 8px">'+fmtAmtExWrapped(amt)+'</div></td>';
+        var hasActual = pr.actualYears && pr.actualYears.has(y4);
+        var dot = hasActual ? '<span title="此欄位已代入部分月份的實際登錄金額" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#16a34a;margin-left:4px;vertical-align:middle"></span>' : '';
+        return'<td style="text-align:center;border-left:1px solid #f5f6f8;padding:8px 10px"><div style="min-height:38px;border-radius:8px;background:'+barBg+';text-align:center;padding:4px 8px">'+fmtAmtExWrapped(amt)+dot+'</div></td>';
       }).join("");
       var fc='<td style="padding:6px 12px 6px 34px;border-right:2px solid #e2e5ea">'+
         '<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">'+
-          '<span style="font-size:15px;font-weight:800;padding:2px 8px;border-radius:99px;background:'+savingsCatColor(pr.category)+'1A;color:'+savingsCatColor(pr.category)+'">'+(pr.category)+'</span>'+
-          '<span style="font-size:15px;font-weight:800;color:#4338ca;background:#eef2ff;padding:2px 8px;border-radius:99px;font-variant-numeric:tabular-nums">'+pr.policyNo+'</span>'+
+          '<span style="font-size:19px;font-weight:800;padding:2px 8px;border-radius:99px;background:'+savingsCatColor(pr.category)+'1A;color:'+savingsCatColor(pr.category)+'">'+(pr.category)+'</span>'+
+          '<span style="font-size:19px;font-weight:800;color:#4338ca;background:#eef2ff;padding:2px 8px;border-radius:99px;font-variant-numeric:tabular-nums">'+pr.policyNo+'</span>'+
           (pr.stillPaying?'<span style="font-size:15px;color:#B07000;font-weight:700">繳費中</span>':'')+
         '</div>'+
         (pr.itemName?'<div style="font-size:19px;color:#444;font-weight:700;margin-top:2px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.2">'+pr.itemName+'</div>':'')+
@@ -718,7 +764,8 @@ function renderSavingsTimeline(pdm3,fData,startYr,endYr){
     var pRows=[];
     sp.forEach(function(p){
       var s2=(p3.savings||[]).find(function(sv){return sv.policyId===p.id;})||{type:"1"};
-      var flows=calcPolicyFlowsEx(p,s2,m.personId,years,p3.profile&&p3.profile.birthDate);
+      var actualYearsSet=new Set();
+      var flows=calcPolicyFlowsEx(p,s2,m.personId,years,p3.profile&&p3.profile.birthDate,actualYearsSet);
       Object.keys(flows).forEach(function(y2){totalFlows[y2]=(totalFlows[y2]||0)+flows[y2];});
       var payEndW=extractYearSmartEx(p.payEndDate,p.payEndRaw);
       var stillPaying=p.category!=="投資型保險" && payEndW!==null && new Date().getFullYear()<payEndW;
@@ -726,7 +773,7 @@ function renderSavingsTimeline(pdm3,fData,startYr,endYr){
         policyNo:p.policyNo||p.id,itemName:p.itemName||"",category:p.category||"",
         currency:p.currency||"TWD",exchangeRate:s2.exchangeRate||1,
         accountValue:s2.accountValue||"",accountValueDate:s2.accountValueDate||"",
-        stillPaying:stillPaying,flows:flows
+        stillPaying:stillPaying,flows:flows,actualYears:actualYearsSet
       });
     });
     if(pRows.length)groups.push({memberName:m.name,policies:pRows});
@@ -772,12 +819,14 @@ function renderSavingsTimeline(pdm3,fData,startYr,endYr){
       var cells=years.map(function(y4){
         var amt=pr.flows[y4]||0;
         if(!amt)return'<td style="text-align:center;color:#9ca3af;font-size:30px;border-left:1px solid #f5f6f8"><span class="st-pill-amt">—</span></td>';
-        return'<td style="border-left:1px solid #f5f6f8;padding:8px 10px"><div class="st-pill-amt" style="min-height:38px;border-radius:8px;background:'+barBg+';text-align:center;padding:4px 8px">'+fmtAmtExWrapped(amt)+'</div></td>';
+        var hasActual = pr.actualYears && pr.actualYears.has(y4);
+        var dot = hasActual ? '<span title="此欄位已代入部分月份的實際登錄金額" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#16a34a;margin-left:4px;vertical-align:middle"></span>' : '';
+        return'<td style="border-left:1px solid #f5f6f8;padding:8px 10px"><div class="st-pill-amt" style="min-height:38px;border-radius:8px;background:'+barBg+';text-align:center;padding:4px 8px">'+fmtAmtExWrapped(amt)+dot+'</div></td>';
       }).join("");
       var fc='<td style="padding:6px 12px 6px 34px;border-right:2px solid #e2e5ea">'+
         '<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">'+
-          '<span style="font-size:15px;font-weight:800;padding:2px 8px;border-radius:99px;background:'+savingsCatColor(pr.category)+'1A;color:'+savingsCatColor(pr.category)+'">'+(pr.category)+'</span>'+
-          '<span style="font-size:15px;font-weight:800;color:#4338ca;background:#eef2ff;padding:2px 8px;border-radius:99px;font-variant-numeric:tabular-nums">'+pr.policyNo+'</span>'+
+          '<span style="font-size:19px;font-weight:800;padding:2px 8px;border-radius:99px;background:'+savingsCatColor(pr.category)+'1A;color:'+savingsCatColor(pr.category)+'">'+(pr.category)+'</span>'+
+          '<span style="font-size:19px;font-weight:800;color:#4338ca;background:#eef2ff;padding:2px 8px;border-radius:99px;font-variant-numeric:tabular-nums">'+pr.policyNo+'</span>'+
           (pr.stillPaying?'<span style="font-size:15px;color:#B07000;font-weight:700">繳費中</span>':'')+
         '</div>'+
         (pr.itemName?'<div style="font-size:19px;color:#444;font-weight:700;margin-top:2px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.2">'+pr.itemName+'</div>':'')+
