@@ -200,6 +200,7 @@ var   BLOCKS=[
   {key:"savings_timeline", label:"儲蓄險現金流時間軸", icon:"📈",desc:"目前選中成員的儲蓄／投資型保單現金流"},
   {key:"family_savings_summary", label:"全家儲蓄規劃總表", icon:"👨‍👩‍👧‍👦",desc:"全家儲蓄／投資型保單現金流總覽，各自小計＋合計"},
   {key:"retirement_pillars", label:"退休金三層總覽", icon:"🏛️",desc:"目前選中成員的第一層社會保險＋第二層企業退休金＋第三層自行準備"},
+  {key:"monthly_cashflow_calendar", label:"月現金流月曆", icon:"🗓️",desc:"目前選中成員的月領/月配息保單，去年／今年逐月進帳對照"},
 ];
 // 退休金三層總覽：可設定的退休起領年齡區間（例如 60~65），影響長條圖／比較表的年齡欄位範圍
 var retireAgeFrom = 60, retireAgeTo = 65;
@@ -217,7 +218,7 @@ var   CC={"壽險保障":"#2563EB","醫療保障":"#0EA5E9","意外險":"#D97706
 function savingsCatColor(cat){ return CC[cat] || "#6b7280"; }
 
 // ── 狀態 ─────────────────────────────────────────────────
-var sel={cover:false,family_premium_summary:false,premium_detail:false,summary:false,policy_detail:false,savings_timeline:false,family_savings_summary:false,retirement_pillars:false};
+var sel={cover:false,family_premium_summary:false,premium_detail:false,summary:false,policy_detail:false,savings_timeline:false,family_savings_summary:false,retirement_pillars:false,monthly_cashflow_calendar:false};
 var fmt="pdf_merge";
 var fmtOpen="pdf"; // 手風琴目前展開的區塊，預設展開 PDF
 var person={},policies=[],coverage={},savings=[];
@@ -1112,6 +1113,132 @@ function buildRetirementPillarsParts(pdmAll, fData, ageFrom, ageTo){
   });
   return parts;
 }
+
+// ═══════════════════════════════════════════════════════
+//  月現金流月曆：去年／今年（自然年）逐月進帳對照，只看「月領生存金／
+//  月月配息」（type 5）這種真正有月資料的保單，不含逐年領回明細/一次領
+//  這些跟「月」無關的類型。跟 savings.html／calcPolicyFlowsEx 用同一套
+//  「今天」判斷過去/未來的規則：已經過去的月份，有登錄實際金額就用
+//  實際值、沒登錄就顯示「尚未登錄」（不會拿估算值偷偷頂替）；還沒發生
+//  的月份，顯示估算金額。
+// ═══════════════════════════════════════════════════════
+function getMonthlyPoliciesForCalendarEx(person){
+  var list = [];
+  (person.policies||[]).filter(function(p){
+    return ["儲蓄險","年金險","儲蓄年金","投資型保險"].indexOf(p.category)>=0;
+  }).forEach(function(p){
+    var s2 = (person.savings||[]).find(function(sv){return sv.policyId===p.id;}) || {type:"1"};
+    if (s2.type !== "5") return; // 只要「月領生存金／月月配息」
+    var er = (p.currency && p.currency!=="TWD" && parseFloat(s2.exchangeRate)) ? parseFloat(s2.exchangeRate) : 1;
+    list.push({
+      itemName: p.itemName || p.policyNo || "保單",
+      afterAmt: (parseFloat(s2.afterAmt)||0) * er,
+      actualMonthly: s2.actualMonthly || {},
+      exchangeRate: er
+    });
+  });
+  return list;
+}
+
+function buildCalendarYearDataEx(policies, year){
+  var now = new Date();
+  var curY = now.getFullYear(), curM = now.getMonth()+1;
+  var months = [];
+  for (var m=1; m<=12; m++){
+    var isPast = (year < curY) || (year === curY && m <= curM);
+    var rocKey = (year-1911) + "-" + String(m).padStart(2,"0");
+    var total = 0, missingCount = 0, actualCount = 0;
+    policies.forEach(function(pr){
+      if (!isPast){ total += pr.afterAmt; return; }
+      var v = pr.actualMonthly[rocKey];
+      if (v !== undefined && v !== null && v !== ""){
+        total += (parseFloat(v)||0) * (pr.exchangeRate||1);
+        actualCount++;
+      } else {
+        missingCount++;
+      }
+    });
+    var status = !isPast ? "estimate"
+      : (missingCount===0 ? "actual"
+      : (actualCount>0 ? "partial" : "missing"));
+    months.push({ m:m, total:total, status:status, missingCount:missingCount });
+  }
+  return months;
+}
+
+function buildMonthlyCalendarPartsEx(pdmAll, fData){
+  var parts = [];
+  (fData.members||[]).filter(function(m){return m.role!=="beneficiary_only";}).forEach(function(m){
+    var p = pdmAll[m.personId]; if(!p) return;
+    var policies = getMonthlyPoliciesForCalendarEx(p);
+    if (!policies.length) return;
+    var now = new Date();
+    var thisYear = now.getFullYear(), lastYear = thisYear-1;
+    var lastYearData = buildCalendarYearDataEx(policies, lastYear);
+    var thisYearData = buildCalendarYearDataEx(policies, thisYear);
+    parts.push({
+      memberName:m.name, policies:policies,
+      lastYear:lastYear, lastYearData:lastYearData,
+      thisYear:thisYear, thisYearData:thisYearData
+    });
+  });
+  return parts;
+}
+
+function buildYearCalendarCardHtml(year, monthData, accentColor, bgTint){
+  var total = 0;
+  var cellsHtml = monthData.map(function(d){
+    var label = d.m + "月";
+    if (d.status === "estimate"){
+      return '<div style="background:#fff;border:2px dashed #d8dae0;border-radius:10px;padding:10px 6px;text-align:center">'+
+        '<div style="font-size:20px;color:#9ca3af">'+label+'</div>'+
+        '<div style="font-size:24px;font-weight:800;color:#6b7280">'+(d.total>0?fmtAmtEx(d.total):'—')+'</div>'+
+      '</div>';
+    }
+    if (d.status === "missing"){
+      total += d.total;
+      return '<div style="background:#FAEEDA;border-radius:10px;padding:10px 6px;text-align:center">'+
+        '<div style="font-size:20px;color:#8A5A00">'+label+'</div>'+
+        '<div style="font-size:20px;font-weight:800;color:#8A5A00">尚未登錄</div>'+
+      '</div>';
+    }
+    total += d.total;
+    var warn = d.status==="partial" ? '<div style="font-size:14px;color:#B7791F;font-weight:700">'+d.missingCount+'張未登錄</div>' : '';
+    return '<div style="background:#EAF3DE;border-radius:10px;padding:10px 6px;text-align:center">'+
+      '<div style="font-size:20px;color:#27500A">'+label+'</div>'+
+      '<div style="font-size:26px;font-weight:800;color:#173404">'+fmtAmtEx(d.total)+'</div>'+
+      warn+
+    '</div>';
+  }).join("");
+
+  return '<div style="background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 4px 14px -4px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.04);flex:1;min-width:0">'+
+    '<div style="background:'+bgTint+';padding:16px 20px">'+
+      '<div style="font-size:24px;color:'+accentColor+'">'+year+' 年</div>'+
+      '<div style="font-size:34px;font-weight:800;color:'+accentColor+'">合計 '+fmtAmtEx(total)+' 元</div>'+
+    '</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:18px">'+cellsHtml+'</div>'+
+  '</div>';
+}
+
+function buildMonthlyCalendarHtmlEx(part){
+  var headerHtml =
+    '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px">'+
+      '<span style="font-size:40px;font-weight:800;color:#166534">🗓️ '+part.memberName+'</span>'+
+      '<span style="font-size:26px;color:#4b5563;font-weight:700;background:#f0fdf4;padding:6px 18px;border-radius:99px">'+part.policies.length+' 張月領/月配息保單</span>'+
+    '</div>';
+
+  var calendarsHtml = '<div style="display:flex;gap:20px;margin-bottom:16px;align-items:stretch">'+
+    buildYearCalendarCardHtml(part.lastYear, part.lastYearData, '#475569', '#f1f5f9')+
+    buildYearCalendarCardHtml(part.thisYear, part.thisYearData, '#166534', '#EAF3DE')+
+  '</div>';
+
+  var listHtml = '<div style="font-size:22px;color:#6b7280;line-height:1.7">涵蓋保單：'+
+    part.policies.map(function(pr){return pr.itemName;}).join('、')+'</div>';
+
+  return { headerHtml:headerHtml, calendarsHtml:calendarsHtml, listHtml:listHtml,
+    html: headerHtml+calendarsHtml+listHtml };
+}
+
 
 // ── Summary 輔助函式（移植自 summary.html）──────────────
 // 保額單位換算成「萬元」，同 summary.html 的 convertToWan
@@ -3056,6 +3183,16 @@ function renderBlock(key){
     return rpParts[0].html;
   }
 
+  if(key==="monthly_cashflow_calendar"){
+    // 只看目前選中的成員，跟其他單人區塊一致。
+    var pdmMC = {};
+    if (personDataMap[currentPersonId]) pdmMC[currentPersonId] = personDataMap[currentPersonId];
+    var singleMemberFamilyDataMC = { members: (familyData&&familyData.members||[]).filter(function(m){ return m.personId===currentPersonId; }) };
+    var mcParts = buildMonthlyCalendarPartsEx(pdmMC, singleMemberFamilyDataMC);
+    if (!mcParts.length) return '<div style="padding:60px;text-align:center;color:#9ca3af;font-size:20px">這位成員尚無月領生存金／月月配息保單可供呈現</div>';
+    return buildMonthlyCalendarHtmlEx(mcParts[0]).html;
+  }
+
   return'<div style="padding:12px;color:#aaa;font-size:14px">建置中</div>';
 }
 
@@ -3193,6 +3330,18 @@ async function doExportPNG(blks,div){
           div.style.width="2400px";
           div.innerHTML=getBlockTitleHtml(blks[i])+rpPartsPNG[0].html+disclaimer+wm;
           fname=pName+"_"+blks[i].label+"_"+rpPartsPNG[0].memberName+"_"+pDate+".jpg";
+        }
+      } else if(blks[i].key==="monthly_cashflow_calendar"){
+        // 月現金流月曆：只匯出目前選到的這位成員。
+        var mcPartsPNG = buildMonthlyCalendarPartsEx(pdmPNG, singleMemberFamilyData);
+        if(!mcPartsPNG.length){
+          div.style.width="2400px";
+          div.innerHTML=getBlockTitleHtml(blks[i])+'<div style="padding:60px;text-align:center;color:#9ca3af;font-size:20px">這位成員尚無月領生存金／月月配息保單可供呈現</div>'+disclaimer+wm;
+          fname=pName+"_"+blks[i].label+"_"+pDate+".jpg";
+        } else {
+          div.style.width="2400px";
+          div.innerHTML=getBlockTitleHtml(blks[i])+buildMonthlyCalendarHtmlEx(mcPartsPNG[0]).html+disclaimer+wm;
+          fname=pName+"_"+blks[i].label+"_"+mcPartsPNG[0].memberName+"_"+pDate+".jpg";
         }
       } else {
         div.style.width="2400px";
@@ -3498,9 +3647,45 @@ async function buildPdfDocument(blks,div){
           pdf.addImage(footC3.toDataURL("image/jpeg",0.88),"JPEG",margin,y3,fd3.iw,fd3.ih);
         }
       }
+    } else if(blks[i].key==="monthly_cashflow_calendar"){
+      // ── 月現金流月曆：內容固定（去年+今年各12格），通常一頁就夠，
+      // 用跟退休金三層總覽一樣的「標題獨立一段＋量高度動態換頁」寫法，
+      // 保險起見還是做防溢位處理，不強制縮小。
+      var mcParts3 = buildMonthlyCalendarPartsEx(pdmSingle, singleMemberFamilyData);
+      if(!mcParts3.length){
+        var emptyMC = await captureHtml(getBlockTitleHtml(blks[i])+'<div style="padding:60px;text-align:center;color:#9ca3af;font-size:20px">這位成員尚無月領生存金／月月配息保單可供呈現</div>'+(isLast||fmt==="pdf_pages"?disclaimer:"")+wm);
+        addNewPage("月曆");
+        var edMC = canvasToMM(emptyMC, usableW, usableH);
+        pdf.addImage(emptyMC.toDataURL("image/jpeg",0.88),"JPEG",margin,margin,edMC.iw,edMC.ih);
+      } else {
+        var mc3 = buildMonthlyCalendarHtmlEx(mcParts3[0]);
+        var titleC4 = await captureHtml(getBlockTitleHtml(blks[i]));
+        var titleH4 = (titleC4.height/titleC4.width)*usableW;
+
+        async function startNewPageMC(){
+          addNewPage("月曆");
+          pdf.addImage(titleC4.toDataURL("image/jpeg",0.88),"JPEG",margin,margin,usableW,titleH4);
+          return margin+titleH4+4;
+        }
+
+        var y4 = await startNewPageMC();
+
+        var bodyC4 = await captureHtml(mc3.headerHtml + mc3.calendarsHtml + mc3.listHtml);
+        var bodyH4 = (bodyC4.height/bodyC4.width)*usableW;
+        if (y4+bodyH4 > margin+usableH && y4>margin+1) { y4 = await startNewPageMC(); }
+        pdf.addImage(bodyC4.toDataURL("image/jpeg",0.88),"JPEG",margin,y4,usableW,bodyH4);
+        y4 += bodyH4;
+
+        if(isLast || fmt==="pdf_pages"){
+          var footC4 = await captureHtml(disclaimer+wm);
+          var fd4 = canvasToMM(footC4, usableW, 40);
+          if(y4+fd4.ih > margin+usableH){ y4 = await startNewPageMC(); }
+          pdf.addImage(footC4.toDataURL("image/jpeg",0.88),"JPEG",margin,y4,fd4.iw,fd4.ih);
+        }
+      }
     } else {
       // ── 其餘區塊：維持單頁等比例縮放 ──────────────────
-      var PAGE_LABEL_PREFIX = { summary:"彙總", policy_detail:"保障", cover:"封面", family_premium_summary:"總表", family_savings_summary:"總表", retirement_pillars:"三層" };
+      var PAGE_LABEL_PREFIX = { summary:"彙總", policy_detail:"保障", cover:"封面", family_premium_summary:"總表", family_savings_summary:"總表", retirement_pillars:"三層", monthly_cashflow_calendar:"月曆" };
       var isCover = blks[i].key==="cover";
       var showDisclaimer = isCover ? false : (fmt==="pdf_pages" ? true : isLast);
       var c = await captureHtml((isCover?'':getBlockTitleHtml(blks[i]))+renderBlock(blks[i].key)+(showDisclaimer?disclaimer:"")+(isCover?'':wm));
@@ -3522,7 +3707,7 @@ async function buildPdfDocument(blks,div){
   }
   setP(95);
   var curMemberForName = (familyData&&familyData.members||[]).find(function(m){return m.personId===currentPersonId;});
-  var memberSuffix = (blks.some(function(b){return b.key==="savings_timeline"||b.key==="retirement_pillars";}) && curMemberForName)
+  var memberSuffix = (blks.some(function(b){return b.key==="savings_timeline"||b.key==="retirement_pillars"||b.key==="monthly_cashflow_calendar";}) && curMemberForName)
     ? "_"+curMemberForName.name
     : "";
   const pdfFileName = pName+"_"+getReportBaseName(blks)+memberSuffix+"_"+pDate+".pdf";
