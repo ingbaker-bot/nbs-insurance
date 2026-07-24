@@ -196,6 +196,10 @@
     // GAS_URL 已移至 nav.js 統一管理
 var currentUser = null, familyData = null, personDataMap = {}, currentPersonId = null;
 var settings = {}; // { [policyId]: settingObj }
+// 記住哪些保單卡片目前是展開狀態，讓 renderSettings() 整頁重繪時
+// （例如填月現金流實際金額觸發的重繪）能維持使用者手動展開的卡片，
+// 不會每重繪一次就被打回收合。
+var expandedPolicyIds = new Set();
 // 退休金(勞保/勞退)：獨立於任何一張保單之外的資料，不掛在policyId上
 var laborPensionData = {};
 var currentPageTab = "settings";
@@ -330,6 +334,7 @@ function renderTabs() {
 function switchMember(pid) {
   currentPersonId = pid;
   settings = {};
+  expandedPolicyIds = new Set();
   laborPensionData = {};
   renderTabs();
   renderSettings();
@@ -568,12 +573,16 @@ function renderSettings() {
       p.payEndRaw    ? "繳滿：" + p.payEndRaw  : "",
     ].filter(Boolean).join("　");
 
-    // 保單卡片一律預設收合（不管有沒有填過資料），使用者自己點標題列展開
+    // 保單卡片一律預設收合，但如果使用者剛剛手動展開過（記錄在
+    // expandedPolicyIds 裡），重繪時要維持展開，不然像月現金流那種
+    // 每輸入一格就會觸發 renderSettings() 整頁重繪的欄位，會讓使用者
+    // 正在填的這張卡片每打完一格就被打回收合，體感很差。
+    const isOpen = expandedPolicyIds.has(p.id);
     const pColor = getPolicyColor(p.category).solid;
-    html += `<div class="savings-card" data-pid="${p.id}" style="border-left:6px solid ${pColor}">
+    html += `<div class="savings-card ${isOpen?'card-open':''}" data-pid="${p.id}" style="border-left:6px solid ${pColor}">
       <div class="card-header card-toggle" onclick="toggleCard('${p.id}')">
         <div style="display:flex;align-items:center;gap:6px;flex:1">
-          <span class="card-chevron" id="chevron-${p.id}">▸</span>
+          <span class="card-chevron" id="chevron-${p.id}">${isOpen?'▾':'▸'}</span>
           <div>
             <div>
               <span class="card-no">${p.policyNo||"—"}</span>
@@ -589,7 +598,7 @@ function renderSettings() {
       </div>
 
       <!-- 展開內容 -->
-      <div class="card-body" id="body-${p.id}" style="display:none">
+      <div class="card-body" id="body-${p.id}" style="display:${isOpen?'block':'none'}">
       <!-- 目前帳戶價值：跟下面的「領回方式」是兩個不同概念——這裡填的是
            現在帳戶裡已經累積多少錢，領回方式填的是未來排定怎麼領。
            外幣保單這裡要填「原幣」金額（跟保單本身的幣別一致），不是台幣，
@@ -928,6 +937,7 @@ function toggleCard(pid) {
   body.style.display    = open ? "block" : "none";
   chevron.textContent   = open ? "▾" : "▸";
   card.classList.toggle("card-open", open);
+  if (open) expandedPolicyIds.add(pid); else expandedPolicyIds.delete(pid);
 }
 
 // 已設定的摘要文字（收合時顯示在標題右側）
@@ -1452,6 +1462,7 @@ function callGAS(action, params) {
 NBS_NAV.onMemberChange = function(pid) {
   currentPersonId = pid;
   settings = {};
+  expandedPolicyIds = new Set();
   laborPensionData = {};
   renderTabs();
   renderSettings();
