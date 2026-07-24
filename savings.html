@@ -556,6 +556,11 @@ function renderSettings() {
         yearlyAmts:    sv.yearlyAmts    || [],
         accountValue:     sv.accountValue     || "",
         accountValueDate: sv.accountValueDate || "",
+        // ⚠️ 這兩個是「月現金流實際/預估」功能新增的欄位，之前這份還原
+        // 清單忘記加，導致存檔裡明明有資料，重新整理後卻讀不回來、
+        // 看起來像不見了——其實資料一直都好好存在雲端硬碟裡。
+        monthlyVariable:  sv.monthlyVariable  || false,
+        actualMonthly:    sv.actualMonthly    || {},
         // 分紅保單（類型6）若備註空白，預填警語
         note: sv.note !== undefined && sv.note !== "" ? sv.note :
               (sv.type === "6" ? "領回金額採中分紅預估，實際以保險公司年度公告為準" : ""),
