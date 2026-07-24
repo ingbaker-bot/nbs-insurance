@@ -688,12 +688,13 @@ function renderMonthlyAfterBlock(pid, s) {
   }
 
   const pastKeys = getPast12MonthKeys();
-  let filledSum = 0, missingCount = 0;
+  let filledSum = 0, filledCount = 0, missingCount = 0;
   const cellsHtml = pastKeys.map(function(key){
     const val = actual[key];
     const label = formatRocMonthLabel(key);
     if (val !== undefined && val !== null && val !== "") {
       filledSum += parseFloat(val) || 0;
+      filledCount++;
       return `<div style="background:#EAF3DE;border-radius:8px;padding:6px 4px;text-align:center">
         <div style="font-size:11px;color:#27500A">${label}</div>
         <input type="number" value="${val}" style="width:100%;text-align:center;font-size:13px;font-weight:700;color:#173404;background:transparent;border:none;padding:2px"
@@ -711,6 +712,14 @@ function renderMonthlyAfterBlock(pid, s) {
 
   const totalWarnHtml = missingCount > 0
     ? `<span style="font-size:12px;color:#B7791F;font-weight:600;margin-left:10px">還有 ${missingCount} 個月尚未登錄</span>`
+    : "";
+
+  // 均值＝已登錄合計 ÷ 已登錄筆數。填幾筆就除以幾筆，讓使用者可以自己
+  // 選擇：每次填「上個月實際配息」，或是懶得每月更新時，直接拿這個均值
+  // 當作往後幾個月的估算依據。四捨五入到小數點第 2 位，跟合計金額的
+  // 精度一致（配息常常是帶小數的）。
+  const avgHtml = filledCount > 0
+    ? `<span style="font-size:12px;color:#888;font-weight:400;margin-left:10px">均值 ${(filledSum/filledCount).toLocaleString(undefined,{maximumFractionDigits:2})} 元／月（${filledCount} 筆）</span>`
     : "";
 
   return toggleHtml + `
@@ -733,7 +742,7 @@ function renderMonthlyAfterBlock(pid, s) {
 
     <div style="display:flex;align-items:baseline;justify-content:space-between;margin-top:12px;padding-top:8px;border-top:1px solid #eee">
       <span style="font-size:13px;color:#666">已登錄合計</span>
-      <span style="font-size:18px;font-weight:700;color:#1a1a1a">${filledSum.toLocaleString()} 元${totalWarnHtml}</span>
+      <span style="font-size:18px;font-weight:700;color:#1a1a1a">${filledSum.toLocaleString()} 元${avgHtml}${totalWarnHtml}</span>
     </div>`;
 }
 
