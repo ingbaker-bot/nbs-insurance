@@ -246,6 +246,30 @@ function formatRocMonthLabel(key) {
   return parts[0] + "/" + parts[1];
 }
 
+// 這一整年（yr，西元）裡，逐月判斷：這個月如果落在「已發生的近 12
+// 個月」範圍內、而且使用者有登錄實際金額，就用實際值；否則（不管是
+// 還沒發生的未來月份，還是已發生但漏填的月份）都用預估值頂替，這樣
+// 年度加總才會是「目前資料能給出的最佳整年金額」。跟 export.html 的
+// computeMonthlyBlendedTotalEx 邏輯完全一致，只是這裡直接複用同一支
+// 檔案裡已經有的 getPast12MonthKeys()，不用像 export.html 那樣另外
+// 做一份「Ex」版本的月份工具函式。
+function computeMonthlyBlendedTotal(yr, aa, actual) {
+  const pastKeys = getPast12MonthKeys();
+  let total = 0, hasActual = false;
+  const rocYear = yr - 1911;
+  for (let m = 1; m <= 12; m++) {
+    const key = rocYear + "-" + String(m).padStart(2, "0");
+    const v = actual ? actual[key] : undefined;
+    if (pastKeys.indexOf(key) !== -1 && v !== undefined && v !== null && v !== "") {
+      total += parseFloat(v) || 0;
+      hasActual = true;
+    } else {
+      total += aa;
+    }
+  }
+  return { total: total, hasActual: hasActual };
+}
+
 // ── 取得被保人 100 歲的西元年 ─────────────────────────────
 function getEndYearAt100(memberId, policy) {
   // 優先從 person.profile.birthDate 算
@@ -1080,7 +1104,7 @@ function extractYearSmart(isoDate, rocRaw) {
 }
 
 // ── 計算單張保單各年現金流 ───────────────────────────────
-function calcPolicyFlows(p, s, memberId, years) {
+function calcPolicyFlows(p, s, memberId, years, actualYearsOut) {
   const startWestern  = extractYearSmart(p.startDate,  p.startDateRaw);
   const payEndWestern = extractYearSmart(p.payEndDate, p.payEndRaw);
   const covEndWestern = p.covEndDate
@@ -1147,13 +1171,22 @@ function calcPolicyFlows(p, s, memberId, years) {
         if (yr >= base && e % afterFreqYr === 0) flow += afterAmt;
       }
     } else if (monthly) {
+      var blendedFlow = 0, blendedHasActual = false;
       if (p.category === "投資型保險") {
         // 投資型保險的「月月配息」是帳戶配息，保單成立後就持續每月發放，
         // 不像儲蓄險/年金險的「月領生存金」要等繳費期滿才開始請領。
-        if (afterAmt > 0 && yr >= startWestern) flow = afterAmt * 12;
+        if (afterAmt > 0 && yr >= startWestern) {
+          var b1 = computeMonthlyBlendedTotal(yr, afterAmt, s.actualMonthly);
+          blendedFlow = b1.total; blendedHasActual = b1.hasActual;
+        }
       } else {
-        if (inAfter && afterAmt > 0) flow = afterAmt * 12;
+        if (inAfter && afterAmt > 0) {
+          var b2 = computeMonthlyBlendedTotal(yr, afterAmt, s.actualMonthly);
+          blendedFlow = b2.total; blendedHasActual = b2.hasActual;
+        }
       }
+      flow = blendedFlow;
+      if (blendedHasActual && actualYearsOut) actualYearsOut.add(yr);
     }
     if (flow > 0) flows[yr] = Math.round(flow * exRate);
   });
@@ -1252,7 +1285,8 @@ function renderTimeline() {
       const s = settings[p.id] ||
                 (person.savings || []).find(sv => sv.policyId === p.id) ||
                 { type:"1" };
-      const flows = calcPolicyFlows(p, s, m.personId, years);
+      const actualYearsSet = new Set();
+      const flows = calcPolicyFlows(p, s, m.personId, years, actualYearsSet);
       // 累加合計（flows 已換算成台幣）
       Object.entries(flows).forEach(([yr, amt]) => {
         totalFlows[yr] = (totalFlows[yr] || 0) + amt;
@@ -1276,6 +1310,7 @@ function renderTimeline() {
         accountValueDate: s.accountValueDate || "",
         stillPaying,
         flows,
+        actualYears: actualYearsSet,
       });
     });
 
@@ -1339,9 +1374,11 @@ function renderTimeline() {
         const amt = pr.flows[yr] || 0;
         if (!amt) return `<td><span style="color:#888;font-size:14px;font-weight:500">—</span></td>`;
         const w = Math.max(34, Math.round((amt / maxTotal) * 80));
+        const hasActual = pr.actualYears && pr.actualYears.has(yr);
+        const dot = hasActual ? `<span title="此欄位已代入部分月份的實際登錄金額" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#16a34a;margin-left:4px;vertical-align:middle"></span>` : "";
         // 用 min-width 而非 width：數字比計算出來的比例寬度還長時，
         // 讓色塊自己撐開，不要讓文字溢出色塊外面。
-        return `<td><div class="cf-bar" style="min-width:${w}px;background:${pColor.grad}"><span>${fmtAmt(amt)}</span></div></td>`;
+        return `<td><div class="cf-bar" style="min-width:${w}px;background:${pColor.grad}"><span>${fmtAmt(amt)}</span>${dot}</div></td>`;
       }).join("");
 
       // 第一欄：險種 badge + 保單號碼 + 商品名稱（badge 用險種專屬顏色，
