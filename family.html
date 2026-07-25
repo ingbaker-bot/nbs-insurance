@@ -748,6 +748,12 @@
 
     // ── 渲染頁面 ──────────────────────────────────────────────
     function renderPage() {
+      // 防呆：如果是「在這個家庭詳情頁裡刪除自己」，刪除完成後 nav.js
+      // 會重新廣播一次頁面資料，這次 familyData 會是空的（家庭已經被
+      // 刪掉了）。這時候不要嘗試渲染，安靜地跳過就好，實際畫面已經在
+      // 準備導回 main.html 了，不需要再畫一次注定會出錯的內容。
+      if (!familyData) return;
+
       document.getElementById("loading-view").style.display = "none";
       document.getElementById("main-content").style.display = "block";
 
