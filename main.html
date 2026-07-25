@@ -326,6 +326,7 @@
 
     <!-- 新增按鈕（移到搜尋下方）-->
     <button class="add-btn" onclick="openCreateModal()" style="margin-bottom:16px;">＋ 新增家庭</button>
+    <button class="add-btn" id="import-btn" onclick="goImportPage()" style="margin-bottom:16px;background:#fff;color:#4338ca;border:1.5px solid #c7d2fe;">📥 批次匯入保單</button>
 
     <!-- 家庭列表 -->
     <div class="section-label" id="list-label">家庭列表</div>
@@ -458,6 +459,7 @@
       const saved = localStorage.getItem("nbs_user");
       if (!saved) { window.location.href = "index.html"; return; }
       currentUser = JSON.parse(saved);
+      updateImportButtonLockUI_();
 
       const nameEl = document.getElementById("user-name");
       const avatarEl = document.getElementById("user-avatar");
@@ -782,6 +784,43 @@
     // 在前端給使用者比較好的體驗。
     function isEliteUser_() {
       return !!(currentUser && (currentUser.isAdmin || currentUser.tier === "菁英"));
+    }
+
+    // 批次匯入保單是菁英會員專屬功能，跟 AI 辨識保單一樣：看得到但點不開，
+    // 點下去跳提醒，不會真的進到匯入頁面。
+    function updateImportButtonLockUI_() {
+      const btn = document.getElementById("import-btn");
+      if (!btn) return;
+      const locked = !isEliteUser_();
+      btn.dataset.locked = locked ? "1" : "0";
+      btn.style.opacity = locked ? "0.55" : "";
+      btn.style.cursor = locked ? "not-allowed" : "";
+      btn.innerHTML = locked ? "🔒 📥 批次匯入保單（菁英會員專屬）" : "📥 批次匯入保單";
+    }
+
+    function goImportPage() {
+      if (!isEliteUser_()) { showEliteOnlyNotice_(); return; }
+      window.location.href = "import.html";
+    }
+
+    function showEliteOnlyNotice_() {
+      let el = document.getElementById("elite-only-notice");
+      if (!el) {
+        el = document.createElement("div");
+        el.id = "elite-only-notice";
+        el.style.cssText = "position:fixed;left:50%;bottom:24px;transform:translateX(-50%);"+
+          "background:#1a1a1a;color:#fff;padding:12px 16px;border-radius:10px;font-size:14px;"+
+          "z-index:9999;display:flex;align-items:center;gap:12px;box-shadow:0 4px 16px rgba(0,0,0,.2);max-width:90vw";
+        el.innerHTML = '<span>🔒 批次匯入保單是菁英會員專屬功能，請聯繫管理員升級</span>'+
+          '<button onclick="document.getElementById(\'elite-only-notice\').remove()" '+
+          'style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:4px 10px;cursor:pointer">關閉</button>';
+        document.body.appendChild(el);
+      }
+      clearTimeout(window._eliteNoticeTimer);
+      window._eliteNoticeTimer = setTimeout(function(){
+        const cur = document.getElementById("elite-only-notice");
+        if (cur) cur.remove();
+      }, 3000);
     }
 
     function updateCreateButtonLockUI_(totalCount) {
