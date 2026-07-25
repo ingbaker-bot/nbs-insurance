@@ -185,14 +185,36 @@ var GROUPS=[
     {key:"ltc_yr",label:"特定傷病保險金（每年）",unit:"萬元/年"},
     {key:"ltc_mo",label:"特定傷病保險金（每月）",unit:"萬元/月"},
   ]},
-  {key:"ltc",label:"失能長照",icon:"🤝",color:"#27500A",bg:"#EAF3DE",periodKey:"ltc",fields:[
+  {key:"ltc",label:"長期看護",icon:"🤝",color:"#27500A",bg:"#EAF3DE",periodKey:"ltc",fields:[
     {key:"ltc_period_type",label:"保障期間類型",unit:""},
     {key:"ltc_period",label:"保障期間",unit:""},
-    {key:"ltc_care",label:"長照／長看關懷保險金",unit:"萬元"},
+    {key:"ltc_care",label:"長照／長看／特定傷病關懷保險金",unit:"萬元"},
+    {key:"ltc_waiting_days",label:"免責期",unit:"天"},
     {key:"ltc_monthly",label:"長期照護療養（每月）",unit:"萬元"},
-    {key:"ltc_dis_amt",label:"失能（殘廢）保險金",unit:"萬元"},
-    {key:"ltc_dis_life",label:"失能（殘廢）生活扶助金",unit:"萬元"},
+    {key:"ltc_support_monthly",label:"生活扶助保險金（每月）",unit:"萬元/月"},
+    {key:"ltc_limit_amt",label:"保險給付限制（帳戶制）",unit:"萬元"},
+    {key:"ltc_limit_times",label:"保險給付限制（倍數型）",unit:"倍"},
     {key:"ltc_waiver",label:"保費豁免",unit:"",type:"checkbox"},
+  ]},
+  // 失能（殘廢）獨立成自己的分類，不再跟「長期看護」擠在同一個分頁——
+  // 兩者觸發條件不同（長照是失能程度符合長照定義；失能殘廢是達到條款
+  // 約定的失能等級），保單設計上也常常是兩張不同附約，分開輸入比較
+  // 符合實務。
+  //
+  // ⚠️ 相容性說明：ltc_dis_amt（失能保險金）／ltc_dis_life（失能生活
+  // 扶助金）是舊欄位，過去沒有拆分疾病/意外、每年/每月，舊資料還是
+  // 用這兩個 key。這次新增的 dis_lump_illness/dis_lump_accident／
+  // dis_life_yearly/dis_life_monthly 是新填的資料才會用到的細分欄位。
+  // summary.html／export.html 加總時，新舊欄位會「一起加總」，不會互相
+  // 覆蓋或遺漏，舊保單不用重填、新保單可以填更精細的資料。
+  {key:"disability",label:"失能（殘廢）",icon:"🦽",color:"#B45309",bg:"#FEF3E2",fields:[
+    {key:"dis_lump_illness",label:"失能保險金－疾病（一次）",unit:"萬元"},
+    {key:"dis_lump_accident",label:"失能保險金－意外（一次）",unit:"萬元"},
+    {key:"dis_life_yearly",label:"失能生活扶助金（每年給付）",unit:"萬元/年"},
+    {key:"dis_life_monthly",label:"失能生活扶助金（每月給付）",unit:"萬元/月"},
+    {key:"dis_guarantee_months",label:"保證期間",unit:"月"},
+    {key:"ltc_dis_amt",label:"失能（殘廢）保險金（舊欄位，疾病/意外未分開時填這裡）",unit:"萬元"},
+    {key:"ltc_dis_life",label:"失能（殘廢）生活扶助金（舊欄位，每年/每月未分開時填這裡）",unit:"萬元"},
   ]},
 ];
 

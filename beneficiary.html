@@ -293,7 +293,7 @@
         }
 
         const dIsUnset = dStr === "未設定";
-        const owner = p.ownerName || person.profile?.name || "—";
+        const owner = p.owner || person.profile?.name || "—";
         const insured = p.insuredName || person.profile?.name || "—";
 
         html += `<tr>

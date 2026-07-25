@@ -1401,9 +1401,10 @@ var GAP_KEY_MAP_EX = {
   cancer_surgery:  { cats:["癌症醫療"],          keys:["can_surgery"] },
   acc_medical:     { cats:["意外險"],            keys:["acc_opd"] },
   acc_hosp:        { cats:["意外險"],            keys:["acc_hosp"] },
-  ltc_disable:     { cats:["失能長照"],          keys:["ltc_dis_amt"] },
-  ltc_support:     { cats:["失能長照"],          keys:["ltc_dis_life", "acc_support", "ltc_life"] },
-  ltc_care:        { cats:["失能長照"],          keys:["ltc_monthly", "ltc_care", "ltc_yr", "ltc_mo"] },
+  ltc_disable:     { cats:["失能長照"],          keys:["ltc_dis_amt", "dis_lump_illness", "dis_lump_accident"] },
+  ltc_support:     { cats:["失能長照"],          keys:["ltc_dis_life", "acc_support", "ltc_life", "dis_life_monthly"] },
+  ltc_support_yr:  { cats:["失能長照"],          keys:["dis_life_yearly"] },
+  ltc_care:        { cats:["失能長照"],          keys:["ltc_monthly", "ltc_care", "ltc_yr", "ltc_mo", "ltc_support_monthly"] },
   // 癌症安寧／癌症身故：原本合併讀 can_death+can_hospice，現在拆開各自獨立
   cancer_hospice:  { cats:["癌症醫療"],          keys:["can_hospice"] },
   cancer_death:    { cats:["癌症醫療"],          keys:["can_death"] },
@@ -1420,8 +1421,8 @@ var COVERAGE_TYPES = [
   { key:"hosp_surg",  label:"手術險",   group:"醫療", color:"#166756", detect:(p,c)=>Object.keys(c).some(k=>k.includes("surg_opd")||k.includes("surg_hosp")) },
   { key:"ci",         label:"重大疾病", group:"重大", color:"#9B59B6", detect:(p,c)=>p.some(x=>["重大疾病險","重大傷病險","特定傷病險"].includes(x.category)) },
   { key:"cancer",     label:"癌症險",   group:"癌症", color:"#E74C3C", detect:(p,c)=>Object.keys(c).some(k=>k.includes("can_first")||k.includes("can_hosp")) },
-  { key:"ltc",        label:"長照險",   group:"長照", color:"#27500A", detect:(p,c)=>Object.keys(c).some(k=>k.includes("ltc_monthly")||k.includes("ltc_care")) },
-  { key:"disable",    label:"失能險",   group:"長照", color:"#5BAD6F", detect:(p,c)=>Object.keys(c).some(k=>k.includes("ltc_dis_amt")||k.includes("ltc_dis_life")) },
+  { key:"ltc",        label:"長照險",   group:"長照", color:"#27500A", detect:(p,c)=>Object.keys(c).some(k=>k.includes("ltc_monthly")||k.includes("ltc_care")||k.includes("ltc_support_monthly")) },
+  { key:"disable",    label:"失能險",   group:"長照", color:"#5BAD6F", detect:(p,c)=>Object.keys(c).some(k=>k.includes("ltc_dis_amt")||k.includes("ltc_dis_life")||k.includes("dis_lump")||k.includes("dis_life")) },
   { key:"savings",    label:"儲蓄險",   group:"財務", color:"#E8638A", detect:(p,c)=>p.some(x=>x.category==="儲蓄險") },
   { key:"annuity",    label:"年金險",   group:"財務", color:"#C0392B", detect:(p,c)=>p.some(x=>x.category==="年金險") },
   { key:"investment", label:"投資型",   group:"財務", color:"#95A5A6", detect:(p,c)=>p.some(x=>x.category==="投資型保險") },
@@ -1548,11 +1549,15 @@ var COVERAGE_GROUPS_EX = [
     { label:"安寧照護", keys:["can_hospice"], unit:"萬元" },
     { label:"癌症身故", keys:["can_death"], unit:"萬元" },
   ]},
-  { label:"失能長照", icon:"🤝", color:"#0f766e", cats:["失能長照"], items:[
-    { label:"長照/長看關懷", keys:["ltc_care"], unit:"萬元" },
+  { label:"長期看護", icon:"🤝", color:"#0f766e", cats:["失能長照"], items:[
+    { label:"長照/長看/特傷關懷", keys:["ltc_care"], unit:"萬元" },
     { label:"長期照護療養 (月)", keys:["ltc_monthly"], unit:"萬元/月" },
-    { label:"失能(殘廢)保險金", keys:["ltc_dis_amt"], unit:"萬元" },
-    { label:"失能生活扶助金", keys:["ltc_dis_life"], unit:"萬元/月" },
+    { label:"生活扶助保險金（長照）", keys:["ltc_support_monthly"], unit:"萬元/月" },
+  ]},
+  { label:"失能（殘廢）", icon:"🦽", color:"#B45309", cats:["失能長照"], items:[
+    { label:"失能保險金", keys:["ltc_dis_amt","dis_lump_illness","dis_lump_accident"], unit:"萬元" },
+    { label:"失能生活扶助金（月）", keys:["ltc_dis_life","dis_life_monthly"], unit:"萬元/月" },
+    { label:"失能生活扶助金（年）", keys:["dis_life_yearly"], unit:"萬元/年" },
   ]},
 ];
 
@@ -1632,7 +1637,7 @@ function getItemCurrentEx(key, policies, coverage, covOverrides) {
   var NO_FALLBACK_KEYS = [
     "acc_medical","acc_hosp","hosp_real_room","hosp_daily",
     "surgery","cancer_hosp","cancer_surgery","ltc_disable","ltc_support",
-    "ltc_care","cancer_hospice","cancer_death"
+    "ltc_support_yr","ltc_care","cancer_hospice","cancer_death"
   ];
   if (NO_FALLBACK_KEYS.indexOf(key) !== -1) {
     return sumCovEx(map.keys, policies, coverage);
@@ -2435,7 +2440,7 @@ function buildPremiumDetailParts(forPrint) {
       var isMR = p===mainPol;
       var amtText = p.insuredAmount ? p.insuredAmount + " " + (p.insuredAmountUnit || '萬元') : '—';
       var rule = BENEF_RULES_PD[p.category] || { death:"可設定", live:"可設定" };
-      var ownerName  = p.ownerName  || p.proposer || p.applicant || "—";
+      var ownerName  = p.owner || "—";
 
       var isFxPD = p.currency && p.currency !== "TWD";
       // 之前這裡把台幣金額跟原幣金額硬擠在同一行、又設定 white-space:nowrap
@@ -2593,7 +2598,7 @@ var DONUT_CATEGORIES_EX = [
   { key:"hosp_real_room", label:"住院醫療",     color:"#E65100", subKeys:["hosp_real_room"] },
   { key:"hosp_daily",     label:"住院日額",     color:"#F57C00", subKeys:["hosp_daily"] },
   { key:"surgery",        label:"手術醫療",     color:"#FF9800", subKeys:["surgery"] },
-  { key:"ltc",            label:"失能/長照",    color:"#2E7D32", subKeys:["ltc_disable","ltc_support","ltc_care"] },
+  { key:"ltc",            label:"失能/長照",    color:"#2E7D32", subKeys:["ltc_disable","ltc_support","ltc_support_yr","ltc_care"] },
   { key:"waiver",         label:"豁免",         color:"#A5D6A7", subKeys:["waiver"] },
 ];
 
@@ -3161,27 +3166,38 @@ function renderBlock(key){
     var html='<div style="width:2540px;padding:8px 16px;box-sizing:content-box">';
     // 放大「各項保障加總」主標題
     html+='<div style="font-size:48px;font-weight:800;color:#444;margin-bottom:8px">各項保障加總</div>';
-    // 改成三欄（原本五欄在字體放大後太窄，容易擠在一起），一樣是手動
-    // 指定哪幾類放同一欄，不是自動順排
-    var columnMap = [
+    // 「長期看護」「失能（殘廢）」欄位變多之後，改成獨立第二排、各自佔
+    // 一整欄，不再跟「日額型住院」擠同一欄，避免這欄比其他欄高出一截，
+    // 導致整張圖為了塞進同一頁被迫等比例縮小、其他欄的字也被拖累變小。
+    var columnMapRow1 = [
       ["壽險/重大保障(終身/定期)", "意外險"],
       ["住院醫療 (實支實付)", "定額手術"],
-      ["日額型住院", "失能長照"],
+      ["日額型住院"],
       ["癌症醫療"],
     ];
-    // 加大欄位之間的距離 (gap: 20px)
-    html+='<div style="display:grid;grid-template-columns:repeat(4,620px);gap:14px;align-items:start;width:2540px">';
-    columnMap.forEach(function(labels){
-      html+='<div style="display:flex;flex-direction:column;gap:6px">';
-      labels.forEach(function(label){
-        var g = COVERAGE_GROUPS_EX.find(function(x){ return x.label===label; });
-        if (g) html += buildStatGroupCard(g, policies, cov3);
+    var columnMapRow2 = [
+      ["長期看護"],
+      ["失能（殘廢）"],
+    ];
+    function renderColumnRow(columnMap, colCount){
+      var rowHtml='<div style="display:grid;grid-template-columns:repeat('+colCount+',620px);gap:14px;align-items:start;width:2540px">';
+      columnMap.forEach(function(labels){
+        rowHtml+='<div style="display:flex;flex-direction:column;gap:6px">';
+        labels.forEach(function(label){
+          var g = COVERAGE_GROUPS_EX.find(function(x){ return x.label===label; });
+          if (g) rowHtml += buildStatGroupCard(g, policies, cov3);
+        });
+        rowHtml+='</div>';
       });
-      html+='</div>';
-    });
-    html+='</div></div>';
+      rowHtml+='</div>';
+      return rowHtml;
+    }
+    html += renderColumnRow(columnMapRow1, 4);
+    html += '<div style="margin-top:14px">' + renderColumnRow(columnMapRow2, 4) + '</div>';
+    html+='</div>';
     return html;
   }
+
 
 
   if(key==="savings_timeline"){
