@@ -186,7 +186,11 @@
   // 不到函式。這裡額外掃描頂層（沒有縮排、真正寫在最外層的）
   // function／async function／function* 宣告，在區塊「結束前」明確補一行
   // window.名稱 = 名稱，讓它們不管是哪種 function 都能被 onclick 呼叫到。
-  var TOP_LEVEL_FN_RE = /^(?:async\s+)?function\s*\*?\s+([A-Za-z_$][\w$]*)\s*\(/gm;
+  // 允許 function／async function 前面有縮排空白（[ \t]*）——不同頁面
+  // 的程式碼縮排風格不一樣，family.html 這類會把整段 <script> 內容縮排
+  // 4 個空白，原本要求「完全沒有空白」才抓得到，導致這種寫法的頁面，
+  // 所有函式都沒被掛回 window，onclick 呼叫時就會「函式未定義」。
+  var TOP_LEVEL_FN_RE = /^[ \t]*(?:async\s+)?function\s*\*?\s+([A-Za-z_$][\w$]*)\s*\(/gm;
   function _wrapPageScript(code) {
     var names = [];
     var m;
