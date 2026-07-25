@@ -42,6 +42,11 @@
   .field-unmapped{background:#FAEEDA;color:#8A5A00}
   .agent-row{padding:10px 18px;background:#fafafa;display:flex;align-items:center;gap:8px;font-size:13px}
   .agent-row input{max-width:220px}
+  .commit-row{padding:12px 18px;border-top:1px solid #f0f0f0;display:flex;align-items:center;gap:10px}
+  .btn-commit{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;background:#4338ca;color:#fff}
+  .btn-commit:disabled{background:#c7c7d0;cursor:not-allowed}
+  .commit-status{font-size:12px}
+  .conflict-row{padding:6px 18px;background:#FCEBEB;color:#791F1F;font-size:12px}
 </style>
 </head>
 <body>
@@ -68,6 +73,7 @@
   </div>
 
   <div id="result-summary"></div>
+  <div id="commit-all-bar"></div>
   <div id="result-groups"></div>
 </div>
 
@@ -185,8 +191,16 @@ function parseFile() {
         document.getElementById("parse-btn").disabled = false;
         return;
       }
-      showUploadStatus("info", "解析中，共 " + policies.length + " 筆保單…");
-      var normalized = policies.map(normalizeFubonPolicy_).filter(Boolean);
+      showUploadStatus("info", "解析中，共 " + policies.length + " 份合約…");
+      var normalized = [];
+      policies.forEach(function(p){
+        normalizeFubonContract_(p).forEach(function(rec){ normalized.push(rec); });
+      });
+      if (!normalized.length) {
+        showUploadStatus("warn", "解析後沒有讀到任何保單項目，請確認檔案內容。");
+        document.getElementById("parse-btn").disabled = false;
+        return;
+      }
       var groups = buildRelationshipGroups_(normalized);
       showUploadStatus("info", "分組完成，共 " + groups.length + " 組客戶，正在比對既有資料…");
       matchAgainstExisting_(groups).then(function(matchedGroups){
@@ -206,14 +220,16 @@ function parseFile() {
   reader.readAsText(file, "UTF-8");
 }
 
-// ── 把富邦原始保單資料，轉成統一格式 ──────────────────────
-function normalizeFubonPolicy_(p) {
+// 把富邦原始的一筆「合約」（可能包含 1 個主約 + 好幾個附約），拆成
+// 系統裡各自獨立的保單記錄——回傳一個陣列，不是單一物件。之前的版本
+// 把主約跟所有附約的給付項目攤平合併成一張保單，是錯的：每個項目
+// 各自有自己的保額/狀態/繳費期滿日/給付項目，理當各自是一張獨立保單，
+// 只是共用同一個要保人/被保險人/關係（這些是合約層級共用的資訊）。
+function normalizeFubonContract_(p) {
   try {
     var sec03 = (p.sec03_保單基本資料 && p.sec03_保單基本資料.kvPairs) || {};
     var applicantName = p.applicant || "";
     var insuredName   = p.insured || "";
-    // sec03 的 kvPairs 裡，關係欄位是用「被保險人姓名/要保人姓名」當 key、
-    // 關係文字（本人/父母子女/配偶…）當 value，逐一找出來。
     var relationship = sec03[applicantName] || sec03[insuredName] || "";
     var applicantIdNumber = sec03["身分證號碼"] || "";
     var applicantBirth    = sec03["生日"] || "";
@@ -223,49 +239,44 @@ function normalizeFubonPolicy_(p) {
     var suggestedAgent    = sec03["鄭牧青"] || sec03["服務人員資料"] || "";
 
     var items = (p.sec05_保險項目與金額 && p.sec05_保險項目與金額.items) || [];
-    var benefits = [];
-    var mainItem = items.find(function(it){ return it._isMainItem; }) || items[0] || {};
-    var category = guessCategoryFromProductName_(mainItem["保險項目"] || p.name || "");
+    var contractPolicyNo = p.policyNo || "";
 
-    items.forEach(function(it){
-      (it._benefits || []).forEach(function(b){
-        benefits.push({
-          rawLabel: b["給付項目"] || "",
-          amount: parseFubonAmount_(b["金額"]),
-          unit: b["單位"] || "",
-          itemName: it["保險項目"] || ""
-        });
+    return items.map(function(it, idx){
+      var category = guessCategoryFromProductName_(it["保險項目"] || "");
+      var benefits = (it._benefits || []).map(function(b){
+        return { rawLabel: b["給付項目"] || "", amount: parseFubonAmount_(b["金額"]), unit: b["單位"] || "" };
       });
-    });
+      // 主約用契約本身的號碼；附約用「契約號碼-序號」區隔，避免跟主約
+      // 或其他附約撞號（跟保單畫面上常見的「XXXX-00」「XXXX-01」慣例一致）。
+      var subPolicyNo = it._isMainItem
+        ? contractPolicyNo + "-00"
+        : contractPolicyNo + "-" + String(idx).padStart(2, "0");
 
-    return {
-      policyNo: p.policyNo || "",
-      productName: mainItem["保險項目"] || p.name || "",
-      category: category,
-      status: mainItem["契約狀態"] || p.status || "",
-      premium: mainItem["保險費"] || "",
-      payEndDate: mainItem["繳費期滿日"] || "",
-      covEndDate: mainItem["保障期滿日"] || "",
-      applicant: {
-        name: applicantName,
-        idNumber: applicantIdNumber,
-        birthDate: applicantBirth,
-        phone: applicantPhone,
-        email: applicantEmail,
-        address: applicantAddress
-      },
-      insured: { name: insuredName },
-      relationship: relationship, // 要保人相對於被保險人的關係
-      suggestedAgent: suggestedAgent,
-      benefits: benefits,
-      mappedBenefits: benefits.map(function(b){
-        var m = lookupBenefitMapping_(b.rawLabel, category);
-        return Object.assign({}, b, m ? { mappedKey: m.key, needsReview: m.needsReview } : { mappedKey: null, needsReview: false });
-      })
-    };
+      return {
+        policyNo: subPolicyNo,
+        productName: it["保險項目"] || "",
+        category: category,
+        isMainItem: !!it._isMainItem,
+        status: it["契約狀態"] || p.status || "",
+        payEndDate: it["繳費期滿日"] || "",
+        covEndDate: it["保障期滿日"] || "",
+        applicant: {
+          name: applicantName, idNumber: applicantIdNumber, birthDate: applicantBirth,
+          phone: applicantPhone, email: applicantEmail, address: applicantAddress
+        },
+        insured: { name: insuredName },
+        relationship: relationship,
+        suggestedAgent: suggestedAgent,
+        benefits: benefits,
+        mappedBenefits: benefits.map(function(b){
+          var m = lookupBenefitMapping_(b.rawLabel, category);
+          return Object.assign({}, b, m ? { mappedKey: m.key, needsReview: m.needsReview } : { mappedKey: null, needsReview: false });
+        })
+      };
+    });
   } catch (e) {
-    console.error("解析單筆保單失敗", e, p);
-    return null;
+    console.error("解析合約失敗", e, p);
+    return [];
   }
 }
 
@@ -400,7 +411,13 @@ function renderResults_() {
         '<span style="color:#27500A;font-weight:700">新客戶 ' + newCount + ' 組</span>　' +
         '<span style="color:#0C447C;font-weight:700">併入既有客戶 ' + matchedCount + ' 組</span>' +
       '</div>' +
-      '<div class="hint">以下請逐組檢查分組是否正確、給付項目對照結果是否合理。這個階段還沒有寫入功能，先確認資料沒問題。</div>' +
+      '<div class="hint">確認每組分組與給付項目對照結果都合理之後，可以逐組按「確認寫入」，或用下面「全部確認寫入」一次處理。</div>' +
+    '</div>';
+
+  document.getElementById("commit-all-bar").innerHTML =
+    '<div class="card" style="display:flex;align-items:center;gap:12px">' +
+      '<button class="btn btn-primary" onclick="commitAll_()">全部確認寫入</button>' +
+      '<div id="commit-all-status" style="font-size:13px;color:#555"></div>' +
     '</div>';
 
   var html = parsedGroups.map(function(g, idx){
@@ -438,14 +455,267 @@ function renderGroupCard_(g, idx) {
     '</div>';
   }).join("");
 
-  return '<div class="group-card">' +
+  return '<div class="group-card" id="group-card-' + idx + '">' +
     '<div class="group-head ' + headClass + '">' +
       '<div class="group-title">' + mainMember.name + (g.members.length>1 ? '　等 ' + g.members.length + ' 人' : '') + tagHtml + '</div>' +
     '</div>' +
     '<div class="member-list">' + memberListHtml + '</div>' +
     policiesHtml +
     '<div class="agent-row">這批保單記錄為業務員：<input type="text" value="' + (document.getElementById("agent-name-input").value || "") + '" onchange="parsedGroups[' + idx + '].agentName=this.value" /></div>' +
+    '<div class="commit-row">' +
+      '<button class="btn-commit" id="commit-btn-' + idx + '" onclick="commitGroup_(' + idx + ')">確認寫入這組</button>' +
+      '<span class="commit-status" id="commit-status-' + idx + '"></span>' +
+    '</div>' +
   '</div>';
+}
+
+// ═══════════════════════════════════════════════════════
+//  第二步：實際寫入資料
+// ═══════════════════════════════════════════════════════
+function todayISO_() {
+  return new Date().toISOString().slice(0,10);
+}
+
+function buildPersonData_(member, personId, analysisDate) {
+  return {
+    version: "3.0.0",
+    personId: personId,
+    agentId: currentUser.email,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    profile: {
+      name: member.name,
+      birthDate: null, // 匯入資料裡通常只有要保人才有生日，被保險人生日這階段先留空，事後手動補
+      gender: "male",
+      idNumber: member.idNumber || null,
+      analysisDate: analysisDate,
+      note: "",
+    },
+    policies: [],
+    coverage: {},
+    savings: [],
+    beneficiaryTemplates: [],
+    medicalSummary: {},
+    settings: { savingsDisplayYears: 20, notes: "" },
+  };
+}
+
+// 把一筆解析後的保單，轉成 person.policies[] 要用的格式，coverage 只
+// 塞「已經對照成功」的欄位，「無法歸類」的項目改存進 note 備註，不會
+// 憑空消失，方便業務員事後自己補。
+function buildPolicyRecord_(p) {
+  var coverage = {};
+  var unmatchedNotes = [];
+  p.mappedBenefits.forEach(function(b){
+    if (b.mappedKey) {
+      coverage[b.mappedKey] = b.amount;
+    } else if (b.rawLabel && b.rawLabel !== "身故") {
+      unmatchedNotes.push(b.rawLabel + "：" + b.amount + b.unit);
+    }
+  });
+  return {
+    id: "pol_" + Date.now() + "_" + Math.random().toString(36).slice(2,7),
+    policyNo: p.policyNo,
+    itemName: p.productName,
+    category: p.category,
+    company: "富邦人壽",
+    owner: p.applicant.name,
+    status: p.status || "有效",
+    payEndRaw: p.payEndDate || "",
+    coverage: coverage,
+    note: unmatchedNotes.length ? ("匯入時無法歸類的給付項目，請人工確認：\n" + unmatchedNotes.join("\n")) : "",
+    _importedAt: new Date().toISOString(),
+    _sourceAgent: p.agentName || null,
+  };
+}
+
+function commitGroup_(idx) {
+  var g = parsedGroups[idx];
+  var btn = document.getElementById("commit-btn-" + idx);
+  var status = document.getElementById("commit-status-" + idx);
+  btn.disabled = true;
+  status.textContent = "寫入中…";
+  status.style.color = "#888";
+
+  var task = g.matched ? commitMatchedGroup_(g) : commitNewGroup_(g);
+  task.then(function(result){
+    if (result.ok) {
+      status.textContent = "✓ 已寫入：" + result.message;
+      status.style.color = "#27500A";
+      btn.textContent = "已完成";
+    } else {
+      status.textContent = "✗ " + result.message;
+      status.style.color = "#791F1F";
+      btn.disabled = false;
+    }
+    return result;
+  }).catch(function(err){
+    status.textContent = "✗ 寫入失敗：" + err.message;
+    status.style.color = "#791F1F";
+    btn.disabled = false;
+    return { ok:false, message: err.message };
+  });
+  return task;
+}
+
+async function commitAll_() {
+  var statusEl = document.getElementById("commit-all-status");
+  for (var i=0; i<parsedGroups.length; i++) {
+    statusEl.textContent = "處理中… (" + (i+1) + "/" + parsedGroups.length + ")";
+    var btn = document.getElementById("commit-btn-" + i);
+    if (btn.textContent === "已完成") continue; // 已經處理過的跳過，避免重複建立
+    await commitGroup_(i);
+  }
+  statusEl.textContent = "全部處理完成，請往下逐組確認結果。";
+}
+
+// ── 新客戶：建立新家庭 ─────────────────────────────────────
+async function commitNewGroup_(g) {
+  var analysisDate = todayISO_();
+  var mainMember = g.members[0];
+  var personIds = {};
+  g.members.forEach(function(m, i){ personIds[m.key] = "p_" + (Date.now() + i); });
+
+  var familyId = "f_" + Date.now();
+  var familyName = mainMember.name + "家";
+  var familyMembers = g.members.map(function(m, i){
+    return {
+      personId: personIds[m.key],
+      name: m.name,
+      role: i === 0 ? "primary" : "family",
+      relation: i === 0 ? "本人" : (m.relationship || "家人"),
+    };
+  });
+
+  var mainPersonData = buildPersonData_(mainMember, personIds[mainMember.key], analysisDate);
+  g.policies.filter(function(p){ return p._insKey === mainMember.key; }).forEach(function(p){
+    mainPersonData.policies.push(buildPolicyRecord_(p));
+  });
+
+  var familyData = {
+    version: "3.0.0",
+    familyId: familyId,
+    familyName: familyName,
+    agentId: currentUser.email,
+    analysisDate: analysisDate,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    members: familyMembers,
+    sharedBeneficiary: [],
+  };
+
+  var res = await callGAS("createFamily", {
+    email: currentUser.email,
+    personFileName: mainMember.name + "_" + personIds[mainMember.key] + ".json",
+    personContent: mainPersonData,
+    familyFileName: familyName + "_" + familyId + ".json",
+    familyContent: familyData,
+  });
+
+  if (!res || res.status !== "ok") {
+    return { ok:false, message: (res && res.message) || "建立家庭失敗" };
+  }
+
+  // 其餘成員各自存檔（第一位成員已經在 createFamily 裡寫過了）
+  for (var i=1; i<g.members.length; i++) {
+    var m = g.members[i];
+    var pData = buildPersonData_(m, personIds[m.key], analysisDate);
+    g.policies.filter(function(p){ return p._insKey === m.key; }).forEach(function(p){
+      pData.policies.push(buildPolicyRecord_(p));
+    });
+    await callGAS("saveFile", {
+      email: currentUser.email, fileType: "persons",
+      fileName: m.name + "_" + personIds[m.key] + ".json", content: pData
+    });
+  }
+
+  return { ok:true, message: "已建立新家庭「" + familyName + "」（" + g.members.length + " 位成員）" };
+}
+
+// ── 既有客戶：併入既有家庭 ───────────────────────────────────
+async function commitMatchedGroup_(g) {
+  var bundle = await callGAS("readFamilyBundle", {
+    email: currentUser.email, fileType: "families", fileName: g.matched.fileName
+  });
+  if (!bundle || bundle.status !== "ok") {
+    return { ok:false, message: "讀取既有家庭資料失敗" };
+  }
+  var family = bundle.family;
+  var persons = bundle.persons || {};
+
+  // 建立「姓名/身分證字號 -> personId」的對照，判斷這組裡每個人是不是
+  // 家庭裡已經有的成員
+  var existingByIdOrName = {};
+  Object.keys(persons).forEach(function(pid){
+    var prof = persons[pid].profile || {};
+    if (prof.idNumber) existingByIdOrName["ID:"+prof.idNumber] = pid;
+    existingByIdOrName["NAME:"+prof.name] = pid;
+  });
+
+  var conflicts = [];
+  var newMembersToAdd = [];
+  var updatedPersonIds = {};
+
+  for (var mi=0; mi<g.members.length; mi++) {
+    var m = g.members[mi];
+    var existingPid = (m.idNumber && existingByIdOrName["ID:"+m.idNumber]) || existingByIdOrName["NAME:"+m.name];
+    var targetPerson, targetPersonId;
+
+    if (existingPid) {
+      targetPerson = persons[existingPid];
+      targetPersonId = existingPid;
+    } else {
+      // 這個家庭裡沒出現過的新面孔（例如原本只登記爸爸，這次匯入才第一次
+      // 出現媽媽），幫他新建一筆 person，並加進 family.members
+      targetPersonId = "p_" + Date.now() + "_" + mi;
+      targetPerson = buildPersonData_(m, targetPersonId, family.analysisDate || todayISO_());
+      newMembersToAdd.push({
+        personId: targetPersonId, name: m.name,
+        role: "family", relation: m.relationship || "家人"
+      });
+    }
+
+    // 把這個人名下的保單，逐筆檢查保單號碼是否已存在——已存在的先攔下來
+    // 不覆蓋，只有全新保單號碼才自動加進去，確保不會洗掉你已經手動精修
+    // 過的資料。
+    var policiesForThisPerson = g.policies.filter(function(p){ return p._insKey === m.key; });
+    var existingPolicyNos = (targetPerson.policies || []).map(function(pp){ return pp.policyNo; });
+    policiesForThisPerson.forEach(function(p){
+      if (existingPolicyNos.indexOf(p.policyNo) !== -1) {
+        conflicts.push(m.name + " 的保單 " + p.policyNo + "（" + p.productName + "）已經存在，本次不覆蓋，請自行到保單清單比對");
+      } else {
+        targetPerson.policies = targetPerson.policies || [];
+        targetPerson.policies.push(buildPolicyRecord_(p));
+      }
+    });
+
+    targetPerson.updatedAt = new Date().toISOString();
+    updatedPersonIds[targetPersonId] = targetPerson;
+  }
+
+  // 寫回每一個有異動的 person
+  for (var pid in updatedPersonIds) {
+    var pdata = updatedPersonIds[pid];
+    await callGAS("saveFile", {
+      email: currentUser.email, fileType: "persons",
+      fileName: pdata.profile.name + "_" + pid + ".json", content: pdata
+    });
+  }
+
+  // 如果有新面孔要加進家庭成員名單，更新 family 檔案
+  if (newMembersToAdd.length) {
+    family.members = (family.members || []).concat(newMembersToAdd);
+    family.updatedAt = new Date().toISOString();
+    await callGAS("saveFile", {
+      email: currentUser.email, fileType: "families",
+      fileName: g.matched.fileName, content: family
+    });
+  }
+
+  var msg = "已併入「" + g.matched.familyName + "」";
+  if (newMembersToAdd.length) msg += "，新增 " + newMembersToAdd.length + " 位成員";
+  if (conflicts.length) msg += "，" + conflicts.length + " 張保單因為已存在而略過（未覆蓋）";
+  return { ok:true, message: msg };
 }
 </script>
 </body>
