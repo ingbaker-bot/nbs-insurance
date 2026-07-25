@@ -1101,6 +1101,55 @@ function buildRetirementPillarHtml(memberName, calc, ageFrom, ageTo){
   };
 }
 
+// ═══════════════════════════════════════════════════════
+//  各項保障加總（保單明細一覽表）：拆成 row1Html／row2Html 兩塊，
+//  PDF 匯出時才能各自量高度、放不下就換頁，不會再被強制塞進同一張
+//  A4，超出頁面下緣被裁掉看不到。
+// ═══════════════════════════════════════════════════════
+function buildPolicyDetailPartsEx(policies){
+  var cov3={};
+  policies.forEach(function(p){
+    Object.entries(p.coverage||{}).forEach(function(e){
+      if(typeof e[1]==="number") cov3[e[0]]=(cov3[e[0]]||0)+e[1]; else cov3[e[0]]=e[1];
+    });
+  });
+  var titleHtml = '<div style="font-size:48px;font-weight:800;color:#444;margin-bottom:8px">各項保障加總</div>';
+  // 「長期看護」「失能（殘廢）」欄位變多之後，改成獨立第二排、各自佔
+  // 一整欄，不再跟「日額型住院」擠同一欄，避免這欄比其他欄高出一截，
+  // 導致整張圖為了塞進同一頁被迫等比例縮小、其他欄的字也被拖累變小。
+  var columnMapRow1 = [
+    ["壽險/重大保障(終身/定期)", "意外險"],
+    ["住院醫療 (實支實付)", "定額手術"],
+    ["日額型住院"],
+    ["癌症醫療"],
+  ];
+  var columnMapRow2 = [
+    ["長期看護"],
+    ["失能（殘廢）"],
+  ];
+  function renderColumnRow(columnMap, colCount){
+    var rowHtml='<div style="display:grid;grid-template-columns:repeat('+colCount+',620px);gap:14px;align-items:start;width:2540px">';
+    columnMap.forEach(function(labels){
+      rowHtml+='<div style="display:flex;flex-direction:column;gap:6px">';
+      labels.forEach(function(label){
+        var g = COVERAGE_GROUPS_EX.find(function(x){ return x.label===label; });
+        if (g) rowHtml += buildStatGroupCard(g, policies, cov3);
+      });
+      rowHtml+='</div>';
+    });
+    rowHtml+='</div>';
+    return rowHtml;
+  }
+  var row1Html = '<div style="width:2540px;padding:8px 16px;box-sizing:content-box">' + renderColumnRow(columnMapRow1, 4) + '</div>';
+  var row2Html = '<div style="width:2540px;padding:8px 16px;box-sizing:content-box">' + renderColumnRow(columnMapRow2, 4) + '</div>';
+  return {
+    titleHtml: titleHtml,
+    row1Html: row1Html,
+    row2Html: row2Html,
+    html: '<div style="width:2540px;padding:8px 16px;box-sizing:content-box">' + titleHtml + '</div>' + row1Html + '<div style="margin-top:14px">' + row2Html + '</div>'
+  };
+}
+
 function buildRetirementPillarsParts(pdmAll, fData, ageFrom, ageTo){
   var parts = [];
   (fData.members||[]).filter(function(m){return m.role!=="beneficiary_only";}).forEach(function(m){
@@ -3157,45 +3206,8 @@ function renderBlock(key){
 
   // ▼ ③保單明細一覽表：原「各項保障加總」完全不動，只改外層區塊名稱
   if(key==="policy_detail"){
-    var cov3={};
-    policies.forEach(function(p){
-      Object.entries(p.coverage||{}).forEach(function(e){
-        if(typeof e[1]==="number") cov3[e[0]]=(cov3[e[0]]||0)+e[1]; else cov3[e[0]]=e[1];
-      });
-    });
-    var html='<div style="width:2540px;padding:8px 16px;box-sizing:content-box">';
-    // 放大「各項保障加總」主標題
-    html+='<div style="font-size:48px;font-weight:800;color:#444;margin-bottom:8px">各項保障加總</div>';
-    // 「長期看護」「失能（殘廢）」欄位變多之後，改成獨立第二排、各自佔
-    // 一整欄，不再跟「日額型住院」擠同一欄，避免這欄比其他欄高出一截，
-    // 導致整張圖為了塞進同一頁被迫等比例縮小、其他欄的字也被拖累變小。
-    var columnMapRow1 = [
-      ["壽險/重大保障(終身/定期)", "意外險"],
-      ["住院醫療 (實支實付)", "定額手術"],
-      ["日額型住院"],
-      ["癌症醫療"],
-    ];
-    var columnMapRow2 = [
-      ["長期看護"],
-      ["失能（殘廢）"],
-    ];
-    function renderColumnRow(columnMap, colCount){
-      var rowHtml='<div style="display:grid;grid-template-columns:repeat('+colCount+',620px);gap:14px;align-items:start;width:2540px">';
-      columnMap.forEach(function(labels){
-        rowHtml+='<div style="display:flex;flex-direction:column;gap:6px">';
-        labels.forEach(function(label){
-          var g = COVERAGE_GROUPS_EX.find(function(x){ return x.label===label; });
-          if (g) rowHtml += buildStatGroupCard(g, policies, cov3);
-        });
-        rowHtml+='</div>';
-      });
-      rowHtml+='</div>';
-      return rowHtml;
-    }
-    html += renderColumnRow(columnMapRow1, 4);
-    html += '<div style="margin-top:14px">' + renderColumnRow(columnMapRow2, 4) + '</div>';
-    html+='</div>';
-    return html;
+    var pdParts = buildPolicyDetailPartsEx(policies);
+    return pdParts.html;
   }
 
 
@@ -3735,6 +3747,41 @@ async function buildPdfDocument(blks,div){
           pdf.addImage(footC4.toDataURL("image/jpeg",0.88),"JPEG",margin,y4,fd4.iw,fd4.ih);
         }
       }
+    } else if(blks[i].key==="policy_detail"){
+      // ── 各項保障加總：改成量高度動態分頁，不再強制滿版寬度、任由
+      // 高度超出頁面下緣被裁掉看不到。第一排（壽險/意外/住院醫療/
+      // 定額手術/日額型住院/癌症醫療）跟第二排（長期看護/失能殘廢）
+      // 各自獨立量高度，一頁放不下才換頁，維持滿版寬度不縮小文字。
+      var pdParts2 = buildPolicyDetailPartsEx(policies);
+      var titleC5 = await captureHtml(getBlockTitleHtml(blks[i]) + pdParts2.titleHtml);
+      var titleH5 = (titleC5.height/titleC5.width)*usableW;
+
+      async function startNewPagePDD(){
+        addNewPage("保障");
+        pdf.addImage(titleC5.toDataURL("image/jpeg",0.88),"JPEG",margin,margin,usableW,titleH5);
+        return margin+titleH5+4;
+      }
+
+      var y5 = await startNewPagePDD();
+
+      var row1C = await captureHtml(pdParts2.row1Html);
+      var row1H = (row1C.height/row1C.width)*usableW;
+      if (y5+row1H > margin+usableH && y5>margin+1) { y5 = await startNewPagePDD(); }
+      pdf.addImage(row1C.toDataURL("image/jpeg",0.88),"JPEG",margin,y5,usableW,row1H);
+      y5 += row1H + 8;
+
+      var row2C = await captureHtml(pdParts2.row2Html);
+      var row2H = (row2C.height/row2C.width)*usableW;
+      if (y5+row2H > margin+usableH && y5>margin+1) { y5 = await startNewPagePDD(); }
+      pdf.addImage(row2C.toDataURL("image/jpeg",0.88),"JPEG",margin,y5,usableW,row2H);
+      y5 += row2H;
+
+      if(isLast || fmt==="pdf_pages"){
+        var footC5 = await captureHtml(disclaimer+wm);
+        var fd5 = canvasToMM(footC5, usableW, 40);
+        if(y5+fd5.ih > margin+usableH){ y5 = await startNewPagePDD(); }
+        pdf.addImage(footC5.toDataURL("image/jpeg",0.88),"JPEG",margin,y5,fd5.iw,fd5.ih);
+      }
     } else {
       // ── 其餘區塊：維持單頁等比例縮放 ──────────────────
       var PAGE_LABEL_PREFIX = { summary:"彙總", policy_detail:"保障", cover:"封面", family_premium_summary:"總表", family_savings_summary:"總表", retirement_pillars:"三層", monthly_cashflow_calendar:"月曆" };
@@ -3742,9 +3789,10 @@ async function buildPdfDocument(blks,div){
       var showDisclaimer = isCover ? false : (fmt==="pdf_pages" ? true : isLast);
       var c = await captureHtml((isCover?'':getBlockTitleHtml(blks[i]))+renderBlock(blks[i].key)+(showDisclaimer?disclaimer:"")+(isCover?'':wm));
       addNewPage(PAGE_LABEL_PREFIX[blks[i].key] || "報告");
-      // 保單彙總一覽表、保單明細一覽表這兩個區塊，永遠強制滿版寬度，
-      // 不要再讓高度超出可用範圍時，反過來把寬度也跟著縮小。
-      var forceFullWidth = (blks[i].key==="summary" || blks[i].key==="policy_detail");
+      // 保單彙總一覽表這個區塊，永遠強制滿版寬度，不要再讓高度超出可用
+      // 範圍時，反過來把寬度也跟著縮小。（保單明細一覽表/policy_detail
+      // 已經改用專屬的動態分頁邏輯，不會再走到這裡）
+      var forceFullWidth = (blks[i].key==="summary");
       var d = forceFullWidth ? canvasToMMFullWidth(c, usableW) : canvasToMM(c, usableW, usableH);
       // 內容比整頁矮的時候（等比例縮放後高度小於可用高度），改成垂直置中
       // 顯示，讓上下留白平均分配，不要整段空白都堆在下方，看起來像沒用滿
