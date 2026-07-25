@@ -690,14 +690,24 @@
     // 差別在於這裡不用重新呼叫 listFamilies，直接用畫面上已經抓好的
     // allFamilies 找出同一組的所有版本即可。
     function promptDeleteEntireFamily(groupId, familyName) {
+      // 家庭名稱本身是空的／損毀的（例如建立過程中出錯，存成一筆看不到
+      // 名稱的殘留資料），這種情況沒辦法要求使用者「完整打出家庭名稱」
+      // 來確認，不然會永遠卡住刪不掉。改成打固定的英文字「DELETE」代替。
+      var isBroken = !familyName || !familyName.trim();
+      var confirmPhrase = isBroken ? "DELETE" : familyName;
+      var displayName = isBroken ? "（沒有名稱的異常資料）" : familyName;
+
       if (!window.confirm(
-        "確定要刪除「"+familyName+"」這整個檔案嗎？\n\n" +
+        "確定要刪除「"+displayName+"」這整個檔案嗎？\n\n" +
         "這會刪除所有版本（現況／草案／歷史現況）與底下所有成員的保單資料，此動作無法復原。"
       )) return;
-      var typed = window.prompt("最後確認：請完整輸入家庭名稱「"+familyName+"」以永久刪除：");
+      var promptMsg = isBroken
+        ? "最後確認：這筆資料沒有名稱，請輸入英文「DELETE」以永久刪除："
+        : "最後確認：請完整輸入家庭名稱「"+familyName+"」以永久刪除：";
+      var typed = window.prompt(promptMsg);
       if (typed === null) return; // 使用者取消
-      if (typed.trim() !== familyName) {
-        alert("輸入的名稱不符，已取消刪除，資料仍然保留。");
+      if (typed.trim() !== confirmPhrase) {
+        alert("輸入的內容不符，已取消刪除，資料仍然保留。");
         return;
       }
 
