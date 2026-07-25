@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>批次匯入保單 — NBS 雲端保單體檢</title>
+<style>
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f5f3;margin:0;padding:20px 16px 80px}
+  .wrap{max-width:900px;margin:0 auto}
+  .top{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+  .back{color:#666;text-decoration:none;font-size:14px}
+  h1{font-size:20px;margin:0}
+  .card{background:#fff;border-radius:14px;padding:20px;margin-bottom:16px;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+  .hint{font-size:13px;color:#888;line-height:1.7;margin-top:6px}
+  .btn{padding:11px 20px;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;border:none;font-family:inherit}
+  .btn-primary{background:#4338ca;color:#fff}
+  .btn-primary:disabled{background:#c7c7d0;cursor:not-allowed}
+  .btn-secondary{background:#f0f0f0;color:#444}
+  input[type=file]{width:100%;padding:10px;border:1.5px dashed #cbd5e1;border-radius:9px;background:#fafafa}
+  input[type=text]{width:100%;padding:8px 10px;border:1.5px solid #e0e0e0;border-radius:7px;font-size:13px;font-family:inherit}
+  .status-box{padding:10px 14px;border-radius:8px;font-size:13px;margin-top:10px;line-height:1.6}
+  .info{background:#E6F1FB;color:#0C447C}
+  .warn{background:#FAEEDA;color:#633806}
+  .error{background:#FCEBEB;color:#791F1F}
+  .ok{background:#EAF3DE;color:#27500A}
+
+  .group-card{border:1.5px solid #e5e5e0;border-radius:12px;margin-bottom:14px;overflow:hidden}
+  .group-head{padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .group-head.new{background:#EAF3DE}
+  .group-head.matched{background:#E6F1FB}
+  .group-title{font-size:15px;font-weight:700}
+  .tag{display:inline-block;font-size:12px;font-weight:700;padding:2px 9px;border-radius:99px;margin-left:6px}
+  .tag-new{background:#27500A;color:#fff}
+  .tag-matched{background:#0C447C;color:#fff}
+  .member-list{padding:10px 18px;font-size:13px;color:#444;line-height:2}
+  .member-list .rel{color:#999;font-size:12px}
+  .policy-row{padding:8px 18px;border-top:1px solid #f0f0f0;font-size:13px}
+  .policy-head{display:flex;justify-content:space-between;color:#222;font-weight:600}
+  .field-tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:99px;margin:2px 4px 2px 0}
+  .field-mapped{background:#EAF3DE;color:#27500A}
+  .field-unmapped{background:#FAEEDA;color:#8A5A00}
+  .agent-row{padding:10px 18px;background:#fafafa;display:flex;align-items:center;gap:8px;font-size:13px}
+  .agent-row input{max-width:220px}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="top">
+    <a class="back" href="main.html">‹ 返回</a>
+    <h1>📥 批次匯入保單</h1>
+  </div>
+
+  <div class="card">
+    <div style="font-weight:600;margin-bottom:8px">第一步：上傳保單資料 JSON</div>
+    <input type="file" id="file-input" accept="application/json" />
+    <div class="hint">
+      支援富邦保單匯出的 JSON 格式。這個階段只會解析、分組、比對，<b>不會寫入任何資料</b>——
+      確認分組跟給付項目對照結果都正確後，才會進到下一階段真正儲存。
+    </div>
+    <div style="margin-top:14px">
+      <label style="font-size:13px;color:#555;display:block;margin-bottom:6px">這批資料要記錄成哪位業務員的？</label>
+      <input type="text" id="agent-name-input" placeholder="例如：李丞敏" />
+    </div>
+    <div id="upload-status"></div>
+    <button class="btn btn-primary" id="parse-btn" style="margin-top:14px" onclick="parseFile()" disabled>開始解析</button>
+  </div>
+
+  <div id="result-summary"></div>
+  <div id="result-groups"></div>
+</div>
+
+<script src="nav.js"></script>
+<script>
+var currentUser = null;
+var parsedGroups = [];   // 分組後的結果
+var existingFamilies = []; // 目前登入帳號既有的家庭索引
+
+// ── 給付項目對照字典 ────────────────────────────────────
+// 只放「已經確認過」的規則，沒把握的項目一律不猜、標記成「無法歸類」
+// 讓業務員自己在預覽畫面複核，不會自動用備註文字猜頻率。
+var BENEFIT_MAPPING = {
+  "住院日數1－30日":       {key:"daily_room_1_30"},
+  "住院日數31日起":        {key:"daily_room_31"},
+  "出院後療養保險金":       {key:"daily_discharge"},
+  "加護病房醫療保險金":     {key:"daily_icu"},
+  "燒燙傷中心醫療保險金":   {key:"daily_burn"},
+  "住院前後門診保險金":     {key:"daily_opd"},
+  "老年住院關懷保險金":     {key:"daily_senior"},
+  "住院手術醫療保險金":     {key:"surg_hosp"},
+  "門診手術醫療保險金":     {key:"surg_opd"},
+  "完全失能生活扶助保險金": {key:"dis_lump_illness", altKey:"dis_lump_accident"}, // 疾病/意外要看保單類型判斷，見 pickDisabilityKey_
+  "完全失能或最高失能等級": {key:"dis_lump_accident"},
+  "特定事故保險金":         {key:"acc_special"},
+  "重大燒燙傷":             {key:"acc_burn"},
+  "意外傷害醫療保險金":     {key:"acc_opd"},
+  "手術醫療保險金":         {key:"surg_hosp"},
+  "特定處置項目保險金":     {key:"surg_special"},
+  "住院手術療養保險金":     {key:"surg_nurse"},
+  "抗排斥藥物醫療保險金":   {key:"daily_antirej"},
+  "重大疾病保險金":         {key:"ci_major_lump"},
+};
+
+// 給付項目文字常常帶括號備註（例如「（同一次住院最高給付日數以365日為限）」），
+// 對照字典比對前先把這些雜訊清乾淨，只留「」內或前段的核心文字。
+// 給付項目文字常常帶括號備註，而且括號可能是巢狀的（例如「（接受住院手術
+// 等級倍數為十倍（含）以上者）」），單純用一次 regex 去括號會漏掉外層；
+// 這裡改成反覆去除「最內層」括號，直到沒有括號為止，同時把全形/半形
+// 空白也一併清掉（原始資料常常有像「1 －30 日」這種帶空白的寫法，
+// 跟對照字典比對前一定要先正規化，不然明明是同一個項目卻比對不到）。
+function cleanBenefitLabel_(raw) {
+  if (!raw) return "";
+  var s = raw.replace(/「|」/g, "");
+  var prev;
+  do {
+    prev = s;
+    s = s.replace(/（[^（）]*）/g, "");
+  } while (s !== prev);
+  s = s.replace(/[\s\u3000]/g, ""); // 半形空白 + 全形空白都清掉
+  return s.trim();
+}
+
+function lookupBenefitMapping_(rawLabel, policyCategory) {
+  var cleaned = cleanBenefitLabel_(rawLabel);
+  var rule = BENEFIT_MAPPING[cleaned];
+  if (!rule) return null;
+  // 「完全失能生活扶助保險金」這種疾病/意外沒辦法從文字本身分辨的項目，
+  // 先用這張保單本身是不是「意外」類型當簡單判斷依據，仍然可能判斷錯，
+  // 一律標記出來讓業務員在預覽畫面自己確認。
+  var key = rule.key;
+  var needsReview = false;
+  if (rule.altKey) {
+    needsReview = true;
+    if (policyCategory && policyCategory.indexOf("意外") !== -1) key = rule.altKey;
+  }
+  return { key: key, needsReview: needsReview, rawLabel: rawLabel };
+}
+
+window.onload = function() {
+  var saved = localStorage.getItem("nbs_user");
+  if (!saved) { window.location.href = "index.html"; return; }
+  currentUser = JSON.parse(saved);
+  var isElite = !!(currentUser.isAdmin || currentUser.tier === "菁英");
+  if (!isElite) {
+    alert("批次匯入保單是菁英會員專屬功能，請聯繫管理員升級");
+    window.location.href = "main.html";
+    return;
+  }
+  document.getElementById("agent-name-input").value = currentUser.agentName || currentUser.name || "";
+
+  document.getElementById("file-input").addEventListener("change", function(){
+    document.getElementById("parse-btn").disabled = !this.files.length;
+  });
+};
+
+function callGAS(action, params) {
+  if (window.NBS_NAV && typeof NBS_NAV.callGAS === "function") {
+    return NBS_NAV.callGAS(action, params);
+  }
+  return Promise.reject(new Error("nav.js 未載入"));
+}
+
+function showUploadStatus(type, msg) {
+  var el = document.getElementById("upload-status");
+  el.innerHTML = '<div class="status-box ' + type + '">' + msg + '</div>';
+}
+
+// ── 第一步：讀檔＋解析 ──────────────────────────────────
+function parseFile() {
+  var fileInput = document.getElementById("file-input");
+  var file = fileInput.files[0];
+  if (!file) return;
+
+  showUploadStatus("info", "讀取檔案中…");
+  document.getElementById("parse-btn").disabled = true;
+
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var data = JSON.parse(e.target.result);
+      var policies = data.policies || [];
+      if (!policies.length) {
+        showUploadStatus("warn", "這份檔案裡沒有讀到任何保單資料，請確認檔案內容。");
+        document.getElementById("parse-btn").disabled = false;
+        return;
+      }
+      showUploadStatus("info", "解析中，共 " + policies.length + " 筆保單…");
+      var normalized = policies.map(normalizeFubonPolicy_).filter(Boolean);
+      var groups = buildRelationshipGroups_(normalized);
+      showUploadStatus("info", "分組完成，共 " + groups.length + " 組客戶，正在比對既有資料…");
+      matchAgainstExisting_(groups).then(function(matchedGroups){
+        parsedGroups = matchedGroups;
+        showUploadStatus("ok", "解析完成：" + normalized.length + " 筆保單、" + groups.length + " 組客戶。請往下檢查分組與給付項目對照結果。");
+        document.getElementById("parse-btn").disabled = false;
+        renderResults_();
+      }).catch(function(err){
+        showUploadStatus("error", "比對既有資料時發生錯誤：" + err.message);
+        document.getElementById("parse-btn").disabled = false;
+      });
+    } catch (err) {
+      showUploadStatus("error", "這份檔案不是有效的 JSON，或格式跟預期不符：" + err.message);
+      document.getElementById("parse-btn").disabled = false;
+    }
+  };
+  reader.readAsText(file, "UTF-8");
+}
+
+// ── 把富邦原始保單資料，轉成統一格式 ──────────────────────
+function normalizeFubonPolicy_(p) {
+  try {
+    var sec03 = (p.sec03_保單基本資料 && p.sec03_保單基本資料.kvPairs) || {};
+    var applicantName = p.applicant || "";
+    var insuredName   = p.insured || "";
+    // sec03 的 kvPairs 裡，關係欄位是用「被保險人姓名/要保人姓名」當 key、
+    // 關係文字（本人/父母子女/配偶…）當 value，逐一找出來。
+    var relationship = sec03[applicantName] || sec03[insuredName] || "";
+    var applicantIdNumber = sec03["身分證號碼"] || "";
+    var applicantBirth    = sec03["生日"] || "";
+    var applicantPhone    = sec03["行動電話"] || sec03["收費/聯絡電話"] || "";
+    var applicantEmail    = sec03["電子信箱"] || "";
+    var applicantAddress  = sec03["住所/戶籍地址"] || sec03["收費地址"] || "";
+    var suggestedAgent    = sec03["鄭牧青"] || sec03["服務人員資料"] || "";
+
+    var items = (p.sec05_保險項目與金額 && p.sec05_保險項目與金額.items) || [];
+    var benefits = [];
+    var mainItem = items.find(function(it){ return it._isMainItem; }) || items[0] || {};
+    var category = guessCategoryFromProductName_(mainItem["保險項目"] || p.name || "");
+
+    items.forEach(function(it){
+      (it._benefits || []).forEach(function(b){
+        benefits.push({
+          rawLabel: b["給付項目"] || "",
+          amount: parseFubonAmount_(b["金額"]),
+          unit: b["單位"] || "",
+          itemName: it["保險項目"] || ""
+        });
+      });
+    });
+
+    return {
+      policyNo: p.policyNo || "",
+      productName: mainItem["保險項目"] || p.name || "",
+      category: category,
+      status: mainItem["契約狀態"] || p.status || "",
+      premium: mainItem["保險費"] || "",
+      payEndDate: mainItem["繳費期滿日"] || "",
+      covEndDate: mainItem["保障期滿日"] || "",
+      applicant: {
+        name: applicantName,
+        idNumber: applicantIdNumber,
+        birthDate: applicantBirth,
+        phone: applicantPhone,
+        email: applicantEmail,
+        address: applicantAddress
+      },
+      insured: { name: insuredName },
+      relationship: relationship, // 要保人相對於被保險人的關係
+      suggestedAgent: suggestedAgent,
+      benefits: benefits,
+      mappedBenefits: benefits.map(function(b){
+        var m = lookupBenefitMapping_(b.rawLabel, category);
+        return Object.assign({}, b, m ? { mappedKey: m.key, needsReview: m.needsReview } : { mappedKey: null, needsReview: false });
+      })
+    };
+  } catch (e) {
+    console.error("解析單筆保單失敗", e, p);
+    return null;
+  }
+}
+
+function parseFubonAmount_(raw) {
+  if (!raw) return 0;
+  var n = String(raw).replace(/[^\d.]/g, "");
+  return parseFloat(n) || 0;
+}
+
+function guessCategoryFromProductName_(name) {
+  if (!name) return "";
+  if (name.indexOf("意外") !== -1) return "意外險";
+  if (name.indexOf("重大疾病") !== -1) return "重大疾病險";
+  if (name.indexOf("癌症") !== -1) return "癌症醫療";
+  if (name.indexOf("醫療") !== -1 || name.indexOf("健康") !== -1) return "醫療保障";
+  if (name.indexOf("投資型") !== -1 || name.indexOf("變額") !== -1) return "投資型保險";
+  if (name.indexOf("年金") !== -1) return "年金險";
+  if (name.indexOf("壽險") !== -1 || name.indexOf("終身壽") !== -1) return "壽險保障";
+  return "儲蓄險"; // 抓不到明確關鍵字，先歸類成儲蓄險，預覽畫面會標示請人工確認
+}
+
+// ── 用「要保人-被保險人關係」把保單分組成客戶／家庭 ─────────
+function buildRelationshipGroups_(policies) {
+  // 用簡單的 union-find：同一組裡的人只要透過任何一張保單的
+  // 要保人/被保險人關係連在一起，就歸成同一組。
+  var parent = {};
+  function find(x){ if(parent[x]===undefined) parent[x]=x; if(parent[x]!==x) parent[x]=find(parent[x]); return parent[x]; }
+  function union(a,b){ var ra=find(a), rb=find(b); if(ra!==rb) parent[ra]=rb; }
+
+  var personKey = {}; // name -> key（優先用身分證字號當 key，比姓名可靠）
+  function keyOf(name, idNumber) {
+    if (idNumber) return "ID:" + idNumber;
+    if (personKey[name]) return personKey[name];
+    var k = "NAME:" + name;
+    personKey[name] = k;
+    return k;
+  }
+
+  var personInfo = {}; // key -> {name, idNumber, relationship}
+  policies.forEach(function(p){
+    var appKey = keyOf(p.applicant.name, p.applicant.idNumber);
+    var insKey = keyOf(p.insured.name, "");
+    if (!personInfo[appKey]) personInfo[appKey] = { name: p.applicant.name, idNumber: p.applicant.idNumber, birthDate: p.applicant.birthDate, phone: p.applicant.phone, email: p.applicant.email, address: p.applicant.address };
+    if (!personInfo[insKey]) personInfo[insKey] = { name: p.insured.name, idNumber: "" };
+    union(appKey, insKey);
+    p._appKey = appKey; p._insKey = insKey;
+  });
+
+  var groupsByRoot = {};
+  Object.keys(personInfo).forEach(function(k){
+    var root = find(k);
+    if (!groupsByRoot[root]) groupsByRoot[root] = { members: {}, policies: [] };
+    groupsByRoot[root].members[k] = personInfo[k];
+  });
+  policies.forEach(function(p){
+    var root = find(p._appKey);
+    groupsByRoot[root].policies.push(p);
+  });
+
+  return Object.keys(groupsByRoot).map(function(root){
+    var g = groupsByRoot[root];
+    var members = Object.keys(g.members).map(function(k){ return Object.assign({key:k}, g.members[k]); });
+    // 把「有身分證字號、有出現過關係文字」的人排在前面，方便畫面上第一眼看到主要要保人
+    members.sort(function(a,b){ return (b.idNumber?1:0) - (a.idNumber?1:0); });
+    return { members: members, policies: g.policies, matched: null };
+  });
+}
+
+// ── 比對既有客戶：抓目前登入帳號的家庭清單，用身分證字號/姓名比對 ──
+function matchAgainstExisting_(groups) {
+  return callGAS("listFamilies", {}).then(function(res){
+    existingFamilies = (res && res.families) || [];
+    // 逐組跟既有家庭比對：只要這組裡任何一個人的身分證字號或姓名，
+    // 跟某個既有家庭的成員對得上，整組都算「併入」那個既有家庭
+    // （即使組裡有些人是這個家庭裡沒出現過的新面孔）。
+    var matchPromises = groups.map(function(g){
+      return matchOneGroup_(g);
+    });
+    return Promise.all(matchPromises);
+  });
+}
+
+function matchOneGroup_(group) {
+  // 目前家庭索引只有成員「姓名」，沒有身分證字號（基於個資最小化原則，
+  // 索引檔沒有存這個），先用姓名做初步篩選，抓出「可能是同一家」的
+  // 候選家庭，再讀取候選家庭的完整資料比對身分證字號做最終確認。
+  var candidateNames = group.members.map(function(m){ return m.name; });
+  var candidates = existingFamilies.filter(function(f){
+    return (f.memberNames || []).some(function(n){ return candidateNames.indexOf(n) !== -1; });
+  });
+  if (!candidates.length) {
+    group.matched = null;
+    return Promise.resolve(group);
+  }
+  // 讀取候選家庭的完整資料，用身分證字號做最終比對（沒有身分證字號的人退回姓名比對）
+  var readPromises = candidates.map(function(f){
+    return callGAS("readFamilyBundle", { fileType:"families", fileName: f.fileName }).catch(function(){ return null; });
+  });
+  return Promise.all(readPromises).then(function(bundles){
+    for (var i=0; i<bundles.length; i++) {
+      var b = bundles[i];
+      if (!b || b.status !== "ok") continue;
+      var persons = b.persons || {};
+      var matchedByIdOrName = group.members.some(function(m){
+        return Object.keys(persons).some(function(pid){
+          var prof = persons[pid].profile || {};
+          if (m.idNumber && prof.idNumber && m.idNumber === prof.idNumber) return true;
+          if (!m.idNumber && prof.name === m.name) return true;
+          return false;
+        });
+      });
+      if (matchedByIdOrName) {
+        group.matched = { familyName: candidates[i].familyName, fileName: candidates[i].fileName };
+        break;
+      }
+    }
+    return group;
+  });
+}
+
+// ── 渲染預覽結果 ──────────────────────────────────────────
+function renderResults_() {
+  var totalPolicies = parsedGroups.reduce(function(s,g){ return s + g.policies.length; }, 0);
+  var newCount = parsedGroups.filter(function(g){ return !g.matched; }).length;
+  var matchedCount = parsedGroups.length - newCount;
+
+  document.getElementById("result-summary").innerHTML =
+    '<div class="card">' +
+      '<div style="font-weight:700;margin-bottom:6px">解析結果總覽</div>' +
+      '<div style="font-size:13px;color:#555;line-height:1.9">' +
+        '共 ' + parsedGroups.length + ' 組客戶（' + totalPolicies + ' 張保單）　' +
+        '<span style="color:#27500A;font-weight:700">新客戶 ' + newCount + ' 組</span>　' +
+        '<span style="color:#0C447C;font-weight:700">併入既有客戶 ' + matchedCount + ' 組</span>' +
+      '</div>' +
+      '<div class="hint">以下請逐組檢查分組是否正確、給付項目對照結果是否合理。這個階段還沒有寫入功能，先確認資料沒問題。</div>' +
+    '</div>';
+
+  var html = parsedGroups.map(function(g, idx){
+    return renderGroupCard_(g, idx);
+  }).join("");
+  document.getElementById("result-groups").innerHTML = html;
+}
+
+function renderGroupCard_(g, idx) {
+  var isNew = !g.matched;
+  var headClass = isNew ? "new" : "matched";
+  var tagHtml = isNew
+    ? '<span class="tag tag-new">新客戶</span>'
+    : '<span class="tag tag-matched">併入既有：' + g.matched.familyName + '</span>';
+
+  var mainMember = g.members[0];
+  var memberListHtml = g.members.map(function(m, i){
+    var relText = i === 0 ? "主要聯絡人" : (m.relationship || "關係待確認");
+    return '<div>' + m.name + (m.idNumber ? '（' + m.idNumber + '）' : '（無身分證字號）') +
+      ' <span class="rel">' + relText + '</span></div>';
+  }).join("");
+
+  var policiesHtml = g.policies.map(function(p){
+    var fieldsHtml = p.mappedBenefits.map(function(b){
+      if (b.mappedKey) {
+        var cls = b.needsReview ? "field-unmapped" : "field-mapped";
+        var label = b.rawLabel + " → " + b.mappedKey + (b.needsReview ? "（請確認疾病/意外）" : "");
+        return '<span class="field-tag ' + cls + '">' + label + '</span>';
+      }
+      return '<span class="field-tag field-unmapped">' + b.rawLabel + ' → 無法歸類，需人工確認</span>';
+    }).join("");
+    return '<div class="policy-row">' +
+      '<div class="policy-head"><span>' + p.productName + '（' + p.policyNo + '）</span><span style="color:#888;font-weight:400">' + p.category + '｜' + p.status + '</span></div>' +
+      '<div style="margin-top:6px">' + fieldsHtml + '</div>' +
+    '</div>';
+  }).join("");
+
+  return '<div class="group-card">' +
+    '<div class="group-head ' + headClass + '">' +
+      '<div class="group-title">' + mainMember.name + (g.members.length>1 ? '　等 ' + g.members.length + ' 人' : '') + tagHtml + '</div>' +
+    '</div>' +
+    '<div class="member-list">' + memberListHtml + '</div>' +
+    policiesHtml +
+    '<div class="agent-row">這批保單記錄為業務員：<input type="text" value="' + (document.getElementById("agent-name-input").value || "") + '" onchange="parsedGroups[' + idx + '].agentName=this.value" /></div>' +
+  '</div>';
+}
+</script>
+</body>
+</html>
