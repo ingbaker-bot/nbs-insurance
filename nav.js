@@ -73,7 +73,14 @@
     // ── 核心修改：判斷是否直連 ──
     var targetUrl = GAS_URL; // 預設 API 1
     var shellUrl = localStorage.getItem("nbs_shell_url");
-    var isAuthAction = (action === 'checkAuth' || action === 'registerShell' || action === 'apply');
+    // 這幾個動作一定要經過 API1，不能被「直連 Shell」繞過去：
+    // checkAuth/registerShell/apply 是原本就有的身份驗證動作；
+    // createFamily 需要 API1 先檢查會員等級／家庭數量上限；
+    // parsePolicyImage/parsePolicyText 需要 API1 先檢查是不是菁英會員
+    // （而且這兩個動作的 AI 解析邏輯本來就只存在 API1，Shell 完全沒有
+    // 實作，如果被直連繞過去反而會直接失敗，這裡順便修掉這個問題）。
+    var isAuthAction = (action === 'checkAuth' || action === 'registerShell' || action === 'apply' ||
+                         action === 'createFamily' || action === 'parsePolicyImage' || action === 'parsePolicyText');
     var isAdmin = user && user.isAdmin;
 
     // 非驗證動作 + 非管理員 + 有專屬網址 ➔ 直連！

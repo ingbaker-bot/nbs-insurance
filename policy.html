@@ -667,6 +667,8 @@ window.addEventListener("nbs_nav_ready", async function(e) {
   currentPersonId   = e.detail.currentPersonId;
   familyFileName    = e.detail.familyFileName;
 
+  applyAiParseLockUI_();
+
   if (!currentUser) {
     document.getElementById("loading").innerHTML = "載入失敗：請重新登入";
     return;
@@ -1701,7 +1703,48 @@ function loadPdfWithPassword(arrayBuffer, btn) {
 // ═══════════════════════════════════════════════════════
 //  未來 PDF 終極版：支援多檔案疊加、主附約整批合併、自動存檔
 // ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
+//  AI 辨識保單：菁英會員專屬功能。非菁英會員（一般會員/尚未取得
+//  等級資訊）看得到按鈕，但點下去會看到提醒，不會真的執行解析
+//  ——真正擋下來的判斷在 API1（parsePolicyImage/parsePolicyText），
+//  這裡只是提早在前端擋一次，給使用者比較好的體驗、少跑一趟網路。
+// ═══════════════════════════════════════════════════════
+function isEliteUser_() {
+  return !!(currentUser && (currentUser.isAdmin || currentUser.tier === "菁英"));
+}
+
+function applyAiParseLockUI_() {
+  if (isEliteUser_()) return; // 菁英/管理員：維持原樣，不用做任何事
+  const btn = document.getElementById("ai-parse-btn");
+  if (!btn) return;
+  btn.style.opacity = "0.55";
+  btn.style.cursor = "not-allowed";
+  btn.innerHTML = "🔒 ✨ 上傳並自動分析填表（菁英會員專屬）";
+}
+
+function showEliteOnlyNotice_() {
+  let el = document.getElementById("elite-only-notice");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "elite-only-notice";
+    el.style.cssText = "position:fixed;left:50%;bottom:24px;transform:translateX(-50%);"+
+      "background:#1a1a1a;color:#fff;padding:12px 16px;border-radius:10px;font-size:14px;"+
+      "z-index:9999;display:flex;align-items:center;gap:12px;box-shadow:0 4px 16px rgba(0,0,0,.2);max-width:90vw";
+    el.innerHTML = '<span>🔒 AI 辨識保單是菁英會員專屬功能，請聯繫管理員升級</span>'+
+      '<button onclick="document.getElementById(\'elite-only-notice\').remove()" '+
+      'style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:4px 10px;cursor:pointer">關閉</button>';
+    document.body.appendChild(el);
+  }
+  clearTimeout(window._eliteNoticeTimer);
+  window._eliteNoticeTimer = setTimeout(function(){
+    const cur = document.getElementById("elite-only-notice");
+    if (cur) cur.remove();
+  }, 3000);
+}
+
 async function handlePDFUpload() {
+  if (!isEliteUser_()) { showEliteOnlyNotice_(); return; }
+
   const fileInput = document.getElementById('pdf-upload');
   const file = fileInput.files[0];
   if (!file) return;

@@ -472,11 +472,15 @@
       document.getElementById("analysis-date-m").value = todayRoc.m;
       document.getElementById("analysis-date-d").value = todayRoc.d;
 
-      // ── 新增：檢查是否有直連網址，沒有就補抓 ──
+      // ── 新增：檢查是否有直連網址，沒有就補抓；順便刷新會員等級 ──
       const shellUrl = localStorage.getItem("nbs_shell_url");
       if (!shellUrl && !currentUser.isAdmin) {
         callGAS("checkAuth", { email: currentUser.email }).then(res => {
           if (res.shellUrl) localStorage.setItem("nbs_shell_url", res.shellUrl);
+          if (res.tier) {
+            currentUser.tier = res.tier;
+            localStorage.setItem("nbs_user", JSON.stringify(currentUser));
+          }
           loadFamilies();
         }).catch(() => loadFamilies());
       } else {
@@ -585,6 +589,11 @@
     function renderFamilies(families, isSearch) {
       const listEl  = document.getElementById("family-list");
       const labelEl = document.getElementById("list-label");
+
+      // 用「完整」家庭數量（不是下面隨機顯示截斷後的 10 筆）判斷要不要
+      // 鎖住新增家庭按鈕，這跟下面「超過 10 個隨機顯示 10 個」是兩件
+      //完全不同的事，不要搞混。
+      if (!isSearch) updateCreateButtonLockUI_(families.length);
 
       if (families.length === 0) {
         labelEl.textContent = isSearch ? "找不到符合的家庭" : "家庭列表";
@@ -745,7 +754,46 @@
     }
 
     // ── 新增家庭 Modal ────────────────────────────────────────
+    // 一般會員達到家庭數量上限時，「＋ 新增家庭」按鈕看得到但點不開，
+    // 真正的擋法在後端（Shell 的 createFamilyChecked），這裡只是提早
+    // 在前端給使用者比較好的體驗。
+    function isEliteUser_() {
+      return !!(currentUser && (currentUser.isAdmin || currentUser.tier === "菁英"));
+    }
+
+    function updateCreateButtonLockUI_(totalCount) {
+      const btn = document.querySelector(".add-btn");
+      if (!btn) return;
+      const locked = !isEliteUser_() && totalCount >= 10;
+      btn.dataset.locked = locked ? "1" : "0";
+      btn.style.opacity = locked ? "0.55" : "";
+      btn.style.cursor = locked ? "not-allowed" : "";
+      btn.textContent = locked ? "🔒 ＋ 新增家庭（已達上限）" : "＋ 新增家庭";
+    }
+
+    function showFamilyLimitNotice_() {
+      let el = document.getElementById("family-limit-notice");
+      if (!el) {
+        el = document.createElement("div");
+        el.id = "family-limit-notice";
+        el.style.cssText = "position:fixed;left:50%;bottom:24px;transform:translateX(-50%);"+
+          "background:#1a1a1a;color:#fff;padding:12px 16px;border-radius:10px;font-size:14px;"+
+          "z-index:9999;display:flex;align-items:center;gap:12px;box-shadow:0 4px 16px rgba(0,0,0,.2);max-width:90vw";
+        el.innerHTML = '<span>🔒 已達一般會員上限（10 個家庭），請聯繫管理員升級菁英會員</span>'+
+          '<button onclick="document.getElementById(\'family-limit-notice\').remove()" '+
+          'style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:6px;padding:4px 10px;cursor:pointer">關閉</button>';
+        document.body.appendChild(el);
+      }
+      clearTimeout(window._familyLimitTimer);
+      window._familyLimitTimer = setTimeout(function(){
+        const cur = document.getElementById("family-limit-notice");
+        if (cur) cur.remove();
+      }, 3000);
+    }
+
     function openCreateModal() {
+      const btn = document.querySelector(".add-btn");
+      if (btn && btn.dataset.locked === "1") { showFamilyLimitNotice_(); return; }
       document.getElementById("create-modal").classList.add("active");
       goStep1();
     }
@@ -807,7 +855,11 @@
 
       const btn = document.getElementById("create-btn");
       btn.disabled = true;
-      btn.textContent = "建立中…";
+      btn.textContent = "驗證中…";
+      // 這個動作會先經過 API1 查會員等級/家庭數量上限，比一般存檔多繞一站，
+      // 如果超過 2 秒還沒回應，把文字換成更明確的說法，避免使用者覺得
+      // 畫面卡住、以為系統當掉。
+      const slowHint = setTimeout(() => { btn.textContent = "確認中，請稍候…"; }, 2000);
 
       const familyId = "f_" + Date.now();
       const personId = "p_" + Date.now();
@@ -847,10 +899,22 @@
         sharedBeneficiary: [],
       };
 
-      // 先儲存個人 JSON，再儲存家庭 JSON
-      callGAS("saveFile", { fileType: "persons", fileName: primaryName + "_" + personId + ".json", content: personData })
-      .then(() => callGAS("saveFile", { fileType: "families", fileName: familyName + "_" + familyId + ".json", content: familyData }))
+      // 改用專屬的 createFamily 動作（一次送出 person + family 兩份資料），
+      // 讓 API1 有機會先檢查會員等級跟家庭數量上限，不再是共用的 saveFile。
+      callGAS("createFamily", {
+        personFileName: primaryName + "_" + personId + ".json",
+        personContent: personData,
+        familyFileName: familyName + "_" + familyId + ".json",
+        familyContent: familyData,
+      })
       .then(result => {
+        clearTimeout(slowHint);
+        if (result && result.code === "family_limit") {
+          btn.disabled = false;
+          btn.textContent = "建立家庭";
+          showCreateStatus("error", result.message || "已達目前方案的家庭數量上限，請聯繫管理員升級");
+          return;
+        }
         btn.disabled = false;
         btn.textContent = "建立家庭";
         closeModal();
@@ -858,6 +922,7 @@
         loadFamilies(true); // 清快取後強制重新載入，確保列表最新
       })
       .catch(err => {
+        clearTimeout(slowHint);
         btn.disabled = false;
         btn.textContent = "建立家庭";
         showCreateStatus("error", "建立失敗，請重試");
@@ -984,7 +1049,9 @@
       // ── 新增：判斷走 API 1 還是走直連 ──
       let targetUrl = AUTH_GAS_URL;
       const shellUrl = localStorage.getItem("nbs_shell_url");
-      const isAuthAction = (action === 'checkAuth' || action === 'registerShell' || action === 'apply');
+      // createFamily 要強制走 API1，讓它有機會先檢查會員等級／家庭數量
+      // 上限，不能像其他存檔動作一樣被直連繞過去。
+      const isAuthAction = (action === 'checkAuth' || action === 'registerShell' || action === 'apply' || action === 'createFamily');
       
       // 非驗證動作 + 非管理員 + 擁有直連網址，就直接打給 Shell！
       if (!isAuthAction && (!currentUser || !currentUser.isAdmin) && shellUrl) {

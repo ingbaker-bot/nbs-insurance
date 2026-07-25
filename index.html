@@ -381,6 +381,7 @@ function checkAndGo(email) {
       u.agentName = r.name;
       u.company   = r.company;
       u.isAdmin   = r.isAdmin||false;
+      u.tier      = r.tier || "一般"; // 一般／菁英，畫面上要不要顯示鎖頭圖示用這個判斷
       localStorage.setItem("nbs_user", JSON.stringify(u));
       showStatus("login-status","success","✓ 驗證成功，正在進入系統…");
       setTimeout(function(){
