@@ -321,7 +321,7 @@
     <!-- 搜尋 -->
     <div class="search-bar" style="margin-top:16px;">
       <span class="search-icon">🔍</span>
-      <input type="text" id="search-input" placeholder="搜尋家庭名稱…" oninput="filterFamilies()" />
+      <input type="text" id="search-input" placeholder="搜尋家庭名稱或成員姓名…" oninput="filterFamilies()" />
     </div>
 
     <!-- 新增按鈕（移到搜尋下方）-->
@@ -385,6 +385,12 @@
             <option value="female">女</option>
           </select>
           <div class="hint" style="font-size:12px;color:#999;margin-top:3px">用於平均餘命試算，之後也會用於家系圖</div>
+        </div>
+
+        <div class="field">
+          <label>身分證字號（選填）</label>
+          <input type="text" id="primary-id-number" placeholder="沒有也沒關係，之後隨時可以補填" maxlength="10" style="text-transform:uppercase" />
+          <div class="hint" style="font-size:12px;color:#999;margin-top:3px">用於之後批次匯入保單資料時比對客戶身分，現在沒有可以先跳過</div>
         </div>
 
         <div class="field">
@@ -740,7 +746,14 @@
         renderFamilies(allFamilies, false);  // 無搜尋：隨機 10 筆
         return;
       }
-      const filtered = allFamilies.filter(f => f.familyName.includes(q));
+      // 同時比對家庭名稱跟成員姓名，之前只比對家庭名稱，只要搜尋內容
+      // 剛好不在家庭名稱裡（例如成員本人的名字），不管是中文還是英數字
+      // 都會找不到，看起來就像「數字/英文搜不到」。
+      const qLower = q.toLowerCase();
+      const filtered = allFamilies.filter(f =>
+        f.familyName.toLowerCase().includes(qLower) ||
+        (f.memberNames || []).some(n => n.toLowerCase().includes(qLower))
+      );
       renderFamilies(filtered, true);         // 搜尋中：顯示全部結果
     }
 
@@ -845,6 +858,7 @@
       const primaryName  = document.getElementById("primary-name").value.trim();
       const birthDate    = document.getElementById("primary-birth").value;
       const gender       = document.getElementById("primary-gender").value;
+      const idNumber     = document.getElementById("primary-id-number").value.trim().toUpperCase();
       const analysisDate = document.getElementById("analysis-date").value;
       const familyName   = document.getElementById("family-name-input").value.trim();
 
@@ -874,6 +888,7 @@
           name: primaryName,
           birthDate: birthDate || null,
           gender: gender || "male",
+          idNumber: idNumber || null, // 選填，之後匯入保單資料時用來比對客戶身分
           analysisDate: analysisDate,
           note: "",
         },

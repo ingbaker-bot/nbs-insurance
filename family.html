@@ -551,6 +551,12 @@
       </div>
 
       <div class="field">
+        <label>身分證字號（選填）</label>
+        <input type="text" id="new-id-number" placeholder="沒有也沒關係，之後隨時可以補填" maxlength="10" style="text-transform:uppercase" />
+        <div class="hint" style="font-size:12px;color:#999;margin-top:3px">用於之後批次匯入保單資料時比對客戶身分，現在沒有可以先跳過</div>
+      </div>
+
+      <div class="field">
         <label>角色</label>
         <select id="new-role">
           <option value="secondary">次要成員（有自己的保單）</option>
@@ -603,6 +609,12 @@
           <option value="female">女</option>
         </select>
         <div class="hint" style="font-size:12px;color:#999;margin-top:3px">用於平均餘命試算，之後也會用於家系圖</div>
+      </div>
+
+      <div class="field">
+        <label>身分證字號（選填）</label>
+        <input type="text" id="edit-id-number" placeholder="沒有也沒關係，之後隨時可以補填" maxlength="10" style="text-transform:uppercase" />
+        <div class="hint" style="font-size:12px;color:#999;margin-top:3px">用於之後批次匯入保單資料時比對客戶身分，現在沒有可以先跳過</div>
       </div>
 
       <div class="field">
@@ -864,6 +876,7 @@
       const relation = document.getElementById("new-relation").value;
       const birth    = document.getElementById("new-birth").value;
       const gender   = document.getElementById("new-gender").value;
+      const idNumber = document.getElementById("new-id-number").value.trim().toUpperCase();
       const role     = document.getElementById("new-role").value;
       const address  = (document.getElementById("new-address")||{}).value||"";
       if (!name) return;
@@ -885,6 +898,7 @@
           name,
           birthDate: birth || null,
           gender: gender || "male",
+          idNumber: idNumber || null,
           analysisDate: familyData.analysisDate,
           address: address || null,
           note: "",
@@ -954,6 +968,7 @@
       document.getElementById("edit-birth-m").value = rocParts.m;
       document.getElementById("edit-birth-d").value = rocParts.d;
       document.getElementById("edit-gender").value = person.profile.gender || "male";
+      document.getElementById("edit-id-number").value = person.profile.idNumber || "";
       const analysisRocParts = isoToRocParts(person.profile.analysisDate);
       document.getElementById("edit-analysis").value = person.profile.analysisDate || "";
       document.getElementById("edit-analysis-y").value = analysisRocParts.y;
@@ -991,12 +1006,14 @@
       const newName     = document.getElementById("edit-name").value.trim();
       const newBirth    = document.getElementById("edit-birth").value;
       const newGender   = document.getElementById("edit-gender").value;
+      const newIdNumber = document.getElementById("edit-id-number").value.trim().toUpperCase();
       const newAnalysis = document.getElementById("edit-analysis").value;
       const newAddress  = document.getElementById("edit-address").value.trim();
 
       person.profile.name         = newName || person.profile.name;
       person.profile.birthDate    = newBirth || null;
       person.profile.gender       = newGender || "male";
+      person.profile.idNumber     = newIdNumber || null;
       person.profile.analysisDate = newAnalysis;
       person.profile.address      = newAddress || null;
       person.updatedAt = new Date().toISOString();
