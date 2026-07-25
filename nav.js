@@ -311,13 +311,24 @@
   }
 
   function _finishLoad(fn, isError) {
+    if (isError) {
+      // 家庭資料真的讀取失敗時，_family 還是初始的 null，_renderAll() 底下
+      // 有十幾個地方會直接存取 _family.xxx 而連環崩潰（例如
+      // _versionActionsHtml 的 _family.role）。與其逐一幫每個地方補防呆、
+      // 風險很高容易漏掉，不如從源頭處理：失敗就不要嘗試畫面渲染，
+      // 直接提示使用者、帶回列表頁，行為清楚也不會有殘留的壞狀態。
+      console.error("[nav] 家庭資料載入失敗，返回列表頁");
+      alert("這份家庭資料讀取失敗（可能是網路不穩或資料異常），將返回列表頁");
+      window.location.href = "main.html";
+      return;
+    }
     _renderAll();
     window.dispatchEvent(new CustomEvent("nbs_nav_ready", {
       detail: {
         user:            _user,
-        familyData:      isError ? null : _family,
-        personsData:     isError ? null : _personsData,
-        currentPersonId: isError ? null : _personId,
+        familyData:      _family,
+        personsData:     _personsData,
+        currentPersonId: _personId,
         familyFileName:  fn
       }
     }));
@@ -552,6 +563,7 @@
   }
 
   function _versionActionsHtml() {
+    if (!_family) return ""; // 家庭資料還沒載入成功時，不要嘗試畫版本管理選單，避免連環崩潰
     var role = _family.role || "current";
     var items = '<div class="nbs-ni nbs-ni-sm" onclick="event.stopPropagation();NBS_NAV._promptCreateDraft()">' +
       '<span class="nbs-nicon">📝</span>' +
