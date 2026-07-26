@@ -524,7 +524,7 @@
         hint.style.background = "#F5A623";
         hint.style.display = "block";
 
-        await callGAS("saveFile", { email: currentUser.email, fileType: "persons", fileId: currentPersonId, fileName: member.name+"_"+currentPersonId+".json", content: person });
+        await callGAS("saveFile", { email: currentUser.email, fileType: "persons", fileId: member.personFileId || "", fileName: member.name+"_"+currentPersonId+".json", content: person });
         sessionStorage.setItem("nbs_person_" + currentPersonId, JSON.stringify(person));
         
         // 2. 顯示已儲存 (綠色)

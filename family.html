@@ -920,10 +920,11 @@
       try {
         // 儲存個人 JSON（僅非受益人才建立）
         if (role !== "beneficiary_only") {
+          // 這是全新成員，Drive 上還沒有對應檔案，不用傳 fileId（也沒有
+          // 正確的值可以傳），讓後端用檔名建立新檔案就好。
           await callGAS("saveFile", {
             email: currentUser.email,
             fileType: "persons",
-            fileId: personId,
             fileName: name + "_" + personId + ".json",
             content: personData,
           });

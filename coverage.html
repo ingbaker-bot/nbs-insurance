@@ -875,7 +875,7 @@ async function saveCoverage(isAutoSave = false) {
     await callGAS("saveFile", {
       email: currentUser.email,
       fileType: "persons",
-      fileId: currentPersonId,
+      fileId: member.personFileId || "",
       fileName: member.name + "_" + currentPersonId + ".json",
       content: person
     });

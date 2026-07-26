@@ -1071,7 +1071,7 @@ async function saveAll() {
   try {
     const member = familyData.members.find(m => m.personId === currentPersonId);
     await callGAS("saveFile", {
-      email: currentUser.email, fileType:"persons", fileId: currentPersonId,
+      email: currentUser.email, fileType:"persons", fileId: member.personFileId || "",
       fileName: member.name + "_" + currentPersonId + ".json", content: person,
     });
     sessionStorage.setItem("nbs_person_" + currentPersonId, JSON.stringify(person));

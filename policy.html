@@ -1385,7 +1385,10 @@ async function savePolicy() {
     const saveResult = await callGAS("saveFile", {
       email: currentUser.email,
       fileType: "persons",
-      fileId: editingPersonId,
+      fileId: member.personFileId || "", // 真正的 Drive 檔案 ID（跟 readFamilyBundle 讀取時用的同一個），
+                                          // 之前這裡誤傳成 editingPersonId（那是內部的人物編號，不是 Drive
+                                          // 檔案 ID），導致寫入跟讀取各自用不同方式定位檔案，萬一雲端硬碟
+                                          // 裡剛好有同名的重複檔案，就會出現「存了但讀不到最新版本」。
       fileName: member.name + "_" + editingPersonId + ".json",
       content: person,
     });
@@ -1543,7 +1546,7 @@ async function deletePolicy() {
     const delResult = await callGAS("saveFile", {
       email: currentUser.email,
       fileType: "persons",
-      fileId: editingPersonId,
+      fileId: member.personFileId || "", // 同上，改傳真正的 Drive 檔案 ID
       fileName: member.name + "_" + editingPersonId + ".json",
       content: person,
     });
@@ -1896,7 +1899,7 @@ async function handlePDFUpload() {
       const saveResult = await callGAS("saveFile", {
         email: currentUser.email,
         fileType: "persons",
-        fileId: personId,
+        fileId: member.personFileId || "",
         fileName: member.name + "_" + personId + ".json",
         content: person,
       });
