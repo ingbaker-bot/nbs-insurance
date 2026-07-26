@@ -220,11 +220,34 @@ function parseFile() {
   reader.readAsText(file, "UTF-8");
 }
 
+// 有些商品的「保險項目」欄位，其實是一段原始說明文字（不是真正的商品
+// 名稱），特徵是內容裡包含「」這個引號（因為在引用給付項目名稱）——
+// 真正的商品名稱不會出現「」。這種項目的 _benefits，其實是屬於它前面
+// 那筆「真商品名稱、但 _benefits 是空的」項目，是資料來源本身的錯位，
+// 不是我們解析錯誤，這裡先掃過一遍把它們正確併回去。
+function looksLikeBenefitTextRow_(itemName) {
+  return !!itemName && itemName.indexOf("「") !== -1;
+}
+
+function mergeMisplacedBenefits_(items) {
+  var merged = [];
+  for (var i = 0; i < items.length; i++) {
+    var it = items[i];
+    var next = items[i+1];
+    if ((!it._benefits || !it._benefits.length) && next && looksLikeBenefitTextRow_(next["保險項目"]) && next._benefits && next._benefits.length) {
+      merged.push(Object.assign({}, it, { _benefits: next._benefits }));
+      i++; // 跳過被併入的下一筆，不要讓它自己也變成一張假保單
+    } else if (!looksLikeBenefitTextRow_(it["保險項目"])) {
+      merged.push(it);
+    }
+    // 如果這筆本身就是「說明文字當名稱」但沒被前一筆合併吃掉（理論上
+    // 不該發生，防呆用），就直接捨棄，不要讓它單獨變成一張怪名字的保單。
+  }
+  return merged;
+}
+
 // 把富邦原始的一筆「合約」（可能包含 1 個主約 + 好幾個附約），拆成
-// 系統裡各自獨立的保單記錄——回傳一個陣列，不是單一物件。之前的版本
-// 把主約跟所有附約的給付項目攤平合併成一張保單，是錯的：每個項目
-// 各自有自己的保額/狀態/繳費期滿日/給付項目，理當各自是一張獨立保單，
-// 只是共用同一個要保人/被保險人/關係（這些是合約層級共用的資訊）。
+// 系統裡各自獨立的保單記錄——回傳一個陣列，不是單一物件。
 function normalizeFubonContract_(p) {
   try {
     var sec03 = (p.sec03_保單基本資料 && p.sec03_保單基本資料.kvPairs) || {};
@@ -238,25 +261,26 @@ function normalizeFubonContract_(p) {
     var applicantAddress  = sec03["住所/戶籍地址"] || sec03["收費地址"] || "";
     var suggestedAgent    = sec03["鄭牧青"] || sec03["服務人員資料"] || "";
 
-    var items = (p.sec05_保險項目與金額 && p.sec05_保險項目與金額.items) || [];
+    var rawItems = (p.sec05_保險項目與金額 && p.sec05_保險項目與金額.items) || [];
+    var items = mergeMisplacedBenefits_(rawItems);
+    // 同一份合約底下，主約＋所有附約一律共用「合約號碼」本身，不要另外
+    // 加序號——policy.html 是用完全相同的 policyNo 字串判斷「這幾張是
+    // 不是同一組」，再靠 isMain 分辨誰是主約，加了序號反而讓每一項都變
+    // 成自己一組，沒辦法正確摺疊顯示。
     var contractPolicyNo = p.policyNo || "";
 
-    return items.map(function(it, idx){
+    return items.map(function(it){
       var category = guessCategoryFromProductName_(it["保險項目"] || "");
       var benefits = (it._benefits || []).map(function(b){
         return { rawLabel: b["給付項目"] || "", amount: parseFubonAmount_(b["金額"]), unit: b["單位"] || "" };
       });
-      // 主約用契約本身的號碼；附約用「契約號碼-序號」區隔，避免跟主約
-      // 或其他附約撞號（跟保單畫面上常見的「XXXX-00」「XXXX-01」慣例一致）。
-      var subPolicyNo = it._isMainItem
-        ? contractPolicyNo + "-00"
-        : contractPolicyNo + "-" + String(idx).padStart(2, "0");
 
       return {
-        policyNo: subPolicyNo,
+        policyNo: contractPolicyNo,
+        productCode: it._productCode || "", // 判斷「這個項目是否已存在」用這個，不要用 policyNo（現在是共用的）
         productName: it["保險項目"] || "",
         category: category,
-        isMainItem: !!it._isMainItem,
+        isMain: !!it._isMainItem,
         status: it["契約狀態"] || p.status || "",
         payEndDate: it["繳費期滿日"] || "",
         covEndDate: it["保障期滿日"] || "",
@@ -516,6 +540,8 @@ function buildPolicyRecord_(p) {
   return {
     id: "pol_" + Date.now() + "_" + Math.random().toString(36).slice(2,7),
     policyNo: p.policyNo,
+    productCode: p.productCode,
+    isMain: p.isMain,
     itemName: p.productName,
     category: p.category,
     company: "富邦人壽",
@@ -675,13 +701,15 @@ async function commitMatchedGroup_(g) {
       });
     }
 
-    // 把這個人名下的保單，逐筆檢查保單號碼是否已存在——已存在的先攔下來
-    // 不覆蓋，只有全新保單號碼才自動加進去，確保不會洗掉你已經手動精修
-    // 過的資料。
+    // 把這個人名下的保單，逐筆檢查「產品代碼」是否已存在——已存在的先
+    // 攔下來不覆蓋，只有全新項目才自動加進去。這裡改用 productCode 而
+    // 不是 policyNo，因為同一份合約底下的主約＋所有附約，policyNo 現在
+    // 是共用同一個號碼（配合 policy.html 的分組邏輯），不能拿來判斷
+    // 「這一項」存不存在。
     var policiesForThisPerson = g.policies.filter(function(p){ return p._insKey === m.key; });
-    var existingPolicyNos = (targetPerson.policies || []).map(function(pp){ return pp.policyNo; });
+    var existingProductCodes = (targetPerson.policies || []).map(function(pp){ return pp.productCode || pp.policyNo; });
     policiesForThisPerson.forEach(function(p){
-      if (existingPolicyNos.indexOf(p.policyNo) !== -1) {
+      if (existingProductCodes.indexOf(p.productCode) !== -1) {
         conflicts.push(m.name + " 的保單 " + p.policyNo + "（" + p.productName + "）已經存在，本次不覆蓋，請自行到保單清單比對");
       } else {
         targetPerson.policies = targetPerson.policies || [];
