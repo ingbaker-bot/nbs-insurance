@@ -86,54 +86,112 @@ var existingFamilies = []; // 目前登入帳號既有的家庭索引
 // ── 給付項目對照字典 ────────────────────────────────────
 // 只放「已經確認過」的規則，沒把握的項目一律不猜、標記成「無法歸類」
 // 讓業務員自己在預覽畫面複核，不會自動用備註文字猜頻率。
+//
+// 改用「引號內的核心名稱」當比對依據，不是整段文字完全比對——原始
+// 資料裡，同一個核心給付名稱後面常常接不同的說明文字（例如「最高給付
+// 天數為90天」「(每次傷害以一次為限)」），如果用整段文字完全比對，
+// 只要說明文字稍微不同就比對不到。但有些核心名稱本身會重複出現、
+// 靠後面的說明文字才能分辨是哪一種（例如「住院醫療保險金」有分
+// 1~30日跟31日起兩種），這種情況額外用 dayRuleFn 檢查完整文字判斷。
 var BENEFIT_MAPPING = {
-  "住院日數1－30日":       {key:"daily_room_1_30"},
-  "住院日數31日起":        {key:"daily_room_31"},
-  "出院後療養保險金":       {key:"daily_discharge"},
-  "加護病房醫療保險金":     {key:"daily_icu"},
-  "燒燙傷中心醫療保險金":   {key:"daily_burn"},
+  // 日額型住院（PHIB 這類保單常見）
+  "住院醫療保險金": { dayRuleFn:function(full){
+      if (/1[~～]30日/.test(full)) return "daily_room_1_30";
+      if (/第?31日起/.test(full)) return "daily_room_31";
+      return null;
+    }},
+  "住院日數1－30日": {key:"daily_room_1_30"},
+  "住院日數31日起":  {key:"daily_room_31"},
+  "加護病房保險金":  {key:"daily_icu"},
+  "加護病房醫療保險金": { dayRuleFn:function(full, cat){ return cat==="意外險" ? "acc_icu" : "daily_icu"; }},
+  "出院療養保險金":  {key:"daily_discharge"},
+  "出院後療養保險金": {key:"daily_discharge"},
+  "住院前後門診給付保險金": {key:"daily_opd"},
   "住院前後門診保險金":     {key:"daily_opd"},
-  "老年住院關懷保險金":     {key:"daily_senior"},
-  "住院手術醫療保險金":     {key:"surg_hosp"},
-  "門診手術醫療保險金":     {key:"surg_opd"},
-  "完全失能生活扶助保險金": {key:"dis_lump_illness", altKey:"dis_lump_accident"}, // 疾病/意外要看保單類型判斷，見 pickDisabilityKey_
+  "急診保險金":      {key:"daily_er"},
+  "緊急醫療轉送保險金": {key:"daily_transport"},
+  "老年住院關懷保險金": {key:"daily_senior"},
+  "燒燙傷中心醫療保險金": {key:"daily_burn"},
+  "住院手術療養保險金":   {key:"surg_nurse"},
+  "抗排斥藥物醫療保險金": {key:"daily_antirej"},
+  "重大疾病保險金":       {key:"ci_major_lump"},
+
+  // 意外險（AHI 這類保單）
+  "傷害住院醫療保險金": {key:"acc_hosp"},
+  "完全失能生活扶助保險金": {key:"dis_lump_illness", altKey:"dis_lump_accident"}, // 疾病/意外要看保單類型判斷
   "完全失能或最高失能等級": {key:"dis_lump_accident"},
   "特定事故保險金":         {key:"acc_special"},
   "重大燒燙傷":             {key:"acc_burn"},
   "意外傷害醫療保險金":     {key:"acc_opd"},
-  "手術醫療保險金":         {key:"surg_hosp"},
-  "特定處置項目保險金":     {key:"surg_special"},
-  "住院手術療養保險金":     {key:"surg_nurse"},
-  "抗排斥藥物醫療保險金":   {key:"daily_antirej"},
-  "重大疾病保險金":         {key:"ci_major_lump"},
+
+  // 手術醫療（PSI 這類保單）
+  "手術醫療保險金":     {key:"surg_hosp"},
+  "住院手術醫療保險金": {key:"surg_hosp"},
+  "門診手術醫療保險金": { dayRuleFn:function(full, cat){ return cat==="意外險" ? null : "surg_opd"; }}, // 意外險的這個項目目前沒有對應欄位
+  "特定處置項目保險金": {key:"surg_special"},
+
+  // 住院醫療（實支實付，HSR 這類保單）
+  "每日病房費用":       {key:"hosp_room"},
+  "住院手術費用":       {key:"hosp_surgery"},
+  "住院醫療費用":       {key:"hosp_misc"},
+
+  // 癌症醫療（PCA 這類保單）
+  // 「第1~90日」跟「第91日起」金額通常不同，但 coverage.html 的
+  // can_hosp 只有一個欄位、沒有日額分段，兩個都對應同一個欄位會讓
+  // 後寫入的直接覆蓋前一個、悄悄漏掉一筆金額。這裡只對應「第1~90日」
+  // 這組（通常是主要參考金額），「第91日起」留在無法歸類、進備註，
+  // 不會憑空消失，業務員可以自己決定要不要另外處理。
+  "罹患癌症保險金":     {key:"can_first"},
+  "繳費期間內確診":     {key:"can_first"},
+  "第1~90日住院醫療":   {key:"can_hosp"},
+  "癌症出院療養保險金": {key:"can_discharge"},
+  "癌症手術醫療保險金": {key:"can_surgery"},
+  "癌症門診醫療保險金": {key:"can_opd"},
+  "癌症放射線治療保險金": {key:"can_radiation"},
+  "癌症化學治療保險金":   {key:"can_chemo"},
+  "癌症身故保險金":       {key:"can_death"},
 };
 
-// 給付項目文字常常帶括號備註（例如「（同一次住院最高給付日數以365日為限）」），
-// 對照字典比對前先把這些雜訊清乾淨，只留「」內或前段的核心文字。
 // 給付項目文字常常帶括號備註，而且括號可能是巢狀的（例如「（接受住院手術
 // 等級倍數為十倍（含）以上者）」），單純用一次 regex 去括號會漏掉外層；
 // 這裡改成反覆去除「最內層」括號，直到沒有括號為止，同時把全形/半形
-// 空白也一併清掉（原始資料常常有像「1 －30 日」這種帶空白的寫法，
-// 跟對照字典比對前一定要先正規化，不然明明是同一個項目卻比對不到）。
+// 空白也一併清掉。
 function cleanBenefitLabel_(raw) {
   if (!raw) return "";
   var s = raw.replace(/「|」/g, "");
   var prev;
   do {
     prev = s;
-    s = s.replace(/（[^（）]*）/g, "");
+    s = s.replace(/（[^（）]*）/g, "").replace(/\([^()]*\)/g, "");
   } while (s !== prev);
   s = s.replace(/[\s\u3000]/g, ""); // 半形空白 + 全形空白都清掉
   return s.trim();
 }
 
+// 抓出「」引號內的核心給付名稱；沒有引號的話，就用清理過後的全文當
+// 核心名稱（相容比較單純、沒有附加說明文字的情況）。
+function extractCoreLabel_(raw) {
+  if (!raw) return "";
+  var m = raw.match(/「([^」]*)」/);
+  var core = m ? m[1] : raw;
+  return cleanBenefitLabel_(core);
+}
+
 function lookupBenefitMapping_(rawLabel, policyCategory) {
-  var cleaned = cleanBenefitLabel_(rawLabel);
-  var rule = BENEFIT_MAPPING[cleaned];
+  var core = extractCoreLabel_(rawLabel);
+  var rule = BENEFIT_MAPPING[core];
   if (!rule) return null;
-  // 「完全失能生活扶助保險金」這種疾病/意外沒辦法從文字本身分辨的項目，
-  // 先用這張保單本身是不是「意外」類型當簡單判斷依據，仍然可能判斷錯，
-  // 一律標記出來讓業務員在預覽畫面自己確認。
+
+  // dayRuleFn：核心名稱本身會重複出現、要看完整文字（例如日額區間、
+  // 保單類別）才能判斷對應到哪個欄位；判斷不出來就回傳 null，一樣
+  // 落入「無法歸類」讓業務員自己確認，不會硬猜一個可能錯的欄位。
+  if (rule.dayRuleFn) {
+    var fullCleaned = cleanBenefitLabel_(rawLabel);
+    var key = rule.dayRuleFn(fullCleaned, policyCategory);
+    if (!key) return null;
+    return { key: key, needsReview: false, rawLabel: rawLabel };
+  }
+
   var key = rule.key;
   var needsReview = false;
   if (rule.altKey) {
@@ -246,20 +304,85 @@ function mergeMisplacedBenefits_(items) {
   return merged;
 }
 
+// 有些合約的 sec03（保單基本資料）沒有結構化的 kvPairs，所有資料混在
+// 一大段 rawText 純文字裡（又是另一種跟前兩次都不一樣的格式）。這裡
+// 從純文字裡，用「找到某個欄位名稱，取它下一行當值」的方式，把要保人
+// 資料跟身故受益人資料撈出來，當作 kvPairs 沒有資料時的備援。
+function parseRawTextFallback_(rawText) {
+  if (!rawText) return {};
+  var lines = rawText.split("\n").map(function(l){ return l.trim(); });
+
+  // 「要保人」跟「被保人」兩個區塊的欄位名稱幾乎一樣（姓名/身分證號碼/
+  // 生日…），要先用這兩個字出現的位置把文字切開，只在「要保人」那段
+  // 範圍內找，才不會誤抓到被保人的資料。
+  var applicantIdx = rawText.indexOf("要保人");
+  var insuredIdx = rawText.indexOf("被保人");
+  var applicantBlock = applicantIdx !== -1 ? rawText.slice(applicantIdx, insuredIdx > applicantIdx ? insuredIdx : rawText.length) : "";
+  var applicantLines = applicantBlock.split("\n").map(function(l){ return l.trim(); });
+
+  function findInLines(blockLines, label) {
+    var idx = blockLines.indexOf(label);
+    if (idx === -1) return "";
+    var v = blockLines[idx+1] || "";
+    return (v === "---" || v === "----") ? "" : v;
+  }
+
+  // 身故受益人資料：標題行是「姓名  關係  人數」，下一行才是實際內容
+  // （例如「邱鳳春 等人   配偶   2」），用 tab 分隔。
+  var beneficiaryDeathText = "";
+  var beneIdx = lines.indexOf("身故受益人資料");
+  if (beneIdx !== -1 && lines[beneIdx+1] && lines[beneIdx+1].indexOf("姓名") !== -1) {
+    var beneLine = lines[beneIdx+2] || "";
+    if (beneLine && beneLine !== "--") beneficiaryDeathText = beneLine.replace(/\t+/g, "　").trim();
+  }
+
+  var suggestedAgent = "";
+  var svcIdx = lines.indexOf("服務人員資料");
+  if (svcIdx !== -1) suggestedAgent = lines[svcIdx+2] || "";
+
+  return {
+    applicantIdNumber: findInLines(applicantLines, "身分證號碼"),
+    applicantBirth:    findInLines(applicantLines, "生日"),
+    applicantPhone:    findInLines(applicantLines, "行動電話") || findInLines(applicantLines, "收費/聯絡電話"),
+    applicantEmail:    findInLines(applicantLines, "電子信箱"),
+    applicantAddress:  findInLines(applicantLines, "住所/戶籍地址") || findInLines(applicantLines, "收費地址"),
+    beneficiaryDeathText: beneficiaryDeathText,
+    suggestedAgent: suggestedAgent
+  };
+}
+
 // 把富邦原始的一筆「合約」（可能包含 1 個主約 + 好幾個附約），拆成
 // 系統裡各自獨立的保單記錄——回傳一個陣列，不是單一物件。
 function normalizeFubonContract_(p) {
   try {
-    var sec03 = (p.sec03_保單基本資料 && p.sec03_保單基本資料.kvPairs) || {};
+    var sec03Full = p.sec03_保單基本資料 || {};
+    var sec03 = sec03Full.kvPairs || {};
     var applicantName = p.applicant || "";
     var insuredName   = p.insured || "";
-    var relationship = sec03[applicantName] || sec03[insuredName] || "";
-    var applicantIdNumber = sec03["身分證號碼"] || "";
-    var applicantBirth    = sec03["生日"] || "";
-    var applicantPhone    = sec03["行動電話"] || sec03["收費/聯絡電話"] || "";
-    var applicantEmail    = sec03["電子信箱"] || "";
-    var applicantAddress  = sec03["住所/戶籍地址"] || sec03["收費地址"] || "";
-    var suggestedAgent    = sec03["鄭牧青"] || sec03["服務人員資料"] || "";
+    var relationship = sec03[applicantName] || sec03[insuredName] || (applicantName===insuredName ? "本人" : "");
+
+    var applicantIdNumber, applicantBirth, applicantPhone, applicantEmail, applicantAddress, suggestedAgent, beneficiaryDeathText;
+
+    if (Object.keys(sec03).length > 0) {
+      // 這份合約有結構化的 kvPairs 可以直接用
+      applicantIdNumber = sec03["身分證號碼"] || "";
+      applicantBirth    = sec03["生日"] || "";
+      applicantPhone    = sec03["行動電話"] || sec03["收費/聯絡電話"] || "";
+      applicantEmail    = sec03["電子信箱"] || "";
+      applicantAddress  = sec03["住所/戶籍地址"] || sec03["收費地址"] || "";
+      suggestedAgent    = sec03["服務人員資料"] || "";
+      beneficiaryDeathText = ""; // 目前已知的結構化格式裡還沒遇過含受益人資料的版本
+    } else {
+      // kvPairs 是空的，退回從 rawText 純文字裡解析
+      var fallback = parseRawTextFallback_(sec03Full.rawText || "");
+      applicantIdNumber = fallback.applicantIdNumber;
+      applicantBirth    = fallback.applicantBirth;
+      applicantPhone    = fallback.applicantPhone;
+      applicantEmail    = fallback.applicantEmail;
+      applicantAddress  = fallback.applicantAddress;
+      suggestedAgent    = fallback.suggestedAgent;
+      beneficiaryDeathText = fallback.beneficiaryDeathText;
+    }
 
     var rawItems = (p.sec05_保險項目與金額 && p.sec05_保險項目與金額.items) || [];
     var items = mergeMisplacedBenefits_(rawItems);
@@ -291,6 +414,8 @@ function normalizeFubonContract_(p) {
         insured: { name: insuredName },
         relationship: relationship,
         suggestedAgent: suggestedAgent,
+        // 只有主約才附身故受益人資料——附約通常「同主約」，不用各自重複填。
+        beneficiaryDeathText: it._isMainItem ? beneficiaryDeathText : "",
         benefits: benefits,
         mappedBenefits: benefits.map(function(b){
           var m = lookupBenefitMapping_(b.rawLabel, category);
@@ -387,9 +512,18 @@ function matchOneGroup_(group) {
   // 目前家庭索引只有成員「姓名」，沒有身分證字號（基於個資最小化原則，
   // 索引檔沒有存這個），先用姓名做初步篩選，抓出「可能是同一家」的
   // 候選家庭，再讀取候選家庭的完整資料比對身分證字號做最終確認。
+  //
+  // ⚠️ memberNames 這個索引欄位是後來才加的，只有「家庭資料被重新編輯
+  // 存檔過一次」才會補上，很久沒動過的舊家庭，索引裡可能還是空的——
+  // 只靠 memberNames 比對會找不到，把明明存在的既有客戶誤判成新客戶。
+  // 這裡加一個不依賴這個索引欄位的備援：直接看候選人姓名，有沒有
+  // 整個出現在家庭名稱裡（例如「楊宗煌」出現在「楊宗煌個人保單」
+  // 這個家庭名稱裡），這個欄位從最一開始就存在，不受索引新舊影響。
   var candidateNames = group.members.map(function(m){ return m.name; });
   var candidates = existingFamilies.filter(function(f){
-    return (f.memberNames || []).some(function(n){ return candidateNames.indexOf(n) !== -1; });
+    var byMemberNames = (f.memberNames || []).some(function(n){ return candidateNames.indexOf(n) !== -1; });
+    var byFamilyName = candidateNames.some(function(n){ return n && f.familyName && f.familyName.indexOf(n) !== -1; });
+    return byMemberNames || byFamilyName;
   });
   if (!candidates.length) {
     group.matched = null;
@@ -407,9 +541,12 @@ function matchOneGroup_(group) {
       var matchedByIdOrName = group.members.some(function(m){
         return Object.keys(persons).some(function(pid){
           var prof = persons[pid].profile || {};
-          if (m.idNumber && prof.idNumber && m.idNumber === prof.idNumber) return true;
-          if (!m.idNumber && prof.name === m.name) return true;
-          return false;
+          // 身分證字號兩邊都有才比對號碼；只要姓名相同就算比對到，
+          // 不再要求「匯入方一定沒有身分證字號」才會退回姓名比對——
+          // 既有資料裡這個人本來就可能沒存過身分證字號，用「兩邊都要
+          // 有號碼」當條件反而會比對不到。
+          if (m.idNumber && prof.idNumber) return m.idNumber === prof.idNumber;
+          return prof.name === m.name;
         });
       });
       if (matchedByIdOrName) {
@@ -537,7 +674,7 @@ function buildPolicyRecord_(p) {
       unmatchedNotes.push(b.rawLabel + "：" + b.amount + b.unit);
     }
   });
-  return {
+  var result = {
     id: "pol_" + Date.now() + "_" + Math.random().toString(36).slice(2,7),
     policyNo: p.policyNo,
     productCode: p.productCode,
@@ -553,6 +690,12 @@ function buildPolicyRecord_(p) {
     _importedAt: new Date().toISOString(),
     _sourceAgent: p.agentName || null,
   };
+  // 身故受益人資料：只有主約才會帶（附約通常「同主約」，beneficiary.html
+  // 本身也是這樣處理的），附約這裡會是空字串，不會多寫這個欄位。
+  if (p.beneficiaryDeathText) {
+    result.beneficiaryDeathText = p.beneficiaryDeathText;
+  }
+  return result;
 }
 
 function commitGroup_(idx) {
