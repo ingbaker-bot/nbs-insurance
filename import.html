@@ -390,7 +390,12 @@ function normalizeFubonContract_(p) {
     // 加序號——policy.html 是用完全相同的 policyNo 字串判斷「這幾張是
     // 不是同一組」，再靠 isMain 分辨誰是主約，加了序號反而讓每一項都變
     // 成自己一組，沒辦法正確摺疊顯示。
+    //
+    // ⚠️ 完整保單號碼＝policyNo＋"-"＋subNo（例如 A103489639-01），不是
+    // 只有 policyNo 本身——這剛好也是既有資料本來就在用的號碼格式，
+    // 兩邊要一致，比對既有保單、判斷「這張存不存在」才會準。
     var contractPolicyNo = p.policyNo || "";
+    if (p.subNo) contractPolicyNo += "-" + p.subNo;
 
     return items.map(function(it){
       var category = guessCategoryFromProductName_(it["保險項目"] || "");
