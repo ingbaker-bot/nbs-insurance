@@ -702,6 +702,18 @@ function todayISO_() {
   return new Date().toISOString().slice(0,10);
 }
 
+// 富邦資料裡的生日是民國格式（例如「54/10/18」），轉成系統存檔用的
+// 西元 ISO 格式（「1965-10-18」）。
+function rocDateToIso_(roc) {
+  if (!roc) return null;
+  var m = String(roc).trim().match(/^(\d{1,3})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+  if (!m) return null;
+  var adYear = parseInt(m[1], 10) + 1911;
+  var mm = String(parseInt(m[2], 10)).padStart(2, "0");
+  var dd = String(parseInt(m[3], 10)).padStart(2, "0");
+  return adYear + "-" + mm + "-" + dd;
+}
+
 function buildPersonData_(member, personId, analysisDate) {
   return {
     version: "3.0.0",
@@ -711,7 +723,11 @@ function buildPersonData_(member, personId, analysisDate) {
     updatedAt: new Date().toISOString(),
     profile: {
       name: member.name,
-      birthDate: null, // 匯入資料裡通常只有要保人才有生日，被保險人生日這階段先留空，事後手動補
+      // 匯入資料裡，只有「要保人」的區塊會有生日資料；如果這個人剛好
+      // 同時是要保人（例如自己保自己），這裡就會有值，轉成西元格式存
+      // 起來。單純的被保險人（沒有同時當要保人）目前還是沒有生日資料
+      // 可用，維持空白，事後手動補。
+      birthDate: rocDateToIso_(member.birthDate) || null,
       gender: "male",
       idNumber: member.idNumber || null,
       analysisDate: analysisDate,
