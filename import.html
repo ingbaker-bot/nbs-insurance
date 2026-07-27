@@ -308,6 +308,21 @@ function mergeMisplacedBenefits_(items) {
 // 一大段 rawText 純文字裡（又是另一種跟前兩次都不一樣的格式）。這裡
 // 從純文字裡，用「找到某個欄位名稱，取它下一行當值」的方式，把要保人
 // 資料跟身故受益人資料撈出來，當作 kvPairs 沒有資料時的備援。
+// 主約在 sec05（保單項目金額）裡的「保險金額」欄位，實務上遇過跟
+// sec03（保單基本資料）文字裡記載的金額對不上（sec05 顯示 0 元，
+// sec03 卻正確寫著實際保額）——這是資料來源本身的落差，不是解析
+// 邏輯的問題。sec03 這邊比較可靠，這裡額外從 rawText 抓一次當備援，
+// 只用在主約（附約的保額本來就是各自獨立的「單位/計畫」，不會出現
+// 在這裡）。
+function parseMainItemAmountFromRawText_(rawText) {
+  if (!rawText) return null;
+  var lines = rawText.split("\n").map(function(l){ return l.trim(); });
+  var idx = lines.indexOf("保險金額");
+  if (idx === -1) return null;
+  var raw = lines[idx+1] || "";
+  return parseFubonPlanAmount_(raw);
+}
+
 function parseRawTextFallback_(rawText) {
   if (!rawText) return {};
   var lines = rawText.split("\n").map(function(l){ return l.trim(); });
@@ -399,6 +414,13 @@ function normalizeFubonContract_(p) {
 
     return items.map(function(it){
       var category = guessCategoryFromProductName_(it["保險項目"] || "");
+      var planAmount = parseFubonPlanAmount_(it["保險金額"] || "");
+      // 主約的保額優先看 sec03 的 rawText（比較可靠），sec05 自己的數字
+      // 當備援（例如 rawText 這次剛好沒有「保險金額」這一行時）。
+      if (it._isMainItem) {
+        var fromRawText = parseMainItemAmountFromRawText_(sec03Full.rawText || "");
+        if (fromRawText && fromRawText.amount) planAmount = fromRawText;
+      }
       var benefits = (it._benefits || []).map(function(b){
         return { rawLabel: b["給付項目"] || "", amount: parseFubonAmount_(b["金額"]), unit: b["單位"] || "" };
       });
@@ -408,6 +430,8 @@ function normalizeFubonContract_(p) {
         productCode: it._productCode || "", // 判斷「這個項目是否已存在」用這個，不要用 policyNo（現在是共用的）
         productName: it["保險項目"] || "",
         category: category,
+        insuredAmount: planAmount.amount,
+        insuredAmountUnit: planAmount.unit,
         isMain: !!it._isMainItem,
         status: it["契約狀態"] || p.status || "",
         payEndDate: it["繳費期滿日"] || "",
@@ -444,6 +468,27 @@ function parseFubonAmount_(raw) {
   if (!raw) return 0;
   var n = String(raw).replace(/[^\d.]/g, "");
   return parseFloat(n) || 0;
+}
+
+// 「保險金額」這個欄位格式很不一致——有的是純數字加單位（例如
+// 「10.18 單位」「20.00單位」），有的數字前面還夾著文字描述（例如
+// 「個人型 6 單位」），有的甚至完全沒有數字、只有計畫代號（例如
+// 「計劃 B」）。抓「文字裡出現的第一個數字」當保額，其餘文字（扣掉
+// 那個數字）當單位；完全沒有數字的，就把整段文字當單位、保額留空，
+// 不要憑空生一個假數字出來。
+function parseFubonPlanAmount_(raw) {
+  if (!raw) return { amount: null, unit: "" };
+  // 數字可能帶千分位逗號（例如「200,000.00」），先抓「數字＋逗號」
+  // 整段，再把逗號去掉才轉數字，不然遇到逗號就會被切斷，抓成"200"
+  // 而不是完整的 200000。
+  var m = raw.match(/([\d,]*\d)(\.\d+)?/);
+  if (m) {
+    var numStr = (m[1] + (m[2]||"")).replace(/,/g, "");
+    var amount = parseFloat(numStr);
+    var unit = raw.replace(m[0], "").trim() || "單位";
+    return { amount: amount, unit: unit };
+  }
+  return { amount: null, unit: raw.trim() };
 }
 
 function guessCategoryFromProductName_(name) {
@@ -628,7 +673,9 @@ function renderGroupCard_(g, idx) {
         '</div>'
       : '';
     return '<div class="policy-row">' +
-      '<div class="policy-head"><span>' + p.productName + '（' + p.policyNo + '）</span><span style="color:#888;font-weight:400">' + p.category + '｜' + p.status + '</span></div>' +
+      '<div class="policy-head"><span>' + p.productName + '（' + p.policyNo + '）</span><span style="color:#888;font-weight:400">' + p.category + '｜' + p.status +
+        (p.insuredAmount !== null ? '｜保額 ' + p.insuredAmount + ' ' + p.insuredAmountUnit : (p.insuredAmountUnit ? '｜' + p.insuredAmountUnit : '')) +
+      '</span></div>' +
       '<div style="margin-top:6px">' + fieldsHtml + '</div>' +
       formulaHtml +
     '</div>';
@@ -703,6 +750,8 @@ function buildPolicyRecord_(p) {
     isMain: p.isMain,
     itemName: p.productName,
     category: p.category,
+    insuredAmount: p.insuredAmount,
+    insuredAmountUnit: p.insuredAmountUnit,
     company: "富邦人壽",
     owner: p.applicant.name,
     status: p.status || "有效",
