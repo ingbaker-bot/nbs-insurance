@@ -416,6 +416,12 @@ function normalizeFubonContract_(p) {
         suggestedAgent: suggestedAgent,
         // 只有主約才附身故受益人資料——附約通常「同主約」，不用各自重複填。
         beneficiaryDeathText: it._isMainItem ? beneficiaryDeathText : "",
+        // 有些保單（例如定額手術這種按「單位」計算的商品）給付項目沒有
+        // 直接寫具體金額，只有像「單位手術醫療保險金×6」這種公式說明
+        // （放在 _notes，不是 _benefits），這種情況沒辦法自動算出正確
+        // 數字，把原始說明文字保留下來，讓業務員自己對照保單條款填寫，
+        // 不要讓這段資訊憑空消失。
+        formulaNotes: (!benefits.length && it._notes && it._notes.length) ? it._notes : [],
         benefits: benefits,
         mappedBenefits: benefits.map(function(b){
           var m = lookupBenefitMapping_(b.rawLabel, category);
@@ -610,9 +616,16 @@ function renderGroupCard_(g, idx) {
       }
       return '<span class="field-tag field-unmapped">' + b.rawLabel + ' → 無法歸類，需人工確認</span>';
     }).join("");
+    var formulaHtml = (p.formulaNotes && p.formulaNotes.length)
+      ? '<div style="margin-top:6px;padding:8px 10px;background:#FCEBEB;border-radius:6px;font-size:12px;color:#791F1F;line-height:1.6">' +
+          '⚠️ 這張保單按「單位」計算，原始資料只有公式說明、沒有具體金額，匯入後會整段存進備註，需要自行對照保單條款填寫：<br/>' +
+          p.formulaNotes.join('<br/>') +
+        '</div>'
+      : '';
     return '<div class="policy-row">' +
       '<div class="policy-head"><span>' + p.productName + '（' + p.policyNo + '）</span><span style="color:#888;font-weight:400">' + p.category + '｜' + p.status + '</span></div>' +
       '<div style="margin-top:6px">' + fieldsHtml + '</div>' +
+      formulaHtml +
     '</div>';
   }).join("");
 
@@ -674,6 +687,10 @@ function buildPolicyRecord_(p) {
       unmatchedNotes.push(b.rawLabel + "：" + b.amount + b.unit);
     }
   });
+  if (p.formulaNotes && p.formulaNotes.length) {
+    unmatchedNotes.push("（此保單給付按「單位」計算，原始資料只有公式說明、沒有具體金額，請自行對照保單條款填寫）");
+    p.formulaNotes.forEach(function(n){ unmatchedNotes.push(n); });
+  }
   var result = {
     id: "pol_" + Date.now() + "_" + Math.random().toString(36).slice(2,7),
     policyNo: p.policyNo,
