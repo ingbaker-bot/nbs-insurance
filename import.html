@@ -134,6 +134,14 @@ var BENEFIT_MAPPING = {
   "每日病房費用":       {key:"hosp_room"},
   "住院手術費用":       {key:"hosp_surgery"},
   "住院醫療費用":       {key:"hosp_misc"},
+  // THS 這類「住院醫療保險特約」常見講法，跟上面 HSR 系列意思相同、
+  // 只是富邦這幾張商品的用詞不太一樣，各自補一條對照，不要互相取代
+  // 上面的寫法（避免哪天遇到真的是「每日病房費用」四個字的保單反而
+  // 對不到）。
+  "每日病房費":         {key:"hosp_room"},
+  "普通手術費":         {key:"hosp_surgery"},
+  "重大手術費":         {key:"hosp_surgery"},
+  "醫院雜費":           {key:"hosp_misc"},
 
   // 癌症醫療（PCA 這類保單）
   // 「第1~90日」跟「第91日起」金額通常不同，但 coverage.html 的
