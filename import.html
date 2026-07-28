@@ -512,8 +512,20 @@ function buildRelationshipGroups_(policies) {
   function union(a,b){ var ra=find(a), rb=find(b); if(ra!==rb) parent[ra]=rb; }
 
   var personKey = {}; // name -> key（優先用身分證字號當 key，比姓名可靠）
+  var idByName = {};  // name -> 曾經見過這個姓名對應的身分證字號
+  // ⚠️ 同一個人可能在某張保單裡是「要保人」（有身分證號），在另一張／
+  // 同一張保單裡是「被保人」（這裡目前拿不到身分證號，永遠傳空字串）。
+  // 如果只看當下這個角色有沒有身分證號來決定 key，同一人會被拆成
+  // 「ID:身分證號」和「NAME:姓名」兩把不同的 key，變成系統裡兩個不同的
+  // 人頭（最典型：自己買給自己的保單，要保人＝被保人）。這裡記住
+  // 「姓名 → 身分證號」的對應，之後同姓名出現、即使這次沒帶身分證號，
+  // 也歸到同一把已知的 ID key 上，不會重複建立人頭。
   function keyOf(name, idNumber) {
-    if (idNumber) return "ID:" + idNumber;
+    if (idNumber) {
+      idByName[name] = idNumber;
+      return "ID:" + idNumber;
+    }
+    if (idByName[name]) return "ID:" + idByName[name];
     if (personKey[name]) return personKey[name];
     var k = "NAME:" + name;
     personKey[name] = k;
@@ -522,10 +534,19 @@ function buildRelationshipGroups_(policies) {
 
   var personInfo = {}; // key -> {name, idNumber, relationship}
   policies.forEach(function(p){
+    // 要保人先算 key（可能帶出身分證號，讓 idByName 先記住這個姓名），
+    // 被保人才算 key，這樣同一筆保單裡「要保人＝被保人」時，被保人
+    // 才能吃到剛剛才記住的身分證號，兩者才會收斂成同一把 key。
     var appKey = keyOf(p.applicant.name, p.applicant.idNumber);
     var insKey = keyOf(p.insured.name, "");
     if (!personInfo[appKey]) personInfo[appKey] = { name: p.applicant.name, idNumber: p.applicant.idNumber, birthDate: p.applicant.birthDate, phone: p.applicant.phone, email: p.applicant.email, address: p.applicant.address };
+    // 之前若已經用 NAME: 建立過這個人（例如先遇到「被保人」角色、
+    // 後來才遇到「要保人」角色帶出身分證號），這裡補上完整資料，
+    // 避免主要資料留在被丟棄的舊 key 上。
     if (!personInfo[insKey]) personInfo[insKey] = { name: p.insured.name, idNumber: "" };
+    else if (!personInfo[insKey].idNumber && idByName[p.insured.name]) {
+      personInfo[insKey].idNumber = idByName[p.insured.name];
+    }
     union(appKey, insKey);
     p._appKey = appKey; p._insKey = insKey;
   });
