@@ -343,6 +343,27 @@ function parseRawTextFallback_(rawText) {
   var applicantBlock = applicantIdx !== -1 ? rawText.slice(applicantIdx, insuredIdx > applicantIdx ? insuredIdx : rawText.length) : "";
   var applicantLines = applicantBlock.split("\n").map(function(l){ return l.trim(); });
 
+  // ⚠️ 補上「被保人」自己的區塊解析——這個區塊其實一直都有身分證號碼、
+  // 生日、性別（要保人區塊反而沒有性別欄位，這是富邦核保用的欄位，只
+  // 記在被保人身上）。之前這裡完全沒解析這一段，導致單純只是被保人、
+  // 沒有同時當要保人的人（例如家人被列為被保人），生日/性別永遠是空
+  // 白，其實資料一直都在 rawText 裡，只是沒被抓出來。這裡找「被保人」
+  // 出現後的範圍，切到下一個明顯的段落標題（受益人資料／服務人員資料）
+  // 為止，避免不小心把後面不相關的內容也當成被保人的欄位值。
+  var insuredEndIdx = -1;
+  ["身故受益人資料", "生存保險受益人資料", "服務人員資料"].forEach(function(marker){
+    var i = rawText.indexOf(marker, insuredIdx);
+    if (i !== -1 && (insuredEndIdx === -1 || i < insuredEndIdx)) insuredEndIdx = i;
+  });
+  var insuredBlock = insuredIdx !== -1 ? rawText.slice(insuredIdx, insuredEndIdx !== -1 ? insuredEndIdx : rawText.length) : "";
+  var insuredLines = insuredBlock.split("\n").map(function(l){ return l.trim(); });
+
+  function mapGender_(raw) {
+    if (raw === "男") return "male";
+    if (raw === "女") return "female";
+    return "";
+  }
+
   function findInLines(blockLines, label) {
     var idx = blockLines.indexOf(label);
     if (idx === -1) return "";
@@ -369,6 +390,14 @@ function parseRawTextFallback_(rawText) {
     applicantPhone:    findInLines(applicantLines, "行動電話") || findInLines(applicantLines, "收費/聯絡電話"),
     applicantEmail:    findInLines(applicantLines, "電子信箱"),
     applicantAddress:  findInLines(applicantLines, "住所/戶籍地址") || findInLines(applicantLines, "收費地址"),
+    // 被保人自己的欄位（單純被保人、沒有同時當要保人的人，之前這幾個
+    // 欄位一律是空的，現在補上）
+    insuredIdNumber: findInLines(insuredLines, "身分證號碼"),
+    insuredBirth:    findInLines(insuredLines, "生日"),
+    insuredGender:   mapGender_(findInLines(insuredLines, "性別")),
+    insuredPhone:    findInLines(insuredLines, "行動電話") || findInLines(insuredLines, "電話"),
+    insuredEmail:    findInLines(insuredLines, "電子信箱"),
+    insuredAddress:  findInLines(insuredLines, "住所"),
     beneficiaryDeathText: beneficiaryDeathText,
     suggestedAgent: suggestedAgent
   };
@@ -385,6 +414,10 @@ function normalizeFubonContract_(p) {
     var relationship = sec03[applicantName] || sec03[insuredName] || (applicantName===insuredName ? "本人" : "");
 
     var applicantIdNumber, applicantBirth, applicantPhone, applicantEmail, applicantAddress, suggestedAgent, beneficiaryDeathText;
+    // 被保人自己的欄位——單純被保人（沒有同時當要保人）以前這幾個
+    // 欄位一律留空，其實 rawText 裡的「被保人」區塊本來就有這些資料
+    // （身分證號碼／生日／性別），只是沒有解析，現在補上。
+    var insuredIdNumber = "", insuredBirth = "", insuredGender = "", insuredPhone = "", insuredEmail = "", insuredAddress = "";
 
     if (Object.keys(sec03).length > 0) {
       // 這份合約有結構化的 kvPairs 可以直接用
@@ -395,6 +428,9 @@ function normalizeFubonContract_(p) {
       applicantAddress  = sec03["住所/戶籍地址"] || sec03["收費地址"] || "";
       suggestedAgent    = sec03["服務人員資料"] || "";
       beneficiaryDeathText = ""; // 目前已知的結構化格式裡還沒遇過含受益人資料的版本
+      // kvPairs 目前是不分要保人/被保人的單一份 key-value，沒有辦法
+      // 像 rawText 那樣切出被保人自己的區塊，這裡維持空白（跟以前
+      // 行為一致），不要硬用同一組值冒充被保人資料。
     } else {
       // kvPairs 是空的，退回從 rawText 純文字裡解析
       var fallback = parseRawTextFallback_(sec03Full.rawText || "");
@@ -405,6 +441,12 @@ function normalizeFubonContract_(p) {
       applicantAddress  = fallback.applicantAddress;
       suggestedAgent    = fallback.suggestedAgent;
       beneficiaryDeathText = fallback.beneficiaryDeathText;
+      insuredIdNumber = fallback.insuredIdNumber;
+      insuredBirth    = fallback.insuredBirth;
+      insuredGender   = fallback.insuredGender;
+      insuredPhone    = fallback.insuredPhone;
+      insuredEmail    = fallback.insuredEmail;
+      insuredAddress  = fallback.insuredAddress;
     }
 
     var rawItems = (p.sec05_保險項目與金額 && p.sec05_保險項目與金額.items) || [];
@@ -448,7 +490,10 @@ function normalizeFubonContract_(p) {
           name: applicantName, idNumber: applicantIdNumber, birthDate: applicantBirth,
           phone: applicantPhone, email: applicantEmail, address: applicantAddress
         },
-        insured: { name: insuredName },
+        insured: {
+          name: insuredName, idNumber: insuredIdNumber, birthDate: insuredBirth,
+          gender: insuredGender, phone: insuredPhone, email: insuredEmail, address: insuredAddress
+        },
         relationship: relationship,
         suggestedAgent: suggestedAgent,
         // 只有主約才附身故受益人資料——附約通常「同主約」，不用各自重複填。
@@ -540,20 +585,35 @@ function buildRelationshipGroups_(policies) {
     return k;
   }
 
-  var personInfo = {}; // key -> {name, idNumber, relationship}
+  var personInfo = {}; // key -> {name, idNumber, birthDate, gender, phone, email, address}
+  // 有欄位缺漏時，用新資料補齊既有資料，但不覆蓋既有已經有值的欄位
+  // （例如同一人某張保單只抓到姓名，另一張抓到完整生日/性別，兩邊
+  // 合併起來才是這個人最完整的資料，而不是後面那張把前面蓋掉）。
+  function fillMissing_(target, src) {
+    ["idNumber","birthDate","gender","phone","email","address"].forEach(function(f){
+      if (!target[f] && src[f]) target[f] = src[f];
+    });
+  }
+
   policies.forEach(function(p){
     // 要保人先算 key（可能帶出身分證號，讓 idByName 先記住這個姓名），
     // 被保人才算 key，這樣同一筆保單裡「要保人＝被保人」時，被保人
     // 才能吃到剛剛才記住的身分證號，兩者才會收斂成同一把 key。
     var appKey = keyOf(p.applicant.name, p.applicant.idNumber);
-    var insKey = keyOf(p.insured.name, "");
-    if (!personInfo[appKey]) personInfo[appKey] = { name: p.applicant.name, idNumber: p.applicant.idNumber, birthDate: p.applicant.birthDate, phone: p.applicant.phone, email: p.applicant.email, address: p.applicant.address };
-    // 之前若已經用 NAME: 建立過這個人（例如先遇到「被保人」角色、
-    // 後來才遇到「要保人」角色帶出身分證號），這裡補上完整資料，
-    // 避免主要資料留在被丟棄的舊 key 上。
-    if (!personInfo[insKey]) personInfo[insKey] = { name: p.insured.name, idNumber: "" };
-    else if (!personInfo[insKey].idNumber && idByName[p.insured.name]) {
-      personInfo[insKey].idNumber = idByName[p.insured.name];
+    // ⚠️ 被保人現在也可能有自己的身分證號碼（從 rawText 的「被保人」
+    // 區塊解析出來），不要再固定傳空字串——單純被保人（沒有同時當
+    // 要保人）的人，本來就要靠這個自己的身分證號碼才能建立正確的 key，
+    // 不然永遠只能退回姓名比對。
+    var insKey = keyOf(p.insured.name, p.insured.idNumber);
+    if (!personInfo[appKey]) {
+      personInfo[appKey] = { name: p.applicant.name, idNumber: p.applicant.idNumber, birthDate: p.applicant.birthDate, gender: "", phone: p.applicant.phone, email: p.applicant.email, address: p.applicant.address };
+    } else {
+      fillMissing_(personInfo[appKey], { idNumber: p.applicant.idNumber, birthDate: p.applicant.birthDate, phone: p.applicant.phone, email: p.applicant.email, address: p.applicant.address });
+    }
+    if (!personInfo[insKey]) {
+      personInfo[insKey] = { name: p.insured.name, idNumber: p.insured.idNumber, birthDate: p.insured.birthDate, gender: p.insured.gender, phone: p.insured.phone, email: p.insured.email, address: p.insured.address };
+    } else {
+      fillMissing_(personInfo[insKey], { idNumber: p.insured.idNumber, birthDate: p.insured.birthDate, gender: p.insured.gender, phone: p.insured.phone, email: p.insured.email, address: p.insured.address });
     }
     union(appKey, insKey);
     p._appKey = appKey; p._insKey = insKey;
@@ -752,12 +812,14 @@ function buildPersonData_(member, personId, analysisDate) {
     updatedAt: new Date().toISOString(),
     profile: {
       name: member.name,
-      // 匯入資料裡，只有「要保人」的區塊會有生日資料；如果這個人剛好
-      // 同時是要保人（例如自己保自己），這裡就會有值，轉成西元格式存
-      // 起來。單純的被保險人（沒有同時當要保人）目前還是沒有生日資料
-      // 可用，維持空白，事後手動補。
+      // 富邦的「被保人」區塊其實有生日資料（之前沒解析被保人區塊，
+      // 才誤以為只有要保人區塊有生日——現在 parseRawTextFallback_
+      // 已經補上被保人區塊解析，單純被保人也能抓到生日了）。
       birthDate: rocDateToIso_(member.birthDate) || null,
-      gender: "male",
+      // 性別同理：只有被保人區塊會標記性別（要保人區塊沒有這個欄
+      // 位），這裡改用實際解析出來的值，抓不到才用 male 當預設值
+      // （沿用舊行為，避免這個欄位直接變成 undefined 影響其他畫面）。
+      gender: member.gender === "female" ? "female" : "male",
       idNumber: member.idNumber || null,
       analysisDate: analysisDate,
       note: "",
