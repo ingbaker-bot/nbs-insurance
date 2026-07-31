@@ -625,6 +625,19 @@
         <input type="text" id="edit-name" placeholder="姓名" />
       </div>
 
+      <div class="field" id="edit-relation-field">
+        <label>與主要成員的關係</label>
+        <select id="edit-relation">
+          <option value="本人">本人</option>
+          <option value="配偶">配偶</option>
+          <option value="子女">子女</option>
+          <option value="父母">父母</option>
+          <option value="祖父母">祖父母</option>
+          <option value="兄弟姊妹">兄弟姊妹</option>
+          <option value="其他">其他</option>
+        </select>
+      </div>
+
       <div class="field">
         <label>出生日期（民國）</label>
         <div style="display:flex;align-items:center;gap:6px;">
@@ -1056,6 +1069,39 @@
       const person = personDataMap[selectedPersonId];
       if (!person) return;
       document.getElementById("edit-name").value = person.profile.name || "";
+      // 「本人」是靠 member.role === "primary" 判斷的，不是靠這個關係
+      // 欄位（家庭總覽那邊顯示「本人」也是看 role），所以本人這裡直接
+      // 鎖定顯示「本人」、不給改，避免使用者以為改這裡可以把本人換成
+      // 別人，實際上完全無效、只會混淆。其餘成員才能正常編輯關係。
+      const member = familyData.members.find(m => m.personId === selectedPersonId);
+      const relationSelect = document.getElementById("edit-relation");
+      if (member && member.role === "primary") {
+        relationSelect.innerHTML = '<option value="本人">本人</option>';
+        relationSelect.value = "本人";
+        relationSelect.disabled = true;
+      } else {
+        relationSelect.disabled = false;
+        var knownRelations = ["配偶","子女","父母","祖父母","兄弟姊妹","其他"];
+        var currentRelation = member && member.relation;
+        var options = '';
+        // 「待確認」或任何不在已知清單裡的值（包含空白），代表這個人
+        // 的關係還沒被明確設定過——不要偷偷塞一個「其他」進去存檔，
+        // 加一個提示選項讓使用者自己主動選，選了才算數。
+        if (!currentRelation || knownRelations.indexOf(currentRelation) === -1) {
+          options += '<option value="" disabled selected>請選擇關係</option>';
+        }
+        options +=
+          '<option value="配偶">配偶</option>' +
+          '<option value="子女">子女</option>' +
+          '<option value="父母">父母</option>' +
+          '<option value="祖父母">祖父母</option>' +
+          '<option value="兄弟姊妹">兄弟姊妹</option>' +
+          '<option value="其他">其他</option>';
+        relationSelect.innerHTML = options;
+        if (currentRelation && knownRelations.indexOf(currentRelation) !== -1) {
+          relationSelect.value = currentRelation;
+        }
+      }
       document.getElementById("edit-birth").value = person.profile.birthDate || "";
       const rocParts = isoToRocParts(person.profile.birthDate);
       document.getElementById("edit-birth-y").value = rocParts.y;
@@ -1098,6 +1144,7 @@
       if (!person) return;
 
       const newName     = document.getElementById("edit-name").value.trim();
+      const newRelation = document.getElementById("edit-relation").value;
       const newBirth    = document.getElementById("edit-birth").value;
       const newGender   = document.getElementById("edit-gender").value;
       const newIdNumber = document.getElementById("edit-id-number").value.trim().toUpperCase();
@@ -1121,10 +1168,12 @@
           content: person,
         });
 
-        // 同步更新家庭成員名稱
+        // 同步更新家庭成員名稱與「與本人的關係」
         const member = familyData.members.find(m => m.personId === selectedPersonId);
-        if (member && newName) {
-          member.name = newName;
+        const relationChanged = member && newRelation && member.relation !== newRelation && member.role !== "primary";
+        if (member && (newName || relationChanged)) {
+          if (newName) member.name = newName;
+          if (relationChanged) member.relation = newRelation;
           familyData.updatedAt = new Date().toISOString();
           await callGAS("saveFile", {
             email: currentUser.email,
