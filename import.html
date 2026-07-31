@@ -371,14 +371,72 @@ function parseRawTextFallback_(rawText) {
     return (v === "---" || v === "----") ? "" : v;
   }
 
-  // 身故受益人資料：標題行是「姓名  關係  人數」，下一行才是實際內容
-  // （例如「邱鳳春 等人   配偶   2」），用 tab 分隔。
+  // 身故受益人資料——遇過兩種完全不同的排版，兩種都要處理：
+  //
+  // 格式 A（單一受益人，表頭跟資料各自一行、用 tab 分隔多個欄位）：
+  //   身故受益人資料
+  //   姓名　關係　人數
+  //   楊嚴玲 等人　配偶　4
+  //
+  // 格式 B（可能有多位受益人，每個欄位各自佔一行，不斷重複）：
+  //   身故受益人資料
+  //   順位
+  //   姓名
+  //   關係
+  //   比例
+  //   01
+  //   高汶蕙
+  //   父母子女
+  //   100/100
+  //   02
+  //   高正治
+  //   祖孫
+  //   50/100
+  //   ...
+  //
+  // 之前只寫了格式 A，遇到格式 B 因為 lines[beneIdx+1] 是「順位」兩個
+  // 字、不含「姓名」，判斷條件直接不成立，整段被跳過、什麼都抓不到。
   var beneficiaryDeathText = "";
   var beneIdx = lines.indexOf("身故受益人資料");
-  if (beneIdx !== -1 && lines[beneIdx+1] && lines[beneIdx+1].indexOf("姓名") !== -1) {
-    var beneLine = lines[beneIdx+2] || "";
-    if (beneLine && beneLine !== "--") beneficiaryDeathText = beneLine.replace(/\t+/g, "　").trim();
+  if (beneIdx !== -1) {
+    // 受益人資料區塊到下一個已知段落標題（或檔案結尾）為止，避免
+    // 不小心把後面不相關的段落也當成這裡的內容。
+    var sectionEnders = ["生存保險受益人資料","滿期受益人資料","祝壽金受益人資料","服務人員資料","保單利益權人資料"];
+    var beneEnd = lines.length;
+    for (var si = beneIdx+1; si < lines.length; si++) {
+      if (sectionEnders.indexOf(lines[si]) !== -1) { beneEnd = si; break; }
+    }
+    var beneBlock = lines.slice(beneIdx+1, beneEnd);
+
+    if (beneBlock[0] === "順位" && beneBlock[1] === "姓名" && beneBlock[2] === "關係" && beneBlock[3] === "比例") {
+      // 格式 B：表頭固定 4 個欄位名稱各佔一行，後面資料每 4 行一筆，
+      // 可能有好幾位受益人，一起列出來（用頓號分隔）。
+      var rows = beneBlock.slice(4);
+      var people = [];
+      for (var ri = 0; ri + 3 < rows.length; ri += 4) {
+        var name = rows[ri+1], rel = rows[ri+2], ratio = rows[ri+3];
+        if (!name || name === "--" || name === "---") continue;
+        people.push(name + "（" + rel + "　" + ratio + "）");
+      }
+      beneficiaryDeathText = people.join("、");
+    } else if (beneBlock[0] && beneBlock[0].indexOf("姓名") !== -1) {
+      // 格式 A：單行 tab 分隔的表頭 + 一行資料
+      var beneLine = beneBlock[1] || "";
+      if (beneLine && beneLine !== "--") beneficiaryDeathText = beneLine.replace(/\t+/g, "　").trim();
+    }
   }
+
+  // 契約始期（保單起始日）跟繳別——這兩個是整張契約層級的資料（不分
+  // 主約/附約，全部共用同一個值），記在最前面「保單管理」那段摘要
+  // 資訊裡，例如：
+  //   契約始期
+  //   88/03/30
+  //   繳別
+  //   半年繳
+  // 之前完全沒有解析這兩個欄位，導致附約永遠沒有起始日、繳別也一律
+  // 被畫面預設成年繳。
+  var contractStartDate = findInLines(lines, "契約始期") || findInLines(lines, "保單起始日");
+  var paymentFrequency  = findInLines(lines, "繳別");
 
   var suggestedAgent = "";
   var svcIdx = lines.indexOf("服務人員資料");
@@ -390,6 +448,8 @@ function parseRawTextFallback_(rawText) {
     applicantPhone:    findInLines(applicantLines, "行動電話") || findInLines(applicantLines, "收費/聯絡電話"),
     applicantEmail:    findInLines(applicantLines, "電子信箱"),
     applicantAddress:  findInLines(applicantLines, "住所/戶籍地址") || findInLines(applicantLines, "收費地址"),
+    contractStartDate: contractStartDate,
+    paymentFrequency:  paymentFrequency,
     // 被保人自己的欄位（單純被保人、沒有同時當要保人的人，之前這幾個
     // 欄位一律是空的，現在補上）
     insuredIdNumber: findInLines(insuredLines, "身分證號碼"),
@@ -414,6 +474,10 @@ function normalizeFubonContract_(p) {
     var relationship = sec03[applicantName] || sec03[insuredName] || (applicantName===insuredName ? "本人" : "");
 
     var applicantIdNumber, applicantBirth, applicantPhone, applicantEmail, applicantAddress, suggestedAgent, beneficiaryDeathText;
+    // 契約始期（保單起始日）跟繳別——整張契約共用同一個值，不分主約/
+    // 附約。目前已知的結構化 kvPairs 格式還沒遇過帶這兩個欄位的版本，
+    // 先留空字串，跟其他欄位一樣的處理方式；rawText 那邊已經有解析。
+    var contractStartDate = "", paymentFrequency = "";
     // 被保人自己的欄位——單純被保人（沒有同時當要保人）以前這幾個
     // 欄位一律留空，其實 rawText 裡的「被保人」區塊本來就有這些資料
     // （身分證號碼／生日／性別），只是沒有解析，現在補上。
@@ -441,6 +505,8 @@ function normalizeFubonContract_(p) {
       applicantAddress  = fallback.applicantAddress;
       suggestedAgent    = fallback.suggestedAgent;
       beneficiaryDeathText = fallback.beneficiaryDeathText;
+      contractStartDate = fallback.contractStartDate;
+      paymentFrequency  = fallback.paymentFrequency;
       insuredIdNumber = fallback.insuredIdNumber;
       insuredBirth    = fallback.insuredBirth;
       insuredGender   = fallback.insuredGender;
@@ -475,6 +541,15 @@ function normalizeFubonContract_(p) {
         return { rawLabel: b["給付項目"] || "", amount: parseFubonAmount_(b["金額"]), unit: b["單位"] || "" };
       });
 
+      // 有些主約商品（例如「XX期滿福終身壽險」這種有滿期還本設計的
+      // 商品）原始表格是兩層表頭（一般時期/期滿後時期各自的保額、保
+      // 費），跟其他附約的表格結構不一樣，欄位會對不齊，導致「繳費
+      // 期滿日」這個 key 裡裝到的其實是金額（例如「新台幣 1,000,000
+      // 元」）而不是日期。這裡做個簡單過濾：不像日期格式就不要，
+      // 免得髒資料被當成日期存進去、顯示出一個看起來很怪的到期日。
+      var payEndRaw = it["繳費期滿日"] || "";
+      if (payEndRaw && !/^\d{1,3}\/\d{1,2}\/\d{1,2}$/.test(payEndRaw)) payEndRaw = "";
+
       return {
         policyNo: contractPolicyNo,
         productCode: it._productCode || "", // 判斷「這個項目是否已存在」用這個，不要用 policyNo（現在是共用的）
@@ -484,8 +559,12 @@ function normalizeFubonContract_(p) {
         insuredAmountUnit: planAmount.unit,
         isMain: !!it._isMainItem,
         status: it["契約狀態"] || p.status || "",
-        payEndDate: it["繳費期滿日"] || "",
+        payEndDate: payEndRaw,
         covEndDate: it["保障期滿日"] || "",
+        // 契約始期／繳別是整張契約共用的（不分主約/附約），從 sec03
+        // 解析出來，直接套用在這張契約底下的每一筆項目。
+        startDateRaw: contractStartDate,
+        payMode: paymentFrequency,
         applicant: {
           name: applicantName, idNumber: applicantIdNumber, birthDate: applicantBirth,
           phone: applicantPhone, email: applicantEmail, address: applicantAddress
@@ -862,7 +941,9 @@ function buildPolicyRecord_(p) {
     company: "富邦人壽",
     owner: p.applicant.name,
     status: p.status || "有效",
+    startDateRaw: p.startDateRaw || "",
     payEndRaw: p.payEndDate || "",
+    payMode: p.payMode || "",
     coverage: coverage,
     note: unmatchedNotes.length ? ("匯入時無法歸類的給付項目，請人工確認：\n" + unmatchedNotes.join("\n")) : "",
     _importedAt: new Date().toISOString(),
