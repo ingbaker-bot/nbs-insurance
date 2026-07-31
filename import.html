@@ -1011,6 +1011,17 @@ async function commitMatchedGroup_(g) {
     if (existingPid) {
       targetPerson = persons[existingPid];
       targetPersonId = existingPid;
+      // ⚠️ 這個人已經存在，不代表他的基本資料已經是完整的——舊資料
+      // 可能是用比較舊版的匯入工具建立的（例如生日/性別那時候還抓不
+      // 到）。這裡只補「目前是空白」的欄位，已經有值的一律不動，避免
+      // 業務員手動改過的資料被匯入資料蓋掉。
+      var prof = targetPerson.profile = targetPerson.profile || {};
+      if (!prof.idNumber && m.idNumber) prof.idNumber = m.idNumber;
+      if (!prof.birthDate && m.birthDate) {
+        var isoBirth = rocDateToIso_(m.birthDate);
+        if (isoBirth) prof.birthDate = isoBirth;
+      }
+      if ((!prof.gender || prof.gender === "male") && m.gender === "female") prof.gender = "female";
     } else {
       // 這個家庭裡沒出現過的新面孔（例如原本只登記爸爸，這次匯入才第一次
       // 出現媽媽），幫他新建一筆 person，並加進 family.members
