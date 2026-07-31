@@ -392,6 +392,20 @@
     .field input:focus, .field select:focus { border-color: #378ADD; }
     .field .hint { font-size: 22px; color: #0C447C; margin-top: 3px; }
 
+    /* 民國年/月/日這種窄輸入框，不要吃 .field input 給一般全寬欄位用的
+       28px 大字＋9px/12px 內距——字體太大、內距太寬，塞進 56~70px 的
+       窄框裡，3 碼年份／2 碼月日會被切掉、顯示不完整。這裡用專屬
+       class 蓋掉字體/內距/寬度，年跟月日各自留一點餘裕。 */
+    .roc-date-input {
+      width: 64px !important;
+      font-size: 20px !important;
+      padding: 6px 4px !important;
+      text-align: center;
+    }
+    .roc-date-input.roc-mmdd {
+      width: 52px !important;
+    }
+
     .btn-row { display: flex; gap: 8px; margin-top: 20px; }
 
     .btn-primary {
@@ -553,9 +567,9 @@
       <div class="field">
         <label>出生日期（民國）</label>
         <div style="display:flex;align-items:center;gap:6px;">
-          <input type="number" id="new-birth-y" placeholder="年" min="1" max="200" style="width:70px" oninput="onNewBirthRocChange()" />年
-          <input type="number" id="new-birth-m" placeholder="月" min="1" max="12" style="width:56px" oninput="onNewBirthRocChange()" />月
-          <input type="number" id="new-birth-d" placeholder="日" min="1" max="31" style="width:56px" oninput="onNewBirthRocChange()" />日
+          <input type="number" id="new-birth-y" placeholder="年" min="1" max="200" class="roc-date-input" oninput="onNewBirthRocChange()" />年
+          <input type="number" id="new-birth-m" placeholder="月" min="1" max="12" class="roc-date-input roc-mmdd" oninput="onNewBirthRocChange()" />月
+          <input type="number" id="new-birth-d" placeholder="日" min="1" max="31" class="roc-date-input roc-mmdd" oninput="onNewBirthRocChange()" />日
         </div>
         <input type="hidden" id="new-birth" />
         <div class="hint" id="new-age-hint"></div>
@@ -614,9 +628,9 @@
       <div class="field">
         <label>出生日期（民國）</label>
         <div style="display:flex;align-items:center;gap:6px;">
-          <input type="number" id="edit-birth-y" placeholder="年" min="1" max="200" style="width:70px" oninput="onEditBirthRocChange()" />年
-          <input type="number" id="edit-birth-m" placeholder="月" min="1" max="12" style="width:56px" oninput="onEditBirthRocChange()" />月
-          <input type="number" id="edit-birth-d" placeholder="日" min="1" max="31" style="width:56px" oninput="onEditBirthRocChange()" />日
+          <input type="number" id="edit-birth-y" placeholder="年" min="1" max="200" class="roc-date-input" oninput="onEditBirthRocChange()" />年
+          <input type="number" id="edit-birth-m" placeholder="月" min="1" max="12" class="roc-date-input roc-mmdd" oninput="onEditBirthRocChange()" />月
+          <input type="number" id="edit-birth-d" placeholder="日" min="1" max="31" class="roc-date-input roc-mmdd" oninput="onEditBirthRocChange()" />日
         </div>
         <input type="hidden" id="edit-birth" />
         <div class="hint" id="edit-age-hint"></div>
@@ -640,9 +654,9 @@
       <div class="field">
         <label>分析日（民國）</label>
         <div style="display:flex;gap:6px;align-items:center">
-          <input type="number" id="edit-analysis-y" placeholder="年" min="1" max="200" style="width:70px" oninput="onEditAnalysisRocChange()" />年
-          <input type="number" id="edit-analysis-m" placeholder="月" min="1" max="12" style="width:56px" oninput="onEditAnalysisRocChange()" />月
-          <input type="number" id="edit-analysis-d" placeholder="日" min="1" max="31" style="width:56px" oninput="onEditAnalysisRocChange()" />日
+          <input type="number" id="edit-analysis-y" placeholder="年" min="1" max="200" class="roc-date-input" oninput="onEditAnalysisRocChange()" />年
+          <input type="number" id="edit-analysis-m" placeholder="月" min="1" max="12" class="roc-date-input roc-mmdd" oninput="onEditAnalysisRocChange()" />月
+          <input type="number" id="edit-analysis-d" placeholder="日" min="1" max="31" class="roc-date-input roc-mmdd" oninput="onEditAnalysisRocChange()" />日
         </div>
         <input type="hidden" id="edit-analysis" />
       </div>
