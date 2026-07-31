@@ -539,7 +539,7 @@
     </div>
     <div class="field">
       <label>繳費方式</label>
-      <select id="f-paymode">
+      <select id="f-paymode" onchange="onPayModeChange()">
         <option>月繳</option>
         <option>季繳</option>
         <option>半年繳</option>
@@ -1002,8 +1002,12 @@ function openForm(mode, memberId, policyIdOrNo) {
     document.getElementById("f-covend").value    = policy.covEndRaw || "";
     document.getElementById("f-paymode").value   = policy.payMode || "年繳";
     document.getElementById("f-currency").value  = policy.currency || "TWD";
-    document.getElementById("f-premium").value   = policy.premiumOrig || "";
+    // 資料庫存的 premiumOrig 是「年繳總額」，這裡要反推回「這一期繳
+    // 多少」才符合輸入框現在的意義（不然編輯既有保單、沒特別去動這
+    // 個欄位就直接按儲存，會被再乘一次繳別倍數，金額整個放大）。
+    document.getElementById("f-premium").value   = policy.premiumOrig ? deAnnualizePremium(policy.premiumOrig, policy.payMode || "年繳") : "";
     document.getElementById("f-rate").value      = policy.exchangeRate || "";
+    updatePremiumLabel();
 
     if (policy.startDateRaw)  parseDate("f-start","f-start-hint");
     if (policy.payEndRaw)     parseDate("f-payend","f-payend-hint");
@@ -1221,15 +1225,37 @@ function normalizeItemName(s) {
 }
 
 // 日期字串轉西元
-// AI 匯入保單時，把 PDF 上看到的原始保費（可能是月繳/季繳/半年繳的
-// 單期金額）依繳費方式換算成正確的「年繳總額」。「年繳保費」欄位設計
-// 上本來就是要填已經換算好的年繳總額，不會自動依繳費方式再乘算一次
-// ——這個函式只在 AI 匯入時使用，手動輸入維持原本「使用者自己填年繳
-// 總額」的行為不變。
+// 這個輸入框代表「這一期要繳多少」（依繳費方式而定：月繳=每月繳多少、
+// 半年繳=每半年繳多少……），存檔時一律換算成「年繳總額」存起來，不管
+// 選的是哪種繳別——這樣資料庫裡永遠是統一單位（年繳總額），方便加總、
+// 比較不同保單。
 function annualizePremium(raw, payMode) {
   const n = Number(raw) || 0;
   const mult = { "月繳":12, "季繳":4, "半年繳":2, "年繳":1 }[payMode] || 1;
   return Math.round(n * mult);
+}
+
+// annualizePremium 的反向運算：資料庫存的是年繳總額，編輯既有保單時
+// 要換算回「這一期繳多少」顯示在輸入框裡，使用者才看得懂、也才不會
+// 一按儲存就把年繳總額當成單期金額再乘一次、金額整個放大。
+function deAnnualizePremium(annual, payMode) {
+  const n = Number(annual) || 0;
+  const mult = { "月繳":12, "季繳":4, "半年繳":2, "年繳":1 }[payMode] || 1;
+  return mult ? Math.round(n / mult) : n;
+}
+
+// 繳費方式改變時：更新欄位標籤（例如「月繳保費（TWD）」）跟即時換算
+// 後的年繳台幣預覽，這樣使用者在存檔前就能看到系統實際會存下去的
+// 年繳總額是多少，不會等存完才發現金額不是自己以為的那樣。
+function onPayModeChange() {
+  updatePremiumLabel();
+  calcTWD();
+}
+
+function updatePremiumLabel() {
+  const currency = document.getElementById("f-currency").value;
+  const payMode  = document.getElementById("f-paymode").value;
+  document.getElementById("premium-label").textContent = `${payMode}保費（${currency}）`;
 }
 
 function rocToWestern(raw) {
@@ -1256,8 +1282,7 @@ function toggleAmountCustom() {
 function toggleFx() {
   const currency = document.getElementById("f-currency").value;
   const fxField = document.getElementById("fx-field");
-  const label = document.getElementById("premium-label");
-  label.textContent = `年繳保費（${currency}）`;
+  updatePremiumLabel();
   if (currency === "TWD") {
     fxField.style.opacity = "0.4";
     fxField.style.pointerEvents = "none";
@@ -1272,23 +1297,27 @@ function toggleFx() {
 // ── 年繳台幣換算 ──────────────────────────────────────────
 function calcTWD() {
   const currency = document.getElementById("f-currency").value;
-  const premium  = parseFloat(document.getElementById("f-premium").value) || 0;
+  const payMode  = document.getElementById("f-paymode").value;
+  const premiumPerPeriod = parseFloat(document.getElementById("f-premium").value) || 0;
   const rate     = parseFloat(document.getElementById("f-rate").value) || 0;
   const display  = document.getElementById("twd-display");
   const valEl    = document.getElementById("twd-value");
   const calcEl   = document.getElementById("twd-calc");
 
-  if (!premium) { display.style.display = "none"; return; }
+  if (!premiumPerPeriod) { display.style.display = "none"; return; }
   display.style.display = "flex";
 
+  const annualOrig = annualizePremium(premiumPerPeriod, payMode);
+  const modeNote = payMode === "年繳" ? "" : `（${payMode} ${premiumPerPeriod.toLocaleString()} 已換算成年繳）`;
+
   if (currency === "TWD") {
-    valEl.textContent = "NT$ " + premium.toLocaleString();
-    calcEl.textContent = "";
+    valEl.textContent = "NT$ " + annualOrig.toLocaleString();
+    calcEl.textContent = modeNote;
   } else {
     if (!rate) { valEl.textContent = "請填入匯率"; calcEl.textContent = ""; return; }
-    const twd = Math.round(premium * rate);
+    const twd = Math.round(annualOrig * rate);
     valEl.textContent = "NT$ " + twd.toLocaleString();
-    calcEl.textContent = premium.toLocaleString() + " " + currency + " × " + rate;
+    calcEl.textContent = annualOrig.toLocaleString() + " " + currency + " × " + rate + modeNote;
   }
 }
 
@@ -1322,8 +1351,10 @@ async function savePolicy() {
   btn.textContent = "儲存中…";
 
   const currency = document.getElementById("f-currency").value;
-  const premium  = parseFloat(document.getElementById("f-premium").value) || 0;
+  const payMode  = document.getElementById("f-paymode").value;
+  const premiumPerPeriod = parseFloat(document.getElementById("f-premium").value) || 0;
   const rate     = parseFloat(document.getElementById("f-rate").value) || null;
+  const premium  = annualizePremium(premiumPerPeriod, payMode); // 換算成年繳總額再存
   const premiumTWD = currency === "TWD" ? premium : (rate ? Math.round(premium * rate) : 0);
 
   const startRaw  = document.getElementById("f-start").value.trim();
