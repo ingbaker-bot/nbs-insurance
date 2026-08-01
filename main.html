@@ -42,18 +42,22 @@
       position: sticky;
       top: 0;
       z-index: 100;
+      gap: 8px;
     }
 
     .header-left {
       display: flex;
       align-items: center;
       gap: 10px;
+      min-width: 0;    /* 讓子元素的 text-overflow:ellipsis 在 flex 容器裡真的生效 */
+      flex-shrink: 1;
     }
 
     .header-logo {
       height: 32px;
       width: auto;
       object-fit: contain;
+      flex-shrink: 0;
     }
 
     .header-title {
@@ -61,12 +65,16 @@
       font-weight: 800;
       color: #111827;
       letter-spacing: -.3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .header-right {
       display: flex;
       align-items: center;
       gap: 10px;
+      flex-shrink: 0;
     }
 
     .user-badge {
@@ -75,6 +83,33 @@
       gap: 7px;
       font-size: 13px;
       color: #6B7280;
+      min-width: 0;
+    }
+
+    #user-name {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 110px;
+    }
+
+    /* 窄螢幕（手機直向，約 iPhone SE ~ 一般手機寬度）：Logo＋標題＋頭像＋
+       姓名＋管理員 Badge＋登出全部擠在一行本來就容易爆版，這裡縮小間距
+       跟字體、姓名欄位進一步限制寬度，登出按鈕改成更小的圖示化樣式，
+       避免整排被擠到換行或橫向溢出。不隱藏管理員 Badge——那是 JS 依權
+       限動態控制顯示與否的，CSS 這裡只負責在「本來就該顯示」的前提下
+       讓它不要撐爆版面。 */
+    @media (max-width: 380px) {
+      .header { padding: 8px 12px; gap: 6px; }
+      .header-left { gap: 6px; }
+      .header-logo { height: 26px; }
+      .header-title { font-size: 12.5px; }
+      .header-right { gap: 6px; }
+      .user-badge { gap: 4px; font-size: 11px; }
+      #user-name { max-width: 56px; }
+      .admin-badge { font-size: 10px !important; padding: 1px 6px !important; }
+      .logout-btn { font-size: 0; padding: 6px 8px; }
+      .logout-btn::before { content: "⎋"; font-size: 14px; }
     }
 
     .user-avatar {
@@ -165,8 +200,8 @@
     .version-picker.open .version-menu { display: block; }
     .version-opt { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 9px; font-size: 13px; font-weight: 600; color: #374151; white-space: nowrap; cursor: pointer; }
     .version-opt:hover { background: #f5f5ff; }
-    .more-actions { position: relative; flex-shrink: 0; display: flex; align-items: center; }
-    .more-actions-btn { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #9CA3AF; font-size: 18px; font-weight: 700; cursor: pointer; }
+    .more-actions { position: relative; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+    .more-actions-btn { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #9CA3AF; font-size: 20px; font-weight: 700; cursor: pointer; }
     .more-actions-btn:hover { background: #f3f4f6; color: #374151; }
     .more-menu { display: none; position: absolute; top: calc(100% + 6px); right: 0; background: #fff; border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.14); padding: 6px; min-width: 160px; z-index: 51; }
     .more-actions.open .more-menu { display: block; }
@@ -174,15 +209,30 @@
     .more-opt:hover { background: #fef2f2; }
     .version-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
+    .action-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
     .add-btn {
-      width: 100%; padding: 13px;
+      flex: 1;
+      min-width: 0;
+      padding: 12px 8px;
       background: linear-gradient(90deg, #3B82F6, #7C3AED);
       color: #fff; border: none; border-radius: 12px;
-      font-size: 14px; font-weight: 700; cursor: pointer;
-      font-family: inherit; margin-top: 6px;
+      font-size: 13.5px; font-weight: 700; cursor: pointer;
+      font-family: inherit;
       transition: opacity .15s, transform .1s;
       box-shadow: 0 4px 16px rgba(100,120,255,.25);
       letter-spacing: .02em;
+      white-space: normal;      /* 鎖定狀態文字比較長，允許換行，不要被硬切掉 */
+      line-height: 1.35;
+      min-height: 44px;         /* 換行後也維持一致的觸控高度 */
+    }
+    .add-btn.secondary {
+      background: #fff; color: #4338ca; border: 1.5px solid #c7d2fe;
+      box-shadow: 0 2px 8px rgba(0,0,0,.03);
     }
     .add-btn:hover { opacity: .92; transform: translateY(-1px); }
     .add-btn:active { transform: translateY(0); }
@@ -200,6 +250,27 @@
       margin-right: 6px; vertical-align: middle;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* 骨架屏：先渲染幾張跟真實家庭卡片同樣尺寸的灰色區塊，帶脈衝動畫，
+       取代單純的轉圈圈——資料還沒回來，畫面看起來已經「有東西在」，
+       感知載入速度會比空白+spinner快很多，網路稍有延遲時也不會讓畫
+       面突然跳動。 */
+    .skeleton-card {
+      background: rgba(255,255,255,.7);
+      border: 1px solid rgba(120,140,255,.10);
+      border-radius: 14px; padding: 13px 15px; margin-bottom: 8px;
+      display: flex; align-items: center; gap: 13px;
+    }
+    .skeleton-block {
+      background: linear-gradient(90deg, #EEF0F4 25%, #F7F8FA 37%, #EEF0F4 63%);
+      background-size: 400% 100%;
+      animation: skeleton-shimmer 1.4s ease infinite;
+      border-radius: 8px;
+    }
+    @keyframes skeleton-shimmer {
+      0% { background-position: 100% 50%; }
+      100% { background-position: 0 50%; }
+    }
 
     .modal-overlay {
       display: none; position: fixed; inset: 0;
@@ -325,15 +396,36 @@
     </div>
 
     <!-- 新增按鈕（移到搜尋下方）-->
-    <button class="add-btn" onclick="openCreateModal()" style="margin-bottom:16px;">＋ 新增家庭</button>
-    <button class="add-btn" id="import-btn" onclick="goImportPage()" style="margin-bottom:16px;background:#fff;color:#4338ca;border:1.5px solid #c7d2fe;">📥 批次匯入保單</button>
+    <div class="action-group">
+      <button class="add-btn" onclick="openCreateModal()">＋ 新增家庭</button>
+      <button class="add-btn secondary" id="import-btn" onclick="goImportPage()">📥 批次匯入</button>
+    </div>
 
     <!-- 家庭列表 -->
     <div class="section-label" id="list-label">家庭列表</div>
     <div id="family-list">
-      <div class="loading-state" id="loading-view">
-        <span class="spinner"></span> 
-        <span id="loading-text">保單體檢資料連線中，請稍候...</span>
+      <div id="loading-view">
+        <div class="skeleton-card">
+          <div class="skeleton-block" style="width:42px;height:42px;border-radius:13px;flex-shrink:0;"></div>
+          <div style="flex:1;min-width:0;">
+            <div class="skeleton-block" style="width:40%;height:14px;margin-bottom:8px;"></div>
+            <div class="skeleton-block" style="width:65%;height:11px;"></div>
+          </div>
+        </div>
+        <div class="skeleton-card">
+          <div class="skeleton-block" style="width:42px;height:42px;border-radius:13px;flex-shrink:0;"></div>
+          <div style="flex:1;min-width:0;">
+            <div class="skeleton-block" style="width:55%;height:14px;margin-bottom:8px;"></div>
+            <div class="skeleton-block" style="width:35%;height:11px;"></div>
+          </div>
+        </div>
+        <div class="skeleton-card">
+          <div class="skeleton-block" style="width:42px;height:42px;border-radius:13px;flex-shrink:0;"></div>
+          <div style="flex:1;min-width:0;">
+            <div class="skeleton-block" style="width:45%;height:14px;margin-bottom:8px;"></div>
+            <div class="skeleton-block" style="width:50%;height:11px;"></div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -539,8 +631,14 @@
       }
 
       // 快取未命中：正常流程，啟動「有溫度的動態載入」
+      // 骨架屏取代原本單純的 spinner——資料還沒回來，畫面看起來已經
+      // 「有東西在」，比空白畫面+轉圈圈的感知載入速度快很多；下面保留
+      // 原本的文字輪播當作說明文案，兩者搭配使用。
       document.getElementById("family-list").innerHTML =
-        '<div class="loading-state"><span class="spinner"></span><span id="loading-text">保單資料庫安全連線中...</span></div>';
+        '<div class="skeleton-card"><div class="skeleton-block" style="width:42px;height:42px;border-radius:13px;flex-shrink:0;"></div><div style="flex:1;min-width:0;"><div class="skeleton-block" style="width:40%;height:14px;margin-bottom:8px;"></div><div class="skeleton-block" style="width:65%;height:11px;"></div></div></div>' +
+        '<div class="skeleton-card"><div class="skeleton-block" style="width:42px;height:42px;border-radius:13px;flex-shrink:0;"></div><div style="flex:1;min-width:0;"><div class="skeleton-block" style="width:55%;height:14px;margin-bottom:8px;"></div><div class="skeleton-block" style="width:35%;height:11px;"></div></div></div>' +
+        '<div class="skeleton-card"><div class="skeleton-block" style="width:42px;height:42px;border-radius:13px;flex-shrink:0;"></div><div style="flex:1;min-width:0;"><div class="skeleton-block" style="width:45%;height:14px;margin-bottom:8px;"></div><div class="skeleton-block" style="width:50%;height:11px;"></div></div></div>' +
+        '<div style="text-align:center;padding:14px 20px 4px;color:#9CA3AF;font-size:12px;"><span id="loading-text">保單資料庫安全連線中...</span></div>';
 
       // 啟動文字輪播計時器 (每 1.5 秒換一句)
       let msgIndex = 0;
@@ -795,7 +893,7 @@
       btn.dataset.locked = locked ? "1" : "0";
       btn.style.opacity = locked ? "0.55" : "";
       btn.style.cursor = locked ? "not-allowed" : "";
-      btn.innerHTML = locked ? "🔒 📥 批次匯入保單（菁英會員專屬）" : "📥 批次匯入保單";
+      btn.innerHTML = locked ? "🔒 批次匯入（菁英專屬）" : "📥 批次匯入";
     }
 
     function goImportPage() {
@@ -830,7 +928,7 @@
       btn.dataset.locked = locked ? "1" : "0";
       btn.style.opacity = locked ? "0.55" : "";
       btn.style.cursor = locked ? "not-allowed" : "";
-      btn.textContent = locked ? "🔒 ＋ 新增家庭（已達上限）" : "＋ 新增家庭";
+      btn.textContent = locked ? "🔒 已達上限" : "＋ 新增家庭";
     }
 
     function showFamilyLimitNotice_() {
