@@ -512,6 +512,26 @@
     }
 
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* 處理中覆蓋層——合併/移出成家這類動作要打好幾次 GAS 請求，
+       每次都要好幾秒，之前畫面完全沒反應，使用者不知道到底有沒有
+       在跑，還是當掉了。加一個全螢幕淡淡的遮罩＋提示文字，讓等待
+       有個交代。 */
+    .busy-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(255,255,255,.72);
+      backdrop-filter: blur(2px);
+      z-index: 500;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .busy-overlay.active { display: flex; }
+    .busy-overlay .spinner { width: 26px; height: 26px; border-width: 3px; }
+    .busy-overlay .busy-text { font-size: 14px; font-weight: 600; color: #4B5563; }
+
     /* nav.js 側欄整合 */
     @media (min-width: 768px) {
       body { padding-left: 220px !important; }
@@ -743,7 +763,14 @@
     </div>
   </div>
 
+  <!-- 處理中覆蓋層 -->
+  <div class="busy-overlay" id="busy-overlay">
+    <span class="spinner"></span>
+    <span class="busy-text" id="busy-text">處理中，請稍候...</span>
+  </div>
+
   <!-- 共用「從清單選一個」彈窗，取代 window.prompt() -->
+
   <div class="modal-overlay" id="picker-modal" onclick="handlePickerOverlayClick(event)">
     <div class="modal">
       <div class="modal-title">
@@ -957,6 +984,7 @@
       if (typed === null) return;
       if (typed.trim() !== name) { alert("輸入的內容不符，已取消刪除，資料仍然保留。"); return; }
 
+      showBusy("刪除處理中，請稍候...");
       try {
         // 刪除這個人的個人資料檔案（保單、保障內容等都在裡面）
         await callGAS("deleteFile", {
@@ -986,6 +1014,8 @@
         }
       } catch (e) {
         alert("刪除失敗：" + e.message);
+      } finally {
+        hideBusy();
       }
     }
 
@@ -1003,6 +1033,15 @@
       document.querySelectorAll(".member-menu.open").forEach(m => m.classList.remove("open"));
     }
     window.addEventListener("click", closeAllMemberMenus);
+
+    // ── 處理中覆蓋層 ──────────────────────────────────────────
+    function showBusy(text) {
+      document.getElementById("busy-text").textContent = text || "處理中，請稍候...";
+      document.getElementById("busy-overlay").classList.add("active");
+    }
+    function hideBusy() {
+      document.getElementById("busy-overlay").classList.remove("active");
+    }
 
     // ── 共用「從清單選一個」彈窗 ──────────────────────────────
     // 用法：const value = await pickFromList("標題", [{label, sub, value}]);
@@ -1069,6 +1108,7 @@
 
       if (!window.confirm("確定要把「" + name + "」移出這個家庭、獨立成立一個新的家庭嗎？\n\n這個人名下的保單與保障資料不會受影響，只是換一個家庭歸戶。")) return;
 
+      showBusy("資料處理中，請稍候...");
       try {
         // 1) 原家庭：移除這個人，視情況指定新本人
         familyData.members = familyData.members.filter(m => m.personId !== personId);
@@ -1113,6 +1153,8 @@
         alert("已將「" + name + "」移到新家庭「" + newFamilyName + "」，回家庭列表就找得到，可以自行修改家庭名稱。");
       } catch (e) {
         alert("移出失敗：" + e.message + "\n\n請重新整理頁面確認實際結果，避免重複操作造成資料不一致。");
+      } finally {
+        hideBusy();
       }
     }
 
@@ -1129,10 +1171,12 @@
 
       // 1) 抓可以選的家庭清單（排除自己這個家庭）
       let list;
+      showBusy("資料讀取中，請稍候...");
       try {
         const res = await callGAS("listFamilies", { email: currentUser.email });
         list = (res.families || []).filter(f => f.fileName !== familyFileName);
-      } catch (e) { alert("讀取家庭清單失敗：" + e.message); return; }
+      } catch (e) { hideBusy(); alert("讀取家庭清單失敗：" + e.message); return; }
+      hideBusy();
       if (!list.length) { alert("目前沒有其他家庭可以合併過去。"); return; }
 
       const targetFileName = await pickFromList(
@@ -1169,6 +1213,7 @@
         : "確定要把「" + name + "」合併到「" + target.familyName + "」，關係設為「" + relation.trim() + "」嗎？";
       if (!window.confirm(confirmMsg)) return;
 
+      showBusy("資料處理中，請稍候...");
       try {
         // 2) 先讀目標家庭「當下最新」的資料，不要用列表頁可能過期的
         //    快取內容去覆蓋，避免把別人剛好也在編輯的東西蓋掉。
@@ -1233,6 +1278,8 @@
         alert("已將「" + name + "」合併到「" + target.familyName + "」。");
       } catch (e) {
         alert("合併失敗：" + e.message + "\n\n請重新整理頁面確認實際結果，避免重複操作造成資料不一致。");
+      } finally {
+        hideBusy();
       }
     }
 
@@ -1479,6 +1526,7 @@
       person.profile.address      = newAddress || null;
       person.updatedAt = new Date().toISOString();
 
+      showBusy("資料儲存中，請稍候...");
       try {
         await callGAS("saveFile", {
           email: currentUser.email,
@@ -1518,6 +1566,7 @@
         window.location.reload(true); // true 代表強制忽略瀏覽器 HTTP 快取
 
       } catch(e) {
+        hideBusy();
         alert("儲存失敗：" + e.message);
       }
     }
