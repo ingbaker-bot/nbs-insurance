@@ -1053,10 +1053,8 @@
       const member = familyData.members.find(m => m.personId === personId);
       if (!member) return;
       const activeMembers = familyData.members.filter(m => m.role !== "beneficiary_only");
-      if (activeMembers.length <= 1) {
-        alert("這是這個家庭目前唯一的成員。如果要把「整個家庭」併到別的家庭去，請回家庭列表操作，不需要在這裡先移除成員。");
-        return;
-      }
+      // 只剩這一人也可以合併——合併完原家庭會變空殼，直接一併刪掉
+      // 那個空殼檔案就好（下面存檔那一步會處理），不需要因此擋下操作。
 
       // 1) 抓可以選的家庭清單（排除自己這個家庭）
       let list;
@@ -1080,10 +1078,13 @@
       );
       if (relation === null) return;
 
-      // 如果被合併走的人是原家庭的本人，一樣要先指定新本人
+      // 如果被合併走的人是原家庭的本人，且原家庭合併後還有其他人留下，
+      // 要先指定新本人；如果這人本來就是家庭裡唯一一人，合併後原家庭
+      // 直接變空殼、一起刪掉即可，不需要指定新本人。
+      const others = activeMembers.filter(m => m.personId !== personId);
       let newPrimaryId = null;
-      if (member.role === "primary") {
-        const others = activeMembers.filter(m => m.personId !== personId);
+      const willBecomeEmpty = others.length === 0;
+      if (member.role === "primary" && !willBecomeEmpty) {
         const npChoice = window.prompt(
           "「" + name + "」是這個家庭目前的本人，合併出去後原家庭需要指定新的本人。\n請完整輸入以下其中一位的姓名：\n" +
           others.map(m => "・" + m.name).join("\n")
@@ -1094,7 +1095,10 @@
         newPrimaryId = picked.personId;
       }
 
-      if (!window.confirm("確定要把「" + name + "」合併到「" + target.familyName + "」，關係設為「" + relation.trim() + "」嗎？")) return;
+      const confirmMsg = willBecomeEmpty
+        ? "確定要把「" + name + "」合併到「" + target.familyName + "」，關係設為「" + relation.trim() + "」嗎？\n\n原本的「" + familyData.familyName + "」合併後會變成空的家庭，將一併自動刪除。"
+        : "確定要把「" + name + "」合併到「" + target.familyName + "」，關係設為「" + relation.trim() + "」嗎？";
+      if (!window.confirm(confirmMsg)) return;
 
       try {
         // 2) 先讀目標家庭「當下最新」的資料，不要用列表頁可能過期的
@@ -1115,10 +1119,18 @@
           if (np) { np.role = "primary"; np.relation = "本人"; }
         }
         familyData.updatedAt = new Date().toISOString();
-        await callGAS("saveFile", {
-          email: currentUser.email, fileType: "families",
-          fileId: familyData.familyId, fileName: familyFileName, content: familyData,
-        });
+        if (willBecomeEmpty) {
+          // 原家庭已經沒有任何成員了，是個空殼，直接刪掉這份家庭檔案，
+          // 不要留著一筆空的家庭在列表裡。
+          await callGAS("deleteFile", {
+            email: currentUser.email, fileType: "families", fileName: familyFileName,
+          });
+        } else {
+          await callGAS("saveFile", {
+            email: currentUser.email, fileType: "families",
+            fileId: familyData.familyId, fileName: familyFileName, content: familyData,
+          });
+        }
 
         // 4) 目標家庭：加進這個人
         targetFamily.members.push({ personId: personId, name: name, role: "family", relation: relation.trim() });
@@ -1128,6 +1140,20 @@
           fileId: targetFamily.familyId, fileName: target.fileName, content: targetFamily,
         });
 
+        if (window.NBS_NAV && typeof NBS_NAV.invalidateBundleCache === 'function') NBS_NAV.invalidateBundleCache();
+
+        if (willBecomeEmpty) {
+          // 這個家庭已經整個併走、檔案也刪了，這個頁面沒有東西可以留著看，
+          // 直接導回家庭列表。
+          alert("已將「" + name + "」合併到「" + target.familyName + "」，原本的「" + familyData.familyName + "」已一併移除。");
+          if (window.NBS_NAV && typeof NBS_NAV.navigate === 'function') {
+            NBS_NAV.navigate("main.html", { skipPush: true });
+          } else {
+            window.location.href = "main.html";
+          }
+          return;
+        }
+
         delete personDataMap[personId];
         if (selectedPersonId === personId) {
           const remaining = familyData.members.find(m => m.role !== "beneficiary_only");
@@ -1135,7 +1161,6 @@
         }
         renderMembers();
         if (selectedPersonId) selectMember(selectedPersonId);
-        if (window.NBS_NAV && typeof NBS_NAV.invalidateBundleCache === 'function') NBS_NAV.invalidateBundleCache();
         alert("已將「" + name + "」合併到「" + target.familyName + "」。");
       } catch (e) {
         alert("合併失敗：" + e.message + "\n\n請重新整理頁面確認實際結果，避免重複操作造成資料不一致。");
