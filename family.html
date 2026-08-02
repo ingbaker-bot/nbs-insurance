@@ -398,6 +398,35 @@
 
     .field { margin-bottom: 14px; }
 
+    /* ── 共用「從清單選一個」彈窗 ──
+       用來取代 window.prompt() 那種要手動打字輸入的選單（例如選要合併
+       到哪個家庭、選新本人）。原生 prompt 對話框的內文幾乎沒辦法選取
+       複製、還要求打字打到一字不差，家庭一多、名字一長就很容易打錯，
+       改成直接點選清單項目。 */
+    .picker-option {
+      padding: 14px 16px;
+      border: 1.5px solid #eee;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 17px;
+      font-weight: 600;
+      color: #111827;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      background: #fff;
+    }
+    .picker-option:hover, .picker-option:active {
+      background: #f5f5ff;
+      border-color: #c7d2fe;
+    }
+    .picker-option .sub {
+      font-size: 13px;
+      color: #9CA3AF;
+      font-weight: 400;
+    }
+
     .field label {
       display: block;
       font-size: 24px;
@@ -714,6 +743,17 @@
     </div>
   </div>
 
+  <!-- 共用「從清單選一個」彈窗，取代 window.prompt() -->
+  <div class="modal-overlay" id="picker-modal" onclick="handlePickerOverlayClick(event)">
+    <div class="modal">
+      <div class="modal-title">
+        <span id="picker-modal-title">請選擇</span>
+        <button class="modal-close" onclick="closePicker(null)">&times;</button>
+      </div>
+      <div id="picker-modal-list"></div>
+    </div>
+  </div>
+
   <script>
     // ── 設定 ─────────────────────────────────────────────────
     // GAS_URL 已移至 nav.js 統一管理
@@ -964,6 +1004,39 @@
     }
     window.addEventListener("click", closeAllMemberMenus);
 
+    // ── 共用「從清單選一個」彈窗 ──────────────────────────────
+    // 用法：const value = await pickFromList("標題", [{label, sub, value}]);
+    // 使用者點了某一項 → resolve 該項的 value；按取消/叉叉/點背景 → resolve null。
+    var _pickerResolve = null;
+    var _pickerOptions = null;
+    function pickFromList(title, options) {
+      return new Promise(function(resolve) {
+        _pickerResolve = resolve;
+        _pickerOptions = options;
+        document.getElementById("picker-modal-title").textContent = title;
+        document.getElementById("picker-modal-list").innerHTML = options.map(function(o, i) {
+          return '<div class="picker-option" onclick="closePicker(' + i + ')">' +
+            '<span>' + o.label + '</span>' +
+            (o.sub ? '<span class="sub">' + o.sub + '</span>' : '') +
+            '</div>';
+        }).join("");
+        document.getElementById("picker-modal").classList.add("active");
+      });
+    }
+    function closePicker(indexOrNull) {
+      document.getElementById("picker-modal").classList.remove("active");
+      var resolve = _pickerResolve;
+      var options = _pickerOptions;
+      _pickerResolve = null;
+      _pickerOptions = null;
+      if (!resolve) return;
+      if (indexOrNull === null || indexOrNull === undefined) resolve(null);
+      else resolve(options[indexOrNull].value);
+    }
+    function handlePickerOverlayClick(evt) {
+      if (evt.target.id === "picker-modal") closePicker(null);
+    }
+
     // ── 移出、獨立成家 ────────────────────────────────────────
     // 用途：批次匯入沒被判斷成同一家庭、或家庭成員離婚／子女成年
     // 搬出去，需要把這個人從目前家庭拆出去、自己成立一個新家庭。
@@ -986,14 +1059,12 @@
       let newPrimaryId = null;
       if (member.role === "primary") {
         const others = activeMembers.filter(m => m.personId !== personId);
-        const choice = window.prompt(
-          "「" + name + "」是這個家庭目前的本人，移出後原家庭需要指定新的本人。\n請完整輸入以下其中一位的姓名：\n" +
-          others.map(m => "・" + m.name).join("\n")
+        const picked = await pickFromList(
+          "「" + name + "」是本人，移出後原家庭要指定新的本人：",
+          others.map(m => ({ label: m.name, sub: m.relation || "", value: m.personId }))
         );
-        if (choice === null) return;
-        const picked = others.find(m => m.name === choice.trim());
-        if (!picked) { alert("輸入的姓名不在名單裡，已取消。"); return; }
-        newPrimaryId = picked.personId;
+        if (picked === null) return;
+        newPrimaryId = picked;
       }
 
       if (!window.confirm("確定要把「" + name + "」移出這個家庭、獨立成立一個新的家庭嗎？\n\n這個人名下的保單與保障資料不會受影響，只是換一個家庭歸戶。")) return;
@@ -1064,17 +1135,17 @@
       } catch (e) { alert("讀取家庭清單失敗：" + e.message); return; }
       if (!list.length) { alert("目前沒有其他家庭可以合併過去。"); return; }
 
-      const choice = window.prompt(
-        "要把「" + name + "」合併到哪個家庭？請完整輸入以下其中一個家庭名稱：\n" +
-        list.map(f => "・" + f.familyName).join("\n")
+      const targetFileName = await pickFromList(
+        "把「" + name + "」合併到哪個家庭？",
+        list.map(f => ({ label: f.familyName, sub: (f.memberCount || 0) + " 位成員", value: f.fileName }))
       );
-      if (choice === null) return;
-      const target = list.find(f => f.familyName === choice.trim());
-      if (!target) { alert("輸入的家庭名稱不在名單裡，已取消。"); return; }
+      if (targetFileName === null) return;
+      const target = list.find(f => f.fileName === targetFileName);
+      if (!target) return;
 
-      const relation = window.prompt(
-        "「" + name + "」跟「" + target.familyName + "」本人的關係是？\n（請輸入：配偶／子女／父母／祖父母／兄弟姊妹／其他）",
-        "配偶"
+      const relation = await pickFromList(
+        "「" + name + "」跟「" + target.familyName + "」本人的關係是？",
+        ["配偶","子女","父母","祖父母","兄弟姊妹","其他"].map(r => ({ label: r, value: r }))
       );
       if (relation === null) return;
 
@@ -1085,14 +1156,12 @@
       let newPrimaryId = null;
       const willBecomeEmpty = others.length === 0;
       if (member.role === "primary" && !willBecomeEmpty) {
-        const npChoice = window.prompt(
-          "「" + name + "」是這個家庭目前的本人，合併出去後原家庭需要指定新的本人。\n請完整輸入以下其中一位的姓名：\n" +
-          others.map(m => "・" + m.name).join("\n")
+        const picked = await pickFromList(
+          "「" + name + "」是本人，合併出去後原家庭要指定新的本人：",
+          others.map(m => ({ label: m.name, sub: m.relation || "", value: m.personId }))
         );
-        if (npChoice === null) return;
-        const picked = others.find(m => m.name === npChoice.trim());
-        if (!picked) { alert("輸入的姓名不在名單裡，已取消。"); return; }
-        newPrimaryId = picked.personId;
+        if (picked === null) return;
+        newPrimaryId = picked;
       }
 
       const confirmMsg = willBecomeEmpty
