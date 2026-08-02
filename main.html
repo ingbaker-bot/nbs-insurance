@@ -272,6 +272,19 @@
       100% { background-position: 0 50%; }
     }
 
+    /* 載入提示文字——之前改骨架屏時，順手把這段字縮成 12px 塞到骨架
+       屏下面的小角落，變得很不顯眼。這裡改回醒目、置中的樣式，跟原本
+       的體驗一致，骨架屏留著當背景視覺（有東西在動的感覺），文字才是
+       真正要讓使用者看到、安心等待的重點。 */
+    .loading-caption {
+      text-align: center;
+      padding: 18px 20px 16px;
+      color: #4B5563;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+
     .modal-overlay {
       display: none; position: fixed; inset: 0;
       background: rgba(17,24,39,.45);
@@ -405,6 +418,7 @@
     <div class="section-label" id="list-label">家庭列表</div>
     <div id="family-list">
       <div id="loading-view">
+        <div class="loading-caption"><span class="spinner"></span> <span id="loading-text-static">保單體檢資料連線中，請稍候...</span></div>
         <div class="skeleton-card">
           <div class="skeleton-block" style="width:42px;height:42px;border-radius:13px;flex-shrink:0;"></div>
           <div style="flex:1;min-width:0;">
@@ -635,10 +649,10 @@
       // 「有東西在」，比空白畫面+轉圈圈的感知載入速度快很多；下面保留
       // 原本的文字輪播當作說明文案，兩者搭配使用。
       document.getElementById("family-list").innerHTML =
+        '<div class="loading-caption"><span class="spinner"></span> <span id="loading-text">保單資料庫安全連線中...</span></div>' +
         '<div class="skeleton-card"><div class="skeleton-block" style="width:42px;height:42px;border-radius:13px;flex-shrink:0;"></div><div style="flex:1;min-width:0;"><div class="skeleton-block" style="width:40%;height:14px;margin-bottom:8px;"></div><div class="skeleton-block" style="width:65%;height:11px;"></div></div></div>' +
         '<div class="skeleton-card"><div class="skeleton-block" style="width:42px;height:42px;border-radius:13px;flex-shrink:0;"></div><div style="flex:1;min-width:0;"><div class="skeleton-block" style="width:55%;height:14px;margin-bottom:8px;"></div><div class="skeleton-block" style="width:35%;height:11px;"></div></div></div>' +
-        '<div class="skeleton-card"><div class="skeleton-block" style="width:42px;height:42px;border-radius:13px;flex-shrink:0;"></div><div style="flex:1;min-width:0;"><div class="skeleton-block" style="width:45%;height:14px;margin-bottom:8px;"></div><div class="skeleton-block" style="width:50%;height:11px;"></div></div></div>' +
-        '<div style="text-align:center;padding:14px 20px 4px;color:#9CA3AF;font-size:12px;"><span id="loading-text">保單資料庫安全連線中...</span></div>';
+        '<div class="skeleton-card"><div class="skeleton-block" style="width:42px;height:42px;border-radius:13px;flex-shrink:0;"></div><div style="flex:1;min-width:0;"><div class="skeleton-block" style="width:45%;height:14px;margin-bottom:8px;"></div><div class="skeleton-block" style="width:50%;height:11px;"></div></div></div>';
 
       // 啟動文字輪播計時器 (每 1.5 秒換一句)
       let msgIndex = 0;
