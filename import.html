@@ -648,6 +648,40 @@ function normalizeFubonContract_(p) {
         return { rawLabel: b["給付項目"] || "", amount: parseFubonAmount_(b["金額"]), unit: b["單位"] || "" };
       });
 
+      // 有些附約（例如「MR 意外傷害醫療保險金（一般型）」）本身沒有拆
+      // 出好幾筆給付明細，整張附約就只有「保額」這一個數字——這種情況
+      // 原本的邏輯完全不會處理（只看 _benefits，這裡是空的），導致
+      // coverage 裡完全沒有這張附約的資料，明明它自己就是一筆完整的
+      // 保障金額。這裡補一個備援：沒有明細、但商品名稱本身可以對到
+      // BENEFIT_MAPPING（去掉前面的商品代碼，例如「MR 」）的話，就直接
+      // 把整張附約的保額當成這一筆給付金額。
+      if (!benefits.length && !(it._notes && it._notes.length)) {
+        var nameForMatch = (it["保險項目"] || "");
+        if (it._productCode) {
+          nameForMatch = nameForMatch.replace(new RegExp("^" + it._productCode.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\s*"), "");
+        }
+        var wholeItemMatch = lookupBenefitMapping_(nameForMatch, category);
+        if (wholeItemMatch && planAmount && planAmount.amount) {
+          benefits = [{ rawLabel: nameForMatch, amount: planAmount.amount, unit: planAmount.unit || "" }];
+        }
+      }
+
+      // 保費——之前完全沒有解析這個欄位，policy.html 的保費一直只能
+      // 靠業務員手動輸入。原始文字是「新台幣 5,460元/年繳」或「新台幣
+      // 1,180元」這種格式，這裡只抓數字金額本身；繳費頻率已經有契約
+      // 層級的 paymentFrequency（見上面 contractStartDate 那段）可以用，
+      // 不需要從這裡再判斷一次。「新台幣 0元」（繳費期滿的附約）會正
+      // 確抓到 0，這是對的，不是漏抓——繳費期滿之後本來就不用再繳保費。
+      var premiumMatch = String(it["保險費"] || "").match(/[\d,]+/);
+      var premiumRaw = premiumMatch ? parseInt(premiumMatch[0].replace(/,/g, ""), 10) : null;
+      // policy.html 存檔時，premiumOrig 一律是「年繳總額」（不管使用者
+      // 選哪種繳別，存檔前都會先乘上對應倍數換算過）——這裡用契約層級
+      // 的繳別（paymentFrequency）套用同一套換算規則，讓自動匯入跟手動
+      // 輸入的資料格式一致，之後在 policy.html 編輯這張保單時，反推回
+      // 「這一期繳多少」才不會算錯。
+      var premiumFreqMult = {"月繳":12,"季繳":4,"半年繳":2,"年繳":1}[paymentFrequency] || 1;
+      var premiumAmount = premiumRaw != null ? premiumRaw * premiumFreqMult : null;
+
       // 有些主約商品（例如「XX期滿福終身壽險」這種有滿期還本設計的
       // 商品）原始表格是兩層表頭（一般時期/期滿後時期各自的保額、保
       // 費），跟其他附約的表格結構不一樣，欄位會對不齊，導致「繳費
@@ -672,6 +706,7 @@ function normalizeFubonContract_(p) {
         // 解析出來，直接套用在這張契約底下的每一筆項目。
         startDateRaw: contractStartDate,
         payMode: paymentFrequency,
+        premium: premiumAmount,
         applicant: {
           name: applicantName, idNumber: applicantIdNumber, birthDate: applicantBirth,
           phone: applicantPhone, email: applicantEmail, address: applicantAddress
@@ -1053,7 +1088,16 @@ function buildPolicyRecord_(p) {
     status: p.status || "有效",
     startDateRaw: p.startDateRaw || "",
     payEndRaw: p.payEndDate || "",
+    covEndRaw: p.covEndDate || "",
     payMode: p.payMode || "",
+    // 富邦這批資料都是台幣保單，先固定 currency:"TWD"、premiumTWD 直接
+    // 等於 premiumOrig（不用查匯率）。p.premium 抓不到值時給 0，跟
+    // policy.html 手動輸入欄位「抓不到就是 0」的行為一致，不要留
+    // null／undefined 讓畫面顯示奇怪的東西。
+    currency: "TWD",
+    exchangeRate: null,
+    premiumOrig: p.premium != null ? p.premium : 0,
+    premiumTWD: p.premium != null ? p.premium : 0,
     coverage: coverage,
     note: unmatchedNotes.length ? ("匯入時無法歸類的給付項目，請人工確認：\n" + unmatchedNotes.join("\n")) : "",
     _importedAt: new Date().toISOString(),
