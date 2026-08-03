@@ -940,6 +940,7 @@
             ${selectedPersonId === m.personId ? '<div class="member-edit-hint">✏️ 點選編輯</div>' : ''}
             <div class="member-menu-btn" title="更多操作" onclick="event.stopPropagation();toggleMemberMenu(event,'${m.personId}')">⋯</div>
             <div class="member-menu" id="member-menu-${m.personId}">
+              ${m.role !== "primary" ? `<div class="member-menu-opt" onclick="event.stopPropagation();closeAllMemberMenus();promptMakePrimary('${m.personId}','${escName}')">👑 設為家庭本人</div>` : ''}
               <div class="member-menu-opt" onclick="event.stopPropagation();closeAllMemberMenus();promptSplitMember('${m.personId}','${escName}')">🏠 移出、獨立成家</div>
               <div class="member-menu-opt" onclick="event.stopPropagation();closeAllMemberMenus();promptMergeMember('${m.personId}','${escName}')">🔀 合併到其他家庭</div>
               <div class="member-menu-opt danger" onclick="event.stopPropagation();closeAllMemberMenus();promptDeleteMember('${m.personId}','${escName}')">🗑️ 刪除這位成員</div>
@@ -1074,6 +1075,61 @@
     }
     function handlePickerOverlayClick(evt) {
       if (evt.target.id === "picker-modal") closePicker(null);
+    }
+
+    // ── 設為家庭本人 ──────────────────────────────────────────
+    // 用途：批次匯入判斷的「本人」，只是資料上的巧合（例如誰先出現在
+    // 保單裡），不一定符合實際上「該以誰的角度做保單體檢」——常見情境
+    // 是先生太太其中一人當初幫全家投保、要保人欄位都寫他/她，但實際
+    // 做財務決策、業務員該主談的人是另一半，需要能事後改回來。
+    //
+    // 這不是單純把角色對調：原本本人跟新本人的關係，如果是配偶對配偶
+    // 是對稱的，互換沒問題；但如果是父母子女這種不對稱關係（例如子女
+    // 接手當家庭窗口），舊本人不能直接沿用「子女對本人」的舊關係標籤
+    // （那是相對於舊本人才成立的），换完之後方向反過來了，需要重新
+    // 指定一次，不能自動猜。
+    async function promptMakePrimary(personId, name) {
+      const newPrimary = familyData.members.find(m => m.personId === personId);
+      if (!newPrimary) return;
+      const oldPrimary = familyData.members.find(m => m.role === "primary");
+      if (!oldPrimary) return; // 理論上不該發生：家庭一定要有一個本人
+      if (oldPrimary.personId === personId) return; // 本來就是本人了
+
+      const oldPrimaryName = oldPrimary.name;
+      const newRelationForOld = await pickFromList(
+        "「" + name + "」設為本人後，原本的本人「" + oldPrimaryName + "」跟新本人的關係是？",
+        ["配偶","子女","父母","祖父母","兄弟姊妹","其他"].map(r => ({ label: r, value: r }))
+      );
+      if (newRelationForOld === null) return;
+
+      if (!window.confirm(
+        "確定要把本人從「" + oldPrimaryName + "」換成「" + name + "」嗎？\n\n" +
+        "「" + oldPrimaryName + "」之後會顯示為「" + newRelationForOld + "」。\n" +
+        "保單資料本身不會受影響，只是換一下家庭裡以誰為主的顯示與判斷角度。\n\n" +
+        "⚠️ 提醒：保障清單／保障彙總等頁面如果有跟「本人」相關的試算邏輯，" +
+        "換完之後建議去確認一下數字是否合理。"
+      )) return;
+
+      showBusy("資料處理中，請稍候...");
+      try {
+        newPrimary.role = "primary";
+        newPrimary.relation = "本人";
+        oldPrimary.role = "family";
+        oldPrimary.relation = newRelationForOld;
+        familyData.updatedAt = new Date().toISOString();
+        await callGAS("saveFile", {
+          email: currentUser.email, fileType: "families",
+          fileId: familyData.familyId, fileName: familyFileName, content: familyData,
+        });
+        if (window.NBS_NAV && typeof NBS_NAV.invalidateBundleCache === 'function') NBS_NAV.invalidateBundleCache();
+        renderMembers();
+        if (selectedPersonId) selectMember(selectedPersonId);
+        alert("已將本人改為「" + name + "」。");
+      } catch (e) {
+        alert("設定失敗：" + e.message + "\n\n請重新整理頁面確認實際結果。");
+      } finally {
+        hideBusy();
+      }
     }
 
     // ── 移出、獨立成家 ────────────────────────────────────────
