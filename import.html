@@ -158,6 +158,107 @@ var BENEFIT_MAPPING = {
   "癌症放射線治療保險金": {key:"can_radiation"},
   "癌症化學治療保險金":   {key:"can_chemo"},
   "癌症身故保險金":       {key:"can_death"},
+
+  // ═══ 以下是業務員實際核對 200 筆真實保單資料後、逐項確認補上的 ═══
+
+  // （2026-08-03 第二輪修正：改用程式直接產生，避免手動輸入造成的頓號/
+  //   標點誤差）
+
+
+  // 業務員確認「不需要獨立列成保障欄位」的項目
+  "身故": {ignore:true},
+  "第91日起住院醫療": {ignore:true},
+  "或住院醫療日額保險金": {ignore:true},
+  "或住院醫療日額給付為": {ignore:true},
+  "失能保險金": {ignore:true},
+  "長期住院補助保險金最高給付天數為150天": {ignore:true},
+  "完全殘廢生活扶助保險金": {ignore:true},
+  "電梯意外身故保險金": {ignore:true},
+  "特定傷病暨完全失能關懷保險金": {ignore:true},
+  "一氧化碳中毒意外傷害事故": {ignore:true},
+  "燒燙傷中心費用保險金給付限額，同一保險事故最高給付日數以90日為限": {ignore:true},
+  "出院在家療養保險金給付限額": {ignore:true},
+  "手術出院療養保險金給付限額": {ignore:true},
+  "意外傷害住院手術慰問金": {ignore:true},
+  "一般意外傷害事故者": {ignore:true},
+  "搭乘大眾運輸交通工具意外傷害事故者": {ignore:true},
+  "每次住院總限額": {ignore:true},
+  "殘廢保險金": {ignore:true},
+  "出院居家療養保險金最高給付天數為90天": {ignore:true},
+  "第2保單年度起": {ignore:true},
+  "第1保單年度": {ignore:true},
+
+  // 業務員確認對應到既有或新增欄位的項目
+  "每日病房費用保險金": {key:"hosp_room"},
+  "住院手術費用保險金": {key:"hosp_surgery"},
+  "住院醫療費用保險金": {key:"hosp_misc"},
+  "心臟、肺臟、肝臟": {key:"organ_transplant_high"},
+  "心臟、肺臟、肝臟移植": {key:"organ_transplant_high"},
+  "胰臟、腎臟、異體骨髓移植": {key:"organ_transplant_low"},
+  "胰臟、腎臟、造血幹細胞": {key:"organ_transplant_low"},
+  "胰臟、腎臟、異體骨髓": {key:"organ_transplant_low"},
+  "重大器官移植或造血幹細胞移植手術保險金": {key:"organ_transplant_low"},
+  "重大器官移植手術保險金": {key:"organ_transplant_low"},
+  "門診手術費用實支實付": {key:"hosp_opd_surgery"},
+  "門診手術醫療費用保險金自負額": {key:"hosp_opd_surgery"},
+  "門診手術醫療費用保險金": {key:"hosp_opd_surgery"},
+  "繳費期間後確診": {key:"can_first"},
+  "第21保單年度起確診": {key:"can_first"},
+  "第1－20保單年度內確診": {key:"can_first"},
+  "第1~20保單年度內確診": {key:"can_first"},
+  "失能生活扶助保險金": {key:"dis_annual_allowance"},
+  "失能扶助金": {key:"dis_annual_allowance"},
+  "殘廢生活扶助保險金": {key:"dis_annual_allowance"},
+  "被保險人在其確定罹患癌症後之第一、二、三、四及五個週年日仍生存時給付": {key:"can_hospice"},
+  "被保險人在其確定罹患癌症後之第一、二、三、四及五個周年日仍生存時給付。": {key:"can_hospice"},
+  "住院看護保險金": {key:"daily_nurse"},
+  "癌症外科手術醫療保險金": {key:"can_surgery"},
+  "傷害醫療保險金": {key:"acc_opd"},
+  "公共建築物火災意外傷害事故": {key:"acc_special"},
+  "電梯意外傷害事故": {key:"acc_special"},
+  "搭乘水上或陸上大眾運輸工具意外傷害事故": {key:"acc_special"},
+  "搭乘空中大眾運輸工具意外傷害事故": {key:"acc_special"},
+  "大眾運輸交通工具意外傷害事故": {key:"acc_special"},
+  "重大傷病保險金": {key:"ci_major_lump"},
+  "重大燒燙傷保險金": {key:"acc_burn"},
+  "住院醫療保險金": {key:"hosp_misc"},
+  "燒燙傷中心保險金": {key:"daily_burn"},
+  "住院醫療日額保險金": {key:"daily_room_1_30"},
+  "食物中毒保險金": {key:"acc_food_poison"},
+  "特定意外傷害二至十一級失能保險金": {key:"acc_disability_2_11"},
+  "一般意外傷害事故": {key:"acc_disability_2_11"},
+  "意外失能保險金": {key:"acc_disability_2_11"},
+  "31日以上": {key:"daily_room_31"},
+  "繄急醫療轉送保險金": {key:"daily_transport"},
+  "1～30日": {key:"daily_room_1_30"},
+  "1~30日": {key:"daily_room_1_30"},
+  "第1－90日住院醫療": {key:"daily_room_1_30"},
+  "特定傷病暨完全失能保險金": {key:"ci_major_lump"},
+  "每日病房費用保險金給付限額，同一保險事故最高給付日數以365日為限": {key:"hosp_room"},
+  "加護病房費用保險金給付限額，同一保險事故最高給付日數以90日為限": {key:"daily_icu"},
+  "住院醫療費用保險金給付限額": {key:"hosp_misc"},
+  "手術費用保險金給付限額": {key:"hosp_surgery"},
+  "意外傷害住院醫療保險金": {key:"acc_hosp"},
+  "癌症住院醫療保險金": {key:"can_hosp"},
+  "特定重大疾病保險金": {key:"ci_major_lump"},
+  "意外傷害失能保險金": {key:"acc_disability_2_11"},
+  "罹患重大疾病保險金給付以一次為限": {key:"ci_major_lump"},
+  "緊急醫療轉送醫療保險金同一次住院以一次為限": {key:"daily_transport"},
+
+  // 這幾個項目原本文字裡帶「」，實際查表只會用「」內的核心名稱，跟
+  // 我一開始整理的完整清理後字串不一樣（例如「手術費用保險金」給付
+  // 限額，實際查表只看「」內，不含「給付限額」），這裡改用正確的
+  // 查表 key 重新補上。
+  "加護病房費用保險金": {key:"daily_icu"},
+  "住院醫療日額給付": {ignore:true},
+  "出院居家療養保險金": {key:"daily_discharge"},
+  "長期住院補助保險金": {ignore:true},
+  "緊急醫療轉送醫療保險金": {key:"daily_transport"},
+  "手術費用保險金": {key:"hosp_surgery"},
+  "出院在家療養保險金": {ignore:true},
+  "罹患重大疾病保險金": {key:"ci_major_lump"},
+  "燒燙傷中心費用保險金": {ignore:true},
+  "手術出院療養保險金": {ignore:true},
 };
 
 // 給付項目文字常常帶括號備註，而且括號可能是巢狀的（例如「（接受住院手術
@@ -189,6 +290,12 @@ function lookupBenefitMapping_(rawLabel, policyCategory) {
   var core = extractCoreLabel_(rawLabel);
   var rule = BENEFIT_MAPPING[core];
   if (!rule) return null;
+
+  // 業務員已經確認過、判斷不需要獨立列成保障欄位的項目（例如條件說明
+  // 文字、或跟其他欄位重複的講法）——回傳一個「已確認」但 key 是 null
+  // 的結果，這樣畫面上不會顯示金額，但也不會再被當成「還沒處理的缺
+  // 口」不斷提醒業務員去補。
+  if (rule.ignore) return { key: null, needsReview: false, ignored: true, rawLabel: rawLabel };
 
   // dayRuleFn：核心名稱本身會重複出現、要看完整文字（例如日額區間、
   // 保單類別）才能判斷對應到哪個欄位；判斷不出來就回傳 null，一樣
@@ -586,7 +693,7 @@ function normalizeFubonContract_(p) {
         benefits: benefits,
         mappedBenefits: benefits.map(function(b){
           var m = lookupBenefitMapping_(b.rawLabel, category);
-          return Object.assign({}, b, m ? { mappedKey: m.key, needsReview: m.needsReview } : { mappedKey: null, needsReview: false });
+          return Object.assign({}, b, m ? { mappedKey: m.key, needsReview: m.needsReview, ignored: !!m.ignored } : { mappedKey: null, needsReview: false, ignored: false });
         })
       };
     });
@@ -831,6 +938,9 @@ function renderGroupCard_(g, idx) {
         var cls = b.needsReview ? "field-unmapped" : "field-mapped";
         var label = b.rawLabel + " → " + b.mappedKey + (b.needsReview ? "（請確認疾病/意外）" : "");
         return '<span class="field-tag ' + cls + '">' + label + '</span>';
+      }
+      if (b.ignored) {
+        return '<span class="field-tag" style="background:#EEE;color:#888">' + b.rawLabel + ' → 已確認不需列</span>';
       }
       return '<span class="field-tag field-unmapped">' + b.rawLabel + ' → 無法歸類，需人工確認</span>';
     }).join("");
