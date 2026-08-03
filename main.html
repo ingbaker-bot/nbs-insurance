@@ -832,35 +832,52 @@
 
       if (window.NBS_NAV && NBS_NAV._showBusyOverlay) NBS_NAV._showBusyOverlay("刪除中，請稍候...");
 
-      var personFileNameSet = {};
-      Promise.all(siblings.map(function(f){
-        return callGAS("readFile", { fileType:"families", fileName: f.fileName }).then(function(rf){
-          if (rf && rf.status === "ok" && rf.content && rf.content.members) {
-            rf.content.members.filter(function(m){ return m.role !== "beneficiary_only"; }).forEach(function(m){
-              var nm = m.name || "member";
-              personFileNameSet[nm + "_" + m.personId + ".json"] = true;
-            });
+      // ⚠️ 這裡刻意「一個一個依序」呼叫，不要用 Promise.all 一次全部平行
+      // 打出去——原因有兩個：
+      // 1. 後端刪除家庭檔案時，會順手同步更新一份「家庭索引」小檔案
+      //    （讀出來、改一筆、存回去）。如果好幾個版本的刪除同時平行
+      //    執行，每個都各自讀了「舊版」索引再各自寫回去，最後只有
+      //    最後一個寫入的會生效，其他刪除動作對索引做的更新會被蓋掉、
+      //    憑空消失，導致索引裡殘留已經刪除的家庭。依序執行，每一筆
+      //    刪除完整做完（含索引更新）才開始下一筆，就不會互相干擾。
+      // 2. 一次打太多平行請求，也比較容易讓 GAS／Drive 那邊塞車、
+      //    甚至間歇性失敗（就是主控台那些 404 紅字的來源）。
+      (async function () {
+        try {
+          var personFileNameSet = {};
+          for (var i = 0; i < siblings.length; i++) {
+            var f = siblings[i];
+            try {
+              var rf = await callGAS("readFile", { fileType: "families", fileName: f.fileName });
+              if (rf && rf.status === "ok" && rf.content && rf.content.members) {
+                rf.content.members.filter(function(m){ return m.role !== "beneficiary_only"; }).forEach(function(m){
+                  var nm = m.name || "member";
+                  personFileNameSet[nm + "_" + m.personId + ".json"] = true;
+                });
+              }
+            } catch (e) { /* 讀不到就算了，還是繼續刪除這個檔案本身 */ }
           }
-          return f.fileName;
-        }).catch(function(){ return f.fileName; });
-      })).then(function(familyFileNames){
-        var deleteFamilies = familyFileNames.map(function(fn){
-          return callGAS("deleteFile", { fileType:"families", fileName: fn }).catch(function(){});
-        });
-        var deletePersons = Object.keys(personFileNameSet).map(function(pfn){
-          return callGAS("deleteFile", { fileType:"persons", fileName: pfn }).catch(function(){});
-        });
-        return Promise.all(deleteFamilies.concat(deletePersons));
-      }).then(function(){
-        if (window.NBS_NAV && NBS_NAV._hideBusyOverlay) NBS_NAV._hideBusyOverlay();
-        alert("「"+familyName+"」已永久刪除。");
-        allFamilies = allFamilies.filter(function(f){ return (f.familyGroupId || f.familyId) !== groupId; });
-        setFamiliesCache(allFamilies);
-        renderFamilies(allFamilies, false);
-      }).catch(function(err){
-        if (window.NBS_NAV && NBS_NAV._hideBusyOverlay) NBS_NAV._hideBusyOverlay();
-        alert("刪除失敗（可能是後端尚未支援刪除功能）："+(err.message||err));
-      });
+
+          for (var j = 0; j < siblings.length; j++) {
+            try { await callGAS("deleteFile", { fileType: "families", fileName: siblings[j].fileName }); }
+            catch (e) { /* 單一版本刪除失敗不中斷，繼續刪其他版本跟成員 */ }
+          }
+          var personFileNames = Object.keys(personFileNameSet);
+          for (var k = 0; k < personFileNames.length; k++) {
+            try { await callGAS("deleteFile", { fileType: "persons", fileName: personFileNames[k] }); }
+            catch (e) { /* 同上，不中斷 */ }
+          }
+
+          if (window.NBS_NAV && NBS_NAV._hideBusyOverlay) NBS_NAV._hideBusyOverlay();
+          alert("「"+familyName+"」已永久刪除。");
+          allFamilies = allFamilies.filter(function(f){ return (f.familyGroupId || f.familyId) !== groupId; });
+          setFamiliesCache(allFamilies);
+          renderFamilies(allFamilies, false);
+        } catch (err) {
+          if (window.NBS_NAV && NBS_NAV._hideBusyOverlay) NBS_NAV._hideBusyOverlay();
+          alert("刪除失敗（可能是後端尚未支援刪除功能）："+(err.message||err));
+        }
+      })();
     }
 
     // ── 搜尋篩選 ─────────────────────────────────────────────
