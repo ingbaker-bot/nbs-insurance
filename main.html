@@ -163,7 +163,14 @@
     .section-label {
       font-size: 11px; font-weight: 700; color: #9CA3AF;
       letter-spacing: .07em; text-transform: uppercase; margin-bottom: 10px;
+      display: flex; align-items: center; justify-content: space-between;
     }
+    .show-all-btn {
+      font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+      color: #4338ca; cursor: pointer; text-decoration: underline; text-underline-offset: 2px;
+      background: none; border: none; padding: 0; font-family: inherit;
+    }
+    .show-all-btn:hover { color: #312e81; }
 
     .family-card {
       background: rgba(255,255,255,.82);
@@ -706,6 +713,28 @@
       });
     }
 
+    // ── 按筆畫排序 ──────────────────────────────────────────
+    // 用瀏覽器內建的 Intl.Collator 搭配 zh-u-co-stroke 這個排序規則，
+    // 直接照中文筆畫順序排序（不用自己維護一份筆畫字典）。萬一瀏覽器
+    // 不支援這個排序規則（極少數情況），退回用一般的中文排序，至少
+    // 還是照著合理的順序排，不會整個掛掉。
+    let strokeCollator_ = null;
+    function strokeOrderCompare_(a, b) {
+      try {
+        if (!strokeCollator_) strokeCollator_ = new Intl.Collator("zh-u-co-stroke");
+        return strokeCollator_.compare(a || "", b || "");
+      } catch (e) {
+        return (a || "").localeCompare(b || "", "zh-Hant");
+      }
+    }
+
+    // ── 全部顯示（取代原本「隨機顯示10個」）────────────────
+    let showAllFamilies = false;
+    function toggleShowAllFamilies() {
+      showAllFamilies = !showAllFamilies;
+      renderFamilies(allFamilies, false);
+    }
+
     function renderFamilies(families, isSearch) {
       const listEl  = document.getElementById("family-list");
       const labelEl = document.getElementById("list-label");
@@ -725,9 +754,10 @@
         return;
       }
 
-      // 搜尋時顯示全部結果；非搜尋時隨機取最多 10 筆
+      // 搜尋時顯示全部結果；非搜尋時，預設隨機取最多 10 筆，但可以按
+      // 「全部顯示」切換成完整清單、並照第一個字筆畫順序排序。
       let display = families;
-      if (!isSearch && families.length > 10) {
+      if (!isSearch && families.length > 10 && !showAllFamilies) {
         // Fisher-Yates shuffle 取前 10 筆（每次載入順序都不同）
         const shuffled = families.slice();
         for (let i = shuffled.length - 1; i > 0; i--) {
@@ -735,7 +765,12 @@
           [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
         }
         display = shuffled.slice(0, 10);
-        labelEl.textContent = `家庭列表　共 ${families.length} 個（隨機顯示 10 個，搜尋可找全部）`;
+        labelEl.innerHTML = `家庭列表　共 ${families.length} 個（隨機顯示 10 個）　` +
+          `<button class="show-all-btn" onclick="toggleShowAllFamilies()">全部顯示</button>`;
+      } else if (!isSearch && showAllFamilies) {
+        display = families.slice().sort((a, b) => strokeOrderCompare_(a.familyName, b.familyName));
+        labelEl.innerHTML = `家庭列表　共 ${families.length} 個（依筆畫排序）　` +
+          `<button class="show-all-btn" onclick="toggleShowAllFamilies()">隨機顯示</button>`;
       } else {
         labelEl.textContent = `家庭列表　${families.length} 個家庭`;
       }
