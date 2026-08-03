@@ -47,12 +47,12 @@
     .group-chevron.open{transform:rotate(90deg)}
     .group-body{padding:14px;border-top:1px solid #f0f0f0}
     /* 欄位 */
-    .fields-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .fields-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px 16px}
     .field-full{grid-column:1/-1}
     .field label{display:block;font-size:14px;color:#888;margin-bottom:4px}
-    .input-unit{display:flex;align-items:center;border:1px solid #e0e0e0;border-radius:6px;overflow:hidden}
+    .input-unit{display:flex;align-items:center;border:1px solid #e0e0e0;border-radius:6px;overflow:hidden;width:fit-content}
     .input-unit:focus-within{border-color:#378ADD}
-    .input-unit input{flex:1;padding:7px 8px;font-size:17px;border:none;outline:none;font-family:inherit;min-width:0}
+    .input-unit input{width:90px;flex:0 0 auto;padding:7px 8px;font-size:17px;border:none;outline:none;font-family:inherit;min-width:0}
     .input-unit .unit{padding:0 7px;font-size:14px;color:#aaa;background:#fafafa;border-left:1px solid #f0f0f0;white-space:nowrap}
     .range-row{display:flex;align-items:center;gap:5px}
     .range-row input{flex:1;padding:7px 8px;font-size:17px;border:1px solid #e0e0e0;border-radius:6px;outline:none;font-family:inherit;min-width:0}
