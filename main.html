@@ -461,6 +461,7 @@
       <button class="pin-key" onclick="pinBackspace()">⌫</button>
     </div>
     <div class="pin-reset-link" onclick="pinResetRequest()">⚙ 重新設定 PIN 碼</div>
+    <div class="pin-reset-link" id="pin-biometric-btn" style="display:none" onclick="pinTryBiometricManual_()">🔒 使用 Face ID／指紋解鎖</div>
   </div>
 
     <!-- Header -->
@@ -691,6 +692,13 @@
         const hash = await sha256Hex_(entered);
         localStorage.setItem("nbs_pin_hash", hash);
         sessionStorage.setItem("nbs_pin_unlocked", "1");
+        // PIN 設定好之後，順便問要不要也開生物辨識——裝置或瀏覽器不
+        // 支援、或使用者按取消，都直接放行進入畫面，PIN 本身已經設定
+        // 完成，生物辨識只是加分項，不是必要條件。
+        const bioAvailable = await pinBiometricAvailable_();
+        if (bioAvailable && window.confirm("要一併啟用 Face ID／指紋解鎖嗎？之後可以更快解鎖，不用每次都輸入 PIN。")) {
+          await pinSetupBiometric_();
+        }
         pinHide_();
         return;
       }
@@ -711,6 +719,72 @@
       }
     }
 
+    // ── 生物辨識（Face ID／指紋）────────────────────────────
+    // 用瀏覽器內建的 WebAuthn API 呼叫裝置本身的生物辨識，這裡完全不
+    // 需要伺服器驗證簽章——我們不是要證明身份給遠端伺服器看，只是要
+    // 確認「這台裝置的生物辨識這一刻通過了」，這件事瀏覽器 API 呼叫
+    // 成功與否本身就能代表，跟 PIN 存在本機的信任模型一致。
+    async function pinBiometricAvailable_() {
+      if (!window.PublicKeyCredential || !navigator.credentials) return false;
+      try {
+        return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+      } catch (e) { return false; }
+    }
+
+    function b64FromBytes_(bytes) {
+      return btoa(String.fromCharCode.apply(null, new Uint8Array(bytes)));
+    }
+    function bytesFromB64_(b64) {
+      return Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    }
+
+    async function pinSetupBiometric_() {
+      try {
+        const challenge = crypto.getRandomValues(new Uint8Array(32));
+        const userId = crypto.getRandomValues(new Uint8Array(16));
+        const cred = await navigator.credentials.create({
+          publicKey: {
+            challenge: challenge,
+            rp: { name: "NBS 雲端保單體檢" },
+            user: { id: userId, name: (currentUser && currentUser.email) || "nbs-user", displayName: (currentUser && currentUser.name) || "使用者" },
+            pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
+            authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
+            timeout: 60000,
+          }
+        });
+        if (cred) {
+          localStorage.setItem("nbs_biometric_cred_id", b64FromBytes_(cred.rawId));
+          return true;
+        }
+      } catch (e) { /* 使用者取消、裝置不支援，都當作沒開成功，不影響 PIN 本身 */ }
+      return false;
+    }
+
+    async function pinTryBiometric_() {
+      const credIdB64 = localStorage.getItem("nbs_biometric_cred_id");
+      if (!credIdB64) return false;
+      if (!(await pinBiometricAvailable_())) return false;
+      try {
+        const challenge = crypto.getRandomValues(new Uint8Array(32));
+        const assertion = await navigator.credentials.get({
+          publicKey: {
+            challenge: challenge,
+            allowCredentials: [{ id: bytesFromB64_(credIdB64), type: "public-key" }],
+            userVerification: "required",
+            timeout: 60000,
+          }
+        });
+        return !!assertion;
+      } catch (e) { return false; } // 使用者取消／驗證失敗，回 false，讓畫面退回輸入 PIN
+    }
+
+    async function pinTryBiometricManual_() {
+      if (await pinTryBiometric_()) {
+        sessionStorage.setItem("nbs_pin_unlocked", "1");
+        pinHide_();
+      }
+    }
+
     function pinHide_() {
       document.getElementById("pin-lock-overlay").classList.add("hidden");
     }
@@ -726,6 +800,7 @@
       // 不會變成繞過 PIN 的後門。
       if (!window.confirm("重設 PIN 碼需要重新登入 Google 帳號驗證身份，確定要繼續嗎？")) return;
       localStorage.removeItem("nbs_pin_hash");
+      localStorage.removeItem("nbs_biometric_cred_id");
       logout();
     }
 
@@ -737,9 +812,16 @@
       if (!hasPin) {
         pinMode = "setup1";
         document.getElementById("pin-subtitle").textContent = "首次使用，請設定 4 碼 PIN 碼";
-      } else {
-        pinMode = "verify";
-        document.getElementById("pin-subtitle").textContent = "請輸入 PIN 碼";
+        return;
+      }
+      pinMode = "verify";
+      document.getElementById("pin-subtitle").textContent = "請輸入 PIN 碼";
+      // 已經設定過生物辨識的話，顯示按鈕，並自動先嘗試一次——成功就
+      // 直接解鎖免輸入 PIN；使用者取消或失敗，就安靜地退回 PIN 畫面，
+      // 不彈額外的錯誤訊息（生物辨識本來就是加分的捷徑，不是必要）。
+      if (localStorage.getItem("nbs_biometric_cred_id")) {
+        document.getElementById("pin-biometric-btn").style.display = "block";
+        pinTryBiometricManual_();
       }
     }
     pinInit_();
