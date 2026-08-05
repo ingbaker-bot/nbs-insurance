@@ -172,6 +172,54 @@
     }
     .show-all-btn:hover { color: #312e81; }
 
+    /* ── PIN 鎖定畫面 ──
+       個資安全用的裝置端快速鎖定（跟 Google 登入是兩件事：Google 登入
+       已經在瀏覽器裡，PIN 只是防止「有人撿到已登入的手機/電腦」就能
+       直接看到客戶個資，多一道快速防線）。 */
+    #pin-lock-overlay {
+      position: fixed; inset: 0; z-index: 99999;
+      background: linear-gradient(160deg, #F4EEE2 0%, #EFE7D8 100%);
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 4px;
+    }
+    #pin-lock-overlay.hidden { display: none; }
+    .pin-logo-card {
+      background: #fff; border-radius: 16px; padding: 14px 28px;
+      box-shadow: 0 4px 16px rgba(0,0,0,.06); margin-bottom: 18px;
+    }
+    .pin-logo-card img { height: 34px; display: block; }
+    .pin-title { font-size: 20px; font-weight: 800; color: #1F7A6C; margin-bottom: 6px; }
+    .pin-subtitle { font-size: 14px; color: #8a8477; margin-bottom: 26px; }
+    .pin-dots { display: flex; gap: 14px; margin-bottom: 34px; }
+    .pin-dot {
+      width: 15px; height: 15px; border-radius: 50%;
+      border: 1.5px solid #378ADD; background: transparent;
+    }
+    .pin-dot.filled { background: #378ADD; }
+    .pin-dot.error { background: #e55a5a; border-color: #e55a5a; }
+    .pin-keypad {
+      display: grid; grid-template-columns: repeat(3, 72px); gap: 16px;
+    }
+    .pin-key {
+      width: 72px; height: 72px; border-radius: 50%;
+      background: #fff; border: none; box-shadow: 0 2px 6px rgba(0,0,0,.05);
+      font-size: 24px; font-weight: 700; color: #333;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+    .pin-key:active { background: #f0f0f0; }
+    .pin-key.pin-key-empty { visibility: hidden; }
+    .pin-reset-link {
+      margin-top: 30px; font-size: 13px; color: #9a9382; cursor: pointer;
+    }
+    .pin-reset-link:hover { text-decoration: underline; }
+    @keyframes pin-shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-8px); }
+      40%, 80% { transform: translateX(8px); }
+    }
+    .pin-dots.shake { animation: pin-shake .35s; }
+
+
     .family-card {
       background: rgba(255,255,255,.82);
       border: 1px solid rgba(120,140,255,.12);
@@ -387,6 +435,34 @@
 </head>
 <body>
 
+  <!-- PIN 鎖定畫面：擋在最上層，通過驗證前看不到任何家庭/客戶資料 -->
+  <div id="pin-lock-overlay" class="hidden">
+    <div class="pin-logo-card">
+      <img src="https://i.ibb.co/FkVkNhhd/NBS-4F3.jpg" alt="NBS Logo" onerror="this.style.display='none'"/>
+    </div>
+    <div class="pin-title" id="pin-title">NBS 雲端保單體檢</div>
+    <div class="pin-subtitle" id="pin-subtitle">請輸入 PIN 碼</div>
+    <div class="pin-dots" id="pin-dots">
+      <div class="pin-dot"></div><div class="pin-dot"></div>
+      <div class="pin-dot"></div><div class="pin-dot"></div>
+    </div>
+    <div class="pin-keypad">
+      <button class="pin-key" onclick="pinPress('1')">1</button>
+      <button class="pin-key" onclick="pinPress('2')">2</button>
+      <button class="pin-key" onclick="pinPress('3')">3</button>
+      <button class="pin-key" onclick="pinPress('4')">4</button>
+      <button class="pin-key" onclick="pinPress('5')">5</button>
+      <button class="pin-key" onclick="pinPress('6')">6</button>
+      <button class="pin-key" onclick="pinPress('7')">7</button>
+      <button class="pin-key" onclick="pinPress('8')">8</button>
+      <button class="pin-key" onclick="pinPress('9')">9</button>
+      <button class="pin-key pin-key-empty">·</button>
+      <button class="pin-key" onclick="pinPress('0')">0</button>
+      <button class="pin-key" onclick="pinBackspace()">⌫</button>
+    </div>
+    <div class="pin-reset-link" onclick="pinResetRequest()">⚙ 重新設定 PIN 碼</div>
+  </div>
+
     <!-- Header -->
   <div class="header">
     <div class="header-left">
@@ -554,6 +630,120 @@
   </div>
 
   <script>
+    // ── PIN 鎖定（個資安全）────────────────────────────────
+    // 跟 Google 登入是兩件不同層級的防護：Google 登入解決「這個瀏覽器
+    // 是不是本人」，PIN 解決「這個已經登入的瀏覽器，此刻在不在本人
+    // 手上」——例如手機忘記鎖螢幕被別人撿到、瀏覽器分頁忘記關掉，PIN
+    // 可以擋住不小心被別人直接看到客戶個資。
+    //
+    // PIN 只存在「這台裝置」（localStorage），用 SHA-256 雜湊過再存，
+    // 不存明碼；只在「這個分頁的這次工作階段」（sessionStorage）記住
+    // 解鎖狀態，換一個新分頁、或瀏覽器整個關掉重開，都要重新輸入。
+    const PIN_LENGTH = 4;
+    let pinBuffer = "";
+    let pinMode = "verify"; // verify | setup1 | setup2
+    let pinSetupFirst = "";
+
+    async function sha256Hex_(text) {
+      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    function pinRenderDots_(count, errorState) {
+      const dots = document.querySelectorAll("#pin-dots .pin-dot");
+      dots.forEach((d, i) => {
+        d.classList.toggle("filled", i < count && !errorState);
+        d.classList.toggle("error", !!errorState);
+      });
+    }
+
+    function pinPress(digit) {
+      if (pinBuffer.length >= PIN_LENGTH) return;
+      pinBuffer += digit;
+      pinRenderDots_(pinBuffer.length, false);
+      if (pinBuffer.length === PIN_LENGTH) setTimeout(pinSubmit_, 120);
+    }
+    function pinBackspace() {
+      pinBuffer = pinBuffer.slice(0, -1);
+      pinRenderDots_(pinBuffer.length, false);
+    }
+
+    async function pinSubmit_() {
+      const entered = pinBuffer;
+      pinBuffer = "";
+      if (pinMode === "setup1") {
+        pinSetupFirst = entered;
+        pinMode = "setup2";
+        pinRenderDots_(0, false);
+        document.getElementById("pin-subtitle").textContent = "請再輸入一次以確認";
+        return;
+      }
+      if (pinMode === "setup2") {
+        if (entered !== pinSetupFirst) {
+          pinRenderDots_(PIN_LENGTH, true);
+          setTimeout(() => {
+            pinMode = "setup1"; pinSetupFirst = "";
+            document.getElementById("pin-subtitle").textContent = "兩次輸入不一致，請重新設定 PIN 碼";
+            pinRenderDots_(0, false);
+          }, 400);
+          return;
+        }
+        const hash = await sha256Hex_(entered);
+        localStorage.setItem("nbs_pin_hash", hash);
+        sessionStorage.setItem("nbs_pin_unlocked", "1");
+        pinHide_();
+        return;
+      }
+      // verify
+      const storedHash = localStorage.getItem("nbs_pin_hash");
+      const hash = await sha256Hex_(entered);
+      if (hash === storedHash) {
+        sessionStorage.setItem("nbs_pin_unlocked", "1");
+        pinHide_();
+      } else {
+        pinRenderDots_(PIN_LENGTH, true);
+        const dotsEl = document.getElementById("pin-dots");
+        dotsEl.classList.add("shake");
+        setTimeout(() => {
+          dotsEl.classList.remove("shake");
+          pinRenderDots_(0, false);
+        }, 400);
+      }
+    }
+
+    function pinHide_() {
+      document.getElementById("pin-lock-overlay").classList.add("hidden");
+    }
+    function pinShow_() {
+      document.getElementById("pin-lock-overlay").classList.remove("hidden");
+    }
+
+    function pinResetRequest() {
+      // 重設 PIN 沒有另外做一套「忘記密碼」驗證機制——最簡單、也最
+      // 安全的做法，是直接借用已經存在的 Google 登入當作身份驗證：
+      // 整個登出，逼對方要能重新用 Google 帳號登入，才能再設定新的
+      // PIN。如果對方連 Google 登入都過不了，PIN 重設也就無從談起，
+      // 不會變成繞過 PIN 的後門。
+      if (!window.confirm("重設 PIN 碼需要重新登入 Google 帳號驗證身份，確定要繼續嗎？")) return;
+      localStorage.removeItem("nbs_pin_hash");
+      logout();
+    }
+
+    function pinInit_() {
+      const hasPin = !!localStorage.getItem("nbs_pin_hash");
+      const unlockedThisSession = sessionStorage.getItem("nbs_pin_unlocked") === "1";
+      if (unlockedThisSession) { return; } // 這個分頁這次工作階段已經解過鎖，不用再問
+      pinShow_();
+      if (!hasPin) {
+        pinMode = "setup1";
+        document.getElementById("pin-subtitle").textContent = "首次使用，請設定 4 碼 PIN 碼";
+      } else {
+        pinMode = "verify";
+        document.getElementById("pin-subtitle").textContent = "請輸入 PIN 碼";
+      }
+    }
+    pinInit_();
+
     // ── 設定 ─────────────────────────────────────────────────
     const AUTH_GAS_URL = "https://script.google.com/macros/s/AKfycbwzDwyZy09189eOJOs-zEwkZOml2_pJOq15nYGtHF2Kyrtv6ag5VY-I2M8sDyrt0iPdZQ/exec"; // 僅身份驗證用
 
