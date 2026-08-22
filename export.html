@@ -1779,6 +1779,26 @@ function getInsAge(pid) {
   return y;
 }
 
+// ── 「延長保障」型醫療附約的過渡期／接續後判斷（跟 summary.html 同一套邏輯，
+//    兩邊要保持一致，其中一邊改了記得另一邊也要跟著改）──
+function resolveExtendedHospCoverage_(policies, currentAge) {
+  return policies.map(function(p) {
+    var cov = p.coverage;
+    if (!cov || cov.hosp_type !== "延長保障") return p;
+    var hospAge = cov.hosp_age;
+    var reachedTransition = (typeof hospAge === "number") && (currentAge != null) && (currentAge >= hospAge);
+    var newCov = Object.assign({}, cov);
+    if (reachedTransition) {
+      newCov.hosp_ext_daily = 0;
+    } else {
+      newCov.hosp_ext_room = 0;
+      newCov.hosp_ext_surgery = 0;
+      newCov.hosp_ext_misc = 0;
+    }
+    return Object.assign({}, p, { coverage: newCov });
+  });
+}
+
 // 西元日期字串轉民國日期顯示文字（例如 2004-04-19 → 93年4月19日）
 function toRocDateStr(dateStr) {
   if (!dateStr) return null;
@@ -2590,7 +2610,7 @@ function switchPerson(pid) {
   }
   if (p) {
     person = p;
-    policies = person.policies || [];
+    policies = resolveExtendedHospCoverage_(person.policies || [], getInsAge(pid));
     coverage = person.coverage || {};
     savings = person.savings || [];
     pName = (person.profile && person.profile.name) || "—";
@@ -3934,7 +3954,7 @@ window.addEventListener("nbs_nav_ready", async function(e) {
     });
 
     person = pdm[currentPersonId] || {};
-    policies = person.policies || [];
+    policies = resolveExtendedHospCoverage_(person.policies || [], getInsAge(currentPersonId));
     coverage = person.coverage || {};
     savings = person.savings || [];
     pName = (person.profile && person.profile.name) || "—";
