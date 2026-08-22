@@ -800,6 +800,44 @@ function getInsAge(pid) {
   return y;
 }
 
+// ── 「延長保障」型醫療附約的過渡期／接續後判斷 ──────────────
+// coverage.html 對「延長保障」的定義（見該檔案註解）：舊保單有效期間
+// 這張附約只給付日額（hosp_ext_daily，「現在（過渡期）」），等舊保單
+// 到了 hosp_age 這個年齡之後，才接續改成實支實付（hosp_ext_room／
+// hosp_ext_surgery／hosp_ext_misc，「未來（接續後）」）——這兩組數字
+// 在任何一個時間點上只會有一組是真的在生效，不是兩組同時都算數。
+//
+// 之前的加總邏輯（hosp_real_room／hosp_daily／surgery 這幾組 GAP_KEY_MAP）
+// 是把 hosp_room 和 hosp_ext_room 無條件加在一起、hosp_daily 和
+// hosp_ext_daily 也無條件加在一起，等於兩個互斥的狀態同時被算成生效，
+// 導致金額被灌水。這裡在加總「之前」，先依被保險人目前的實際年齡跟
+// hosp_age 比較，把還沒生效的那一組欄位歸零，之後所有既有的加總邏輯
+// 完全不用改，因為它們本來就已經把 hosp_room+hosp_ext_room／
+// daily_room_1_30+hosp_ext_daily 放在一起加總，只要有一邊被歸零，
+// 結果自然就對了。
+function resolveExtendedHospCoverage_(policies, currentAge) {
+  return policies.map(function(p) {
+    var cov = p.coverage;
+    if (!cov || cov.hosp_type !== "延長保障") return p;
+    var hospAge = cov.hosp_age;
+    var reachedTransition = (typeof hospAge === "number") && (currentAge != null) && (currentAge >= hospAge);
+    var newCov = Object.assign({}, cov);
+    if (reachedTransition) {
+      // 已經到轉換年齡：現在是「未來（接續後）」階段，實支實付才算數，
+      // 過渡期的日額歸零（避免舊資料裡這個欄位還留著值）。
+      newCov.hosp_ext_daily = 0;
+    } else {
+      // 還沒到轉換年齡（或轉換年齡是「終身」/沒填，保守當作永遠沒轉
+      // 換）：現在是「現在（過渡期）」階段，只有日額算數，接續後的
+      // 實支實付還沒開始生效，全部歸零，不能提前算進去。
+      newCov.hosp_ext_room = 0;
+      newCov.hosp_ext_surgery = 0;
+      newCov.hosp_ext_misc = 0;
+    }
+    return Object.assign({}, p, { coverage: newCov });
+  });
+}
+
 function switchPerson(pid) {
   currentPersonId=pid;
   renderTabs();
@@ -810,7 +848,7 @@ function renderContent() {
   document.getElementById("loading").style.display="none";
   document.getElementById("content").style.display="block";
   const person  = personDataMap[currentPersonId];
-  const policies= person?.policies||[];
+  const policies= resolveExtendedHospCoverage_(person?.policies||[], getInsAge(currentPersonId));
   const active  = policies.filter(isPolicyActive);
   const totalTWD= active.reduce((s,p)=>s+(p.premiumTWD||0),0);
   savingsArr = person?.savings || [];
@@ -1245,7 +1283,7 @@ function buildGapAnalysis(active, coverage, targets, covOverrides) {
 // ── 目標設定 Modal ────────────────────────────────────────
 function openTargetModal() {
   const person = personDataMap[currentPersonId];
-  const policies = person?.policies||[];
+  const policies = resolveExtendedHospCoverage_(person?.policies||[], getInsAge(currentPersonId));
   const active = policies.filter(isPolicyActive);
 
   const coverage = {};
@@ -1322,7 +1360,7 @@ function saveTargets() {
 
 function openModal() {
   const person  = personDataMap[currentPersonId];
-  const policies= person?.policies||[];
+  const policies= resolveExtendedHospCoverage_(person?.policies||[], getInsAge(currentPersonId));
   const coverage= person?.coverage||{};
   const active  = policies.filter(isPolicyActive);
   const covTypes= COVERAGE_TYPES.map(t=>{
