@@ -1791,9 +1791,20 @@ function resolveExtendedHospCoverage_(policies, currentAge) {
     if (reachedTransition) {
       newCov.hosp_ext_daily = 0;
     } else {
-      newCov.hosp_ext_room = 0;
-      newCov.hosp_ext_surgery = 0;
-      newCov.hosp_ext_misc = 0;
+      // coverage.html 的「未來（接續後）實支實付」實際存的是共用欄位
+      // hosp_room／hosp_surgery／hosp_misc／hosp_icu／hosp_organ_min／
+      // hosp_organ_max／hosp_deduct／hosp_limit_per／hosp_limit_acct，
+      // 不是 hosp_ext_room 這種另外命名、畫面上根本沒有輸入框綁定的
+      // 欄位——這裡改成把真正在用的這一組欄位歸零。
+      newCov.hosp_room = 0;
+      newCov.hosp_surgery = 0;
+      newCov.hosp_misc = 0;
+      newCov.hosp_icu = 0;
+      newCov.hosp_organ_min = 0;
+      newCov.hosp_organ_max = 0;
+      newCov.hosp_deduct = 0;
+      newCov.hosp_limit_per = 0;
+      newCov.hosp_limit_acct = 0;
     }
     return Object.assign({}, p, { coverage: newCov });
   });
