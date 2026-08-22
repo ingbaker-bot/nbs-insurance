@@ -824,15 +824,27 @@ function resolveExtendedHospCoverage_(policies, currentAge) {
     var newCov = Object.assign({}, cov);
     if (reachedTransition) {
       // 已經到轉換年齡：現在是「未來（接續後）」階段，實支實付才算數，
-      // 過渡期的日額歸零（避免舊資料裡這個欄位還留著值）。
+      // 過渡期的日額歸零。
       newCov.hosp_ext_daily = 0;
     } else {
-      // 還沒到轉換年齡（或轉換年齡是「終身」/沒填，保守當作永遠沒轉
-      // 換）：現在是「現在（過渡期）」階段，只有日額算數，接續後的
-      // 實支實付還沒開始生效，全部歸零，不能提前算進去。
-      newCov.hosp_ext_room = 0;
-      newCov.hosp_ext_surgery = 0;
-      newCov.hosp_ext_misc = 0;
+      // 還沒到轉換年齡：現在還在「現在（過渡期）」階段，只有日額算數。
+      // ⚠️ 修正：coverage.html 的「未來（接續後）實支實付」那些輸入框，
+      // 實際存的是跟「一般」模式共用的同一組欄位名稱（hosp_room／
+      // hosp_surgery／hosp_misc／hosp_icu／hosp_organ_min／hosp_organ_max／
+      // hosp_deduct／hosp_limit_per／hosp_limit_acct），不是另外取名的
+      // hosp_ext_room 之類的欄位——那幾個欄位在 coverage.html 裡雖然還
+      // 留著定義，但畫面上並沒有任何輸入框真的綁定到它們，一直都是空
+      // 的，之前把這幾個沒在用的欄位歸零，等於完全沒有修正到問題。
+      // 這裡改成把「未來（接續後）」真正在用的這一組欄位全部歸零。
+      newCov.hosp_room = 0;
+      newCov.hosp_surgery = 0;
+      newCov.hosp_misc = 0;
+      newCov.hosp_icu = 0;
+      newCov.hosp_organ_min = 0;
+      newCov.hosp_organ_max = 0;
+      newCov.hosp_deduct = 0;
+      newCov.hosp_limit_per = 0;
+      newCov.hosp_limit_acct = 0;
     }
     return Object.assign({}, p, { coverage: newCov });
   });
